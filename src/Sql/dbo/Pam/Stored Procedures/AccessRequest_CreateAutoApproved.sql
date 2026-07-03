@@ -9,7 +9,8 @@ CREATE PROCEDURE [dbo].[AccessRequest_CreateAutoApproved]
     @NotAfter DATETIME2(7),
     @Reason NVARCHAR(MAX) = NULL,
     @ConditionKind TINYINT = NULL,
-    @CreationDate DATETIME2(7)
+    @CreationDate DATETIME2(7),
+    @RuleId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -24,12 +25,12 @@ BEGIN
     INSERT INTO [dbo].[AccessRequest]
     (
         [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-        [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate]
+        [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate], [RuleId]
     )
     VALUES
     (
         @AccessRequestId, NULL, @OrganizationId, @CollectionId, @CipherId, @RequesterId,
-        @NotBefore, @NotAfter, @Reason, 1 /* Approved */, @CreationDate, @CreationDate
+        @NotBefore, @NotAfter, @Reason, 1 /* Approved */, @CreationDate, @CreationDate, @RuleId
     )
 
     INSERT INTO [dbo].[AccessDecision]

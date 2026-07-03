@@ -40,6 +40,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
                 request.Reason,
                 decision.ConditionKind,
                 CreationDate = request.CreationDate,
+                request.RuleId,
             },
             commandType: CommandType.StoredProcedure);
     }
@@ -203,6 +204,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
                 request.NotAfter,
                 request.Reason,
                 Now = now,
+                request.RuleId,
             },
             commandType: CommandType.StoredProcedure);
 

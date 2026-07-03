@@ -18,6 +18,9 @@ public class AccessRequestDetails
     public Guid CollectionId { get; set; }
     public Guid CipherId { get; set; }
     public Guid RequesterId { get; set; }
+
+    /// <summary>The access rule pinned on the request at submit, or null for requests created before pinning.</summary>
+    public Guid? RuleId { get; set; }
     public DateTime NotBefore { get; set; }
     public DateTime NotAfter { get; set; }
     public string? Reason { get; set; }

@@ -21,6 +21,7 @@ BEGIN
         LR.[Status],
         LR.[CreationDate],
         LR.[ResolvedDate],
+        LR.[RuleId],
         PL.[Id] AS [ProducedLeaseId],
         PL.[Status] AS [ProducedLeaseStatus],
         U.[Name] AS [RequesterName],

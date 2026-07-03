@@ -13,6 +13,41 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     public AccessRequestDetailsResponseModel()
         : base("accessRequestDetails")
     {
+        ArgumentNullException.ThrowIfNull(details);
+
+        Id = details.Id;
+        CipherId = details.CipherId;
+        CollectionId = details.CollectionId;
+        OrganizationId = details.OrganizationId;
+        RequesterId = details.RequesterId;
+        RuleId = details.RuleId;
+        Status = AccessRequestStatusNames.From(details.Status, details.ProducedLeaseId.HasValue);
+        LeaseNotBefore = details.NotBefore.AsUtc();
+        LeaseNotAfter = details.NotAfter.AsUtc();
+        Reason = details.Reason;
+        SubmittedAt = details.CreationDate.AsUtc();
+        ResolvedAt = details.ResolvedDate.AsUtc();
+        // The request's full decision log, oldest first: one element per recorded decision (human or automatic).
+        // Empty only while pending (no decision recorded yet).
+        Decisions = details.Decisions
+            .Select(d => new AccessRequestDecisionResponseModel
+            {
+                DeciderKind = AccessDeciderKindNames.From(d.DeciderKind),
+                Id = d.Id,
+                Name = d.Name,
+                Email = d.Email,
+                Comment = d.Comment,
+                Verdict = d.Verdict,
+                DecidedAt = d.DecidedAt.AsUtc(),
+            })
+            .ToList();
+        ProducedLeaseId = details.ProducedLeaseId;
+        ProducedLeaseStatus = details.ProducedLeaseStatus.HasValue
+            ? AccessLeaseStatusNames.From(details.ProducedLeaseStatus.Value)
+            : null;
+        ExtensionOfLeaseId = details.ExtensionOfLeaseId;
+        RequesterName = details.RequesterName;
+        RequesterEmail = details.RequesterEmail;
     }
 
     /// <summary>The access request's unique identifier.</summary>
@@ -21,23 +56,14 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// <summary>The cipher access was requested for.</summary>
     public Guid CipherId { get; set; }
 
-    /// <summary>The collection the cipher belongs to, through which the request is governed.</summary>
-    public Guid CollectionId { get; set; }
-
-    /// <summary>The organization that owns the cipher.</summary>
-    public Guid OrganizationId { get; set; }
-
-    /// <summary>The member who opened the request.</summary>
-    public Guid RequesterId { get; set; }
-
     /// <summary>
     /// The access rule that gated the cipher and that this request is evaluated against, resolved once at submit
     /// (oldest wins) and pinned on the request. Null for requests created before pinning existed.
     /// </summary>
-    public Guid? RuleId { get; set; }
+    public Guid? RuleId { get; }
 
-    /// <summary>The request's lifecycle state.</summary>
-    public AccessRequestStatus Status { get; set; }
+    /// <summary><c>pending | approved | activated | denied | cancelled | expired</c>.</summary>
+    public string Status { get; }
 
     /// <summary>
     /// The activation window resolved at submit — the bounds on WHEN this request may be promoted to a lease. Both
@@ -45,19 +71,11 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// start/end), so there is no separate duration or mode field; the length is <see cref="LeaseNotAfter"/> minus
     /// <see cref="LeaseNotBefore"/>. In v1 the approved and leased windows are identical to this one.
     /// </summary>
-    public DateTime LeaseNotBefore { get; set; }
-
-    /// <summary>The end of the resolved activation window (UTC); see <see cref="LeaseNotBefore"/>.</summary>
-    public DateTime LeaseNotAfter { get; set; }
-
-    /// <summary>The optional justification the requester supplied when opening the request.</summary>
-    public string? Reason { get; set; }
-
-    /// <summary>When the request was opened (UTC).</summary>
-    public DateTime SubmittedAt { get; set; }
-
-    /// <summary>When the request was approved, denied, or cancelled (UTC); null while pending.</summary>
-    public DateTime? ResolvedAt { get; set; }
+    public DateTime LeaseNotBefore { get; }
+    public DateTime LeaseNotAfter { get; }
+    public string? Reason { get; }
+    public DateTime SubmittedAt { get; }
+    public DateTime? ResolvedAt { get; }
 
     /// <summary>Distinct from <see cref="ResolvedAt"/>; set when an approved request lapses unactivated. Not tracked in v1.</summary>
     public DateTime? ExpiredAt { get; set; }

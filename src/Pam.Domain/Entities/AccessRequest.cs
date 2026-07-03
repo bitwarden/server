@@ -26,6 +26,13 @@ public class AccessRequest : ITableObject<Guid>
     public Guid RequesterId { get; set; }
 
     /// <summary>
+    /// The access rule that governed this request, resolved once at submit (oldest wins) and pinned here so every
+    /// downstream operation reads the same rule rather than re-resolving. Null for requests created before pinning
+    /// existed, or when the cipher was not leasing-gated through a stored rule.
+    /// </summary>
+    public Guid? RuleId { get; set; }
+
+    /// <summary>
     /// The requested access window. For automatic approval this is <c>now</c>; for human approval it is the
     /// requester-supplied start.
     /// </summary>

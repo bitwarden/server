@@ -12,8 +12,10 @@ CREATE TABLE [dbo].[AccessRequest] (
     [CreationDate]          DATETIME2 (7)       NOT NULL,
     [ResolvedDate]          DATETIME2 (7)       NULL,
     [RejectedDate]          DATETIME2 (7)       NULL,
+    [RuleId]                UNIQUEIDENTIFIER    NULL,
     CONSTRAINT [PK_AccessRequest] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AccessRequest_AccessLease] FOREIGN KEY ([ExtensionOfLeaseId]) REFERENCES [dbo].[AccessLease] ([Id]),
+    CONSTRAINT [FK_AccessRequest_AccessRule] FOREIGN KEY ([RuleId]) REFERENCES [dbo].[AccessRule] ([Id]),
     CONSTRAINT [FK_AccessRequest_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
 );
 GO

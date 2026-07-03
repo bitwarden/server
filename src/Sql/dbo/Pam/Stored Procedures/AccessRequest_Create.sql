@@ -11,7 +11,8 @@ CREATE PROCEDURE [dbo].[AccessRequest_Create]
     @Status TINYINT,
     @CreationDate DATETIME2(7),
     @ResolvedDate DATETIME2(7) = NULL,
-    @RejectedDate DATETIME2(7) = NULL
+    @RejectedDate DATETIME2(7) = NULL,
+    @RuleId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -30,7 +31,8 @@ BEGIN
         [Status],
         [CreationDate],
         [ResolvedDate],
-        [RejectedDate]
+        [RejectedDate],
+        [RuleId]
     )
     VALUES
     (
@@ -46,6 +48,7 @@ BEGIN
         @Status,
         @CreationDate,
         @ResolvedDate,
-        @RejectedDate
+        @RejectedDate,
+        @RuleId
     )
 END
