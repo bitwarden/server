@@ -47,11 +47,12 @@
                         <label class="form-label">Client Owner Email</label>
                         @if (!string.IsNullOrWhiteSpace(Model.Owners))
                         {
-                            <input type="text" class="form-control" asp-for="Owners" readonly>
+                            <input type="email" class="form-control" asp-for="Owners" readonly>
                         }
                         else
                         {
-                            <input type="text" class="form-control" asp-for="Owners" required>
+                            <input type="email" class="form-control" asp-for="Owners" required>
+                            <span asp-validation-for="Owners" class="invalid-feedback"></span>
                         }
                         <div class="form-text mt-0">This user should be independent of the Provider. If the Provider is disassociated with the organization, this user will maintain ownership of the organization.</div>
                     </div>
