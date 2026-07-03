@@ -88,9 +88,7 @@ public sealed class ArchiveAndDeleteRateTests
         const double deletedRate = 0.035;
         const int maxDeleted = 25;
 
-        var deletedOrgTarget = deletedRate > 0
-            ? Math.Min((int)(orgCipherCount * deletedRate), maxDeleted)
-            : 0;
+        var deletedOrgTarget = Math.Min((int)(orgCipherCount * deletedRate), maxDeleted);
 
         Assert.Equal(25, deletedOrgTarget);
 

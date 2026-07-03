@@ -85,7 +85,7 @@ internal sealed class GeneratePersonalCiphersStep(
         // rather than sharing one combined budget across steps. bothTarget is clamped by
         // MaxDeletedCiphers too (not just archivedTarget) since it counts toward the delete ceiling
         // as well as the archive ceiling.
-        var (archivedTarget, deletedTarget, bothTarget, deletedOnlyTarget) = ArchiveDeleteDistribution.ComputeTargets(
+        var (archivedTarget, _, bothTarget, deletedOnlyTarget) = ArchiveDeleteDistribution.ComputeTargets(
             expectedTotal,
             density?.ArchivedCipherRate ?? 0, density?.DeletedCipherRate ?? 0, density?.ArchivedAndDeletedOverlapRate ?? 0,
             density?.MaxArchivedCiphers ?? 0, density?.MaxDeletedCiphers ?? 0);

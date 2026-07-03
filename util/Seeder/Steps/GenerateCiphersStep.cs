@@ -57,7 +57,7 @@ internal sealed class GenerateCiphersStep(
         // rather than sharing one combined budget across steps. Org ciphers are archived "for" a
         // round-robin-selected user (there's no single owning user like a personal cipher has), so
         // archiving requires at least one user to exist.
-        var (archivedOrgTarget, deletedOrgTarget, bothOrgTarget, deletedOnlyOrgTarget) = ArchiveDeleteDistribution.ComputeTargets(
+        var (archivedOrgTarget, _, bothOrgTarget, deletedOnlyOrgTarget) = ArchiveDeleteDistribution.ComputeTargets(
             count,
             _density?.ArchivedCipherRate ?? 0, _density?.DeletedCipherRate ?? 0, _density?.ArchivedAndDeletedOverlapRate ?? 0,
             _density?.MaxArchivedCiphers ?? 0, _density?.MaxDeletedCiphers ?? 0,
