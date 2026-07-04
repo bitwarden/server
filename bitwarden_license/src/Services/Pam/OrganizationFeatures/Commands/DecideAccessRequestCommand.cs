@@ -1,11 +1,12 @@
-﻿using Bit.Services.Pam.Models;
-using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Services.Pam.Services;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Pam.Services;
+using Bit.Services.Pam.Models;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -15,6 +16,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public DecideAccessRequestCommand(
@@ -22,12 +24,14 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -75,10 +79,29 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         };
         decision.SetNewId();
 
+        // audit (before/after): the verdict is known up front, so both phases carry the resulting kind (approved or
+        // denied). Record the attempt, then the outcome around the point of no return.
+        var auditKind = approved ? AccessAuditEventKind.RequestApproved : AccessAuditEventKind.RequestDenied;
+        var audit = new AccessAuditEventData
+        {
+            Kind = auditKind,
+            OccurredAt = now,
+            OrganizationId = request.OrganizationId,
+            ActorId = userId,
+            RequesterId = request.RequesterId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            AccessRequestId = request.Id,
+            Detail = decision.Comment,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         // Approval records the verdict only. The lease that actually authorizes access is minted when the requester
         // activates the approved request (ActivateAccessRequestCommand) — until then they hold a startable approval,
         // not access. The automatic path still mints instantly at submit, where the requester is present and asking.
         await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, status, now);
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
         // The request just left the pending queue; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);

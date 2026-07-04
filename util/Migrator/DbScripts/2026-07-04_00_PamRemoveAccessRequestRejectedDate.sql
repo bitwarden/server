@@ -1,4 +1,12 @@
-CREATE PROCEDURE [dbo].[AccessRequest_Create]
+-- Revert AccessRequest.RejectedDate: an audit-support field that only fed the retired synthesized projection. Refused
+-- activations are now recorded by the written LeaseActivationRejected event, so drop the field, its writer proc, and
+-- the @RejectedDate parameter on AccessRequest_Create. The recreated proc keeps @RuleId (added by
+-- 2026-07-03_00_PamPinRuleOnAccessRequest, which runs before this). Dapper/MSSQL only.
+
+DROP PROCEDURE IF EXISTS [dbo].[AccessRequest_MarkActivationRejected]
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @ExtensionOfLeaseId UNIQUEIDENTIFIER = NULL,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -49,3 +57,10 @@ BEGIN
         @RuleId
     )
 END
+GO
+
+IF COL_LENGTH('[dbo].[AccessRequest]', 'RejectedDate') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[AccessRequest] DROP COLUMN [RejectedDate];
+END
+GO

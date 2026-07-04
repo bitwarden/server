@@ -1,6 +1,7 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
+﻿using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 
@@ -20,11 +21,19 @@ public class ListAccessAuditTrailQuery : IListAccessAuditTrailQuery
     public async Task<ICollection<AccessAuditEvent>> GetTrailAsync(Guid organizationId)
     {
         // Shares the approver inbox's history window so the audit view reaches as far back as request/lease history.
-        // @Now also dates the derived expiry events (an approved request whose window lapsed unused, a lease past its
-        // window), so the projection can surface them without a sweep having run. Authorization is the AccessEventLogs
-        // permission, enforced at the endpoint, so the trail is org-wide.
+        // Authorization is the AccessEventLogs permission, enforced at the endpoint, so the trail is org-wide.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var since = now.AddDays(-ListInboxHistoryQuery.HistoryRetentionDays);
-        return await _accessAuditEventRepository.GetManyByOrganizationIdAsync(organizationId, since, now);
+        var events = await _accessAuditEventRepository.GetManyByOrganizationIdAsync(organizationId, since);
+
+        // Collapse each action's before/after pair (shared CorrelationId) into one row: the Outcome when it landed,
+        // otherwise the lone Attempt -- which the response flags as in-doubt (its outcome never arrived). Newest first.
+        return events
+            .GroupBy(auditEvent => auditEvent.CorrelationId)
+            .Select(group =>
+                group.FirstOrDefault(auditEvent => auditEvent.Phase == AccessAuditEventPhase.Outcome)
+                ?? group.First())
+            .OrderByDescending(auditEvent => auditEvent.OccurredAt)
+            .ToList();
     }
 }

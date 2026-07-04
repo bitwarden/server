@@ -13,17 +13,13 @@ CREATE TABLE [dbo].[AccessRule] (
     [CreationDate]      DATETIME2(7)        NOT NULL,
     [RevisionDate]      DATETIME2(7)        NOT NULL,
     [LastEditedBy]      UNIQUEIDENTIFIER    NULL,
-    [DeletedDate]       DATETIME2(7)        NULL,
-    [DeletedBy]         UNIQUEIDENTIFIER    NULL,
     CONSTRAINT [PK_AccessRule] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AccessRule_Organization] FOREIGN KEY ([OrganizationId])
         REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
 );
 GO
 
--- Filtered to live rules only: a soft-deleted rule (DeletedDate IS NOT NULL) releases its name, so a rule can be
--- deleted and another created with the same name, while active rules stay unique per organization.
+-- A rule's name is unique per organization; a hard delete frees the name naturally.
 CREATE UNIQUE NONCLUSTERED INDEX [IX_AccessRule_OrganizationId_Name]
-    ON [dbo].[AccessRule] ([OrganizationId] ASC, [Name] ASC)
-    WHERE [DeletedDate] IS NULL;
+    ON [dbo].[AccessRule] ([OrganizationId] ASC, [Name] ASC);
 GO

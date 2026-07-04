@@ -1,9 +1,11 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Services.Pam.Services;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Pam.Services;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -13,6 +15,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public RevokeAccessLeaseCommand(
@@ -20,12 +23,14 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessLeaseRepository = accessLeaseRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -65,7 +70,28 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         };
         auditDecision.SetNewId();
 
+        // audit (before/after): record the revoke attempt, then the outcome around the point of no return. A holder
+        // ending their own lease and an operator revoking both settle to the single LeaseRevoked kind.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.LeaseRevoked,
+            OccurredAt = now,
+            OrganizationId = lease.OrganizationId,
+            ActorId = userId,
+            RequesterId = lease.RequesterId,
+            CollectionId = lease.CollectionId,
+            CipherId = lease.CipherId,
+            AccessRequestId = lease.AccessRequestId,
+            AccessLeaseId = lease.Id,
+            LeaseNotBefore = lease.NotBefore,
+            LeaseNotAfter = lease.NotAfter,
+            Detail = string.IsNullOrWhiteSpace(reason) ? null : reason,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         await _accessLeaseRepository.RevokeAsync(lease, endStatus, auditDecision, now);
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
         // The active lease just drained; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);

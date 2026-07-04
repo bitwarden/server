@@ -1,9 +1,11 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Commands;
-using Bit.Services.Pam.Services;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Pam.Services;
+using Bit.Services.Pam.OrganizationFeatures.Commands;
+using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
@@ -250,6 +252,51 @@ public class ActivateAccessRequestCommandTests
 
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, false);
+    }
+
+    // The happy path records the activation before and after the mint: an Attempt up front, then a LeaseActivated
+    // Outcome once the lease is minted.
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_Minted_EmitsActivatedAttemptThenOutcome(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, Arg.Any<bool>())
+            .Returns(AccessLeaseMintOutcome.Minted);
+
+        await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivated && e.Phase == AccessAuditEventPhase.Attempt
+            && e.AccessRequestId == request.Id));
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivated && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessRequestId == request.Id));
+    }
+
+    // A refused activation records the Attempt, then a LeaseActivationRejected Outcome (not LeaseActivated) -- the
+    // outcome kind follows the mint result.
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_SingleActiveLeaseConflict_EmitsAttemptThenRejectedOutcome(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
+            .Returns(true);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, true)
+            .Returns(AccessLeaseMintOutcome.SingleActiveLeaseConflict);
+
+        await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivated && e.Phase == AccessAuditEventPhase.Attempt));
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivationRejected && e.Phase == AccessAuditEventPhase.Outcome));
     }
 
     private static SutProvider<ActivateAccessRequestCommand> Setup()

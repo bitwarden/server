@@ -28,10 +28,4 @@ public interface IAccessRuleRepository : IRepository<AccessRule, Guid>
     /// <param name="collectionIdsToClear">Collections whose reference to the access rule should be removed.</param>
     Task SetCollectionAssociationsAsync(Guid organizationId, Guid accessRuleId,
         IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear);
-
-    /// <summary>
-    /// Soft-deletes the rule: stamps DeletedDate/DeletedBy so it stops governing access (every gating read excludes
-    /// deleted rules) while preserving its collection links for the audit trail. Idempotent for an already-deleted rule.
-    /// </summary>
-    Task SoftDeleteAsync(Guid id, Guid? deletedBy, DateTime deletedDate);
 }

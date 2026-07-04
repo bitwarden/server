@@ -1,13 +1,15 @@
 ﻿using Bit.HttpExtensions;
+using Bit.Pam.Enums;
 using Bit.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
-/// One row of the synthesized PAM access-audit trail, as the governance client renders it. Projected from existing PAM
-/// entity state — there is no audit record. <see cref="Kind"/> carries the outcome (string vocabulary);
-/// <see cref="ActorId"/> is who performed it, null for a system / automatic event (see <see cref="Automated"/>).
-/// Subject ids are populated according to the kind. <see cref="Detail"/> is an approver comment or a revoke reason.
+/// One row of the PAM access-audit trail, as the governance client renders it. Read from the dedicated audit store,
+/// where each event was written self-contained (display names snapshotted at write time). <see cref="Kind"/> carries
+/// the outcome (string vocabulary); <see cref="ActorId"/> is who performed it, null for a system / automatic event
+/// (see <see cref="Automated"/>). Subject ids are populated according to the kind. <see cref="Detail"/> is an approver
+/// comment or a revoke reason.
 /// </summary>
 public class AccessAuditEventResponseModel : ResponseModel
 {
@@ -37,6 +39,7 @@ public class AccessAuditEventResponseModel : ResponseModel
         CollectionName = auditEvent.CollectionName;
         RuleName = auditEvent.RuleName;
         Automated = auditEvent.Automated;
+        Incomplete = auditEvent.Phase == AccessAuditEventPhase.Attempt;
     }
 
     /// <summary>The event kind, as the governance vocabulary (see <see cref="AccessAuditEventKindNames"/>).</summary>
@@ -80,4 +83,10 @@ public class AccessAuditEventResponseModel : ResponseModel
 
     /// <summary>True when there is no human actor — a system / automatic event.</summary>
     public bool Automated { get; }
+
+    /// <summary>
+    /// True when this row is an action whose outcome never landed — only the write-ahead Attempt was recorded, so it is
+    /// in-doubt (may have failed or been interrupted). False for a normal completed action.
+    /// </summary>
+    public bool Incomplete { get; }
 }

@@ -3,8 +3,8 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// One row in the synthesized PAM access-audit trail — a read model projected from existing PAM entity state, never
-/// persisted on its own (there is no audit table). <see cref="Kind"/> carries the outcome, so no separate verdict field
+/// One row in the PAM access-audit trail — the read model of a stored audit event (see <see cref="AccessAuditEventData"/>
+/// for the write-side payload), with denormalized display fields joined on read. <see cref="Kind"/> carries the outcome, so no separate verdict field
 /// is needed. <see cref="ActorId"/> is who performed the event (the approver on a decision, the revoker on a revoke,
 /// the requester on a submission or self-end) and is null for a system / automatic event; <see cref="RequesterId"/> is
 /// the owner of the subject request or lease. Subject ids are populated according to <see cref="Kind"/>.
@@ -12,6 +12,13 @@ namespace Bit.Pam.Models;
 public class AccessAuditEvent
 {
     public AccessAuditEventKind Kind { get; set; }
+
+    /// <summary>Whether this row is the pre-action attempt or the post-action outcome (before/after model).</summary>
+    public AccessAuditEventPhase Phase { get; set; }
+
+    /// <summary>Correlates an action's before/after pair; the trail read collapses events sharing this id into one entry.</summary>
+    public Guid CorrelationId { get; set; }
+
     public DateTime OccurredAt { get; set; }
     public Guid OrganizationId { get; set; }
 

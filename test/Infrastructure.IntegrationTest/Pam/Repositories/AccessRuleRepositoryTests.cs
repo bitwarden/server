@@ -66,8 +66,8 @@ public class AccessRuleRepositoryTests
             Conditions = """{"kind":"human_approval"}""",
         });
 
-        // Act: soft-delete the rule, then create a new one reusing its name. The unique index on (OrganizationId, Name)
-        // is filtered to live rules, so the soft-deleted row no longer reserves the name.
+        // Act: delete the rule, then create a new one reusing its name. A hard delete removes the row, so the unique
+        // index on (OrganizationId, Name) no longer reserves the name.
         await accessRuleRepository.DeleteAsync(original);
 
         var recreated = await accessRuleRepository.CreateAsync(new AccessRule
@@ -77,7 +77,7 @@ public class AccessRuleRepositoryTests
             Conditions = """{"kind":"human_approval"}""",
         });
 
-        // Assert: a distinct, live rule owns the name and the soft-deleted original stays gone.
+        // Assert: a distinct, live rule owns the name and the original stays gone.
         Assert.NotEqual(original.Id, recreated.Id);
         Assert.Null(await accessRuleRepository.GetByIdAsync(original.Id));
 

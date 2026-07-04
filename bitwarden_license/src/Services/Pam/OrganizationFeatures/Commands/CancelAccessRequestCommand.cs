@@ -1,9 +1,11 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Services.Pam.Services;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Pam.Services;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -14,6 +16,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public CancelAccessRequestCommand(
@@ -22,6 +25,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
@@ -29,6 +33,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -71,6 +76,21 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
+        // audit (before/after): record the cancel attempt, then the outcome around the point of no return. Both the
+        // requester withdrawing and a manager retracting settle the request to the single RequestCancelled kind.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.RequestCancelled,
+            OccurredAt = now,
+            OrganizationId = request.OrganizationId,
+            ActorId = userId,
+            RequesterId = request.RequesterId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            AccessRequestId = request.Id,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         if (isRequester)
         {
             // The requester withdraws their own request: Cancelled, no decision recorded. A user who is both the
@@ -93,6 +113,8 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
             decision.SetNewId();
             await _accessRequestRepository.CancelWithDecisionAsync(request, decision, now);
         }
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
         // The request just left the pending/approved set; tell every approver of this collection to re-fetch so it
         // drops out of their inbox. Mirrors decide.

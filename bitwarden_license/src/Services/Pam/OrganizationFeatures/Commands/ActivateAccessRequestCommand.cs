@@ -1,9 +1,11 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Services.Pam.Services;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Pam.Services;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -14,6 +16,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
     private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public ActivateAccessRequestCommand(
@@ -22,6 +25,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
         ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
@@ -29,6 +33,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
         _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -94,11 +99,32 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         // singleton rule; an escape path leaves them unconstrained. The mint proc enforces it under a range lock.
         var enforceSingleActiveLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, request.CipherId);
 
+        // audit (before/after): record the activation attempt, then the outcome around the point of no return. The
+        // outcome kind follows the mint result -- a minted lease, or a recorded rejection (single-active-lease
+        // conflict or a lost race). A race won by another activation is a no-op for this caller and emits nothing,
+        // leaving the attempt as an in-doubt entry.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.LeaseActivated,
+            OccurredAt = now,
+            OrganizationId = request.OrganizationId,
+            ActorId = userId,
+            RequesterId = request.RequesterId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            AccessRequestId = request.Id,
+            AccessLeaseId = lease.Id,
+            LeaseNotBefore = lease.NotBefore,
+            LeaseNotAfter = lease.NotAfter,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         var outcome = await _accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now, enforceSingleActiveLease);
 
         if (outcome == AccessLeaseMintOutcome.SingleActiveLeaseConflict)
         {
-            await _accessRequestRepository.MarkActivationRejectedAsync(request.Id, now);
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with { Kind = AccessAuditEventKind.LeaseActivationRejected, Phase = AccessAuditEventPhase.Outcome, AccessLeaseId = null });
             throw new ConflictException("Another active lease exists for this item. Try again once it ends.");
         }
 
@@ -112,9 +138,12 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             {
                 return winner;
             }
-            await _accessRequestRepository.MarkActivationRejectedAsync(request.Id, now);
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with { Kind = AccessAuditEventKind.LeaseActivationRejected, Phase = AccessAuditEventPhase.Outcome, AccessLeaseId = null });
             throw new ConflictException("This request can no longer be activated.");
         }
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
         // The approver's history row just flipped approved -> activated and gained a revocable lease; tell every
         // approver of this collection to re-fetch, mirroring decide and revoke.

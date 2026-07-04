@@ -1,4 +1,6 @@
-﻿using Bit.Services.Pam.Api.Endpoints;
+﻿using Bit.HttpExtensions;
+using Bit.Pam.Services;
+using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
@@ -6,8 +8,6 @@ using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Services.Pam.Services;
-using Bit.HttpExtensions;
-using Bit.Pam.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Services.Pam.Utilities;
@@ -45,6 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
+        services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
 
         // Minimal API endpoint handlers. The endpoints (see PamEndpointsExtensions) resolve these from DI.
         services.AddScoped<LeaseEndpointsHandler>();
