@@ -90,15 +90,6 @@ public class AccessRuleRepository : Repository<AccessRule, Guid>, IAccessRuleRep
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task SoftDeleteAsync(Guid id, Guid? deletedBy, DateTime deletedDate)
-    {
-        using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
-            $"[{Schema}].[AccessRule_DeleteById]",
-            new { Id = id, DeletedBy = deletedBy, DeletedDate = deletedDate },
-            commandType: CommandType.StoredProcedure);
-    }
-
     private sealed class CollectionAccessRuleMapping
     {
         public Guid AccessRuleId { get; init; }

@@ -11,7 +11,6 @@ CREATE TABLE [dbo].[AccessRequest] (
     [Status]                TINYINT             NOT NULL,
     [CreationDate]          DATETIME2 (7)       NOT NULL,
     [ResolvedDate]          DATETIME2 (7)       NULL,
-    [RejectedDate]          DATETIME2 (7)       NULL,
     [RuleId]                UNIQUEIDENTIFIER    NULL,
     CONSTRAINT [PK_AccessRequest] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AccessRequest_AccessLease] FOREIGN KEY ([ExtensionOfLeaseId]) REFERENCES [dbo].[AccessLease] ([Id]),

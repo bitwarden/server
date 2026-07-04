@@ -71,16 +71,6 @@ public class AccessRule : ITableObject<Guid>
     /// </summary>
     public Guid? LastEditedBy { get; set; }
 
-    /// <summary>
-    /// When the rule was soft-deleted, or null while it is active. A soft-deleted rule keeps its collection links (so
-    /// the rule_deleted audit event stays scopable) but is excluded from every gating / governing read, so it no longer
-    /// governs access.
-    /// </summary>
-    public DateTime? DeletedDate { get; set; }
-
-    /// <summary>The user who deleted the rule; the actor on the rule_deleted audit event. Null while active.</summary>
-    public Guid? DeletedBy { get; set; }
-
     public void SetNewId()
     {
         Id = CombGuid.Generate();

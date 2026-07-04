@@ -161,6 +161,7 @@ public static class ServiceCollectionExtensions
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
         services.TryAddScoped<ICipherLeaseGate, NoopCipherLeaseGate>();
+        services.TryAddScoped<IAccessAuditEventEmitter, NoopAccessAuditEventEmitter>();
         services.AddPolicyServices();
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IEventService, EventService>();

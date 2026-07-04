@@ -57,13 +57,6 @@ public class AccessRequest : ITableObject<Guid>
     /// </summary>
     public DateTime? ResolvedDate { get; set; }
 
-    /// <summary>
-    /// When the most recent activation attempt was refused (e.g. single-active-lease contention). Last-only: a refused
-    /// activation leaves the request <see cref="AccessRequestStatus.Approved"/> and re-activatable, so this records only
-    /// the latest refusal, for the audit trail. There is no "rejected by" — the actor is always the requester.
-    /// </summary>
-    public DateTime? RejectedDate { get; set; }
-
     public void SetNewId()
     {
         Id = CombGuid.Generate();

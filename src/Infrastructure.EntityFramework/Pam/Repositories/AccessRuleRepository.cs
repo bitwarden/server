@@ -22,7 +22,7 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var rules = await dbContext.AccessRules
-            .Where(p => p.OrganizationId == organizationId && p.DeletedDate == null)
+            .Where(p => p.OrganizationId == organizationId)
             .AsNoTracking()
             .ToListAsync();
         return Mapper.Map<List<CoreEntity>>(rules);
@@ -33,7 +33,7 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var rule = await dbContext.AccessRules
-            .Where(p => p.Id == id && p.DeletedDate == null)
+            .Where(p => p.Id == id)
             .AsNoTracking()
             .FirstOrDefaultAsync();
         if (rule is null)
@@ -54,7 +54,7 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var rules = await dbContext.AccessRules
-            .Where(p => p.OrganizationId == organizationId && p.DeletedDate == null)
+            .Where(p => p.OrganizationId == organizationId)
             .AsNoTracking()
             .ToListAsync();
 
@@ -80,36 +80,23 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
 
     public override async Task DeleteAsync(CoreEntity accessRule)
     {
-        // Mirrors the Dapper proc: delete is now a soft-delete (see SoftDeleteAsync).
-        await SoftDeleteAsync(accessRule.Id, null, DateTime.UtcNow);
-    }
-
-    public async Task SoftDeleteAsync(Guid id, Guid? deletedBy, DateTime deletedDate)
-    {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var organizationId = await dbContext.AccessRules
-            .Where(r => r.Id == id && r.DeletedDate == null)
-            .Select(r => (Guid?)r.OrganizationId)
-            .FirstOrDefaultAsync();
-        if (organizationId is null)
-        {
-            // Already deleted or missing: idempotent no-op.
-            return;
-        }
-
-        // Soft-delete: stamp the row but PRESERVE the Collection.AccessRuleId links so the rule_deleted audit event can
-        // scope through them. Reads exclude DeletedDate != null, so the rule stops governing access.
-        // RevisionDate is left untouched so the delete is not read as an edit (the rule_updated projection fires on
-        // RevisionDate > CreationDate).
-        await dbContext.AccessRules
-            .Where(r => r.Id == id && r.DeletedDate == null)
+        // Clear the collection links first (the FK Collection.AccessRuleId -> AccessRule is ON DELETE NO ACTION), then
+        // remove the rule. A cleared collection is simply ungoverned; the RuleDeleted audit event already carries the
+        // rule's name, so the row need not survive.
+        await dbContext.Collections
+            .Where(c => c.AccessRuleId == accessRule.Id)
             .ExecuteUpdateAsync(s => s
-                .SetProperty(r => r.DeletedDate, deletedDate)
-                .SetProperty(r => r.DeletedBy, deletedBy));
+                .SetProperty(c => c.AccessRuleId, (Guid?)null)
+                .SetProperty(c => c.RevisionDate, DateTime.UtcNow));
 
-        await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId.Value);
+        await dbContext.AccessRules
+            .Where(r => r.Id == accessRule.Id)
+            .ExecuteDeleteAsync();
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(accessRule.OrganizationId);
         await dbContext.SaveChangesAsync();
     }
 

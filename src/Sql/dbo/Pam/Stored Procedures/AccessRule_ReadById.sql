@@ -7,5 +7,4 @@ BEGIN
     SELECT *
     FROM [dbo].[AccessRule]
     WHERE [Id] = @Id
-        AND [DeletedDate] IS NULL
 END

@@ -4,6 +4,7 @@ using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Pam.Services;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -19,6 +20,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
     private readonly ICurrentContext _currentContext;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public RequestLeaseExtensionCommand(
@@ -28,6 +30,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
         ICurrentContext currentContext,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessLeaseRepository = accessLeaseRepository;
@@ -36,6 +39,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
         _currentContext = currentContext;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -121,6 +125,25 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         };
         decision.SetNewId();
 
+        // audit (before/after): record the extension attempt, then the outcome around the point of no return. A
+        // failed extension (lease no longer active, or already extended) throws, leaving the attempt as an in-doubt
+        // entry with no outcome. AccessLeaseId is the parent lease; LeaseNotAfter is its new end.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.LeaseExtended,
+            OccurredAt = now,
+            OrganizationId = lease.OrganizationId,
+            ActorId = userId,
+            RequesterId = lease.RequesterId,
+            CollectionId = lease.CollectionId,
+            CipherId = lease.CipherId,
+            AccessRequestId = request.Id,
+            AccessLeaseId = lease.Id,
+            LeaseNotAfter = request.NotAfter,
+            Detail = request.Reason,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         var outcome = await _accessRequestRepository.CreateApprovedExtensionAsync(request, decision, now);
 
         switch (outcome)
@@ -130,6 +153,8 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             case AccessLeaseExtendOutcome.AlreadyExtended:
                 throw new BadRequestException("This lease has already been extended.");
         }
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
         // The parent lease's window just grew. Tell every approver of the collection to re-fetch (their active-leases
         // and history views show the new end), and tell the requester's other devices so the banner/badge countdown

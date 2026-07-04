@@ -5,7 +5,9 @@ using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Pam.Services;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -34,6 +36,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IMailService _mailService;
     private readonly ILogger<SubmitAccessRequestCommand> _logger;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public SubmitAccessRequestCommand(
@@ -50,6 +53,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         IOrganizationRepository organizationRepository,
         IMailService mailService,
         ILogger<SubmitAccessRequestCommand> logger,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
@@ -65,6 +69,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         _organizationRepository = organizationRepository;
         _mailService = mailService;
         _logger = logger;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -162,11 +167,40 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         decision.SetNewId();
 
+        // audit (before/after): the request is auto-approved in one write, so the outcome is two events -- the
+        // submission and the automatic approval (no human actor). Record the attempt, then both outcomes around the
+        // point of no return.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.RequestSubmitted,
+            OccurredAt = now,
+            OrganizationId = governingRule.OrganizationId,
+            ActorId = userId,
+            RequesterId = userId,
+            CollectionId = governingRule.CollectionId,
+            CipherId = cipherId,
+            AccessRequestId = request.Id,
+            Detail = request.Reason,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         // Auto-approval records only the request and its automatic verdict — no lease. The requester explicitly
         // activates the approved request (ActivateAccessRequestCommand) to start the lease, exactly like the human
         // path after approval. Deferring the mint means the per-cipher single-active-lease guard runs at activation,
         // the one place a lease is now minted, rather than here.
         await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+        // The automatic approval is a distinct event from the submission (it has no attempt of its own), so it gets
+        // its own correlation id rather than sharing the submit pair's.
+        await _accessAuditEventEmitter.EmitAsync(
+            audit with
+            {
+                Kind = AccessAuditEventKind.RequestApproved,
+                Phase = AccessAuditEventPhase.Outcome,
+                ActorId = null,
+                CorrelationId = Guid.NewGuid(),
+            });
 
         // Tell the requester's other devices a new approved request exists, so "My requests" can offer to activate it
         // without a manual refresh.
@@ -218,7 +252,25 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             CreationDate = now,
         };
 
+        // audit (before/after): record the submission attempt (the request has no id until it is created), then the
+        // outcome carrying the new request id, around the point of no return.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.RequestSubmitted,
+            OccurredAt = now,
+            OrganizationId = governingRule.OrganizationId,
+            ActorId = userId,
+            RequesterId = userId,
+            CollectionId = governingRule.CollectionId,
+            CipherId = cipherId,
+            Detail = request.Reason,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         var created = await _accessRequestRepository.CreateAsync(request);
+
+        await _accessAuditEventEmitter.EmitAsync(
+            audit with { Phase = AccessAuditEventPhase.Outcome, AccessRequestId = created.Id });
 
         // A new request just entered the pending queue; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(created.CollectionId);
