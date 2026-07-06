@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
@@ -12,7 +13,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandler
 public class OrganizationDataOwnershipPolicyEventHandler(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
-    IOrganizationRepository organizationRepository,
     IOrganizationAbilityCacheService organizationAbilityCacheService,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
     : OrganizationPolicyEventHandler(policyRepository, factories), IOnPolicyPostUpdateEvent
@@ -73,17 +73,11 @@ public class OrganizationDataOwnershipPolicyEventHandler(
     private async Task<bool> OrganizationUsesMyItemsAsync(Guid organizationId)
     {
         var organizationAbility = await organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (organizationAbility != null)
+        if (organizationAbility == null)
         {
-            return organizationAbility.UseMyItems;
+            throw new NotFoundException($"Organization with ID {organizationId} not found.");
         }
 
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-        if (organization == null)
-        {
-            throw new InvalidOperationException($"Organization with ID {organizationId} not found.");
-        }
-
-        return organization.UseMyItems;
+        return organizationAbility.UseMyItems;
     }
 }
