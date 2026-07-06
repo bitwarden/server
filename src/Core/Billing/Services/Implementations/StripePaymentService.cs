@@ -668,7 +668,7 @@ public class StripePaymentService : IStripePaymentService
             subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(discount);
         }
 
-        await ApplySchedulePhase2DataAsync(subscription, subscriptionInfo);
+        await ApplySchedulePhase2DataAsync(subscription, subscriptionInfo, subscriber);
 
         var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(subscription);
 
@@ -711,7 +711,8 @@ public class StripePaymentService : IStripePaymentService
         return subscriptionInfo;
     }
 
-    private async Task ApplySchedulePhase2DataAsync(Subscription subscription, SubscriptionInfo subscriptionInfo)
+    private async Task ApplySchedulePhase2DataAsync(Subscription subscription, SubscriptionInfo subscriptionInfo,
+        ISubscriber subscriber)
     {
         if (string.IsNullOrEmpty(subscription.ScheduleId))
         {
