@@ -83,9 +83,11 @@ public class GetAnnualUpgradeOfferQueryTests
     [Fact]
     public async Task Run_LegacyVintageMonthlyOrg_ComparesAgainstAnnualLatest()
     {
-        // An org still on a legacy monthly vintage (e.g. pending a Track A price migration) sees
+        // An org still on a legacy monthly vintage (e.g. pending a Track A price migration) has
         // savings computed against the annual-latest plan -- the same target the migration program
-        // would move it to -- not the legacy-vintage annual plan.
+        // would move it to -- not the legacy-vintage annual plan. At current pricing the legacy
+        // Enterprise 2020 monthly rate ($6/seat/mo = $72/seat/yr) equals the annual-latest rate
+        // ($72/seat/yr), so there are no positive savings and no offer is returned.
         var organization = new Organization { Id = Guid.NewGuid(), PlanType = PlanType.EnterpriseMonthly2020 };
         _getChurnOfferCohortMembershipQuery.Run(organization).Returns((ChurnOfferCohortMembership?)null);
 
@@ -98,7 +100,9 @@ public class GetAnnualUpgradeOfferQueryTests
 
         var result = await _query.Run(organization);
 
-        Assert.NotNull(result);
-        Assert.Equal(annualLatestPlan.PasswordManager.SeatPrice * 5, result.NewAnnualCost);
+        // The vintage-specific annual plan (EnterpriseAnnually2020) is never consulted.
+        await _pricingClient.Received(1).GetPlanOrThrow(PlanType.EnterpriseAnnually);
+        await _pricingClient.DidNotReceive().GetPlanOrThrow(PlanType.EnterpriseAnnually2020);
+        Assert.Null(result);
     }
 }
