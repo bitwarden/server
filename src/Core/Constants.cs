@@ -311,6 +311,7 @@ public static partial class FeatureFlagKeys
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
+    public const string PamRotation = "pm-42354-rotation-daemon";
 
     /// <summary>
     /// Kill switch for the PAM SQL audit trail. Off — the absent-flag default, and the only state self-host ever
