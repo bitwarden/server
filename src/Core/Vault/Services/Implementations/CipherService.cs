@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -39,7 +40,7 @@ public class CipherService : ICipherService
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
     private readonly IGetCipherPermissionsForUserQuery _getCipherPermissionsForUserQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IPricingClient _pricingClient;
 
     public CipherService(
@@ -58,7 +59,7 @@ public class CipherService : ICipherService
         GlobalSettings globalSettings,
         IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
         IPolicyRequirementQuery policyRequirementQuery,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IPricingClient pricingClient)
     {
         _cipherRepository = cipherRepository;
@@ -76,7 +77,7 @@ public class CipherService : ICipherService
         _globalSettings = globalSettings;
         _getCipherPermissionsForUserQuery = getCipherPermissionsForUserQuery;
         _policyRequirementQuery = policyRequirementQuery;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _pricingClient = pricingClient;
     }
 
@@ -882,7 +883,7 @@ public class CipherService : ICipherService
     {
         var user = await _userService.GetUserByIdAsync(userId);
         var organizationAbility = cipher.OrganizationId.HasValue ?
-            await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
+            await _organizationAbilityCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
 
         return NormalCipherPermissions.CanDelete(user, cipher, organizationAbility);
     }
@@ -891,7 +892,7 @@ public class CipherService : ICipherService
     {
         var user = await _userService.GetUserByIdAsync(userId);
         var organizationAbility = cipher.OrganizationId.HasValue ?
-            await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
+            await _organizationAbilityCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
 
         return NormalCipherPermissions.CanRestore(user, cipher, organizationAbility);
     }
@@ -1201,7 +1202,7 @@ public class CipherService : ICipherService
             .Select(id => id!.Value)
             .ToList();
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(organizationIds);
+        var organizationAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(organizationIds);
         return organizationAbilities;
     }
 }

@@ -2,6 +2,7 @@
 using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
@@ -235,7 +236,7 @@ public class OrganizationReportControllerTests
             .AccessReports(orgId)
             .Returns(true);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(orgId)
             .Returns(new OrganizationAbility { UseRiskInsights = false });
 
@@ -1641,7 +1642,7 @@ public class OrganizationReportControllerTests
             .AccessReports(orgId)
             .Returns(true);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(orgId)
             .Returns(new OrganizationAbility { UseRiskInsights = true });
     }
@@ -1658,7 +1659,7 @@ public class OrganizationReportControllerTests
             .AccessReports(orgId)
             .Returns(true);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(orgId)
             .Returns(new OrganizationAbility { UseRiskInsights = true });
     }

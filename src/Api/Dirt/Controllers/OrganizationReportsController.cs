@@ -3,6 +3,7 @@ using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
@@ -31,7 +32,7 @@ public class OrganizationReportsController : Controller
     private readonly IGetOrganizationReportApplicationDataQuery _getOrganizationReportApplicationDataQuery;
     private readonly IUpdateOrganizationReportApplicationDataCommand _updateOrganizationReportApplicationDataCommand;
     private readonly IFeatureService _featureService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationReportStorageService _storageService;
     private readonly ICreateOrganizationReportCommand _createReportCommand;
     private readonly IOrganizationReportRepository _organizationReportRepo;
@@ -50,7 +51,7 @@ public class OrganizationReportsController : Controller
         IGetOrganizationReportApplicationDataQuery getOrganizationReportApplicationDataQuery,
         IUpdateOrganizationReportApplicationDataCommand updateOrganizationReportApplicationDataCommand,
         IFeatureService featureService,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IOrganizationReportStorageService storageService,
         ICreateOrganizationReportCommand createReportCommand,
         IOrganizationReportRepository organizationReportRepo,
@@ -68,7 +69,7 @@ public class OrganizationReportsController : Controller
         _getOrganizationReportApplicationDataQuery = getOrganizationReportApplicationDataQuery;
         _updateOrganizationReportApplicationDataCommand = updateOrganizationReportApplicationDataCommand;
         _featureService = featureService;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _storageService = storageService;
         _createReportCommand = createReportCommand;
         _organizationReportRepo = organizationReportRepo;
@@ -469,7 +470,7 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException();
         }
 
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
         if (orgAbility is null || !orgAbility.UseRiskInsights)
         {
             throw new BadRequestException("Your organization's plan does not support this feature.");

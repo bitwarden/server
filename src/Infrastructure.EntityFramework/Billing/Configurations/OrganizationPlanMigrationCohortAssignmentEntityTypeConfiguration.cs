@@ -28,6 +28,12 @@ public class OrganizationPlanMigrationCohortAssignmentEntityTypeConfiguration
             .HasIndex(a => new { a.CohortId, a.ScheduledDate, a.MigratedDate })
             .IsClustered(false);
 
+        // Composite index serves the CSV export cursor: cohort filter plus the
+        // (CreationDate, Id) keyset seek (PM-36965).
+        builder
+            .HasIndex(a => new { a.CohortId, a.CreationDate, a.Id })
+            .IsClustered(false);
+
         builder
             .HasOne(a => a.Organization)
             .WithMany()

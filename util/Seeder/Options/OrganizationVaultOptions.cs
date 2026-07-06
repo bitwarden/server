@@ -106,6 +106,12 @@ public class OrganizationVaultOptions
     public string? Password { get; init; }
 
     /// <summary>
+    /// Override email for the organization owner. When null, defaults to <c>owner@&lt;Domain&gt;</c>.
+    /// Passed through the mangler, so <c>--mangle</c> applies a unique prefix when enabled.
+    /// </summary>
+    public string? OwnerEmail { get; init; }
+
+    /// <summary>
     /// Billing plan type for the organization.
     /// </summary>
     public PlanType PlanType { get; init; } = PlanType.EnterpriseAnnually;
