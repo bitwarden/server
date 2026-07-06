@@ -1,18 +1,32 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Repositories;
+using Bit.Core.Billing.Services;
+using Bit.Core.Services;
+using Stripe;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 
+using static StripeConstants;
+
 public class GetAnnualUpgradeOfferQuery(
+    IFeatureService featureService,
     IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
     IPricingClient pricingClient,
-    IOrganizationRepository organizationRepository) : IGetAnnualUpgradeOfferQuery
+    IStripeAdapter stripeAdapter) : IGetAnnualUpgradeOfferQuery
 {
     public async Task<AnnualUpgradeOfferResult?> Run(Organization organization)
     {
+        // Kill switch: the offer shares the business plan migration program's flag so ops can
+        // stop new redemptions without a deploy. The renewal webhook stays ungated on purpose --
+        // schedules created before a flag kill still activate and must flip PlanType.
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        {
+            return null;
+        }
+
         // Mutual exclusivity with the churn-mitigation coupon offer: membership in a churn-offer
         // -eligible cohort excludes this offer entirely, regardless of whether that offer is
         // currently live (e.g. its one-shot coupon may already be consumed).
@@ -28,13 +42,47 @@ public class GetAnnualUpgradeOfferQuery(
             return null;
         }
 
+        if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
+        {
+            return null;
+        }
+
         var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
         var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
 
-        var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        var subscription = await TryGetSubscriptionAsync(organization.GatewaySubscriptionId);
+        if (subscription is null)
+        {
+            return null;
+        }
 
-        var currentAnnualCost = currentPlan.PasswordManager.SeatPrice * seatCounts.Total * 12;
-        var newAnnualCost = annualLatestPlan.PasswordManager.SeatPrice * seatCounts.Total;
+        // A redeemed org keeps its monthly PlanType until renewal, so the annual-switch schedule
+        // is the only durable marker that the offer was already taken. Only the annual-latest
+        // seat price suppresses: a Track A migration schedule targets a monthly price and must
+        // keep the offer visible (redeeming releases and replaces that schedule).
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+        var alreadyRedeemed = schedules.Data.Any(s =>
+            s.SubscriptionId == subscription.Id &&
+            s.Status == SubscriptionScheduleStatus.Active &&
+            s.Phases.Any(p => p.Items.Any(i => i.PriceId == annualLatestPlan.PasswordManager.StripeSeatPlanId)));
+        if (alreadyRedeemed)
+        {
+            return null;
+        }
+
+        // Savings quote what Stripe actually bills: the purchased seat quantity on the
+        // subscription's seat line, which the redemption schedule preserves and the renewal
+        // invoice charges. Occupied seats can be lower and would understate both figures.
+        var seatItem = subscription.Items.Data.FirstOrDefault(i =>
+            i.Price?.Id == currentPlan.PasswordManager.StripeSeatPlanId);
+        if (seatItem is null)
+        {
+            return null;
+        }
+
+        var currentAnnualCost = currentPlan.PasswordManager.SeatPrice * seatItem.Quantity * 12;
+        var newAnnualCost = annualLatestPlan.PasswordManager.SeatPrice * seatItem.Quantity;
         var savings = currentAnnualCost - newAnnualCost;
 
         if (savings <= 0)
@@ -43,5 +91,17 @@ public class GetAnnualUpgradeOfferQuery(
         }
 
         return new AnnualUpgradeOfferResult(currentAnnualCost, newAnnualCost, savings);
+    }
+
+    private async Task<Subscription?> TryGetSubscriptionAsync(string subscriptionId)
+    {
+        try
+        {
+            return await stripeAdapter.GetSubscriptionAsync(subscriptionId);
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
+        {
+            return null;
+        }
     }
 }
