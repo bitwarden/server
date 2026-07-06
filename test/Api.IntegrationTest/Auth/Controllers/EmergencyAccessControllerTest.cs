@@ -17,7 +17,7 @@ using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Controllers;
+namespace Bit.Api.IntegrationTest.Auth.Controllers;
 
 public class EmergencyAccessControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
