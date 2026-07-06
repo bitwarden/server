@@ -1,6 +1,9 @@
 ﻿using Bit.Api.Billing.Controllers.VNext;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
@@ -24,21 +27,27 @@ public class OrganizationBillingVNextControllerTests
 {
     private readonly IGetChurnMitigationOfferQuery _getChurnMitigationOfferQuery;
     private readonly IRedeemChurnMitigationOfferCommand _redeemChurnMitigationOfferCommand;
+    private readonly IGetAnnualUpgradeOfferQuery _getAnnualUpgradeOfferQuery;
+    private readonly IRedeemAnnualUpgradeOfferCommand _redeemAnnualUpgradeOfferCommand;
     private readonly OrganizationBillingVNextController _sut;
 
     public OrganizationBillingVNextControllerTests()
     {
         _getChurnMitigationOfferQuery = Substitute.For<IGetChurnMitigationOfferQuery>();
         _redeemChurnMitigationOfferCommand = Substitute.For<IRedeemChurnMitigationOfferCommand>();
+        _getAnnualUpgradeOfferQuery = Substitute.For<IGetAnnualUpgradeOfferQuery>();
+        _redeemAnnualUpgradeOfferCommand = Substitute.For<IRedeemAnnualUpgradeOfferCommand>();
 
         _sut = new OrganizationBillingVNextController(
             Substitute.For<ICreateBitPayInvoiceForCreditCommand>(),
+            _getAnnualUpgradeOfferQuery,
             Substitute.For<IGetBillingAddressQuery>(),
             _getChurnMitigationOfferQuery,
             Substitute.For<IGetCreditQuery>(),
             Substitute.For<IGetOrganizationMetadataQuery>(),
             Substitute.For<IGetOrganizationWarningsQuery>(),
             Substitute.For<IGetPaymentMethodQuery>(),
+            _redeemAnnualUpgradeOfferCommand,
             _redeemChurnMitigationOfferCommand,
             Substitute.For<IRestartSubscriptionCommand>(),
             Substitute.For<IUpdateBillingAddressCommand>(),
@@ -128,5 +137,31 @@ public class OrganizationBillingVNextControllerTests
 
         Assert.IsType<Ok<None>>(result);
         await _redeemChurnMitigationOfferCommand.Received(1).Run(organization);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAnnualUpgradeOfferAsync_EligibleOrg_ReturnsOkWithModel(Organization organization)
+    {
+        var offer = new AnnualUpgradeOfferResult(60m, 48m, 12m);
+        _getAnnualUpgradeOfferQuery.Run(organization).Returns(offer);
+
+        var result = await _sut.GetAnnualUpgradeOfferAsync(organization);
+
+        var okResult = Assert.IsType<Ok<AnnualUpgradeOfferResult?>>(result);
+        Assert.NotNull(okResult.Value);
+        Assert.Equal(60m, okResult.Value!.CurrentAnnualCost);
+        Assert.Equal(48m, okResult.Value.NewAnnualCost);
+        Assert.Equal(12m, okResult.Value.Savings);
+        await _getAnnualUpgradeOfferQuery.Received(1).Run(organization);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RedeemAnnualUpgradeOfferAsync_CallsCommand(Organization organization)
+    {
+        _redeemAnnualUpgradeOfferCommand.Run(organization).Returns(new BillingCommandResult<None>(new None()));
+
+        await _sut.RedeemAnnualUpgradeOfferAsync(organization);
+
+        await _redeemAnnualUpgradeOfferCommand.Received(1).Run(organization);
     }
 }

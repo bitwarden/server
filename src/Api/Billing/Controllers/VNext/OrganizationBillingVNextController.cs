@@ -6,6 +6,8 @@ using Bit.Api.Billing.Models.Requests.Subscriptions;
 using Bit.Api.Billing.Models.Requirements;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.Queries;
@@ -25,12 +27,14 @@ namespace Bit.Api.Billing.Controllers.VNext;
 [SelfHosted(NotSelfHostedOnly = true)]
 public class OrganizationBillingVNextController(
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
+    IGetAnnualUpgradeOfferQuery getAnnualUpgradeOfferQuery,
     IGetBillingAddressQuery getBillingAddressQuery,
     IGetChurnMitigationOfferQuery getChurnMitigationOfferQuery,
     IGetCreditQuery getCreditQuery,
     IGetOrganizationMetadataQuery getOrganizationMetadataQuery,
     IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
+    IRedeemAnnualUpgradeOfferCommand redeemAnnualUpgradeOfferCommand,
     IRedeemChurnMitigationOfferCommand redeemChurnMitigationOfferCommand,
     IRestartSubscriptionCommand restartSubscriptionCommand,
     IUpdateBillingAddressCommand updateBillingAddressCommand,
@@ -161,6 +165,26 @@ public class OrganizationBillingVNextController(
         [BindNever] Organization organization)
     {
         var result = await redeemChurnMitigationOfferCommand.Run(organization);
+        return Handle(result);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("annual-upgrade-offer")]
+    [InjectOrganization]
+    public async Task<IResult> GetAnnualUpgradeOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var offer = await getAnnualUpgradeOfferQuery.Run(organization);
+        return TypedResults.Ok(offer);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPost("annual-upgrade-offer/redeem")]
+    [InjectOrganization]
+    public async Task<IResult> RedeemAnnualUpgradeOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var result = await redeemAnnualUpgradeOfferCommand.Run(organization);
         return Handle(result);
     }
 }
