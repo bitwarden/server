@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Commands;
@@ -56,6 +57,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
         services.AddTransient<IGetChurnOfferCohortMembershipQuery, GetChurnOfferCohortMembershipQuery>();
         services.AddTransient<IGetAnnualUpgradeOfferQuery, GetAnnualUpgradeOfferQuery>();
+        services.AddTransient<IRedeemAnnualUpgradeOfferCommand, RedeemAnnualUpgradeOfferCommand>();
         services.AddTransient<IGetChurnMitigationOfferQuery, GetChurnMitigationOfferQuery>();
         services.AddTransient<IRedeemChurnMitigationOfferCommand, RedeemChurnMitigationOfferCommand>();
         services.AddScoped<ICohortBulkAssignmentCsvParser, CohortBulkAssignmentCsvParser>();
