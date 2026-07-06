@@ -8,6 +8,8 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
@@ -793,6 +795,17 @@ public class StripePaymentService : IStripePaymentService
                     }
                 }
 
+                // Drop the seat-overage line a Packaged migration folds into the migrated seat line
+                // (Pass 2 above). Keyed on the seat price, so storage/Secrets Manager lines are kept.
+                if (subscriber is Organization organization && ShouldCollapseSeatOverageLine(organization))
+                {
+                    var sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+                    if (sourcePlan.PasswordManager is { StripeSeatPlanId: not null and not "" } passwordManager)
+                    {
+                        items.RemoveAll(item => item.PriceId == passwordManager.StripeSeatPlanId);
+                    }
+                }
+
                 subscriptionInfo.Subscription.Items = items;
             }
 
@@ -1024,4 +1037,15 @@ public class StripePaymentService : IStripePaymentService
             throw new GatewayException("Failed to retrieve current invoices", exception);
         }
     }
+
+    /// <summary>
+    /// Evaluates whether the organization's pending migration folds a legacy seat-overage line into the migrated
+    /// seat line — true only for usage-resolved Packaged sources (e.g. Teams 2019).
+    /// </summary>
+    /// <param name="organization">The organization to evaluate.</param>
+    /// <returns>True if the seat-overage line should be collapsed into the migrated seat line.</returns>
+    private static bool ShouldCollapseSeatOverageLine(Organization organization) =>
+        MigrationPaths.All.Any(path =>
+            path.FromPlan == organization.PlanType &&
+            path.SeatCountPolicy == SeatCountPolicy.ActualUsage);
 }
