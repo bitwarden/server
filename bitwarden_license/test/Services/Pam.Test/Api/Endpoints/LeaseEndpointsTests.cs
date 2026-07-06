@@ -13,12 +13,12 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the access-rule wire contract that the generated OpenAPI spec — and the client bindings built from it —
+/// Locks the lease wire contract that the generated OpenAPI spec — and the client bindings built from it —
 /// depend on. The endpoint bodies are scaffold stubs; the contract (routes, names, methods, return types) is the
 /// thing under test. Endpoints are materialized by mapping them onto a minimal host and reading its
 /// <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator inspects.
 /// </summary>
-public class AccessRuleEndpointsTests
+public class LeaseEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
@@ -42,10 +42,10 @@ public class AccessRuleEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheFiveAccessRuleRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheFiveLeaseRoutes_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
-            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
+            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Leases"))
             .ToList();
 
         Assert.Equal(5, endpoints.Count);
@@ -54,11 +54,11 @@ public class AccessRuleEndpointsTests
     }
 
     [Theory]
-    [InlineData("Pam_AccessRules_GetAll", "GET", "organizations/{orgId:guid}/access-rules")]
-    [InlineData("Pam_AccessRules_Get", "GET", "organizations/{orgId:guid}/access-rules/{id:guid}")]
-    [InlineData("Pam_AccessRules_Post", "POST", "organizations/{orgId:guid}/access-rules")]
-    [InlineData("Pam_AccessRules_Put", "PUT", "organizations/{orgId:guid}/access-rules/{id:guid}")]
-    [InlineData("Pam_AccessRules_Delete", "DELETE", "organizations/{orgId:guid}/access-rules/{id:guid}")]
+    [InlineData("Pam_Leases_GetActive", "GET", "leases/active")]
+    [InlineData("Pam_Leases_GetHistory", "GET", "leases/history")]
+    [InlineData("Pam_Leases_GetMine", "GET", "leases/mine")]
+    [InlineData("Pam_Leases_Revoke", "POST", "leases/{id:guid}/revoke")]
+    [InlineData("Pam_Leases_Extend", "POST", "leases/{id:guid}/extend")]
     public void MapPamEndpoints_RegistersExpectedRoute(string name, string method, string route)
     {
         var endpoints = MaterializeEndpoints();
@@ -66,17 +66,17 @@ public class AccessRuleEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/.../access-rules/")
+        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/leases/active")
         // that the generated spec path does not.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }
 
     [Fact]
-    public void AccessRuleGroup_DocumentsErrorResponseModel_For400And404()
+    public void LeaseGroup_DocumentsErrorResponseModel_For400And404()
     {
         var endpoint = MaterializeEndpoints()
-            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"));
+            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Leases"));
         var produces = endpoint.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>();
 
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status400BadRequest && p.Type == typeof(ErrorResponseModel));
@@ -84,14 +84,14 @@ public class AccessRuleEndpointsTests
     }
 
     [Theory]
-    [InlineData(nameof(AccessRuleEndpointsHandler.GetAll), typeof(Task<ListResponseModel<AccessRuleResponseModel>>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Get), typeof(Task<AccessRuleResponseModel>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Post), typeof(Task<AccessRuleResponseModel>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Put), typeof(Task<AccessRuleResponseModel>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Delete), typeof(Task))]
+    [InlineData(nameof(LeaseEndpointsHandler.GetActive), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
+    [InlineData(nameof(LeaseEndpointsHandler.GetHistory), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
+    [InlineData(nameof(LeaseEndpointsHandler.GetMine), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
+    [InlineData(nameof(LeaseEndpointsHandler.Revoke), typeof(Task))]
+    [InlineData(nameof(LeaseEndpointsHandler.Extend), typeof(Task<AccessRequestDetailsResponseModel>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
-        var method = typeof(AccessRuleEndpointsHandler).GetMethod(methodName);
+        var method = typeof(LeaseEndpointsHandler).GetMethod(methodName);
 
         Assert.NotNull(method);
         Assert.Equal(expectedReturnType, method!.ReturnType);
