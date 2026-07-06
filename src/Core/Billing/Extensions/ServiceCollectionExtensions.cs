@@ -53,6 +53,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
         services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
         services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
+        services.AddTransient<IGetChurnOfferCohortMembershipQuery, GetChurnOfferCohortMembershipQuery>();
         services.AddTransient<IGetChurnMitigationOfferQuery, GetChurnMitigationOfferQuery>();
         services.AddTransient<IRedeemChurnMitigationOfferCommand, RedeemChurnMitigationOfferCommand>();
         services.AddScoped<ICohortBulkAssignmentCsvParser, CohortBulkAssignmentCsvParser>();

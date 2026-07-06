@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
-using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -12,32 +11,26 @@ namespace Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using static StripeConstants;
 
 public class GetChurnMitigationOfferQuery(
-    IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
-    IOrganizationPlanMigrationCohortRepository cohortRepository,
+    IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
     IStripeAdapter stripeAdapter,
     ILogger<GetChurnMitigationOfferQuery> logger) : IGetChurnMitigationOfferQuery
 {
     public async Task<ChurnMitigationOfferResult?> Run(Organization organization)
     {
-        // DB pre-filter -- short-circuit non-cohort organizations before any Stripe call.
-        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
-        if (assignment is null)
+        var membership = await getChurnOfferCohortMembershipQuery.Run(organization);
+        if (membership is null)
         {
             return null;
         }
 
-        var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
-        if (cohort is not { IsActive: true } || string.IsNullOrEmpty(cohort.ChurnDiscountCouponCode))
-        {
-            return null;
-        }
+        var (assignment, cohort) = membership;
 
         // Migration cohort: inspect the active subscription schedule -- the coupon goes on
         // Phase 2 only. Churn-only cohort (MigrationPathId is null): inspect live subscription
         // discounts plus the per-assignment one-shot guard for `once` coupons.
         return cohort.MigrationPathId is not null
-            ? await EvaluateMigrationCohortAsync(organization, cohort.ChurnDiscountCouponCode)
-            : await EvaluateChurnOnlyCohortAsync(organization, assignment, cohort.ChurnDiscountCouponCode);
+            ? await EvaluateMigrationCohortAsync(organization, cohort.ChurnDiscountCouponCode!)
+            : await EvaluateChurnOnlyCohortAsync(organization, assignment, cohort.ChurnDiscountCouponCode!);
     }
 
     private async Task<ChurnMitigationOfferResult?> EvaluateMigrationCohortAsync(
