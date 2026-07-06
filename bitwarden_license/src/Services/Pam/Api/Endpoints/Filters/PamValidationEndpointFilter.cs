@@ -10,13 +10,19 @@ namespace Bit.Services.Pam.Api.Endpoints.Filters;
 /// </summary>
 public class PamValidationEndpointFilter : IEndpointFilter
 {
-    private const string RequestModelNamespace = "Bit.Services.Pam.Api.Models.Request";
+    // A prefix/suffix match rather than an exact one, so nested feature subtrees that mirror the same
+    // Api/Models/Request folder convention -- e.g. Rotation's Bit.Services.Pam.Rotation.Api.Models.Request --
+    // are covered without this filter needing to know about every subtree by name.
+    private const string RequestModelNamespacePrefix = "Bit.Services.Pam.";
+    private const string RequestModelNamespaceSuffix = ".Api.Models.Request";
 
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         foreach (var argument in context.Arguments)
         {
-            if (argument is null || argument.GetType().Namespace != RequestModelNamespace)
+            if (argument is null || argument.GetType().Namespace is not { } ns
+                || !ns.StartsWith(RequestModelNamespacePrefix, StringComparison.Ordinal)
+                || !ns.EndsWith(RequestModelNamespaceSuffix, StringComparison.Ordinal))
             {
                 continue;
             }

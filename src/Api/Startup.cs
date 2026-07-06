@@ -210,7 +210,7 @@ public class Startup
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
         services.AddSecretsManagerEfRepositories();
-        services.AddPamServices();
+        services.AddPamServices(Configuration);
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
