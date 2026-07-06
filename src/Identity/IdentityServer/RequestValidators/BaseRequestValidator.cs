@@ -592,15 +592,6 @@ public abstract class BaseRequestValidator<T> where T : class
 
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
     {
-        // Check current context/cache to see if user is in any organizations, avoids extra DB call if not
-        var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
-            .ToList();
-
-        if (orgs.Count == 0)
-        {
-            return null;
-        }
-
         var masterPasswordPolicy = await PolicyRequirementQuery.GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id);
         return new MasterPasswordPolicyResponseModel(masterPasswordPolicy.EnforcedOptions);
     }
