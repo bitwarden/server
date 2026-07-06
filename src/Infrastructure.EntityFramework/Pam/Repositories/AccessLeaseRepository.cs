@@ -2,6 +2,7 @@
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -262,6 +263,44 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         }
 
         await transaction.CommitAsync();
+    }
+
+    public async Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // The stored procedure flips and projects in one UPDATE ... OUTPUT; EF has no portable equivalent, so the due
+        // rows are projected first and the flip is constrained to those ids. A Serializable transaction keeps a
+        // concurrent sweep from flipping the same rows between the read and the write, so a lease is returned only by
+        // the run that actually expired it -- the LeaseExpired audit event and the rotation access-end trigger fire
+        // once per lease. The revoke fields are deliberately left untouched: natural expiry has no revoker.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+        var due = await dbContext.AccessLeases
+            .Where(l => l.Status == AccessLeaseStatus.Active && l.NotAfter <= now)
+            .Select(l => new PamExpiredLease
+            {
+                Id = l.Id,
+                OrganizationId = l.OrganizationId,
+                CollectionId = l.CollectionId,
+                CipherId = l.CipherId,
+                RequesterId = l.RequesterId,
+                NotBefore = l.NotBefore,
+                NotAfter = l.NotAfter,
+            })
+            .ToListAsync();
+
+        if (due.Count > 0)
+        {
+            var ids = due.Select(l => l.Id).ToList();
+            await dbContext.AccessLeases
+                .Where(l => ids.Contains(l.Id) && l.Status == AccessLeaseStatus.Active)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(l => l.Status, AccessLeaseStatus.Expired));
+        }
+
+        await transaction.CommitAsync();
+        return due;
     }
 
     /// <summary>
