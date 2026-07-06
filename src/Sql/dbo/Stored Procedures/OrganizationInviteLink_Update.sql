@@ -1,12 +1,12 @@
 CREATE PROCEDURE [dbo].[OrganizationInviteLink_Update]
-    @Id                 UNIQUEIDENTIFIER,
-    @Code               UNIQUEIDENTIFIER,
-    @OrganizationId     UNIQUEIDENTIFIER,
-    @AllowedDomains     NVARCHAR(MAX),
-    @EncryptedInviteKey NVARCHAR(MAX),
-    @EncryptedOrgKey    NVARCHAR(MAX),
-    @CreationDate       DATETIME2(7),
-    @RevisionDate       DATETIME2(7)
+    @Id                   UNIQUEIDENTIFIER,
+    @Code                 UNIQUEIDENTIFIER,
+    @OrganizationId       UNIQUEIDENTIFIER,
+    @AllowedDomains       NVARCHAR(MAX),
+    @Invite               NVARCHAR(MAX),
+    @SupportsConfirmation BIT,
+    @CreationDate         DATETIME2(7),
+    @RevisionDate         DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -17,8 +17,8 @@ BEGIN
         [Code] = @Code,
         [OrganizationId] = @OrganizationId,
         [AllowedDomains] = @AllowedDomains,
-        [EncryptedInviteKey] = @EncryptedInviteKey,
-        [EncryptedOrgKey] = @EncryptedOrgKey,
+        [Invite] = @Invite,
+        [SupportsConfirmation] = @SupportsConfirmation,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

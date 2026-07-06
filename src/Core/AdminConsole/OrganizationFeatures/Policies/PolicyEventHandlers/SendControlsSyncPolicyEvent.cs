@@ -153,6 +153,10 @@ public class SendControlsSyncPolicyEvent(
                 return true;
             }
         }
+        if (policyData.AllowedSendTypes != null && !policyData.AllowedSendTypes.Contains(send.Type))
+        {
+            return true;
+        }
         return false;
     }
 }

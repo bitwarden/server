@@ -1139,7 +1139,7 @@
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "CsvHelper": "[33.1.0, 33.1.0]"
         }
       },
@@ -1147,8 +1147,15 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.0, )",
-          "Infrastructure.EntityFramework": "[2026.6.0, )"
+          "Core": "[2026.6.1, )",
+          "Infrastructure.EntityFramework": "[2026.6.1, )"
+        }
+      },
+      "pam": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.6.1, )",
+          "HttpExtensions": "[2026.6.1, )"
         }
       },
       "core": {
@@ -1204,10 +1211,13 @@
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
       },
+      "httpextensions": {
+        "type": "Project"
+      },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1215,7 +1225,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1228,9 +1238,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
-          "Infrastructure.Dapper": "[2026.6.0, )",
-          "Infrastructure.EntityFramework": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
+          "Infrastructure.Dapper": "[2026.6.1, )",
+          "Infrastructure.EntityFramework": "[2026.6.1, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }

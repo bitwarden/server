@@ -243,7 +243,7 @@ public class ProviderServiceTests
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
 
         existingProvider.Id = provider.Id;
         existingProvider.Enabled = !provider.Enabled; // Different enabled status
@@ -282,7 +282,7 @@ public class ProviderServiceTests
         {
             await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
                 o.Id == org.Id && o.Enabled == provider.Enabled));
-            await applicationCacheService.Received(1).UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o =>
+            await organizationAbilityCacheService.Received(1).UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o =>
                 o.Id == org.Id && o.Enabled == provider.Enabled));
         }
     }
@@ -295,7 +295,7 @@ public class ProviderServiceTests
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
 
         existingProvider.Id = provider.Id;
         existingProvider.Enabled = !provider.Enabled; // Different enabled status
@@ -334,7 +334,7 @@ public class ProviderServiceTests
         {
             await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
                 o.Id == org.Id && o.Enabled == provider.Enabled));
-            await applicationCacheService.Received(1).UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o =>
+            await organizationAbilityCacheService.Received(1).UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o =>
                 o.Id == org.Id && o.Enabled == provider.Enabled));
         }
     }
@@ -347,7 +347,7 @@ public class ProviderServiceTests
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
 
         existingProvider.Id = provider.Id;
         existingProvider.Enabled = !provider.Enabled; // Different enabled status
@@ -386,7 +386,7 @@ public class ProviderServiceTests
         foreach (var org in organizations)
         {
             await organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
-            await applicationCacheService.DidNotReceive().UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
+            await organizationAbilityCacheService.DidNotReceive().UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
         }
     }
 
@@ -398,7 +398,7 @@ public class ProviderServiceTests
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
 
         existingProvider.Id = provider.Id;
         existingProvider.Enabled = !provider.Enabled; // Different enabled status
@@ -426,7 +426,7 @@ public class ProviderServiceTests
 
         // No organizations should be updated since they're all null
         await organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
-        await applicationCacheService.DidNotReceive().UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
+        await organizationAbilityCacheService.DidNotReceive().UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
     }
 
     [Theory, BitAutoData]
