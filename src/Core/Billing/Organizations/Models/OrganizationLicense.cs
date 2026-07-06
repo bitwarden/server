@@ -490,7 +490,13 @@ public class OrganizationLicense : ILicense
                    || useInviteLinks == organization.UseInviteLinks) &&
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UsePam))
                    || usePam == organization.UsePam) &&
+               // UseRiskInsights is additive and plan-derived (backfilled for existing
+               // Enterprise orgs). Licenses issued since 2025-04 carry the claim with the
+               // org's value at generation time, which is False for orgs backfilled later.
+               // Only enforce equality when the claim asserts True, so a stale False claim
+               // does not invalidate a backfilled org and disable it.
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseRiskInsights))
+                   || !useRiskInsights
                    || useRiskInsights == organization.UseRiskInsights);
 
     }

@@ -434,8 +434,14 @@ If you believe you need to change the version for a valid reason, please discuss
         Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
     }
 
+    /// <summary>
+    /// Regression test for the self-host auto-disable scenario: existing Enterprise orgs are
+    /// backfilled to UseRiskInsights = true, but their license (issued since 2025-04) carries the
+    /// claim with the value False. A stale False claim must NOT invalidate the backfilled org, or
+    /// ValidateOrganizationsJob would disable it. VerifyData must pass in this case.
+    /// </summary>
     [Fact]
-    public void OrganizationLicense_VerifyData_FailsWhenUseRiskInsightsClaimPresentAndMismatches()
+    public void OrganizationLicense_VerifyData_PassesWhenUseRiskInsightsClaimFalseButOrgTrue()
     {
         var organization = CreateDeterministicOrganization();
         organization.UseRiskInsights = true;
@@ -443,8 +449,36 @@ If you believe you need to change the version for a valid reason, please discuss
         var installationId = new Guid("78900000-0000-0000-0000-000000000123");
 
         var claims = BuildBaseVerifyDataClaims(organization, installationId);
-        // Claim says false, org says true — should fail
+        // Claim says false (stale, pre-backfill), org says true (backfilled) — must NOT disable
         claims.Add(new Claim(nameof(OrganizationLicense.UseRiskInsights), false.ToString()));
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        var license = new OrganizationLicense { Token = "non-empty", Expires = DateTime.MaxValue };
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = installationId
+        });
+
+        Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
+    }
+
+    /// <summary>
+    /// The opposite direction is still a genuine mismatch: the license claim asserts True
+    /// (the license grants the ability) but the org DB says False. VerifyData must fail here.
+    /// </summary>
+    [Fact]
+    public void OrganizationLicense_VerifyData_FailsWhenUseRiskInsightsClaimTrueButOrgFalse()
+    {
+        var organization = CreateDeterministicOrganization();
+        organization.UseRiskInsights = false;
+
+        var installationId = new Guid("78900000-0000-0000-0000-000000000123");
+
+        var claims = BuildBaseVerifyDataClaims(organization, installationId);
+        // Claim says true, org says false — genuine mismatch, should fail
+        claims.Add(new Claim(nameof(OrganizationLicense.UseRiskInsights), true.ToString()));
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
         var license = new OrganizationLicense { Token = "non-empty", Expires = DateTime.MaxValue };
