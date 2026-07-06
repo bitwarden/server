@@ -45,6 +45,14 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
                 auditEvent.Detail,
                 auditEvent.LeaseNotBefore,
                 auditEvent.LeaseNotAfter,
+                auditEvent.TargetSystemId,
+                auditEvent.TargetSystemName,
+                auditEvent.DaemonId,
+                auditEvent.DaemonName,
+                auditEvent.RotationConfigId,
+                auditEvent.RotationJobId,
+                RotationSource = (byte?)auditEvent.RotationSource,
+                SyncState = (byte?)auditEvent.SyncState,
             },
             commandType: CommandType.StoredProcedure);
     }

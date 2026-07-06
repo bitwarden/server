@@ -4,9 +4,9 @@ namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
 /// Maps <see cref="AccessAuditEventKind"/> to the string vocabulary the governance client expects. The projection
-/// emits the request, lease, and rule administration
-/// kinds today; the remaining names (credential access, system controls) are defined so the contract stays stable as
-/// those kinds come online.
+/// emits the request, lease, rule administration, and rotation-lifecycle/fleet-administration kinds today; the
+/// remaining names (credential access, system controls) are defined so the contract stays stable as those kinds come
+/// online.
 /// </summary>
 public static class AccessAuditEventKindNames
 {
@@ -29,6 +29,32 @@ public static class AccessAuditEventKindNames
     public const string LeasingKillSwitchTriggered = "leasingKillSwitchTriggered";
     public const string LeasingFreezeEnabled = "leasingFreezeEnabled";
     public const string LeasingFreezeLifted = "leasingFreezeLifted";
+    public const string RotationConfigCreated = "rotationConfigCreated";
+    public const string RotationSettingsUpdated = "rotationSettingsUpdated";
+    public const string RotationAccountUpdated = "rotationAccountUpdated";
+    public const string RotationPaused = "rotationPaused";
+    public const string RotationResumed = "rotationResumed";
+    public const string RotationConfigDeleted = "rotationConfigDeleted";
+    public const string RotationOffered = "rotationOffered";
+    public const string RotationDispatched = "rotationDispatched";
+    public const string RotationSucceeded = "rotationSucceeded";
+    public const string RotationAttemptFailed = "rotationAttemptFailed";
+    public const string RotationFailed = "rotationFailed";
+    public const string RotationJobReleased = "rotationJobReleased";
+    public const string RotationJobTimedOut = "rotationJobTimedOut";
+    public const string RotationCipherWriteRejected = "rotationCipherWriteRejected";
+    public const string RotationReportRejected = "rotationReportRejected";
+    public const string ManualRotationDue = "manualRotationDue";
+    public const string ManualRotationRecorded = "manualRotationRecorded";
+    public const string DaemonRegistered = "daemonRegistered";
+    public const string DaemonRevoked = "daemonRevoked";
+    public const string DaemonAssignedToTarget = "daemonAssignedToTarget";
+    public const string DaemonUnassignedFromTarget = "daemonUnassignedFromTarget";
+    public const string TargetSystemRegistered = "targetSystemRegistered";
+    public const string TargetSystemDisabled = "targetSystemDisabled";
+    public const string TargetSystemEnabled = "targetSystemEnabled";
+    public const string TargetSystemRenamed = "targetSystemRenamed";
+    public const string TargetSystemPolicyUpdated = "targetSystemPolicyUpdated";
 
     public static string From(AccessAuditEventKind kind) => kind switch
     {
@@ -51,6 +77,32 @@ public static class AccessAuditEventKindNames
         AccessAuditEventKind.LeasingKillSwitchTriggered => LeasingKillSwitchTriggered,
         AccessAuditEventKind.LeasingFreezeEnabled => LeasingFreezeEnabled,
         AccessAuditEventKind.LeasingFreezeLifted => LeasingFreezeLifted,
+        AccessAuditEventKind.RotationConfigCreated => RotationConfigCreated,
+        AccessAuditEventKind.RotationSettingsUpdated => RotationSettingsUpdated,
+        AccessAuditEventKind.RotationAccountUpdated => RotationAccountUpdated,
+        AccessAuditEventKind.RotationPaused => RotationPaused,
+        AccessAuditEventKind.RotationResumed => RotationResumed,
+        AccessAuditEventKind.RotationConfigDeleted => RotationConfigDeleted,
+        AccessAuditEventKind.RotationOffered => RotationOffered,
+        AccessAuditEventKind.RotationDispatched => RotationDispatched,
+        AccessAuditEventKind.RotationSucceeded => RotationSucceeded,
+        AccessAuditEventKind.RotationAttemptFailed => RotationAttemptFailed,
+        AccessAuditEventKind.RotationFailed => RotationFailed,
+        AccessAuditEventKind.RotationJobReleased => RotationJobReleased,
+        AccessAuditEventKind.RotationJobTimedOut => RotationJobTimedOut,
+        AccessAuditEventKind.RotationCipherWriteRejected => RotationCipherWriteRejected,
+        AccessAuditEventKind.RotationReportRejected => RotationReportRejected,
+        AccessAuditEventKind.ManualRotationDue => ManualRotationDue,
+        AccessAuditEventKind.ManualRotationRecorded => ManualRotationRecorded,
+        AccessAuditEventKind.DaemonRegistered => DaemonRegistered,
+        AccessAuditEventKind.DaemonRevoked => DaemonRevoked,
+        AccessAuditEventKind.DaemonAssignedToTarget => DaemonAssignedToTarget,
+        AccessAuditEventKind.DaemonUnassignedFromTarget => DaemonUnassignedFromTarget,
+        AccessAuditEventKind.TargetSystemRegistered => TargetSystemRegistered,
+        AccessAuditEventKind.TargetSystemDisabled => TargetSystemDisabled,
+        AccessAuditEventKind.TargetSystemEnabled => TargetSystemEnabled,
+        AccessAuditEventKind.TargetSystemRenamed => TargetSystemRenamed,
+        AccessAuditEventKind.TargetSystemPolicyUpdated => TargetSystemPolicyUpdated,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 }

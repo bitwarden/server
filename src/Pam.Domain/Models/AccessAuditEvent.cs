@@ -33,6 +33,16 @@ public class AccessAuditEvent
     public Guid? AccessRequestId { get; set; }
     public Guid? AccessLeaseId { get; set; }
     public Guid? AccessRuleId { get; set; }
+    public Guid? TargetSystemId { get; set; }
+    public Guid? DaemonId { get; set; }
+    public Guid? RotationConfigId { get; set; }
+    public Guid? RotationJobId { get; set; }
+
+    /// <summary>What triggered the rotation job (scheduled, on-demand, or access-end); set on job/attempt-scoped events.</summary>
+    public PamRotationSource? RotationSource { get; set; }
+
+    /// <summary>Whether a failed attempt left the target system's password changed; set on failure/report events.</summary>
+    public PamRotationSyncState? SyncState { get; set; }
 
     /// <summary>An approver comment, an auto-denial reason, or a revoke reason — whatever the source row carried.</summary>
     public string? Detail { get; set; }
@@ -53,6 +63,14 @@ public class AccessAuditEvent
     /// <summary>The access rule's name — plaintext org configuration (not vault data), for rule administration events
     /// (created / updated / deleted). Null for non-rule events, or when the rule row is gone.</summary>
     public string? RuleName { get; set; }
+
+    /// <summary>The target system's name — snapshotted at write by the rotation commands (same pattern as
+    /// <see cref="RuleName"/>, not a read-time JOIN). Null for non-target events.</summary>
+    public string? TargetSystemName { get; set; }
+
+    /// <summary>The daemon's name — snapshotted at write by the rotation commands (same pattern as
+    /// <see cref="RuleName"/>, not a read-time JOIN). Null for non-daemon events.</summary>
+    public string? DaemonName { get; set; }
 
     /// <summary>True when there is no human actor — a system / automatic event. Drives the automated-vs-human filter.</summary>
     public bool Automated => ActorId is null;
