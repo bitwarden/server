@@ -78,6 +78,7 @@ public class OrganizationResponseModel : ResponseModel
         UsePhishingBlocker = organization.UsePhishingBlocker;
         UseMyItems = organization.UseMyItems;
         UseInviteLinks = organization.UseInviteLinks;
+        UsePam = organization.UsePam;
     }
 
     public Guid Id { get; set; }
@@ -131,6 +132,7 @@ public class OrganizationResponseModel : ResponseModel
     public bool UsePhishingBlocker { get; set; }
     public bool UseMyItems { get; set; }
     public bool UseInviteLinks { get; set; }
+    public bool UsePam { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
@@ -154,6 +156,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         bool hideSensitiveData) : this(organization, plan)
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
+        SmServiceAccountsGrace = subscription.Subscription?.ServiceAccountGrace;
         UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
         CustomerDiscount = subscription.CustomerDiscount != null ? new BillingCustomerDiscount(subscription.CustomerDiscount) : null;
         Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
@@ -216,6 +219,14 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     public BillingCustomerDiscount CustomerDiscount { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
+
+    /// <summary>
+    /// The count of permanently-free Secrets Manager service accounts granted beyond the plan baseline during a
+    /// pricing migration. Clients subtract this from <see cref="OrganizationResponseModel.SmServiceAccounts"/> so the
+    /// migration-grace allotment is not billed. Null on self-hosted and when there is no gateway subscription;
+    /// a concrete count (including 0 for a non-migrated cloud organization) otherwise.
+    /// </summary>
+    public int? SmServiceAccountsGrace { get; set; }
 
     /// <summary>
     /// Date when a self-hosted organization's subscription expires, without any grace period.

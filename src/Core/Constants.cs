@@ -136,16 +136,13 @@ public static class FeatureFlagKeys
     /* Admin Console Team */
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
-    public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
     public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
-    public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
-    public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
-    public const string ProviderAbilityExtendedCache = "pm-32111-provider-ability-extended-cache";
     public const string PolicyDrawers = "pm-34804-policy-drawers";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
-    public const string PM36859RefactorOrgCollectionsVaultComponent = "pm-36859-refactor-org-collections-vault-component";
+    public const string ChangeMemberEmailNoMp = "pm-28365-change-member-email-no-mp";
+    public const string PM34423StagedStatus = "pm-34423-staged-status";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -166,12 +163,14 @@ public static class FeatureFlagKeys
     public const string DevicesLastActivityDate = "pm-4516-devices-add-last-activity-date";
     public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
     public const string PM37165_RotateUserApiKeyCommand = "pm-37165-rotate-user-api-key-command";
+    public const string PM30806_SelfServiceChangeEmailCommand = "pm-30806-self-service-change-email-command";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
     public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
     public const string EnableAutofillTriage = "enable-autofill-triage";
+    public const string PM39071_DefaultPasswordManagerPrompt = "pm-39071-default-password-manager-prompt";
 
     /* Desktop Native Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
@@ -259,7 +258,6 @@ public static class FeatureFlagKeys
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
-    public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
     public const string PM28191_CipherAdminOpsToSdk = "pm-28191-cipher-admin-ops-to-sdk";
@@ -278,12 +276,12 @@ public static class FeatureFlagKeys
     public const string PM37785_VaultBatchBar = "pm-37785-vault-batch-bar";
     public const string PM37785_DesktopVaultBatchBar = "pm-37785-desktop-vault-batch-bar";
     public const string PM29968_FillAfterSave = "pm-29968-fill-after-save";
+    public const string PM32380_BtnTextAddCreate = "pm-32380-btn-text-add-create";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
 
     /* Innovation Team */
-    public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
     /* DIRT Team */
     public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";

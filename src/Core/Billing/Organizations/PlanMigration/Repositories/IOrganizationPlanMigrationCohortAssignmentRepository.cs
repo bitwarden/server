@@ -26,4 +26,19 @@ public interface IOrganizationPlanMigrationCohortAssignmentRepository
     /// single atomic statement and returns the Insert/Update/Unassign counts. MSSQL/Dapper only.
     /// </summary>
     Task<CohortBulkAssignmentSummary> SyncManyAsync(IEnumerable<ResolvedCohortBulkAssignmentRow> rows);
+
+    /// <summary>
+    /// Returns a single bounded keyset page of export rows for the given cohort, joined to the
+    /// organization to surface <see cref="CohortAssignmentExportRow.OrganizationName"/>. Rows are
+    /// ordered by <c>(CreationDate, Id)</c> using the provider's native ordering; the cursor is only
+    /// internally consistent (the seek matches the ORDER BY on a given provider). Row order is not
+    /// guaranteed identical across databases, which is acceptable because the export is consumed as
+    /// a download. A page shorter than <paramref name="take"/> signals the end.
+    /// </summary>
+    /// <param name="cohortId">The cohort whose assignments to export.</param>
+    /// <param name="afterCreationDate">Exclusive lower bound on <c>CreationDate</c>; null for the first page.</param>
+    /// <param name="afterId">Tiebreaker lower bound on <c>Id</c> when <c>CreationDate</c> ties; null for the first page.</param>
+    /// <param name="take">Maximum number of rows to return.</param>
+    Task<IReadOnlyList<CohortAssignmentExportRow>> GetExportRowsByCohortIdAsync(
+        Guid cohortId, DateTime? afterCreationDate, Guid? afterId, int take);
 }

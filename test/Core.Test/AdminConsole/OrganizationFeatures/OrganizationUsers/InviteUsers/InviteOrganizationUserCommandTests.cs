@@ -1,4 +1,5 @@
 ﻿using System.Net.Mail;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -489,7 +490,7 @@ public class InviteOrganizationUserCommandTests
 
         await orgRepository.Received(1).IncrementSeatCountAsync(organization.Id, passwordManagerUpdate.SeatsRequiredToAdd, request.PerformedAt.UtcDateTime);
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(x => x.Seats == passwordManagerUpdate.UpdatedSeatTotal));
     }
@@ -670,7 +671,7 @@ public class InviteOrganizationUserCommandTests
         // PM revert
         await orgRepository.Received(1).ReplaceAsync(Arg.Any<Organization>());
 
-        await sutProvider.GetDependency<IApplicationCacheService>().Received(2)
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>().Received(2)
             .UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
     }
 

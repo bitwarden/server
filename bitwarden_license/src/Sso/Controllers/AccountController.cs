@@ -18,6 +18,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Bit.Sso.Exceptions;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using Duende.IdentityModel;
@@ -291,18 +292,55 @@ public class AccountController : Controller
                 ? result.Properties.Items["user_identifier"]
                 : null;
 
-            var (resolvedUser, foundOrganization, foundOrCreatedOrgUser) =
-                await CreateUserAndOrgUserConditionallyAsync(
-                    provider,
-                    providerUserId,
-                    claims,
-                    userIdentifier,
-                    ssoConfigData);
-#nullable restore
+            try
+            {
+                var (resolvedUser, foundOrganization, foundOrCreatedOrgUser) =
+                    await CreateUserAndOrgUserConditionallyAsync(
+                        provider,
+                        providerUserId,
+                        claims,
+                        userIdentifier,
+                        ssoConfigData);
 
-            possibleSsoLinkedUser = resolvedUser;
-            organization = foundOrganization;
-            orgUser = foundOrCreatedOrgUser;
+                possibleSsoLinkedUser = resolvedUser;
+                organization = foundOrganization;
+                orgUser = foundOrCreatedOrgUser;
+            }
+            catch (SsoAuthnRequiresInviteAcceptanceException ex)
+            {
+                // Clean up external auth cookie so retry attempts start fresh.
+                // Mirrors the success path's cleanup at the end of ExternalCallback.
+                await HttpContext.SignOutAsync(
+                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+
+                var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+                    _globalSettings.BaseServiceUri.VaultWithHash,
+                    ex.UserEmail,
+                    ex.OrganizationId,
+                    ex.OrganizationDisplayName,
+                    SsoRedirectUrlBuilder.ErrorCodes.InviteAcceptanceRequired);
+
+                return Redirect(redirectUrl);
+            }
+            catch (SsoAuthnRequiresOrgMembershipException ex)
+            {
+                // Same cleanup + redirect contract as the invite-acceptance catch above,
+                // but emits the OrgMembershipRequired errorCode so the client can dispatch
+                // its own match/no-match split (see SsoAuthnRequiresOrgMembershipException
+                // for the two scenarios that converge here).
+                await HttpContext.SignOutAsync(
+                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+
+                var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+                    _globalSettings.BaseServiceUri.VaultWithHash,
+                    ex.UserEmail,
+                    ex.OrganizationId,
+                    ex.OrganizationDisplayName,
+                    SsoRedirectUrlBuilder.ErrorCodes.OrgMembershipRequired);
+
+                return Redirect(redirectUrl);
+            }
+#nullable restore
         }
 
         User resolvedSsoLinkedUser = possibleSsoLinkedUser
@@ -530,15 +568,26 @@ public class AccountController : Controller
                 throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
             }
 
-            OrganizationUser guaranteedOrgUser = possibleOrgUser ?? throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
+            OrganizationUser guaranteedOrgUser = possibleOrgUser ?? throw new SsoAuthnRequiresOrgMembershipException(
+                organization.Id,
+                organization.DisplayName(),
+                guaranteedExistingUser.Email);
 
             /*
              * ----------------------------------------------------
              *              Critical Code Check Here
              *
              * We want to ensure a user is not in the invited state
-             * explicitly. User's in the invited state should not
-             * be able to authenticate via SSO.
+             * explicitly. Users in the invited state cannot complete
+             * SSO authentication. Instead of failing with a server
+             * error page, we throw a typed exception so the SSO
+             * callback can redirect the user back to the web client's
+             * /login with a toast prompting them to sign in with their
+             * master password and accept the invite first.
+             *
+             * The security-critical property is unchanged: no SsoUser
+             * row is written and no auth session is established for
+             * invited users.
              *
              * See internal doc called "Added Context for SSO Login
              * Flows" for further details.
@@ -546,9 +595,15 @@ public class AccountController : Controller
              */
             if (guaranteedOrgUser.Status == OrganizationUserStatusType.Invited)
             {
-                // Org User is invited – must accept via email first
-                throw new Exception(
-                    _i18nService.T("AcceptInviteBeforeUsingSSO", organization.DisplayName()));
+                // Org User is invited – must accept via email first.
+                // Use the existing User's email (non-nullable, canonical) rather than the
+                // OrganizationUser's invite-target email (nullable) — they refer to the
+                // same person in this scenario, and the existing user's email is what
+                // the redirected login form will pre-fill.
+                throw new SsoAuthnRequiresInviteAcceptanceException(
+                    organization.Id,
+                    organization.DisplayName(),
+                    guaranteedExistingUser.Email);
             }
 
             // If the user already exists in Bitwarden, we require that the user already be in the org,
