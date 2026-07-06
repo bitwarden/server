@@ -177,6 +177,7 @@ public class SubscriptionInfo
             {
                 if (item.Plan != null)
                 {
+                    PriceId = item.Price?.Id;
                     ProductId = item.Plan.ProductId;
                     Name = item.Plan.Nickname;
                     Amount = ConvertFromStripeMinorUnits(item.Plan.Amount) ?? 0;
@@ -193,6 +194,9 @@ public class SubscriptionInfo
             }
 
             public bool AddonSubscriptionItem { get; set; }
+
+            /// <summary>Internal only; not mapped to the API response. Used to match a line to a plan's price.</summary>
+            public string? PriceId { get; set; }
             public string? ProductId { get; set; }
             public string? Name { get; set; }
             public decimal Amount { get; set; }
