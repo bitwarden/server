@@ -27,9 +27,11 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.Billing.Mocks.Plans;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using OneOf.Types;
+using Stripe;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
@@ -342,5 +344,122 @@ public class OrganizationsControllerTests : IDisposable
         _organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
 
         await Assert.ThrowsAsync<NotFoundException>(() => _sut.PostReinstate(organizationId));
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_CloudOrganizationWithMigrationGrace_PopulatesSmServiceAccountsGrace(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var plan = new EnterprisePlan(isAnnual: true);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ServiceAccountGrace = 30
+            }
+        };
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(subscriptionInfo);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Equal(30, response.SmServiceAccountsGrace);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_CloudOrganizationWithoutGrace_SmServiceAccountsGraceIsZero(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var plan = new EnterprisePlan(isAnnual: true);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ServiceAccountGrace = 0
+            }
+        };
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(subscriptionInfo);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Equal(0, response.SmServiceAccountsGrace);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_SelfHosted_SmServiceAccountsGraceIsNull(
+        Guid organizationId,
+        Organization organization)
+    {
+        _globalSettings.SelfHosted = true;
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.SmServiceAccountsGrace);
+        await _paymentService.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_NoGatewaySubscription_SmServiceAccountsGraceIsNull(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = null;
+        var plan = new EnterprisePlan(isAnnual: true);
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.SmServiceAccountsGrace);
+        await _paymentService.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_WhenHidingSensitiveData_StillPopulatesSmServiceAccountsGrace(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var plan = new EnterprisePlan(isAnnual: true);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ServiceAccountGrace = 30
+            }
+        };
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(false); // hideSensitiveData = true
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(subscriptionInfo);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        // Grace is a non-sensitive count and must survive the hideSensitiveData branch...
+        Assert.Equal(30, response.SmServiceAccountsGrace);
+        // ...while genuinely sensitive data is still hidden.
+        Assert.Null(response.BillingEmail);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Pipeline;
@@ -14,7 +15,8 @@ public sealed record SeederDependencies(
     DatabaseContext Db,
     IMapper Mapper,
     IPasswordHasher<User> PasswordHasher,
-    IManglerService ManglerService)
+    IManglerService ManglerService,
+    ILicensingService LicensingService)
 {
     /// <summary>
     /// Optional progress reporter. When null, the pipeline runs silently.

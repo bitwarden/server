@@ -63,4 +63,5 @@ public interface IStripeAdapter
     Task<SubscriptionSchedule> UpdateSubscriptionScheduleAsync(string id, SubscriptionScheduleUpdateOptions options);
     Task<SubscriptionSchedule> ReleaseSubscriptionScheduleAsync(string id, SubscriptionScheduleReleaseOptions options = null);
     Task<TestClock> GetTestClockAsync(string testClockId, TestClockGetOptions options = null);
+    Task WaitForTestClockToAdvanceAsync(TestClock testClock);
 }
