@@ -1,7 +1,9 @@
 ﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 public record OrganizationInviteLinkStatus(
+    Guid OrganizationId,
     string OrganizationName,
+    bool LinksEnabled,
     bool SeatsAvailable,
     OrganizationInviteLinkSsoStatus? Sso);
 

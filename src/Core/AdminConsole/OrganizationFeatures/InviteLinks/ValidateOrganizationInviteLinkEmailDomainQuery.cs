@@ -9,7 +9,7 @@ public class ValidateOrganizationInviteLinkEmailDomainQuery(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository)
     : IValidateOrganizationInviteLinkEmailDomainQuery
 {
-    public async Task<CommandResult<bool>> ValidateAsync(Guid code, string email)
+    public async Task<CommandResult<OrganizationInviteLinkEmailDomainStatus>> ValidateAsync(Guid code, string email)
     {
         var link = await organizationInviteLinkRepository.GetByCodeAsync(code);
         if (link is null)
@@ -17,6 +17,7 @@ public class ValidateOrganizationInviteLinkEmailDomainQuery(
             return new InviteLinkNotFound();
         }
 
-        return InviteLinkDomainValidator.IsEmailDomainAllowed(email, link.GetAllowedDomains());
+        var isAllowed = InviteLinkDomainValidator.IsEmailDomainAllowed(email, link.GetAllowedDomains());
+        return new OrganizationInviteLinkEmailDomainStatus(link.OrganizationId, isAllowed);
     }
 }

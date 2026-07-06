@@ -32,7 +32,8 @@ public class GetOrganizationInviteLinkStatusQuery(
 
         if (!organization.UseInviteLinks)
         {
-            return new InviteLinkNotAvailable();
+            return new OrganizationInviteLinkStatus(
+                organization.Id, organization.Name, LinksEnabled: false, SeatsAvailable: false, Sso: null);
         }
 
         var occupied = (await organizationRepository
@@ -41,7 +42,8 @@ public class GetOrganizationInviteLinkStatusQuery(
 
         var sso = seatsAvailable ? await GetSsoStatusAsync(organization) : null;
 
-        return new OrganizationInviteLinkStatus(organization.Name, seatsAvailable, sso);
+        return new OrganizationInviteLinkStatus(
+            organization.Id, organization.Name, LinksEnabled: true, seatsAvailable, sso);
     }
 
     private async Task<OrganizationInviteLinkSsoStatus?> GetSsoStatusAsync(Organization organization)

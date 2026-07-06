@@ -1,3 +1,3 @@
 ﻿namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
-public record OrganizationInviteLinkValidateEmailDomainResponseModel(bool IsAllowed);
+public record OrganizationInviteLinkValidateEmailDomainResponseModel(Guid OrganizationId, bool IsAllowed);

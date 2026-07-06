@@ -95,6 +95,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.Equal(HttpStatusCode.OK, validateResponse.StatusCode);
         var result = await validateResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkValidateEmailDomainResponseModel>();
         Assert.NotNull(result);
+        Assert.Equal(_organization.Id, result.OrganizationId);
         Assert.True(result.IsAllowed);
     }
 
@@ -262,7 +263,9 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
         var status = await statusResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkStatusResponseModel>();
         Assert.NotNull(status);
+        Assert.Equal(_organization.Id, status.OrganizationId);
         Assert.Equal(_organization.Name, status.OrganizationName);
+        Assert.True(status.LinksEnabled);
         Assert.True(status.SeatsAvailable);
     }
 
