@@ -341,6 +341,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UsePam")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("boolean");
 
@@ -399,11 +402,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("EncryptedInviteKey")
+                    b.Property<string>("Invite")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("EncryptedOrgKey")
                         .HasColumnType("text");
 
                     b.Property<Guid>("OrganizationId")
@@ -411,6 +411,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("SupportsConfirmation")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -1060,6 +1063,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("CohortId", "CreationDate", "Id")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")
@@ -1831,6 +1837,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("smallint");
 
                     b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<short?>("StatusNew")
                         .HasColumnType("smallint");
 
                     b.Property<byte>("Type")
