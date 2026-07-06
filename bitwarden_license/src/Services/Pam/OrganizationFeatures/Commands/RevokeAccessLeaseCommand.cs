@@ -5,6 +5,7 @@ using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Pam.Services;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.Rotation.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
@@ -16,7 +17,9 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
+    private readonly IHandleAccessGrantEndedCommand _handleAccessGrantEndedCommand;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<RevokeAccessLeaseCommand> _logger;
 
     public RevokeAccessLeaseCommand(
         IAccessLeaseRepository accessLeaseRepository,
@@ -24,14 +27,18 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
         IAccessAuditEventEmitter accessAuditEventEmitter,
-        TimeProvider timeProvider)
+        IHandleAccessGrantEndedCommand handleAccessGrantEndedCommand,
+        TimeProvider timeProvider,
+        ILogger<RevokeAccessLeaseCommand> logger)
     {
         _accessLeaseRepository = accessLeaseRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
         _accessAuditEventEmitter = accessAuditEventEmitter;
+        _handleAccessGrantEndedCommand = handleAccessGrantEndedCommand;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     public async Task RevokeAsync(Guid userId, Guid leaseId, string? reason)
@@ -92,6 +99,20 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         await _accessLeaseRepository.RevokeAsync(lease, endStatus, auditDecision, now);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+
+        // Both a holder self-end and an operator revoke are grant-ends (spec RotateOnAccessEnd /
+        // RaiseManualObligationOnAccessEnd); the handler self-gates on the PamRotation flag. A failure here must
+        // never fail the revoke itself -- the lease has already ended -- so it is logged and swallowed.
+        try
+        {
+            await _handleAccessGrantEndedCommand.HandleAsync(lease.CipherId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to trigger the rotation access-end handler for cipher {CipherId} after revoking lease {AccessLeaseId}.",
+                lease.CipherId, lease.Id);
+        }
 
         // The active lease just drained; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
