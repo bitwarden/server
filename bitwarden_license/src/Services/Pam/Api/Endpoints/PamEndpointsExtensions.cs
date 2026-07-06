@@ -1,15 +1,14 @@
-﻿using Bit.Services.Pam.Api.Endpoints.Filters;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Models.Api;
+using Bit.Services.Pam.Api.Endpoints.Filters;
 
 namespace Bit.Services.Pam.Api.Endpoints;
 
 /// <summary>
 /// Maps the PAM HTTP surface as Minimal API endpoint groups. Each resource group shares the same cross-cutting
 /// chain — authorization, exception → <c>ErrorResponseModel</c> translation, the PAM feature gate, and request-model
-/// validation — reproducing what the MVC controllers received from attributes and conventions. Routes are identical
-/// to the controllers they replace.
+/// validation.
 /// </summary>
 public static class PamEndpointsExtensions
 {

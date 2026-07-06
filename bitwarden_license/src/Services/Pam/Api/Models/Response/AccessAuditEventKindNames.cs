@@ -3,8 +3,8 @@
 namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
-/// Maps <see cref="AccessAuditEventKind"/> to the string vocabulary the governance client expects, mirroring
-/// <see cref="AccessLeaseStatusNames"/> for leases. The projection emits the request, lease, and rule administration
+/// Maps <see cref="AccessAuditEventKind"/> to the string vocabulary the governance client expects. The projection
+/// emits the request, lease, and rule administration
 /// kinds today; the remaining names (credential access, system controls) are defined so the contract stays stable as
 /// those kinds come online.
 /// </summary>

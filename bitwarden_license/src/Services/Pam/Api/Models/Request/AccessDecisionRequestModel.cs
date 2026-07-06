@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Services.Pam.Models;
-using Bit.Pam.Enums;
 
 namespace Bit.Services.Pam.Api.Models.Request;
 
@@ -11,15 +10,21 @@ namespace Bit.Services.Pam.Api.Models.Request;
 /// </summary>
 public class AccessDecisionRequestModel
 {
+    /// <summary>
+    /// The approver's verdict on the request: deny (<c>0</c>) or approve (<c>1</c>). Required.
+    /// </summary>
     [Required]
     [EnumDataType(typeof(AccessDecisionVerdict))]
     public AccessDecisionVerdict? Verdict { get; set; }
 
+    /// <summary>
+    /// An optional note recorded with the decision — for example the reason for a denial. Surfaced to the requester.
+    /// </summary>
     public string? Comment { get; set; }
 
     public AccessDecisionSubmission ToSubmission() => new()
     {
-        Verdict = Verdict!.Value,
+        Verdict = Verdict!.Value.ToDomainVerdict(),
         Comment = Comment,
     };
 }

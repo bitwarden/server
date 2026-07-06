@@ -14,7 +14,7 @@ public class AccessRequestResponseModel : ResponseModel
         CipherId = request.CipherId;
         CollectionId = request.CollectionId;
         OrganizationId = request.OrganizationId;
-        Status = AccessRequestStatusNames.From(request.Status, hasLease: false);
+        Status = request.Status.ToApiStatus(hasLease: false);
         LeaseNotBefore = request.NotBefore.AsUtc();
         LeaseNotAfter = request.NotAfter.AsUtc();
         Reason = request.Reason;
@@ -26,8 +26,8 @@ public class AccessRequestResponseModel : ResponseModel
     public Guid CollectionId { get; }
     public Guid OrganizationId { get; }
 
-    /// <summary><c>pending | approved | activated | denied | cancelled | expired</c>.</summary>
-    public string Status { get; }
+    /// <summary>The request's lifecycle state.</summary>
+    public AccessRequestStatus Status { get; }
 
     /// <summary>The activation window resolved at submit — when this request may be promoted to a lease.</summary>
     public DateTime LeaseNotBefore { get; }

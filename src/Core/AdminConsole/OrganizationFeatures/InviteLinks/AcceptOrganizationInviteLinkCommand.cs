@@ -34,7 +34,8 @@ public class AcceptOrganizationInviteLinkCommand(
     IMailService mailService,
     IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
-    ILogger<AcceptOrganizationInviteLinkCommand> logger)
+    ILogger<AcceptOrganizationInviteLinkCommand> logger,
+    IEventService eventService)
     : IAcceptOrganizationInviteLinkCommand
 {
     public async Task<CommandResult<OrganizationUser>> AcceptAsync(AcceptOrganizationInviteLinkRequest request)
@@ -109,6 +110,8 @@ public class AcceptOrganizationInviteLinkCommand(
         {
             return acceptResult;
         }
+
+        await eventService.LogOrganizationUserEventAsync(acceptResult.AsSuccess, EventType.OrganizationUser_InviteLinkAccepted);
 
         await PerformPostAcceptSideEffectsAsync(organization, user, autoEnrollEnabled, request.ResetPasswordKey, autoConfirmPolicyEnabled);
 

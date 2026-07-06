@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using Bit.Services.Pam.Api.Models;
 using Bit.Services.Pam.Api.Models.Request;
-using Bit.Pam.Enums;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Api.Models;
@@ -20,7 +20,7 @@ public class AccessDecisionRequestModelTests
 
         Assert.NotNull(model);
         Assert.Equal(expected, model!.Verdict);
-        Assert.Equal(expected, model.ToSubmission().Verdict);
+        Assert.Equal(expected.ToDomainVerdict(), model.ToSubmission().Verdict);
     }
 
     [Theory]

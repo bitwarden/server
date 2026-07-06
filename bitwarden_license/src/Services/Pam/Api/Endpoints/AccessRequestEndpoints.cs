@@ -6,7 +6,7 @@ namespace Bit.Services.Pam.Api.Endpoints;
 
 /// <summary>
 /// The <c>access-requests</c> resource: lease requests through their lifecycle (the requester's own queue plus the
-/// approver's queue and decision). Mirrors the routes the former <c>AccessRequestsController</c> served.
+/// approver's queue and decision).
 /// </summary>
 internal static class AccessRequestEndpoints
 {

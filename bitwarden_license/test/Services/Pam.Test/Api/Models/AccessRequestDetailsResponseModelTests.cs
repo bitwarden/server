@@ -2,6 +2,7 @@
 using Bit.Pam.Models;
 using Bit.Services.Pam.Api.Models.Response;
 using Xunit;
+using ApiEnums = Bit.Services.Pam.Api.Models;
 
 namespace Bit.Services.Pam.Test.Api.Models;
 
@@ -85,12 +86,12 @@ public class AccessRequestDetailsResponseModelTests
         var model = new AccessRequestDetailsResponseModel(details);
 
         var decision = Assert.Single(model.Decisions);
-        Assert.Equal(AccessDeciderKindNames.Human, decision.DeciderKind);
+        Assert.Equal(ApiEnums.DeciderKind.Human, decision.DeciderKind);
         Assert.Equal(approverId, decision.Id!.Value);
         Assert.Equal("Ada Approver", decision.Name);
         Assert.Equal("ada@example.com", decision.Email);
         Assert.Equal("Outside approved hours", decision.Comment);
-        Assert.Equal(AccessDecisionVerdict.Deny, decision.Verdict);
+        Assert.Equal(ApiEnums.AccessDecisionVerdict.Deny, decision.Verdict);
         Assert.Equal(decidedAt.Ticks, decision.DecidedAt.Ticks);
         Assert.Equal(DateTimeKind.Utc, decision.DecidedAt.Kind);
     }
@@ -98,7 +99,7 @@ public class AccessRequestDetailsResponseModelTests
     [Fact]
     public void Ctor_MapsAutomaticDecisionWithNoApproverIdentity()
     {
-        // An automatic (access-rule) decision is surfaced like any other, but with deciderKind "automatic" and no
+        // An automatic (access-rule) decision is surfaced like any other, but with an Automatic decider kind and no
         // approver identity — the client renders it as a rule-driven decision rather than a person.
         var unspecified = new DateTime(2026, 6, 15, 13, 0, 0, DateTimeKind.Unspecified);
         var details = new AccessRequestDetails
@@ -123,10 +124,10 @@ public class AccessRequestDetailsResponseModelTests
         var model = new AccessRequestDetailsResponseModel(details);
 
         var decision = Assert.Single(model.Decisions);
-        Assert.Equal(AccessDeciderKindNames.Automatic, decision.DeciderKind);
+        Assert.Equal(ApiEnums.DeciderKind.Automatic, decision.DeciderKind);
         Assert.Null(decision.Id);
         Assert.Null(decision.Name);
-        Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
+        Assert.Equal(ApiEnums.AccessDecisionVerdict.Approve, decision.Verdict);
     }
 
     [Fact]

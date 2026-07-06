@@ -1,16 +1,16 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Services;
+using Bit.HttpExtensions;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Core.Services;
-using Bit.HttpExtensions;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>access-requests</c> resource. Holds the logic the <c>AccessRequestsController</c> previously
-/// hosted; the Minimal API endpoints (see <c>AccessRequestEndpoints</c>) resolve this handler from DI.
+/// Handler for the <c>access-requests</c> resource. The Minimal API endpoints (see <c>AccessRequestEndpoints</c>)
+/// resolve this handler from DI.
 /// </summary>
 public class AccessRequestEndpointsHandler(
     IUserService userService,

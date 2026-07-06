@@ -1,18 +1,18 @@
 ﻿using System.Security.Claims;
-using Bit.Services.Pam.Api.Endpoints.Handlers;
-using Bit.Services.Pam.Api.Models.Request;
-using Bit.Services.Pam.Api.Models.Response;
-using Bit.Services.Pam.Models;
-using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Endpoints.Handlers;
+using Bit.Services.Pam.Api.Models.Request;
+using Bit.Services.Pam.Models;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using ApiEnums = Bit.Services.Pam.Api.Models;
 
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
@@ -60,7 +60,7 @@ public class AccessRequestEndpointsHandlerTests
 
         Assert.Single(result);
         Assert.Equal(row.Id, result[0].Id);
-        Assert.Equal(AccessRequestStatusNames.Pending, result[0].Status);
+        Assert.Equal(ApiEnums.AccessRequestStatus.Pending, result[0].Status);
     }
 
     [Theory, BitAutoData]
@@ -81,14 +81,14 @@ public class AccessRequestEndpointsHandlerTests
     {
         SetupUser(sutProvider, userId);
         details.Status = AccessRequestStatus.Approved;
-        // A non-null produced lease would make the response model report "activated"; null keeps the mapped status.
+        // A non-null produced lease would make the response model report Activated; null keeps the mapped status.
         details.ProducedLeaseId = null;
         sutProvider.GetDependency<IGetAccessRequestDetailsQuery>().GetDetailsAsync(userId, requestId).Returns(details);
 
         var result = await sutProvider.Sut.GetDetails(_user, requestId);
 
         Assert.Equal(details.Id, result.Id);
-        Assert.Equal(AccessRequestStatusNames.Approved, result.Status);
+        Assert.Equal(ApiEnums.AccessRequestStatus.Approved, result.Status);
     }
 
     [Theory, BitAutoData]
@@ -102,10 +102,10 @@ public class AccessRequestEndpointsHandlerTests
             .DecideAsync(userId, requestId, Arg.Any<AccessDecisionSubmission>())
             .Returns(updated);
 
-        var result = await sutProvider.Sut.Decide(_user, requestId, new AccessDecisionRequestModel { Verdict = AccessDecisionVerdict.Approve });
+        var result = await sutProvider.Sut.Decide(_user, requestId, new AccessDecisionRequestModel { Verdict = ApiEnums.AccessDecisionVerdict.Approve });
 
         Assert.Equal(updated.Id, result.Id);
-        Assert.Equal(AccessRequestStatusNames.Approved, result.Status);
+        Assert.Equal(ApiEnums.AccessRequestStatus.Approved, result.Status);
     }
 
     [Theory, BitAutoData]
@@ -121,7 +121,7 @@ public class AccessRequestEndpointsHandlerTests
         var result = await sutProvider.Sut.Activate(_user, requestId);
 
         Assert.Equal(lease.Id, result.Id);
-        Assert.Equal(AccessLeaseStatusNames.Active, result.Status);
+        Assert.Equal(ApiEnums.AccessLeaseStatus.Active, result.Status);
     }
 
     [Theory, BitAutoData]

@@ -1,8 +1,9 @@
-﻿using Bit.Services.Pam.Api.Models.Response;
-using Bit.Pam.Entities;
+﻿using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Services.Pam.Api.Models.Response;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
+using ApiEnums = Bit.Services.Pam.Api.Models;
 
 namespace Bit.Services.Pam.Test.Api.Models;
 
@@ -21,7 +22,7 @@ public class AccessLeaseResponseModelTests
         Assert.Equal(lease.CollectionId, model.CollectionId);
         Assert.Equal(lease.OrganizationId, model.OrganizationId);
         Assert.Equal(lease.RequesterId, model.RequesterId);
-        Assert.Equal(AccessLeaseStatusNames.Active, model.Status);
+        Assert.Equal(ApiEnums.AccessLeaseStatus.Active, model.Status);
         Assert.Equal(lease.NotBefore, model.NotBefore);
         Assert.Equal(lease.NotAfter, model.NotAfter);
         Assert.Equal(lease.RevokedDate, model.RevokedAt);

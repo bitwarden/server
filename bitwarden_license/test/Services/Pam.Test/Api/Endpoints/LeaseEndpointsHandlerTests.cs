@@ -1,18 +1,18 @@
 ﻿using System.Security.Claims;
-using Bit.Services.Pam.Api.Endpoints.Handlers;
-using Bit.Services.Pam.Api.Models.Request;
-using Bit.Services.Pam.Api.Models.Response;
-using Bit.Services.Pam.Models;
-using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Endpoints.Handlers;
+using Bit.Services.Pam.Api.Models.Request;
+using Bit.Services.Pam.Models;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using ApiEnums = Bit.Services.Pam.Api.Models;
 
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
@@ -33,7 +33,7 @@ public class LeaseEndpointsHandlerTests
 
         Assert.Single(result);
         Assert.Equal(lease.Id, result[0].Id);
-        Assert.Equal(AccessLeaseStatusNames.Active, result[0].Status);
+        Assert.Equal(ApiEnums.AccessLeaseStatus.Active, result[0].Status);
     }
 
     [Theory, BitAutoData]
@@ -60,7 +60,7 @@ public class LeaseEndpointsHandlerTests
 
         Assert.Single(result);
         Assert.Equal(lease.Id, result[0].Id);
-        Assert.Equal(AccessLeaseStatusNames.Revoked, result[0].Status);
+        Assert.Equal(ApiEnums.AccessLeaseStatus.Revoked, result[0].Status);
     }
 
     [Theory, BitAutoData]
@@ -75,7 +75,7 @@ public class LeaseEndpointsHandlerTests
 
         Assert.Single(result);
         Assert.Equal(lease.Id, result[0].Id);
-        Assert.Equal(AccessLeaseStatusNames.Active, result[0].Status);
+        Assert.Equal(ApiEnums.AccessLeaseStatus.Active, result[0].Status);
     }
 
     [Theory, BitAutoData]
@@ -96,7 +96,7 @@ public class LeaseEndpointsHandlerTests
     {
         SetupUser(sutProvider, userId);
         details.Status = AccessRequestStatus.Approved;
-        details.ProducedLeaseId = null; // an extension produces no lease of its own, so the status stays "approved"
+        details.ProducedLeaseId = null; // an extension produces no lease of its own, so the status stays Approved
         sutProvider.GetDependency<IRequestLeaseExtensionCommand>()
             .ExtendAsync(userId, Arg.Any<AccessLeaseExtensionSubmission>())
             .Returns(details);
@@ -104,7 +104,7 @@ public class LeaseEndpointsHandlerTests
         var result = await sutProvider.Sut.Extend(_user, leaseId, model);
 
         Assert.Equal(details.Id, result.Id);
-        Assert.Equal(AccessRequestStatusNames.Approved, result.Status);
+        Assert.Equal(ApiEnums.AccessRequestStatus.Approved, result.Status);
         Assert.Equal(details.ExtensionOfLeaseId, result.ExtensionOfLeaseId);
         await sutProvider.GetDependency<IRequestLeaseExtensionCommand>().Received(1).ExtendAsync(
             userId,
