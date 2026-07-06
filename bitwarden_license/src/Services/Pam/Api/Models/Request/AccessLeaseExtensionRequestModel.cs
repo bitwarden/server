@@ -11,7 +11,7 @@ public class AccessLeaseExtensionRequestModel
 {
     /// <summary>
     /// How far the lease's end is pushed out, in seconds. Must be positive and no longer than the governing rule's
-    /// maximum extension duration (enforced server-side against the resolved rule).
+    /// maximum extension duration.
     /// </summary>
     [Range(1, int.MaxValue)]
     public int DurationSeconds { get; set; }
