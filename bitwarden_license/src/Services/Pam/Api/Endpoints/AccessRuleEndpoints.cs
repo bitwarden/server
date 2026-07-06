@@ -4,8 +4,8 @@ using Bit.Services.Pam.Api.Models.Request;
 namespace Bit.Services.Pam.Api.Endpoints;
 
 /// <summary>
-/// The <c>organizations/{orgId}/access-rules</c> resource: rule CRUD scoped to an organization. Mirrors the routes
-/// the former <c>AccessRulesController</c> served. <c>orgId</c> is bound from the group's route prefix.
+/// The <c>organizations/{orgId}/access-rules</c> resource: rule CRUD scoped to an organization. <c>orgId</c> is
+/// bound from the group's route prefix.
 /// </summary>
 internal static class AccessRuleEndpoints
 {

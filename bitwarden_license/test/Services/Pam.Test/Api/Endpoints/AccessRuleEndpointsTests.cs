@@ -23,9 +23,9 @@ public class AccessRuleEndpointsTests
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
         var builder = WebApplication.CreateSlimBuilder();
-        // Every handler must be a known service so Minimal API binding treats the handler parameter as injected
-        // (not an inferred request body) — the same registration AddPamServices performs in the app. MapPamEndpoints
-        // maps the full PAM surface, so all handlers must be registered for the data sources to materialize.
+        // The handlers must be known services so Minimal API binding treats the handler parameter as injected
+        // (not an inferred request body) — the same registration AddPamServices performs in the app.
+        // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
         builder.Services.AddScoped<LeaseEndpointsHandler>();
         builder.Services.AddScoped<AuditEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();

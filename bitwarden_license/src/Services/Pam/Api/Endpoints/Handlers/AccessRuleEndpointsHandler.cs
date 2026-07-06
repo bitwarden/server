@@ -1,17 +1,16 @@
-﻿using Bit.Services.Pam.Api.Models.Request;
-using Bit.Services.Pam.Api.Models.Response;
-using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.HttpExtensions;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Api.Models.Request;
+using Bit.Services.Pam.Api.Models.Response;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>organizations/{orgId}/access-rules</c> resource. Holds the logic the
-/// <c>AccessRulesController</c> previously hosted; the Minimal API endpoints (see <c>AccessRuleEndpoints</c>)
-/// resolve this handler from DI.
+/// Handler for the <c>organizations/{orgId}/access-rules</c> resource. The Minimal API endpoints (see
+/// <c>AccessRuleEndpoints</c>) resolve this handler from DI.
 /// </summary>
 public class AccessRuleEndpointsHandler(
     ICurrentContext currentContext,
