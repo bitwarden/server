@@ -5,6 +5,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.Identity.IdentityServer;
@@ -56,18 +57,18 @@ public class RefreshTokenGrantTests : IClassFixture<IdentityApplicationFactory>
         requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         var localFactory = new IdentityApplicationFactory();
 
-        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
+        await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
 
         var (_, refreshToken) = await localFactory.TokenFromPasswordAsync(
             requestModel.Email, requestModel.MasterPasswordHash);
 
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "grant_type", "refresh_token" },
-                { "client_id", "web" },
-                { "refresh_token", refreshToken },
-            }));
+        using var formContent = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "client_id", "web" },
+            { "refresh_token", refreshToken },
+        });
+        var context = await localFactory.Server.PostAsync("/connect/token", formContent);
 
         using var body = await AssertDefaultTokenBodyAsync(context);
         AssertRefreshTokenExists(body.RootElement);
@@ -104,13 +105,13 @@ public class RefreshTokenGrantTests : IClassFixture<IdentityApplicationFactory>
         await organizationUserRepository.DeleteAsync(membership);
 
         // Refresh the token: the rebuilt token reflects current membership, so the organization claim is gone.
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "grant_type", "refresh_token" },
-                { "client_id", "web" },
-                { "refresh_token", refreshToken },
-            }));
+        using var formContent = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "client_id", "web" },
+            { "refresh_token", refreshToken },
+        });
+        var context = await localFactory.Server.PostAsync("/connect/token", formContent);
 
         using var body = await AssertDefaultTokenBodyAsync(context);
         var refreshedAccessToken = AssertAccessTokenExists(body.RootElement);
@@ -118,11 +119,106 @@ public class RefreshTokenGrantTests : IClassFixture<IdentityApplicationFactory>
         Assert.False(refreshedClaims.TryGetProperty(Claims.OrganizationOwner, out _));
     }
 
+    /// <summary>
+    /// Membership claims are rebuilt from the database on every token issuance. A Custom-role member's granted
+    /// permissions are carried as individual claims; when a permission is removed, the corresponding claim must
+    /// not be re-issued on refresh.
+    /// </summary>
+    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
+    public async Task RefreshToken_ReflectsRemovedCustomPermission(
+        RegisterFinishRequestModel requestModel)
+    {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
+        var localFactory = new IdentityApplicationFactory();
+
+        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
+
+        // Give the user a Custom membership with the ManageUsers permission granted.
+        var organizationId = Guid.NewGuid();
+        await CreateOrganizationMembershipAsync(localFactory, organizationId, user.Email, OrganizationUserType.Custom,
+            permissions: new Permissions { ManageUsers = true });
+
+        // Initial password login: the access token reflects the granted permission.
+        var (accessToken, refreshToken) = await localFactory.TokenFromPasswordAsync(
+            requestModel.Email, requestModel.MasterPasswordHash);
+        var initialClaims = ReadJwtPayload(accessToken);
+        Assert.True(JwtPayloadContainsClaimValue(initialClaims, Claims.CustomPermissions.ManageUsers, organizationId.ToString()));
+
+        // The ManageUsers permission is removed.
+        var organizationUserRepository = localFactory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var membership = await organizationUserRepository.GetByOrganizationAsync(organizationId, user.Id);
+        Assert.NotNull(membership);
+        membership.SetPermissions(new Permissions { ManageUsers = false });
+        await organizationUserRepository.ReplaceAsync(membership);
+
+        // Refresh the token: the rebuilt token reflects current permissions, so the ManageUsers claim is gone.
+        using var formContent = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "client_id", "web" },
+            { "refresh_token", refreshToken },
+        });
+        var context = await localFactory.Server.PostAsync("/connect/token", formContent);
+
+        using var body = await AssertDefaultTokenBodyAsync(context);
+        var refreshedAccessToken = AssertAccessTokenExists(body.RootElement);
+        var refreshedClaims = ReadJwtPayload(refreshedAccessToken);
+        Assert.False(refreshedClaims.TryGetProperty(Claims.CustomPermissions.ManageUsers, out _));
+    }
+
+    /// <summary>
+    /// Membership claims are rebuilt from the database on every token issuance. Secrets Manager access is granted
+    /// per-organization; when access is removed, the corresponding claim must not be re-issued on refresh.
+    /// </summary>
+    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
+    public async Task RefreshToken_ReflectsRemovedSecretsManagerAccess(
+        RegisterFinishRequestModel requestModel)
+    {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
+        var localFactory = new IdentityApplicationFactory();
+
+        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
+
+        // Give the user Secrets Manager access on the organization.
+        var organizationId = Guid.NewGuid();
+        await CreateOrganizationMembershipAsync(localFactory, organizationId, user.Email, OrganizationUserType.User,
+            accessSecretsManager: true);
+
+        // Initial password login: the access token reflects Secrets Manager access.
+        var (accessToken, refreshToken) = await localFactory.TokenFromPasswordAsync(
+            requestModel.Email, requestModel.MasterPasswordHash);
+        var initialClaims = ReadJwtPayload(accessToken);
+        Assert.True(JwtPayloadContainsClaimValue(initialClaims, Claims.SecretsManagerAccess, organizationId.ToString()));
+
+        // Secrets Manager access is removed.
+        var organizationUserRepository = localFactory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var membership = await organizationUserRepository.GetByOrganizationAsync(organizationId, user.Id);
+        Assert.NotNull(membership);
+        membership.AccessSecretsManager = false;
+        await organizationUserRepository.ReplaceAsync(membership);
+
+        // Refresh the token: the rebuilt token reflects current access, so the Secrets Manager claim is gone.
+        using var formContent = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "client_id", "web" },
+            { "refresh_token", refreshToken },
+        });
+        var context = await localFactory.Server.PostAsync("/connect/token", formContent);
+
+        using var body = await AssertDefaultTokenBodyAsync(context);
+        var refreshedAccessToken = AssertAccessTokenExists(body.RootElement);
+        var refreshedClaims = ReadJwtPayload(refreshedAccessToken);
+        Assert.False(refreshedClaims.TryGetProperty(Claims.SecretsManagerAccess, out _));
+    }
+
     private static async Task CreateOrganizationMembershipAsync(
         IdentityApplicationFactory localFactory,
         Guid organizationId,
         string username,
-        OrganizationUserType organizationUserType)
+        OrganizationUserType organizationUserType,
+        Permissions permissions = null,
+        bool accessSecretsManager = false)
     {
         var userRepository = localFactory.Services.GetRequiredService<IUserRepository>();
         var organizationRepository = localFactory.Services.GetRequiredService<IOrganizationRepository>();
@@ -135,16 +231,24 @@ public class RefreshTokenGrantTests : IClassFixture<IdentityApplicationFactory>
             Enabled = true,
             Plan = "Enterprise",
             BillingEmail = $"billing-email+{organizationId}@example.com",
+            UseSecretsManager = accessSecretsManager,
         });
 
         var user = await userRepository.GetByEmailAsync(username);
-        await organizationUserRepository.CreateAsync(new OrganizationUser
+        var organizationUser = new OrganizationUser
         {
             OrganizationId = organizationId,
             UserId = user.Id,
             Status = OrganizationUserStatusType.Confirmed,
-            Type = organizationUserType
-        });
+            Type = organizationUserType,
+            AccessSecretsManager = accessSecretsManager,
+        };
+        if (permissions != null)
+        {
+            organizationUser.SetPermissions(permissions);
+        }
+
+        await organizationUserRepository.CreateAsync(organizationUser);
     }
 
     /// <summary>
