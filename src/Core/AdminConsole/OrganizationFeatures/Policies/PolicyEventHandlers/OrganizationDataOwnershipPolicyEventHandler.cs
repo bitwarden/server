@@ -1,9 +1,11 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
@@ -11,7 +13,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandler
 public class OrganizationDataOwnershipPolicyEventHandler(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
-    IOrganizationRepository organizationRepository,
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
     : OrganizationPolicyEventHandler(policyRepository, factories), IOnPolicyPostUpdateEvent
 {
@@ -44,16 +46,7 @@ public class OrganizationDataOwnershipPolicyEventHandler(
 
     private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate, string defaultCollectionName)
     {
-        // FIXME: we should use the organizationAbility cache here, but it is currently flaky
-        // and it's not obvious how to handle a cache failure.
-        // https://bitwarden.atlassian.net/browse/PM-32699
-        var organization = await organizationRepository.GetByIdAsync(policyUpdate.OrganizationId);
-        if (organization == null)
-        {
-            throw new InvalidOperationException($"Organization with ID {policyUpdate.OrganizationId} not found.");
-        }
-
-        if (!organization.UseMyItems)
+        if (!await OrganizationUsesMyItemsAsync(policyUpdate.OrganizationId))
         {
             return;
         }
@@ -75,5 +68,16 @@ public class OrganizationDataOwnershipPolicyEventHandler(
             policyUpdate.OrganizationId,
             userOrgIds,
             defaultCollectionName);
+    }
+
+    private async Task<bool> OrganizationUsesMyItemsAsync(Guid organizationId)
+    {
+        var organizationAbility = await organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (organizationAbility == null)
+        {
+            throw new NotFoundException($"Organization with ID {organizationId} not found.");
+        }
+
+        return organizationAbility.UseMyItems;
     }
 }

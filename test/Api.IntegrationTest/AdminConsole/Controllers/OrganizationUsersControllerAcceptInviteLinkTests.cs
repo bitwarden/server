@@ -20,8 +20,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
 
-    private const string _validEncryptedKey =
-        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private const string _invite = "opaque-invite-blob";
 
     private Organization _organization = null!;
     private string _ownerEmail = null!;
@@ -70,7 +69,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["example.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);

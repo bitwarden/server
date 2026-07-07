@@ -37,6 +37,7 @@ public class OrganizationPlanExtensionsTests
         Assert.Equal(targetPlan.HasScim, organization.UseScim);
         Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
         Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
         Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
         Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
         Assert.True(organization.UsePasswordManager);
@@ -49,6 +50,78 @@ public class OrganizationPlanExtensionsTests
         {
             PlanType = PlanType.EnterpriseMonthly2020,
             Plan = "Enterprise (Monthly) 2020"
+        };
+        var targetPlan = new EnterprisePlan(isAnnual: false);
+
+        organization.ChangePlan(targetPlan);
+
+        Assert.Equal(PlanType.EnterpriseMonthly, organization.PlanType);
+        Assert.Equal(targetPlan.Name, organization.Plan);
+        Assert.Equal(targetPlan.HasGroups, organization.UseGroups);
+        Assert.Equal(targetPlan.HasDirectory, organization.UseDirectory);
+        Assert.Equal(targetPlan.HasEvents, organization.UseEvents);
+        Assert.Equal(targetPlan.HasTotp, organization.UseTotp);
+        Assert.Equal(targetPlan.Has2fa, organization.Use2fa);
+        Assert.Equal(targetPlan.HasApi, organization.UseApi);
+        Assert.Equal(targetPlan.HasSelfHost, organization.SelfHost);
+        Assert.Equal(targetPlan.HasPolicies, organization.UsePolicies);
+        Assert.Equal(targetPlan.HasMyItems, organization.UseMyItems);
+        Assert.Equal(targetPlan.HasInviteLinks, organization.UseInviteLinks);
+        Assert.Equal(targetPlan.HasSso, organization.UseSso);
+        Assert.Equal(targetPlan.HasOrganizationDomains, organization.UseOrganizationDomains);
+        Assert.Equal(targetPlan.HasScim, organization.UseScim);
+        Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
+        Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
+        Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
+        Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
+        Assert.True(organization.UsePasswordManager);
+    }
+
+    [Fact]
+    public void ChangePlan_EnterpriseAnnually2019ToEnterpriseAnnually_AppliesStructuralFields()
+    {
+        // Enterprise 2019 -> Current adds and removes NO capability flags (the 2019 set is
+        // already full). This asserts every flag the helper writes lands on the current value,
+        // i.e. nothing in active use is dropped.
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually2019,
+            Plan = "Enterprise (Annually) 2019"
+        };
+        var targetPlan = new EnterprisePlan(isAnnual: true);
+
+        organization.ChangePlan(targetPlan);
+
+        Assert.Equal(PlanType.EnterpriseAnnually, organization.PlanType);
+        Assert.Equal(targetPlan.Name, organization.Plan);
+        Assert.Equal(targetPlan.HasGroups, organization.UseGroups);
+        Assert.Equal(targetPlan.HasDirectory, organization.UseDirectory);
+        Assert.Equal(targetPlan.HasEvents, organization.UseEvents);
+        Assert.Equal(targetPlan.HasTotp, organization.UseTotp);
+        Assert.Equal(targetPlan.Has2fa, organization.Use2fa);
+        Assert.Equal(targetPlan.HasApi, organization.UseApi);
+        Assert.Equal(targetPlan.HasSelfHost, organization.SelfHost);
+        Assert.Equal(targetPlan.HasPolicies, organization.UsePolicies);
+        Assert.Equal(targetPlan.HasMyItems, organization.UseMyItems);
+        Assert.Equal(targetPlan.HasInviteLinks, organization.UseInviteLinks);
+        Assert.Equal(targetPlan.HasSso, organization.UseSso);
+        Assert.Equal(targetPlan.HasOrganizationDomains, organization.UseOrganizationDomains);
+        Assert.Equal(targetPlan.HasScim, organization.UseScim);
+        Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
+        Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
+        Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
+        Assert.True(organization.UsePasswordManager);
+    }
+
+    [Fact]
+    public void ChangePlan_EnterpriseMonthly2019ToEnterpriseMonthly_AppliesStructuralFields()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseMonthly2019,
+            Plan = "Enterprise (Monthly) 2019"
         };
         var targetPlan = new EnterprisePlan(isAnnual: false);
 
@@ -107,6 +180,7 @@ public class OrganizationPlanExtensionsTests
         Assert.Equal(targetPlan.HasScim, organization.UseScim);
         Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
         Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
         Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
         Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
         Assert.True(organization.UsePasswordManager);
@@ -142,6 +216,7 @@ public class OrganizationPlanExtensionsTests
         Assert.Equal(targetPlan.HasScim, organization.UseScim);
         Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
         Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
         Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
         Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
         Assert.True(organization.UsePasswordManager);
@@ -178,6 +253,7 @@ public class OrganizationPlanExtensionsTests
         Assert.Equal(targetPlan.HasScim, organization.UseScim);
         Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
         Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
         Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
         Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
         Assert.True(organization.UsePasswordManager);

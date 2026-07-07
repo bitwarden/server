@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
@@ -11,7 +12,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMem
 public class AcceptOrganizationMembershipValidator(
     IPolicyRequirementQuery policyRequirementQuery,
     IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
-    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+    IPolicyQuery policyQuery)
     : IAcceptOrganizationMembershipValidator
 {
     public async Task<ValidationResult<AcceptOrganizationMembershipValidationResult>> ValidateAsync(
@@ -54,9 +56,12 @@ public class AcceptOrganizationMembershipValidator(
             }
         }
 
+        var autoConfirmPolicyStatus = await policyQuery.RunAsync(
+            request.OrganizationId, PolicyType.AutomaticUserConfirmation);
+
         return Valid(new AcceptOrganizationMembershipValidationResult
         {
-            AutoConfirmPolicyEnabled = autoConfirmRequirement.IsEnabled(request.OrganizationId)
+            AutoConfirmPolicyEnabled = autoConfirmPolicyStatus.Enabled
         });
     }
 

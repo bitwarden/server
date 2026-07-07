@@ -196,11 +196,12 @@ public class GetCloudOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_NullSubscription_Throws(
+    public async Task GetLicenseAsync_NullSubscription_NoExpirationDate_Throws(
         SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation)
     {
         installation.Enabled = true;
+        organization.ExpirationDate = null;
         var subInfo = new SubscriptionInfo { Subscription = null };
 
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
@@ -209,6 +210,47 @@ public class GetCloudOrganizationLicenseQueryTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.GetLicenseAsync(organization, installationId));
         Assert.Contains("No active subscription found", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetLicenseAsync_NullSubscription_PastExpirationDate_Throws(
+        SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
+        Organization organization, Guid installationId, Installation installation)
+    {
+        installation.Enabled = true;
+        organization.ExpirationDate = DateTime.UtcNow.AddDays(-1);
+        var subInfo = new SubscriptionInfo { Subscription = null };
+
+        sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
+        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.GetLicenseAsync(organization, installationId));
+        Assert.Contains("No active subscription found", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetLicenseAsync_NullSubscription_FutureExpirationDate_CreatesLicense(
+        SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
+        Organization organization, Guid installationId, Installation installation,
+        byte[] licenseSignature)
+    {
+        installation.Enabled = true;
+        organization.ExpirationDate = DateTime.UtcNow.AddDays(30);
+        var subInfo = new SubscriptionInfo { Subscription = null };
+
+        sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
+        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
+        sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
+
+        var result = await sutProvider.Sut.GetLicenseAsync(organization, installationId);
+
+        Assert.Equal(LicenseType.Organization, result.LicenseType);
+        Assert.Equal(organization.Id, result.Id);
+        Assert.Equal(installationId, result.InstallationId);
+        Assert.Equal(organization.ExpirationDate!.Value.Date, result.Expires!.Value.Date);
     }
 
     [Theory]

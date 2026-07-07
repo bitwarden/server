@@ -331,6 +331,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UsePam")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("INTEGER");
 
@@ -388,11 +391,8 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("EncryptedInviteKey")
+                    b.Property<string>("Invite")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EncryptedOrgKey")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
@@ -400,6 +400,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("SupportsConfirmation")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1041,6 +1044,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("CohortId", "CreationDate", "Id")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")
