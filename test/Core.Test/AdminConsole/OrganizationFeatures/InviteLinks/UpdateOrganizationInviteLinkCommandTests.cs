@@ -38,8 +38,8 @@ public class UpdateOrganizationInviteLinkCommandTests
             Id = Guid.NewGuid(),
             Code = Guid.NewGuid(),
             OrganizationId = organization.Id,
-            EncryptedInviteKey = "encrypted-key",
-            EncryptedOrgKey = "encrypted-org-key",
+            Invite = "invite-blob",
+            SupportsConfirmation = true,
             CreationDate = originalCreationDate,
             RevisionDate = originalCreationDate,
         };
@@ -58,8 +58,8 @@ public class UpdateOrganizationInviteLinkCommandTests
         Assert.Same(existingLink, link);
         Assert.Equal(existingLink.Id, link.Id);
         Assert.Equal(existingLink.Code, link.Code);
-        Assert.Equal("encrypted-key", link.EncryptedInviteKey);
-        Assert.Equal("encrypted-org-key", link.EncryptedOrgKey);
+        Assert.Equal("invite-blob", link.Invite);
+        Assert.True(link.SupportsConfirmation);
         Assert.Equal(originalCreationDate, link.CreationDate);
         Assert.True(link.RevisionDate > originalCreationDate);
 

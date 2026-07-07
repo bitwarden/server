@@ -198,6 +198,63 @@ FROM (
 ) T;
 ```
 
+### Q9: Deleted Org Ciphers
+
+Verifies `cipherAssignment.deletedRate` and `maxDeletedCiphers`. Applies to org ciphers in every Scale preset.
+
+```sql
+DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
+
+SELECT
+    COUNT(*) AS TotalOrgCiphers,
+    SUM(CASE WHEN DeletedDate IS NOT NULL THEN 1 ELSE 0 END) AS DeletedCiphers
+FROM [dbo].[Cipher] WITH (NOLOCK)
+WHERE OrganizationId = @OrgId;
+```
+
+### Q10: Archived & Deleted Personal Ciphers
+
+Verifies `cipherAssignment.archivedRate`, `deletedRate`, and `archivedAndDeletedOverlapRate` against the
+personal (non-org) cipher pool — see Q11 for the same rates verified against the org pool, which is archived
+independently. Only applies to presets with `density.personalCiphers` set (Sterling Cooper, Wayne Enterprises,
+Weyland-Yutani). Personal ciphers aren't tied to `OrganizationId`, so this joins through `OrganizationUser` to
+scope to the seeded org's users. Follows the same JSON-path pattern used to compute `ArchivedDate` in
+`dbo.CipherDetails`.
+
+```sql
+DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
+
+SELECT
+    COUNT(*) AS TotalPersonalCiphers,
+    SUM(CASE WHEN JSON_VALUE(C.[Archives], CONCAT('$."', UPPER(CONVERT(VARCHAR(36), C.UserId)), '"')) IS NOT NULL THEN 1 ELSE 0 END) AS ArchivedCiphers,
+    SUM(CASE WHEN C.DeletedDate IS NOT NULL THEN 1 ELSE 0 END) AS DeletedCiphers,
+    SUM(CASE WHEN C.DeletedDate IS NOT NULL AND JSON_VALUE(C.[Archives], CONCAT('$."', UPPER(CONVERT(VARCHAR(36), C.UserId)), '"')) IS NOT NULL THEN 1 ELSE 0 END) AS BothArchivedAndDeleted
+FROM [dbo].[Cipher] C WITH (NOLOCK)
+WHERE C.OrganizationId IS NULL
+    AND C.UserId IN (
+        SELECT OU.UserId FROM [dbo].[OrganizationUser] OU WITH (NOLOCK) WHERE OU.OrganizationId = @OrgId
+    );
+```
+
+### Q11: Archived & Deleted Org Ciphers
+
+Verifies `cipherAssignment.archivedRate`/`deletedRate`/`archivedAndDeletedOverlapRate` against org ciphers.
+Applies to every Scale preset — org ciphers are archived independently of the personal pool, "for" a
+round-robin-selected org member (see `GenerateCiphersStep`), so an existence check on `Archives` is enough
+(no need to scope to a specific user like Q10 does for personal ciphers).
+
+```sql
+DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
+
+SELECT
+    COUNT(*) AS TotalOrgCiphers,
+    SUM(CASE WHEN Archives IS NOT NULL THEN 1 ELSE 0 END) AS ArchivedCiphers,
+    SUM(CASE WHEN DeletedDate IS NOT NULL THEN 1 ELSE 0 END) AS DeletedCiphers,
+    SUM(CASE WHEN DeletedDate IS NOT NULL AND Archives IS NOT NULL THEN 1 ELSE 0 END) AS BothArchivedAndDeleted
+FROM [dbo].[Cipher] WITH (NOLOCK)
+WHERE OrganizationId = @OrgId;
+```
+
 ---
 
 ## Scale Preset Expected Values
@@ -213,6 +270,8 @@ FROM (
 | Direct access ratio   | 0.8 — ~80% of access paths are direct CollectionUser.                         |
 | Collections per user  | Uniform 1-3. Min=1, Max=3, Avg=2.                                             |
 | Multi-collection rate | 20% of 200 non-orphan ciphers in 2 collections. ~40 multi-collection ciphers. |
+| Archived org ciphers  | ~8 of 200 (4% rate, under the 50 cap).                                       |
+| Deleted org ciphers   | ~4 of 200 (2% rate, under the 25 cap). ~2 of those are also archived (1% overlap); ~2 are delete-only. |
 
 ### 2. Planet Express (SM)
 
@@ -225,6 +284,8 @@ FROM (
 | Direct access ratio   | 0.7 — ~70% of access paths are direct CollectionUser.                           |
 | Collections per user  | PowerLaw 1-5 (skew 0.3). First users get up to 5, most get 1-2. CV > 0.3.       |
 | Multi-collection rate | 15% of ~713 non-orphan ciphers in 2 collections. ~107 multi-collection ciphers. |
+| Archived org ciphers  | ~45 of 750 (6% rate, under the 50 cap).                                         |
+| Deleted org ciphers   | ~22 of 750 (3% rate, under the 25 cap). ~15 of those are also archived (2% overlap); ~7 are delete-only. |
 
 ### 3. Bluth Company (SM)
 
@@ -237,6 +298,8 @@ FROM (
 | Direct access ratio   | 0.6 — ~60% of access paths are direct CollectionUser.                          |
 | Collections per user  | Uniform 1-3. Min=1, Max=3, Avg=2.                                              |
 | Multi-collection rate | 10% of ~425 non-orphan ciphers in 2 collections. ~42 multi-collection ciphers. |
+| Archived org ciphers  | ~40 of 500 (8% rate, under the 50 cap).                                        |
+| Deleted org ciphers   | ~20 of 500 (4% rate, under the 25 cap). ~15 of those are also archived (3% overlap); ~5 are delete-only. |
 
 ### 4. Sterling Cooper (MD)
 
@@ -250,6 +313,10 @@ FROM (
 | Empty group rate      | ~26% — ~13 of 50 groups have 0 members due to power-law tail truncation.    |
 | Collections per user  | PowerLaw 1-10 (skew 0.5). First users get up to 10, most get 1-2. CV > 0.5. |
 | Multi-collection rate | 20% of ~4,600 non-orphan ciphers in 2-3 collections. Max 3 per cipher.      |
+| Archived org ciphers  | 50 of 5,000 (6% rate = 300, clamped to the 50 cap).                         |
+| Deleted org ciphers   | 25 of 5,000 (3% rate = 150, clamped to the 25 cap). All 25 are also archived (2% overlap = 100, clamped) — 0 are delete-only. |
+| Archived personal ciphers | 50 of ~3,638 personal ciphers (6% rate = ~218, clamped to the 50 cap).  |
+| Deleted personal ciphers  | 25 of ~3,638 (3% rate clamped to 25). All 25 are also archived (2% overlap = ~73, clamped to `min(archivedTarget, maxDeletedCiphers)` = 25) — 0 are delete-only. See `ArchiveAndDeleteRateTests.BothTarget_NeverExceedsMaxDeletedCiphers_EvenWhenArchivedCeilingIsHigher` for the exact clamp this demonstrates. Sterling Cooper seeds archived/deleted items in *both* the org pool and the personal pool, since `archivedRate`/`deletedRate`/`archivedAndDeletedOverlapRate` apply independently to each. |
 
 ### 5. Umbrella Corp (MD)
 
@@ -262,6 +329,8 @@ FROM (
 | Direct access ratio   | 0.9 — ~90% of access paths are direct CollectionUser.                                  |
 | Collections per user  | PowerLaw 1-15 (skew 0.6). First users get up to 15, most get 1-2. CV > 0.5.            |
 | Multi-collection rate | 25% of ~2,400 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                 |
+| Archived org ciphers  | 50 of 3,000 (8% rate = 240, clamped to the 50 cap).                                    |
+| Deleted org ciphers   | 25 of 3,000 (4% rate = 120, clamped to the 25 cap). All 25 are also archived (3% overlap = 90, clamped) — 0 are delete-only. |
 
 ### 6. Wayne Enterprises (LG)
 
@@ -275,6 +344,10 @@ FROM (
 | Empty group rate      | ~30% — ~30 of 100 groups have 0 members due to power-law tail truncation.      |
 | Collections per user  | PowerLaw 1-25 (skew 0.6). First users get up to 25, most get 1-2. CV > 0.5.    |
 | Multi-collection rate | 25% of ~9,000 non-orphan ciphers in 2-4 collections. Max 4 per cipher.         |
+| Archived org ciphers  | 50 of 10,000 (6% rate = 600, clamped to the 50 cap).                           |
+| Deleted org ciphers   | 25 of 10,000 (3% rate = 300, clamped to the 25 cap). All 25 are also archived (2% overlap = 200, clamped) — 0 are delete-only. |
+| Archived personal ciphers | 50 of ~14,525 personal ciphers (6% rate = ~872, clamped to the 50 cap).   |
+| Deleted personal ciphers  | 25 of ~14,525 (3% rate clamped to 25). All 25 are also archived (2% overlap clamped the same way as Sterling Cooper) — 0 are delete-only. Wayne Enterprises seeds archived/deleted items in *both* the org pool and the personal pool. |
 
 ### 7. Tyrell Corp (LG)
 
@@ -288,6 +361,8 @@ FROM (
 | Empty group rate      | 20% — ~15 of 75 groups have 0 members.                                           |
 | Collections per user  | PowerLaw 1-30 (skew 0.7). First users get up to 30, most get 1-2. CV > 0.5.      |
 | Multi-collection rate | 30% of ~14,450 non-orphan ciphers in 2-4 collections. Max 4 per cipher.          |
+| Archived org ciphers  | 50 of 17,000 (8% rate = 1,360, clamped to the 50 cap).                           |
+| Deleted org ciphers   | 25 of 17,000 (4% rate = 680, clamped to the 25 cap). All 25 are also archived (3% overlap = 510, clamped) — 0 are delete-only. |
 
 ### 8. Weyland-Yutani (XL)
 
@@ -301,6 +376,10 @@ FROM (
 | Empty group rate      | ~68% — ~341 of 500 groups have 0 members due to power-law tail truncation.           |
 | Collections per user  | PowerLaw 1-50 (skew 0.8). First users get up to 50, most get 1-2. CV > 0.5.          |
 | Multi-collection rate | 30% of ~13,500 non-orphan ciphers in 2-5 collections. Max 5 per cipher.              |
+| Archived org ciphers  | 50 of 15,000 (4% rate = 600, clamped to the 50 cap).                                 |
+| Deleted org ciphers   | 25 of 15,000 (3% rate = 450, clamped to the 25 cap). All 25 are also archived (1% overlap = 150, clamped) — 0 are delete-only. |
+| Archived personal ciphers | 50 of ~11,000 personal ciphers (4% rate = 440, clamped to the 50 cap).          |
+| Deleted personal ciphers  | 25 of ~11,000 (3% rate clamped to 25). All 25 are also archived (1% overlap = 110, clamped the same way) — 0 are delete-only. Weyland-Yutani seeds archived/deleted items in *both* the org pool and the personal pool. |
 
 ### 9. Initech (XL)
 
@@ -313,6 +392,8 @@ FROM (
 | Direct access ratio   | 1.0 — 100% of access paths are direct CollectionUser.                                   |
 | Collections per user  | PowerLaw 1-20 (skew 0.5). First users get up to 20, most get 1. CV > 0.2.               |
 | Multi-collection rate | 15% of ~2,250 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                  |
+| Archived org ciphers  | 50 of 15,000 (8% rate = 1,200, clamped to the 50 cap).                                  |
+| Deleted org ciphers   | 25 of 15,000 (5% rate = 750, clamped to the 25 cap). All 25 are also archived (3% overlap = 450, clamped) — 0 are delete-only. |
 
 ---
 
