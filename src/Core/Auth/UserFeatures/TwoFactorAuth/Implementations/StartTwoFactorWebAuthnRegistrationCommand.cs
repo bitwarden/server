@@ -63,8 +63,13 @@ public class StartTwoFactorWebAuthnRegistrationCommand : IStartTwoFactorWebAuthn
             RequireResidentKey = false,
             UserVerification = UserVerificationRequirement.Discouraged
         };
-        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
-            AttestationConveyancePreference.None);
+        var options = _fido2.RequestNewCredential(new RequestNewCredentialParams
+        {
+            User = fidoUser,
+            ExcludeCredentials = excludeCredentials,
+            AuthenticatorSelection = authenticatorSelection,
+            AttestationPreference = AttestationConveyancePreference.None
+        });
 
         provider.MetaData["pending"] = options.ToJson();
         providers[TwoFactorProviderType.WebAuthn] = provider;
