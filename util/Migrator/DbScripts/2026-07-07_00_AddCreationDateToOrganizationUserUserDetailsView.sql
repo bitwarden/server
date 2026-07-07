@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[OrganizationUserUserDetailsView]
+CREATE OR ALTER VIEW [dbo].[OrganizationUserUserDetailsView]
 AS
 SELECT
     OU.[Id],
@@ -26,3 +26,4 @@ LEFT JOIN
     [dbo].[User] U ON U.[Id] = OU.[UserId]
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
+GO
