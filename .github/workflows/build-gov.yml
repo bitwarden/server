@@ -1,0 +1,211 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - "main"
+      - "rc"
+      - "hotfix-rc"
+  workflow_dispatch:
+
+env:
+  _GAMEWARDEN_REGISTRY: "registry.gamewarden.io"
+  _TAG_SUFFIX: "-gov"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+
+      - name: Verify format
+        run: dotnet format --verify-no-changes
+
+  build-artifacts:
+    name: Build Docker images
+    runs-on: ubuntu-22.04
+    needs: lint
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project_name: Admin
+            base_path: ./src
+            dotnet: true
+            node: true
+          - project_name: Api
+            base_path: ./src
+            dotnet: true
+          - project_name: Attachments
+            base_path: ./util
+          - project_name: Events
+            base_path: ./src
+            dotnet: true
+          - project_name: EventsProcessor
+            base_path: ./src
+            dotnet: true
+          - project_name: Icons
+            base_path: ./src
+            dotnet: true
+          - project_name: Identity
+            base_path: ./src
+            dotnet: true
+          - project_name: MsSql
+            base_path: ./util
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+            dotnet: true
+          - project_name: Nginx
+            base_path: ./util
+          - project_name: Notifications
+            base_path: ./src
+            dotnet: true
+          - project_name: Scim
+            base_path: ./bitwarden_license/src
+            dotnet: true
+          - project_name: Setup
+            base_path: ./util
+            dotnet: true
+          - project_name: Sso
+            base_path: ./bitwarden_license/src
+            dotnet: true
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Generate image tags
+        id: image-tags
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | sed "s#/#-#g")
+          PROJECT_NAME=$(echo "${{ matrix.project_name }}" | tr '[:upper:]' '[:lower:]')
+
+          if [[ "$BRANCH_NAME" == 'main' ]]; then
+            # tag images on main with 'dev' and short sha
+            SHORT_SHA=$(git rev-parse --short "${SHA}")
+            TAGS="${_GAMEWARDEN_REGISTRY}/${PROJECT_NAME}:dev${_TAG_SUFFIX}"
+            TAGS=$TAGS",${_GAMEWARDEN_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}${_TAG_SUFFIX}"
+          else
+            TAGS="${_GAMEWARDEN_REGISTRY}/${PROJECT_NAME}:${BRANCH_NAME:0:124}${_TAG_SUFFIX}"
+          fi
+
+          SCAN_TAG=$(echo "${TAGS}" | cut -f 1 -d ',')
+          echo "scan_tag=$SCAN_TAG" >> "$GITHUB_OUTPUT"
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Dockerfile exists
+        run: |
+          DOCKERFILE="${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile.gov"
+          if [[ ! -f "$DOCKERFILE" ]]; then
+            echo "::error::Dockerfile not found: $DOCKERFILE"
+            exit 1
+          fi
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+
+      - name: Set up Node
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          cache: "npm"
+          cache-dependency-path: "**/package-lock.json"
+          node-version: "24"
+
+      - name: Print environment
+        run: |
+          whoami
+          dotnet --info
+          node --version
+          npm --version
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub event: $GITHUB_EVENT"
+          echo "Project: ${{ matrix.project_name }}"
+
+      - name: Build node
+        if: ${{ matrix.node }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.project_name }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish project
+        working-directory: ${{ matrix.base_path }}/${{ matrix.project_name }}
+        if: ${{ matrix.dotnet }}
+        run: |
+          echo "Publish"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+      - name: Set up QEMU emulators
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Get Gamewarden registry secrets from Key Vault
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-deploy
+          secrets: "GAMEWARDEN-REGISTRY-USERNAME,GAMEWARDEN-REGISTRY-PASSWORD"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
+      - name: Log in to Gamewarden registry
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ${{ env._GAMEWARDEN_REGISTRY }}
+          username: ${{ steps.get-kv-secrets.outputs.GAMEWARDEN-REGISTRY-USERNAME }}
+          password: ${{ steps.get-kv-secrets.outputs.GAMEWARDEN-REGISTRY-PASSWORD }}
+
+      - name: Build Docker image
+        id: build-artifacts
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        with:
+          context: .
+          file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile.gov
+          platforms: "linux/amd64"
+          push: true
+          tags: ${{ steps.image-tags.outputs.tags }}
+
+      - name: Scan Docker image
+        id: container-scan
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+        with:
+          image: ${{ steps.image-tags.outputs.scan_tag }}
+          fail-build: false
+          output-format: sarif
+
+      - name: Log out from Gamewarden registry
+        run: docker logout ${_GAMEWARDEN_REGISTRY}
+
+      - name: Upload Grype results to GitHub
+        uses: github/codeql-action/upload-sarif@cdefb33c0f6224e58673d9004f47f7cb3e328b89 # v4.31.10
+        with:
+          sarif_file: ${{ steps.container-scan.outputs.sarif }}
+          sha: ${{ github.sha }}
+          ref: ${{ github.ref }}
