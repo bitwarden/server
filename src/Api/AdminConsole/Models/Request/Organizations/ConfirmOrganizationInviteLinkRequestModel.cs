@@ -9,7 +9,7 @@ public class ConfirmOrganizationInviteLinkRequestModel
     public required Guid Code { get; set; }
 
     /// <summary>
-    /// The organization symmetric key encrypted to the user. Released to the user on confirmation.
+    /// The organization symmetric key encrypted to the user.
     /// </summary>
     [Required]
     public required string OrgUserKey { get; set; }

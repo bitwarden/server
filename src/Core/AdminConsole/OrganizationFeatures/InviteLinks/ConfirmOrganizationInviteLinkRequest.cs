@@ -4,9 +4,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 /// <summary>
 /// The data required to confirm a user into an organization via an invite link. The confirmation
-/// creates the membership when one does not already exist, releases the organization key to the user,
-/// and runs the policy-driven side effects (Organization Data Ownership, account recovery enrollment,
-/// and emergency access removal).
+/// creates the membership when one does not already exist, confirms it with the supplied organization
+/// key, and runs the policy-driven side effects (Organization Data Ownership default collection and
+/// account recovery enrollment).
 /// </summary>
 public record ConfirmOrganizationInviteLinkRequest
 {
