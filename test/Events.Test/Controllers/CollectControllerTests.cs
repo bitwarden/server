@@ -612,10 +612,12 @@ public class CollectControllerTests
     [Theory]
     [AutoData]
     public async Task Post_OrganizationClientExportedVault_WithValidOrg_LogsOrgEvent(
-        Guid userId, Guid orgId, Organization organization)
+        Guid userId, Guid orgId, Organization organization, OrganizationUser orgUser)
     {
         _currentContext.UserId.Returns(userId);
         organization.Id = orgId;
+        orgUser.OrganizationId = orgId;
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns(orgUser);
         _organizationRepository.GetByIdAsync(orgId).Returns(organization);
         var eventDate = DateTime.UtcNow;
         var events = new List<EventModel>
@@ -631,6 +633,7 @@ public class CollectControllerTests
         var result = await _sut.Post(events);
 
         Assert.IsType<OkResult>(result);
+        await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
         await _organizationRepository.Received(1).GetByIdAsync(orgId);
         await _eventService.Received(1).LogOrganizationEventAsync(organization, EventType.Organization_ClientExportedVault, eventDate);
     }
@@ -659,9 +662,12 @@ public class CollectControllerTests
 
     [Theory]
     [AutoData]
-    public async Task Post_OrganizationClientExportedVault_WithNullOrg_SkipsEvent(Guid userId, Guid orgId)
+    public async Task Post_OrganizationClientExportedVault_WithNullOrg_SkipsEvent(
+        Guid userId, Guid orgId, OrganizationUser orgUser)
     {
         _currentContext.UserId.Returns(userId);
+        orgUser.OrganizationId = orgId;
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns(orgUser);
         _organizationRepository.GetByIdAsync(orgId).Returns((Organization)null);
         var events = new List<EventModel>
         {
@@ -703,12 +709,14 @@ public class CollectControllerTests
     [Theory]
     [AutoData]
     public async Task Post_MixedEventTypes_ProcessesAllEvents(
-        Guid userId, Guid cipherId, Guid orgId, CipherDetails cipherDetails, Organization organization)
+        Guid userId, Guid cipherId, Guid orgId, CipherDetails cipherDetails, Organization organization, OrganizationUser orgUser)
     {
         _currentContext.UserId.Returns(userId);
         cipherDetails.Id = cipherId;
         organization.Id = orgId;
+        orgUser.OrganizationId = orgId;
         _cipherRepository.GetByIdAsync(cipherId, userId).Returns(cipherDetails);
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns(orgUser);
         _organizationRepository.GetByIdAsync(orgId).Returns(organization);
         var events = new List<EventModel>
         {
@@ -799,10 +807,12 @@ public class CollectControllerTests
     [BitAutoData(EventType.Organization_AutoConfirmEnabled_Admin)]
     [BitAutoData(EventType.Organization_AutoConfirmDisabled_Admin)]
     public async Task Post_OrganizationAutoConfirmAdmin_WithValidOrg_LogsOrgEvent(
-        EventType eventType, Guid userId, Guid orgId, Organization organization)
+        EventType eventType, Guid userId, Guid orgId, Organization organization, OrganizationUser orgUser)
     {
         _currentContext.UserId.Returns(userId);
         organization.Id = orgId;
+        orgUser.OrganizationId = orgId;
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns(orgUser);
         _organizationRepository.GetByIdAsync(orgId).Returns(organization);
         var eventDate = DateTime.UtcNow;
         var events = new List<EventModel>
@@ -818,6 +828,7 @@ public class CollectControllerTests
         var result = await _sut.Post(events);
 
         Assert.IsType<OkResult>(result);
+        await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
         await _organizationRepository.Received(1).GetByIdAsync(orgId);
         await _eventService.Received(1).LogOrganizationEventAsync(organization, eventType, eventDate);
     }
@@ -850,9 +861,11 @@ public class CollectControllerTests
     [BitAutoData(EventType.Organization_AutoConfirmEnabled_Admin)]
     [BitAutoData(EventType.Organization_AutoConfirmDisabled_Admin)]
     public async Task Post_OrganizationAutoConfirmAdmin_WithNullOrg_SkipsEvent(
-        EventType eventType, Guid userId, Guid orgId)
+        EventType eventType, Guid userId, Guid orgId, OrganizationUser orgUser)
     {
         _currentContext.UserId.Returns(userId);
+        orgUser.OrganizationId = orgId;
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns(orgUser);
         _organizationRepository.GetByIdAsync(orgId).Returns((Organization)null);
         var events = new List<EventModel>
         {
@@ -874,10 +887,12 @@ public class CollectControllerTests
     [Theory]
     [AutoData]
     public async Task Post_OrganizationClientCopiedInviteLink_WithValidOrg_LogsOrgEvent(
-        Guid userId, Guid orgId, Organization organization)
+        Guid userId, Guid orgId, Organization organization, OrganizationUser orgUser)
     {
         _currentContext.UserId.Returns(userId);
         organization.Id = orgId;
+        orgUser.OrganizationId = orgId;
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns(orgUser);
         _organizationRepository.GetByIdAsync(orgId).Returns(organization);
         var eventDate = DateTime.UtcNow;
         var events = new List<EventModel>
@@ -893,6 +908,7 @@ public class CollectControllerTests
         var result = await _sut.Post(events);
 
         Assert.IsType<OkResult>(result);
+        await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
         await _organizationRepository.Received(1).GetByIdAsync(orgId);
         await _eventService.Received(1).LogOrganizationEventAsync(organization, EventType.Organization_InviteLinkClientCopied, eventDate);
     }
@@ -915,6 +931,91 @@ public class CollectControllerTests
         var result = await _sut.Post(events);
 
         Assert.IsType<OkResult>(result);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task Post_OrganizationClientExportedVault_NonMember_SkipsEvent(
+        Guid userId, Guid orgId, Organization organization)
+    {
+        _currentContext.UserId.Returns(userId);
+        organization.Id = orgId;
+        _organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        // Caller is NOT a member of the org.
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns((OrganizationUser)null);
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = EventType.Organization_ClientExportedVault,
+                OrganizationId = orgId,
+                Date = DateTime.UtcNow
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData(EventType.Organization_AutoConfirmEnabled_Admin)]
+    [BitAutoData(EventType.Organization_AutoConfirmDisabled_Admin)]
+    public async Task Post_OrganizationAutoConfirmAdmin_NonMember_SkipsEvent(
+        EventType eventType, Guid userId, Guid orgId, Organization organization)
+    {
+        _currentContext.UserId.Returns(userId);
+        organization.Id = orgId;
+        _organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        // Caller is NOT a member of the org.
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns((OrganizationUser)null);
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = eventType,
+                OrganizationId = orgId,
+                Date = DateTime.UtcNow
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task Post_OrganizationClientCopiedInviteLink_NonMember_SkipsEvent(
+        Guid userId, Guid orgId, Organization organization)
+    {
+        _currentContext.UserId.Returns(userId);
+        organization.Id = orgId;
+        _organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        // Caller is NOT a member of the org.
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns((OrganizationUser)null);
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = EventType.Organization_InviteLinkClientCopied,
+                OrganizationId = orgId,
+                Date = DateTime.UtcNow
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
         await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
         await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
     }
