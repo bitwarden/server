@@ -40,10 +40,14 @@ Everything else tied: no-skill found the correct joins, the `UserCipherDetails`/
 | Capability                                                                   | Build when                                                                                        |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | Write-mode seeding/mutation support ("this shouldn't be just about reading") | A safe write workflow is designed with its own eval set and permission model                      |
-| MySQL/PostgreSQL/SQLite provider references + per-provider read-only hooks   | The multi-provider seed-and-verify loop produces validated per-provider runbooks                  |
+| MySQL/PostgreSQL provider references + per-provider read-only hooks          | The multi-provider seed-and-verify loop produces validated per-provider runbooks                  |
 | Send-liveness and AuthRequest-expiry grounding rules                         | Both tables are empty database-wide today; a preset seeds them and a case exercises the semantics |
 
 Eval-fixture improvements for the next iteration (grader-flagged): give eval-13 a direct-RO=1/group-RO=0 conflict so the count alone discriminates precedence; give eval-9 an org with mixed `Use*` flags so "all enabled" can't pass trivially.
+
+## Provider validation
+
+Sterling Cooper seeded per provider by flipping `globalSettings:databaseProvider`; identical counts on MSSQL/Dapper, PostgreSQL, and MySQL (status mix 12/13/12/214; ciphers 5,000/25 deleted/50 archived; 50 groups; 500 collections; all payloads `2.`-prefixed EncStrings). Read-only guards in the provider references were verified by rejected write attempts on all three providers.
 
 ## Triggering (description optimization, 5 iterations)
 

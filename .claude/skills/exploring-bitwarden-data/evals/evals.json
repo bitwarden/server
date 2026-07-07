@@ -34,7 +34,7 @@
         1
       ],
       "references_exercised": [
-        "enums.md"
+        "sources.md"
       ],
       "prompt": "Break down the members of the org '{{ORG_NAME}}' in my local Bitwarden database by their membership status, with human-readable status names.",
       "expected_output": "Counts per status with correct name mapping: -1 Revoked, 0 Invited, 1 Accepted, 2 Confirmed.",
@@ -68,7 +68,7 @@
         5
       ],
       "references_exercised": [
-        "schema-relationships.md"
+        "sources.md"
       ],
       "prompt": "Show me the top 5 members of org '{{ORG_NAME}}' by the number of collections they have direct access to (not via groups), with their emails.",
       "expected_output": "Joins CollectionUser.OrganizationUserId = OrganizationUser.Id then OrganizationUser.UserId = User.Id. Results match ground truth. A CollectionUser.OrganizationUserId = User.Id join silently returns wrong/empty results.",
@@ -128,7 +128,6 @@
         8
       ],
       "references_exercised": [
-        "enums.md",
         "sources.md"
       ],
       "prompt": "What subscription plan is org '{{ORG_NAME}}' on, and is the org currently active? Check my local Bitwarden database.",
@@ -157,7 +156,7 @@
       "id": 9,
       "name": "org-abilities-via-view",
       "references_exercised": [
-        "schema-views.md"
+        "sources.md"
       ],
       "prompt": "Which features does org '{{ORG_NAME}}' have enabled \u2014 SSO, groups, API, events, that kind of thing? Query my local Bitwarden database.",
       "expected_output": "Uses OrganizationAbilityView (or equivalent correct Use* flag read) and reports flags matching ground truth.",

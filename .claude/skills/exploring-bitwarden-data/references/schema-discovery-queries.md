@@ -1,8 +1,8 @@
 # Schema Discovery Queries — Bitwarden (MSSQL)
 
-Read-only `INFORMATION_SCHEMA` and `sys.*` queries for tables, columns, FKs, and view definitions. MSSQL-only — other providers will use their own introspection (MySQL `INFORMATION_SCHEMA`, PostgreSQL `pg_catalog`, SQLite `sqlite_master`).
+Read-only `INFORMATION_SCHEMA` and `sys.*` queries for tables, columns, FKs, and view definitions. MSSQL-only — other providers will use their own introspection (MySQL `INFORMATION_SCHEMA`, PostgreSQL `pg_catalog`).
 
-Read when the schema reference lists ([schema-tables.md](schema-tables.md), [schema-relationships.md](schema-relationships.md), [schema-views.md](schema-views.md)) are insufficient: unlisted tables/columns, full schema enumeration, or fetching a view's definition.
+Read when the SSDT sources mapped in [sources.md](sources.md) aren't enough: full schema enumeration, tables or columns not listed there, or fetching a live view's definition.
 
 Wrap each query below in the standard sqlcmd invocation from [providers/mssql.md](providers/mssql.md). `{{SCHEMA_NAME}}` is almost always `dbo`.
 

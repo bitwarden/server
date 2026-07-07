@@ -1,7 +1,7 @@
 ---
 name: exploring-bitwarden-data
 description: Read-only exploration of a local Bitwarden development database — answer business questions from live data, verify seeded fixtures, and introspect schema. Use whenever the user wants to query, count, look up, verify, or explore data in a local Bitwarden database ("how many orgs/users/ciphers", "show me collections", "check what the seeder created", "look up user X", "which orgs have feature Y"), even without the word SQL. Not for authoring stored procedures, migrations, or repository code (use writing-database-queries), and not for seeding or modifying data.
-argument-hint: "[mssql|mysql|postgresql|sqlite] <question or SQL>"
+argument-hint: "[mssql|mysql|postgresql] <question or SQL>"
 user-invocable: true
 allowed-tools: "Bash(which sqlcmd), Bash(sqlcmd:*)"
 hooks:
@@ -15,7 +15,7 @@ hooks:
 
 # Explorer Bitwarden Database
 
-Read-only access to a local Bitwarden database. MSSQL is wired today; the other providers are scaffolds.
+Read-only access to a local Bitwarden database, across all three dev providers.
 
 ## Read-only, defense in depth
 
@@ -31,14 +31,13 @@ Read-only access to a local Bitwarden database. MSSQL is wired today; the other 
 
 ## Provider selection
 
-First arg picks the provider — `mssql` (default), `mysql`, `postgresql`, or `sqlite`. Read the matching provider reference before composing SQL.
+First arg picks the provider — `mssql` (default), `mysql`, or `postgresql`. Read the matching provider reference before composing SQL.
 
-| Provider   | Env prefix    | CLI       | Reference                                                                | Status    |
-| ---------- | ------------- | --------- | ------------------------------------------------------------------------ | --------- |
-| MSSQL      | `BW_MSSQL_*`  | `sqlcmd`  | [references/providers/mssql.md](references/providers/mssql.md)           | **Ready** |
-| MySQL      | `BW_MYSQL_*`  | `mysql`   | [references/providers/mysql.md](references/providers/mysql.md)           | Stub      |
-| PostgreSQL | `BW_PG_*`     | `psql`    | [references/providers/postgresql.md](references/providers/postgresql.md) | Stub      |
-| SQLite     | `BW_SQLITE_*` | `sqlite3` | [references/providers/sqlite.md](references/providers/sqlite.md)         | Stub      |
+| Provider        | Env prefix    | CLI                 | Reference                                                                 | Status    |
+| --------------- | ------------- | ------------------- | -------------------------------------------------------------------------- | --------- |
+| MSSQL           | `BW_MSSQL_*`  | `sqlcmd`            | [references/providers/mssql.md](references/providers/mssql.md)            | **Ready** |
+| MySQL           | `BW_MYSQL_*`  | `mysql`             | [references/providers/mysql.md](references/providers/mysql.md)            | **Ready** |
+| PostgreSQL      | `BW_POSTGRES_*` | `psql`            | [references/providers/postgresql.md](references/providers/postgresql.md)  | **Ready** |
 
 ## The repo is the schema's source of truth
 
