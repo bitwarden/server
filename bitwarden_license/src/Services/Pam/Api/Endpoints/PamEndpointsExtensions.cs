@@ -14,6 +14,7 @@ public static class PamEndpointsExtensions
 {
     public static void MapPamEndpoints(this IEndpointRouteBuilder endpoints)
     {
+        endpoints.MapGroup("/access-requests").WithPamDefaults().MapAccessRequestEndpoints();
         endpoints.MapGroup("/organizations/{orgId:guid}/access-rules").WithPamDefaults().MapAccessRuleEndpoints();
     }
 
