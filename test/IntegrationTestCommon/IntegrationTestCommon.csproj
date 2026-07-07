@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="[10.0.3]" />
+    <PackageReference Include="Fido2.Models" Version="[4.0.1]" />
   </ItemGroup>
 
   <ItemGroup>
