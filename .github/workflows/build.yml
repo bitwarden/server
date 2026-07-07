@@ -291,19 +291,27 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           DIGEST: ${{ steps.build-artifacts.outputs.digest }}
+          TAGS: ${{ steps.image-tags.outputs.tags }}
         run: |
+          fragment='{}'
+          IFS=',' read -r -a tags_array <<< "$TAGS"
+          for tag in "${tags_array[@]}"; do
+            image_uri="${tag%:*}"   # strip ":tag" -> full repo URI, e.g. ghcr.io/bitwarden/api
+            host="${tag%%/*}"       # registry host, e.g. bitwardenprod.azurecr.io / ghcr.io
+            base_domain=$(echo "$host" | awk -F. 'NF>=2{printf "%s.%s",$(NF-1),$NF} NF<2{printf "%s",$0}')
+            fragment=$(echo "$fragment" | jq \
+              --arg k "${PROJECT_NAME}-${base_domain}" \
+              --arg image "$image_uri" \
+              --arg tag "$IMAGE_TAG" \
+              --arg digest "$DIGEST" \
+              '. + {($k): {type: "container_image", image: $image, tag: $tag, digest: $digest}}')
+          done
+
           mkdir -p image-manifest-fragments
-          jq -n \
-            --arg name "$PROJECT_NAME" \
-            --arg registry "$_AZ_REGISTRY" \
-            --arg image "$PROJECT_NAME" \
-            --arg tag "$IMAGE_TAG" \
-            --arg digest "$DIGEST" \
-            '{($name): {type: "container_image", registry: $registry, image: $image, tag: $tag, digest: $digest}}' \
-            > "image-manifest-fragments/${PROJECT_NAME}.json"
+          echo "$fragment" > "image-manifest-fragments/${PROJECT_NAME}.json"
 
       - name: Upload image manifest fragment
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: image-manifest-fragment-${{ steps.setup.outputs.project_name }}
           path: image-manifest-fragments/${{ steps.setup.outputs.project_name }}.json
