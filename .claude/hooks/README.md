@@ -68,7 +68,7 @@ from going stale.
 
 **Event:** PreToolUse (fires before the Bash tool executes)
 
-**Registration:** Skill frontmatter in `.claude/skills/querying-bitwarden-database/SKILL.md` — checked in and active for anyone using the skill.
+**Registration:** Skill frontmatter in `.claude/skills/exploring-bitwarden-data/SKILL.md` — checked in and active for anyone using the skill.
 
 **Purpose:** Enforces read-only access to the Bitwarden database when Claude runs `sqlcmd` commands. Denies mutating operations before they reach the database.
 

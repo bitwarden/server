@@ -71,7 +71,7 @@ for pattern in "${sql_deny_patterns[@]}"; do
   "hookSpecificOutput": {
     "permissionDecision": "deny"
   },
-  "systemMessage": "BLOCKED by Bitwarden read-only hook: Mutating SQL detected (pattern: $pattern). The Skill(querying-bitwarden-database) is strictly read-only. Only SELECT, WITH (CTE), and INFORMATION_SCHEMA/sys queries are permitted."
+  "systemMessage": "BLOCKED by Bitwarden read-only hook: Mutating SQL detected (pattern: $pattern). The Skill(exploring-bitwarden-data) is strictly read-only. Only SELECT, WITH (CTE), and INFORMATION_SCHEMA/sys queries are permitted."
 }
 HOOKEOF
     exit 0

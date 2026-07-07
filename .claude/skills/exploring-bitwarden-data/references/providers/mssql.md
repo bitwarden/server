@@ -17,6 +17,10 @@ echo "Bitwarden MSSQL env vars OK" || echo "MISSING Bitwarden MSSQL env var"
 
 `sqlcmd` (Microsoft Go implementation) must be installed. If absent, stop and surface to the user.
 
+## Dialect notes
+
+Bracket identifiers that collide with reserved keywords — Bitwarden's schema has several: `[Plan]`, `[User]`, `[Group]`, `[Status]`, `[ReadOnly]`. An unbracketed `Plan` or `Group` fails with a syntax error.
+
 ## Running queries
 
 Every example below uses `-C -N m -K ReadOnly`: mandatory TLS and certificate trust are required by this environment, and `-K ReadOnly` enforces the read-only connection intent at the driver level — a safety constraint that is not part of standard `sqlcmd` invocations Claude would construct by default. The heredoc form (`-i /dev/stdin`) is the correct way to pass multi-statement SQL to the Go implementation of `sqlcmd` and is not universally obvious.
