@@ -874,7 +874,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("/organizations/users/invite-link/link-confirm")]
-    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
+    [RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
     public async Task<IResult> ConfirmInviteLink([FromBody] ConfirmOrganizationInviteLinkRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
