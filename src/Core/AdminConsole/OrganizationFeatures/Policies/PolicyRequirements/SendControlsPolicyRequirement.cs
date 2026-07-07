@@ -39,7 +39,7 @@ public class SendControlsPolicyRequirement : IPolicyRequirement
     /// <summary>
     /// Indicates the deletion date interval that Sends must use
     /// </summary>
-    public int? DeletionHours { get; set; }
+    public int? DeletionHours { get; init; }
 }
 
 public class SendControlsPolicyRequirementFactory : BasePolicyRequirementFactory<SendControlsPolicyRequirement>
