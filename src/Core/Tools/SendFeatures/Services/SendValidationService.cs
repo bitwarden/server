@@ -9,6 +9,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Tools.Services;
@@ -101,6 +102,11 @@ public class SendValidationService : ISendValidationService
         if (emailsRequired && sendControlsRequirement.AllowedDomains != null && !SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsRequirement.AllowedDomains))
         {
             throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): {sendControlsRequirement.AllowedDomains}");
+        }
+
+        if (sendControlsRequirement.AllowedSendTypes != null && !sendControlsRequirement.AllowedSendTypes.Contains(send.Type))
+        {
+            throw new BadRequestException($"Due to an Enterprise policy your Sends must be of the following types: {string.Join(", ", sendControlsRequirement.AllowedSendTypes.Select(st => st == SendType.Text ? "Text" : st == SendType.File ? "File" : "Unknown"))}");
         }
     }
 

@@ -208,8 +208,8 @@ public static class OrganizationTestHelpers
             Code = Guid.NewGuid(),
             OrganizationId = organization.Id,
             AllowedDomains = "[\"example.com\"]",
-            EncryptedInviteKey = $"encrypted-key-{identifier}",
-            EncryptedOrgKey = $"encrypted-org-key-{identifier}",
+            Invite = $"invite-blob-{identifier}",
+            SupportsConfirmation = true,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         });
