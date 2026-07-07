@@ -35,6 +35,9 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
             featureService
                 .IsEnabled(FeatureFlagKeys.GenerateInviteLink)
                 .Returns(true);
+            featureService
+                .IsEnabled(FeatureFlagKeys.InviteLinkAutoConfirm)
+                .Returns(true);
         });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
@@ -137,7 +140,8 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["example.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _validEncryptedKey,
+            SupportsConfirmation = true,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
