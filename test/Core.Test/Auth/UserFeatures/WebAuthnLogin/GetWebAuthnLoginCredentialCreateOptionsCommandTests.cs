@@ -5,7 +5,6 @@ using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Fido2NetLib;
-using Fido2NetLib.Objects;
 using NSubstitute;
 using Xunit;
 
@@ -28,12 +27,7 @@ public class GetWebAuthnLoginCredentialCreateOptionsTests
         // Assert
         sutProvider.GetDependency<IFido2>()
             .Received()
-            .RequestNewCredential(
-                Arg.Any<Fido2User>(),
-                Arg.Is<List<PublicKeyCredentialDescriptor>>(list => list.Count == 0),
-                Arg.Any<AuthenticatorSelection>(),
-                Arg.Any<AttestationConveyancePreference>(),
-                Arg.Any<AuthenticationExtensionsClientInputs>());
+            .RequestNewCredential(Arg.Is<RequestNewCredentialParams>(p => p.ExcludeCredentials.Count == 0));
     }
 
     [Theory, BitAutoData]
@@ -50,11 +44,6 @@ public class GetWebAuthnLoginCredentialCreateOptionsTests
         // Assert
         sutProvider.GetDependency<IFido2>()
             .Received()
-            .RequestNewCredential(
-                Arg.Any<Fido2User>(),
-                Arg.Is<List<PublicKeyCredentialDescriptor>>(list => list.Count == 1),
-                Arg.Any<AuthenticatorSelection>(),
-                Arg.Any<AttestationConveyancePreference>(),
-                Arg.Any<AuthenticationExtensionsClientInputs>());
+            .RequestNewCredential(Arg.Is<RequestNewCredentialParams>(p => p.ExcludeCredentials.Count == 1));
     }
 }
