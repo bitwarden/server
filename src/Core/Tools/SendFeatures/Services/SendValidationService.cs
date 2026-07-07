@@ -109,7 +109,7 @@ public class SendValidationService : ISendValidationService
             throw new BadRequestException($"Due to an Enterprise policy your Sends must be of the following types: {string.Join(", ", sendControlsRequirement.AllowedSendTypes.Select(st => st == SendType.Text ? "Text" : st == SendType.File ? "File" : "Unknown"))}");
         }
 
-        if (sendControlsRequirement.DeletionHours != null && (send.DeletionDate - send.CreationDate).TotalHours > sendControlsRequirement.DeletionHours.Value + 1.0/60.0)
+        if (sendControlsRequirement.DeletionHours != null && (send.DeletionDate - send.CreationDate).TotalHours > sendControlsRequirement.DeletionHours.Value + 1.0 / 60.0)
         {
             throw new BadRequestException($"Due to an Enterprise policy your Sends must have a deletion date no more than {sendControlsRequirement.DeletionHours} hours from its creation date");
         }

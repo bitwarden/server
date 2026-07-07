@@ -541,7 +541,7 @@ public class SendControlsSyncPolicyEventTests
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
             new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
-        
+
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count() == 1 && l.ElementAt(0) == compliantSend.Id), false);
