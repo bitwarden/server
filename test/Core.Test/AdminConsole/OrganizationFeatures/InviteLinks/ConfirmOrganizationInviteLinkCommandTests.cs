@@ -10,6 +10,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -28,12 +29,15 @@ public class ConfirmOrganizationInviteLinkCommandTests
         ConfirmOrganizationInviteLinkRequest request,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
+        // Arrange
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
             .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
             .Returns(new InviteLinkNotFound());
 
+        // Act
         var result = await sutProvider.Sut.ConfirmAsync(request);
 
+        // Assert
         Assert.True(result.IsError);
         Assert.IsType<InviteLinkNotFound>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -52,11 +56,14 @@ public class ConfirmOrganizationInviteLinkCommandTests
         OrganizationUser existingOrganizationUser,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
+        // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
-
         var request = BuildRequest(inviteLink, user);
+
+        // Act
         var result = await sutProvider.Sut.ConfirmAsync(request);
 
+        // Assert
         Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -81,12 +88,15 @@ public class ConfirmOrganizationInviteLinkCommandTests
         User user,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
+        // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
         organization.Seats = null;
-
         var request = BuildRequest(inviteLink, user);
+
+        // Act
         var result = await sutProvider.Sut.ConfirmAsync(request);
 
+        // Assert
         Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
@@ -108,6 +118,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         User user,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
+        // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
         organization.Seats = 2;
 
@@ -115,8 +126,10 @@ public class ConfirmOrganizationInviteLinkCommandTests
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
             .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
 
+        // Act
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
 
+        // Assert
         Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<IOrganizationService>()
             .Received(1)
@@ -133,6 +146,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         User user,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
+        // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
         organization.Seats = 2;
 
@@ -143,8 +157,10 @@ public class ConfirmOrganizationInviteLinkCommandTests
             .AutoAddSeatsAsync(organization, 1)
             .ThrowsAsync(new BadRequestException("No payment method."));
 
+        // Act
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
 
+        // Assert
         Assert.True(result.IsError);
         Assert.IsType<ConfirmSeatAddFailed>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -163,12 +179,15 @@ public class ConfirmOrganizationInviteLinkCommandTests
         OrganizationUser existingOrganizationUser,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
+        // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
         SetupAutoEnrollPolicy(organization, user, sutProvider);
-
         var request = BuildRequest(inviteLink, user) with { ResetPasswordKey = null };
+
+        // Act
         var result = await sutProvider.Sut.ConfirmAsync(request);
 
+        // Assert
         Assert.True(result.IsError);
         Assert.IsType<ConfirmResetPasswordKeyRequired>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -184,12 +203,15 @@ public class ConfirmOrganizationInviteLinkCommandTests
         OrganizationUser existingOrganizationUser,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
+        // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
         SetupAutoEnrollPolicy(organization, user, sutProvider);
-
         var request = BuildRequest(inviteLink, user) with { ResetPasswordKey = "2.validresetpasswordkey" };
+
+        // Act
         var result = await sutProvider.Sut.ConfirmAsync(request);
 
+        // Assert
         Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>()
             .Received(1)
@@ -204,13 +226,16 @@ public class ConfirmOrganizationInviteLinkCommandTests
         OrganizationUser existingOrganizationUser,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
+        // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
         organization.UseMyItems = true;
         SetupDataOwnershipPolicy(organization, existingOrganizationUser, user, sutProvider);
-
         var request = BuildRequest(inviteLink, user);
+
+        // Act
         var result = await sutProvider.Sut.ConfirmAsync(request);
 
+        // Assert
         Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
@@ -228,17 +253,61 @@ public class ConfirmOrganizationInviteLinkCommandTests
         OrganizationUser existingOrganizationUser,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
+        // Arrange
         // No data ownership policy details are configured, so the policy does not apply.
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
 
+        // Act
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
 
+        // Assert
         Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_WithExistingMembership_PushesSyncOrgKeys(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(1)
+            .PushSyncOrgKeysAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_WhenValidationFails_DoesNotPushSyncOrgKeys(
+        ConfirmOrganizationInviteLinkRequest request,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
+            .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
+            .Returns(new InviteLinkNotFound());
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+    }
 
     private static ConfirmOrganizationInviteLinkRequest BuildRequest(OrganizationInviteLink inviteLink, User user) =>
         new()

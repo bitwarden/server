@@ -9,6 +9,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     IOrganizationService organizationService,
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
+    IPushNotificationService pushNotificationService,
     ILogger<ConfirmOrganizationInviteLinkCommand> logger)
     : IConfirmOrganizationInviteLinkCommand
 {
@@ -79,6 +81,9 @@ public class ConfirmOrganizationInviteLinkCommand(
             await updateUserResetPasswordEnrollmentCommand.UpdateUserResetPasswordEnrollmentAsync(
                 organization.Id, user.Id, request.ResetPasswordKey, user.Id);
         }
+
+        // The membership now carries the organization key, so notify the user's other devices to sync it.
+        await pushNotificationService.PushSyncOrgKeysAsync(user.Id);
 
         return new None();
     }

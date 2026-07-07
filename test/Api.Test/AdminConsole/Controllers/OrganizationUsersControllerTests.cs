@@ -769,6 +769,7 @@ public class OrganizationUsersControllerTests
         ConfirmOrganizationInviteLinkRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
+        // Arrange
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(user);
@@ -777,8 +778,10 @@ public class OrganizationUsersControllerTests
             .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
             .Returns(new CommandResult(new None()));
 
+        // Act
         var result = await sutProvider.Sut.ConfirmInviteLink(model);
 
+        // Assert
         Assert.IsType<Ok>(result);
         await sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
             .Received(1)
@@ -796,6 +799,7 @@ public class OrganizationUsersControllerTests
         ConfirmOrganizationInviteLinkRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
+        // Arrange
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(user);
@@ -804,8 +808,10 @@ public class OrganizationUsersControllerTests
             .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
             .Returns(new CommandResult(new EmailDomainNotAllowed()));
 
+        // Act
         var result = await sutProvider.Sut.ConfirmInviteLink(model);
 
+        // Assert
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 
@@ -814,10 +820,12 @@ public class OrganizationUsersControllerTests
         ConfirmOrganizationInviteLinkRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
+        // Arrange
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns((User?)null);
 
+        // Act & Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.ConfirmInviteLink(model));
     }
 }
