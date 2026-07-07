@@ -6430,4 +6430,60 @@ public class SubscriptionUpdatedHandlerTests
         await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
     }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_PricingServiceThrowsBillingException_RethrowsForStripeRetry()
+    {
+        // Arrange — a BillingException from the pricing client must bubble out of
+        // the handler so the webhook returns 500 and Stripe retries the event.
+        // The monthly-to-annual price transition appears on exactly one
+        // subscription.updated event, so swallowing this would leave the
+        // organization's PlanType monthly forever while Stripe bills annually.
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_pricing_outage",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_pricing_outage",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { Price = new Price { Id = "price_target_current" }, Plan = new Plan { Id = "price_target_current" } }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly)
+            .Throws(new BillingException(message: "pricing service unavailable"));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act + Assert — BillingException must propagate out of HandleAsync
+        await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
+
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
 }

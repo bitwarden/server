@@ -795,6 +795,16 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 sourcePlan.Type,
                 targetPlan.Type);
         }
+        catch (BillingException)
+        {
+            // Rethrow so Stripe retries: the monthly-to-annual price transition appears on
+            // exactly one subscription.updated event, so a swallowed failure here would leave
+            // the organization's PlanType monthly forever while Stripe bills annually.
+            // GetPlanOrThrow surfaces BillingException for pricing-service errors, unknown
+            // plan types, and malformed responses; ChangePlan is structurally idempotent on
+            // the retry.
+            throw;
+        }
         catch (Exception exception)
         {
             _logger.LogError(

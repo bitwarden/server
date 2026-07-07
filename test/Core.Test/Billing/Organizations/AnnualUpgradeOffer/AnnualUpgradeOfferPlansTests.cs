@@ -8,7 +8,6 @@ public class AnnualUpgradeOfferPlansTests
 {
     [Theory]
     [InlineData(PlanType.TeamsMonthly, PlanType.TeamsAnnually)]
-    [InlineData(PlanType.TeamsMonthly2019, PlanType.TeamsAnnually)]
     [InlineData(PlanType.TeamsMonthly2020, PlanType.TeamsAnnually)]
     [InlineData(PlanType.TeamsMonthly2023, PlanType.TeamsAnnually)]
     [InlineData(PlanType.EnterpriseMonthly, PlanType.EnterpriseAnnually)]
@@ -28,6 +27,7 @@ public class AnnualUpgradeOfferPlansTests
     [InlineData(PlanType.Free)]
     [InlineData(PlanType.FamiliesAnnually)]
     [InlineData(PlanType.TeamsStarter)]
+    [InlineData(PlanType.TeamsMonthly2019)]
     public void ResolveAnnualLatestPlanType_NotAMonthlyBusinessPlan_ReturnsNull(PlanType current)
     {
         var result = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(current);
