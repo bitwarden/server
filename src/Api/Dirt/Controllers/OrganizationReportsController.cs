@@ -470,15 +470,11 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException();
         }
 
-        // TODO: Re-enable this access control in PM-37469
-        // Temporarily disabling this access control to allow for proper access control and billing
-        // setup to be done.
-        //
-        // var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
-        // if (orgAbility is null || !orgAbility.UseRiskInsights)
-        // {
-        //     throw new BadRequestException("Your organization's plan does not support this feature.");
-        // }
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (orgAbility is null || !orgAbility.UseRiskInsights)
+        {
+            throw new BadRequestException("Your organization's plan does not support this feature.");
+        }
     }
 
     private static void EnsureValidIds(Guid organizationId, Guid? reportId = null)

@@ -2569,6 +2569,7 @@ public class ProviderBillingServiceTests
         // Assert
         await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
         await organizationRepository.Received(1).ReplaceAsync(organization);
+        Assert.Equal(MockPlans.Get(PlanType.EnterpriseMonthly).HasRiskInsights, organization.UseRiskInsights);
         await providerOrganizationRepository.Received(1).CreateAsync(Arg.Is<ProviderOrganization>(po =>
             po.ProviderId == provider.Id && po.OrganizationId == organization.Id && po.Key == key));
         await eventService.Received(1).LogProviderOrganizationEventAsync(
