@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Auth.Identity;
+﻿using Duende.IdentityModel;
+
+namespace Bit.Core.Auth.Identity;
 
 public static class Claims
 {
@@ -41,39 +43,38 @@ public static class Claims
     }
 
     /// <summary>
-    /// The membership and authorization claim types that
-    /// <see cref="Bit.Core.Utilities.CoreHelpers.BuildIdentityClaims"/> is authoritative for. These are rebuilt
-    /// from the database on every token issuance, so the Identity Profile Service must not carry them over from the
-    /// existing subject when refreshing a token — a refreshed token should always reflect the member's current
-    /// organization and provider membership.
+    /// The claim types the Identity Profile Service will carry over from the existing subject when refreshing a
+    /// token. Everything not in this set is dropped by default — including membership and authorization claim
+    /// types produced by <see cref="Bit.Core.Utilities.CoreHelpers.BuildIdentityClaims"/>, which are rebuilt from
+    /// the database on every token issuance, so a refreshed token always reflects the member's current
+    /// organization and provider membership rather than a stale grant of access.
     /// <para>
-    /// Keep this in sync with <c>BuildIdentityClaims</c>. It intentionally excludes user-identity claims
-    /// (<see cref="Premium"/>, email, email_verified, name, <see cref="SecurityStamp"/>) and non-membership claims
-    /// (<see cref="Type"/>, <see cref="Organization"/>, <see cref="Device"/>, <see cref="DeviceType"/>, send_*),
-    /// which are overwritten or preserved separately.
+    /// This is an allowlist: a new claim type added to <c>BuildIdentityClaims</c> (or elsewhere) is dropped on
+    /// refresh by default unless it is deliberately added here, which fails closed. Only add a claim type here if
+    /// it is a user-identity claim that is safe to persist across a refresh regardless of the member's current
+    /// authorization state.
     /// </para>
     /// </summary>
-    public static readonly IReadOnlySet<string> MembershipClaimTypes = new HashSet<string>
+    public static readonly IReadOnlySet<string> UserIdentityClaimTypes = new HashSet<string>
     {
-        OrganizationOwner,
-        OrganizationAdmin,
-        OrganizationUser,
-        OrganizationCustom,
-        ProviderAdmin,
-        ProviderServiceUser,
-        SecretsManagerAccess,
-        CustomPermissions.AccessEventLogs,
-        CustomPermissions.AccessImportExport,
-        CustomPermissions.AccessReports,
-        CustomPermissions.CreateNewCollections,
-        CustomPermissions.EditAnyCollection,
-        CustomPermissions.DeleteAnyCollection,
-        CustomPermissions.ManageGroups,
-        CustomPermissions.ManagePolicies,
-        CustomPermissions.ManageSso,
-        CustomPermissions.ManageUsers,
-        CustomPermissions.ManageResetPassword,
-        CustomPermissions.ManageScim,
+        // Added by Duende's GrantValidationResult when the subject is first authenticated; not produced by
+        // BuildIdentityClaims, but required for the refreshed token to keep resolving to the correct principal.
+        JwtClaimTypes.Subject,
+        JwtClaimTypes.AuthenticationMethod,
+        JwtClaimTypes.IdentityProvider,
+        JwtClaimTypes.AuthenticationTime,
+
+        // User-identity claims rebuilt by BuildIdentityClaims on every issuance; safe to carry over as a fallback
+        // for issuances where the user cannot be looked up (see ProfileService.GetProfileDataAsync).
+        JwtClaimTypes.Email,
+        JwtClaimTypes.EmailVerified,
+        JwtClaimTypes.Name,
+        Premium,
+        SecurityStamp,
+
+        // Device-binding claims added when the subject is first authenticated; not produced by BuildIdentityClaims.
+        Device,
+        DeviceType,
     };
 
     public static class SendAccessClaims

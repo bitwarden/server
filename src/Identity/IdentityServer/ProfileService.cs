@@ -74,14 +74,14 @@ public class ProfileService : IProfileService
         }
 
         // Determine which of the existingClaims to carry over onto the refreshed token.
-        // We do not carry over membership and authorization claims so each refresh token
-        // reflects the user's current membership and authorization state.
+        // Only known-safe user-identity claims are carried over; everything else (including membership and
+        // authorization claims) is dropped so each refresh token reflects the user's current membership and
+        // authorization state.
         var existingClaimsToKeep = existingClaims
             .Where(c =>
-                // remove all membership claims so that the refreshed token reflects the user's current membership state
-                !Claims.MembershipClaimTypes.Contains(c.Type) &&
-                // For all other (user-identity) claims: if we have no new claims, keep the existing claim;
-                // otherwise keep it only when it is not being overwritten by a freshly built claim of the same type.
+                // only allow user-identity claims to be carried over from the existing subject
+                Claims.UserIdentityClaimTypes.Contains(c.Type) &&
+                // keep the existing claim only when it is not being overwritten by a freshly built claim of the same type
                 (newClaims.Count == 0 || !newClaims.Any(nc => nc.Type == c.Type))
             ).ToList();
 
