@@ -163,6 +163,7 @@ public static class FeatureFlagKeys
     public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
     public const string PM37165_RotateUserApiKeyCommand = "pm-37165-rotate-user-api-key-command";
     public const string PM30806_SelfServiceChangeEmailCommand = "pm-30806-self-service-change-email-command";
+    public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -189,7 +190,6 @@ public static class FeatureFlagKeys
     public const string DebugDisableSelfHostPremiumCheck = "debug-disable-self-host-premium-check";
     public const string PM35215_BusinessPlanPriceMigration = "pm-35215-business-plan-price-migration";
     public const string PM37597_AlwaysEnableStripeAutomaticTax = "pm-37597-always-enable-stripe-automatic-tax";
-    public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
