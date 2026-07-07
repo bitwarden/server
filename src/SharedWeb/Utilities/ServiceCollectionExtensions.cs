@@ -4,7 +4,6 @@
 using System.Net;
 using System.Reflection;
 using System.Security.Claims;
-using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
@@ -492,56 +491,7 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    public static void AddCustomDataProtectionServices(
-        this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
-    {
-        var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
 
-        if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
-        {
-            builder.PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
-        }
-
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
-        {
-            X509Certificate2 dataProtectionCert = null;
-            if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
-            {
-                dataProtectionCert = CoreHelpers.GetCertificate(
-                    globalSettings.DataProtection.CertificateThumbprint);
-            }
-            else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
-            {
-                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(
-                    globalSettings.Storage.ConnectionString,
-                    "certificates",
-                    globalSettings.DataProtection.BlobName,
-                    globalSettings.DataProtection.CertificatePassword)
-                    .GetAwaiter().GetResult();
-            }
-
-            if (!env.IsDevelopment())
-            {
-                builder
-                    .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
-                    .ProtectKeysWithCertificate(dataProtectionCert);
-
-                if (globalSettings.DataProtection.UnprotectCertificates.Length > 0)
-                {
-                    var unprotectCertificates = Task.WhenAll(globalSettings.DataProtection.UnprotectCertificates
-                        .Select(ci => CoreHelpers.GetBlobCertificateAsync(
-                            globalSettings.Storage.ConnectionString,
-                            "certificates",
-                            ci.FileName,
-                            ci.Password
-                        ))
-                    ).GetAwaiter().GetResult();
-
-                    builder.UnprotectKeysWithAnyCertificate(unprotectCertificates);
-                }
-            }
-        }
-    }
 
     public static IIdentityServerBuilder AddIdentityServerCertificate(
         this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)

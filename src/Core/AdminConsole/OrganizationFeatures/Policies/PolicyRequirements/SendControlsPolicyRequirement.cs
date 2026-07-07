@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.Tools.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
@@ -29,6 +30,11 @@ public class SendControlsPolicyRequirement : IPolicyRequirement
     /// Indicates the domains the emails of an email-protected Send must use
     /// </summary>
     public string? AllowedDomains { get; init; }
+
+    /// <summary>
+    /// Indicates the types of Send that can be created
+    /// </summary>
+    public SendType[]? AllowedSendTypes { get; init; }
 }
 
 public class SendControlsPolicyRequirementFactory : BasePolicyRequirementFactory<SendControlsPolicyRequirement>
@@ -46,7 +52,8 @@ public class SendControlsPolicyRequirementFactory : BasePolicyRequirementFactory
                     DisableSend = result.DisableSend || data.DisableSend,
                     DisableHideEmail = result.DisableHideEmail || data.DisableHideEmail,
                     WhoCanAccess = result.WhoCanAccess ?? data.WhoCanAccess,
-                    AllowedDomains = result.AllowedDomains ?? data.AllowedDomains
+                    AllowedDomains = result.AllowedDomains ?? data.AllowedDomains,
+                    AllowedSendTypes = result.AllowedSendTypes ?? data.AllowedSendTypes,
                 });
     }
 }

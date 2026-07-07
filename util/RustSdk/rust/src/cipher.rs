@@ -227,11 +227,13 @@ fn encrypt_segments(
 
 #[cfg(test)]
 mod tests {
+    use bitwarden_crypto::SymmetricKeyAlgorithm;
+
     use super::*;
     use crate::free_c_string;
 
     fn make_test_key() -> SymmetricCryptoKey {
-        SymmetricCryptoKey::make_aes256_cbc_hmac_key()
+        SymmetricCryptoKey::make(SymmetricKeyAlgorithm::Aes256CbcHmac)
     }
 
     fn call_ffi_string(

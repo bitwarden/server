@@ -6,7 +6,9 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Payment.Queries;
@@ -23,7 +25,6 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
-using Stripe.TestHelpers;
 using Event = Stripe.Event;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
@@ -367,10 +368,7 @@ public class UpcomingInvoiceHandler(
                 return false;
             }
 
-            if (subscription.TestClock != null)
-            {
-                await WaitForTestClockToAdvanceAsync(subscription.TestClock);
-            }
+            await stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
 
             var migrationScheduled = await priceIncreaseScheduler.ScheduleForSubscription(subscription);
 
@@ -421,7 +419,8 @@ public class UpcomingInvoiceHandler(
             var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
             var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
 
-            await SendBusinessRenewalEmailAsync(organization, subscription, sourcePlan, targetPlan, cohort);
+            await SendBusinessRenewalEmailAsync(
+                organization, subscription, sourcePlan, targetPlan, cohort, migrationPath.SeatCountPolicy);
         }
         catch (Exception exception)
         {
@@ -441,7 +440,8 @@ public class UpcomingInvoiceHandler(
         Subscription subscription,
         Plan sourcePlan,
         Plan targetPlan,
-        OrganizationPlanMigrationCohort cohort)
+        OrganizationPlanMigrationCohort cohort,
+        SeatCountPolicy seatCountPolicy)
     {
         var renewalDate = subscription.GetCurrentPeriodEnd();
         if (renewalDate is null)
@@ -456,7 +456,7 @@ public class UpcomingInvoiceHandler(
         }
 
         var culture = new CultureInfo("en-US");
-        var seats = await ResolveSeatCountAsync(subscription, sourcePlan, organization);
+        var seats = await ResolveSeatCountAsync(subscription, sourcePlan, organization, seatCountPolicy);
 
         // SeatPrice is a per-year figure on annual plans and a per-month figure on monthly plans. The per-user
         // monthly line always shows a monthly rate (annual ÷ 12); the recurring total is quoted in the plan's own
@@ -503,14 +503,24 @@ public class UpcomingInvoiceHandler(
             ? amount.ToString("C0", culture)
             : amount.ToString("C2", culture);
 
-    private async Task<int> ResolveSeatCountAsync(Subscription subscription, Plan sourcePlan, Organization organization)
+    private async Task<int> ResolveSeatCountAsync(
+        Subscription subscription, Plan sourcePlan, Organization organization, SeatCountPolicy seatCountPolicy)
     {
-        // A packaged source has no per-seat line, so the fallback below would quote organization.Seats (the
-        // bundle cap). Match the billed quantity instead: the org's actual occupied seats, floored at 1.
-        if (sourcePlan.HasNonSeatBasedPasswordManagerPlan())
+        // A Packaged source's line items don't reflect the true seat total, so resolve the quote from
+        // actual usage to match what the scheduler bills.
+        if (sourcePlan.IsPackagedMigrationSource(seatCountPolicy))
         {
-            var occupied = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            return Math.Max(1, occupied.Total);
+            var occupied = (await organizationRepository
+                .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
+            var passwordManagerSeats = sourcePlan.ResolveMigratedSeatCount(occupied, organization.Seats);
+
+            // Floor the quote on the Stripe SM seat line so the email matches the billed PM seats (SM <= PM).
+            var secretsManagerSeatQuantity = subscription.Items.Data
+                .FirstOrDefault(item =>
+                    sourcePlan.SecretsManager is not null &&
+                    item.Price?.Id == sourcePlan.SecretsManager.StripeSeatPlanId)?.Quantity ?? 0;
+
+            return (int)Math.Max((long)passwordManagerSeats, secretsManagerSeatQuantity);
         }
 
         var seatItem = subscription.Items.Data
@@ -665,19 +675,6 @@ public class UpcomingInvoiceHandler(
         }
 
         return discounts;
-    }
-
-    private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
-    {
-        while (testClock.Status != "ready")
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2));
-            testClock = await stripeAdapter.GetTestClockAsync(testClock.Id);
-            if (testClock.Status == "internal_failure")
-            {
-                throw new Exception("Stripe Test Clock encountered an internal failure");
-            }
-        }
     }
 
     #endregion
