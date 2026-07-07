@@ -141,8 +141,6 @@ public class ConfirmOrganizationInviteLinkValidator(
         var singleOrgError = singleOrgRequirement.CanJoinOrganization(organizationId, allOrganizationMemberships);
         if (singleOrgError is not null)
         {
-
-            // TODO: Jimmy reassess this
             // Translate the shared policy error into the link-confirm validation-problem variant so the
             // endpoint always returns the RFC 7807 shape. CanJoinOrganization only produces the two errors
             // below; a new one must be mapped here rather than silently falling back to a plain 400.

@@ -873,7 +873,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         return Handle(result, _ => TypedResults.Ok());
     }
 
-    [HttpPost("/organizations/users/invite-link/link-confirm")]
+    [HttpPost("/organizations/users/invite-link/confirm")]
     [RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
     public async Task<IResult> ConfirmInviteLink([FromBody] ConfirmOrganizationInviteLinkRequestModel model)
     {
