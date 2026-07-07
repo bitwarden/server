@@ -175,7 +175,7 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         };
     }
 
-    /// <inheritdoc />  
+    /// <inheritdoc />
     public async Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -194,8 +194,11 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var orgUsers = await dbContext.OrganizationUsers.Where(ou => ou.OrganizationId == organizationId).ToListAsync();
-        var orgUserSendIds = await dbContext.Sends.Where(s => orgUsers.Any(ou => ou.UserId == s.UserId)).Select(s => s.Id).ToListAsync();
+        var orgUserSendIds = await dbContext.Sends
+            .Where(s => dbContext.OrganizationUsers
+                .Any(ou => ou.OrganizationId == organizationId && ou.UserId == s.UserId))
+            .Select(s => s.Id)
+            .ToListAsync();
         return Mapper.Map<List<Guid>>(orgUserSendIds);
     }
 
