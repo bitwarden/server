@@ -15,20 +15,18 @@ public class SalesAssistedRegistrationTokenable : ExpiringTokenable
     public const string DataProtectorPurpose = "SalesAssistedRegistrationTokenDataProtector";
     public const string TokenIdentifier = "SalesAssistedRegistrationToken";
 
-    public string Identifier { get; set; } = TokenIdentifier;
-    public string Email { get; set; } = null!;
-    public string? Name { get; set; }
+    // Binding properties use [JsonInclude] internal set so only the factory (in Bit.Core) can mint a token.
+    // [JsonInclude] is required: JsonSerializer with default options ignores non-public setters, and
+    // deserialized tokens would silently come back with default values.
+    [JsonInclude]
+    public string Identifier { get; internal set; } = TokenIdentifier;
+    [JsonInclude]
+    public string Email { get; internal set; } = null!;
+    [JsonInclude]
+    public string? Name { get; internal set; }
 
-    /// <summary>
-    /// The token is minted exclusively through <see cref="ISalesAssistedRegistrationTokenableFactory"/>, which is the
-    /// sole guaranteed path to a configured lifetime — the factory sets <see cref="Tokens.ExpiringTokenable.ExpirationDate"/>
-    /// after construction. Both constructors are internal — including this one, despite <c>[JsonConstructor]</c> — so
-    /// callers in other assemblies (Identity/Admin/Api) cannot bypass the factory. System.Text.Json's reflection-based
-    /// deserializer can invoke non-public constructors marked <c>[JsonConstructor]</c>, so visibility here doesn't
-    /// affect deserialization.
-    /// </summary>
     [JsonConstructor]
-    internal SalesAssistedRegistrationTokenable()
+    public SalesAssistedRegistrationTokenable()
     {
     }
 
