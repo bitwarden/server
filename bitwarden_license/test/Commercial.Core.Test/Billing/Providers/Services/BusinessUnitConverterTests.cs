@@ -159,6 +159,7 @@ public class BusinessUnitConverterTests
         await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(arguments =>
             arguments.PlanType == PlanType.EnterpriseAnnually &&
             arguments.Status == OrganizationStatusType.Managed &&
+            arguments.UseRiskInsights == enterpriseAnnually.HasRiskInsights &&
             arguments.GatewayCustomerId == null &&
             arguments.GatewaySubscriptionId == null));
 
