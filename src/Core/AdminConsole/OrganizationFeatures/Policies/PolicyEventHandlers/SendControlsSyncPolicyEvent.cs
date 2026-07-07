@@ -108,11 +108,6 @@ public class SendControlsSyncPolicyEvent(
             {
                 await sendRepository.UpdateManyDisabledAsync(disabled, true);
             }
-            // We only want to update deletion dates if the policy is enabled
-            if (postUpsertedPolicyState.Enabled && sendControlsPolicyData.DeletionHours != null)
-            {
-                await sendRepository.UpdateManyDeletionDatesByIdsAsync(sendIdsChunk, sendControlsPolicyData.DeletionHours.GetValueOrDefault(0));
-            }
         }
     }
 
@@ -154,6 +149,11 @@ public class SendControlsSyncPolicyEvent(
             }
         }
         if (policyData.AllowedSendTypes != null && !policyData.AllowedSendTypes.Contains(send.Type))
+        {
+            return true;
+        }
+        // We allow for up to a minute of skew in the difference between the deletion date and the creation date
+        if (policyData.DeletionHours.HasValue && (send.DeletionDate - send.CreationDate).TotalHours > policyData.DeletionHours.Value + 1.0/60.0)
         {
             return true;
         }
