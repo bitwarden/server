@@ -470,6 +470,70 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetPlan(Arg.Any<PlanType>());
     }
 
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithFreeAdminMembership_AdminLimitReached_ReturnsError(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        organization.PlanType = PlanType.Free;
+        existingOrganizationUser.Type = OrganizationUserType.Admin;
+        existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
+        existingOrganizationUser.RevocationReason = null;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, user.Id)
+            .Returns(existingOrganizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
+            .Returns(1);
+
+        // Act
+        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<OnlyOneFreeOrganizationAdminAllowed>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithFreeAdminMembership_NotAtLimit_IsAllowed(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        organization.PlanType = PlanType.Free;
+        existingOrganizationUser.Type = OrganizationUserType.Admin;
+        existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
+        existingOrganizationUser.RevocationReason = null;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, user.Id)
+            .Returns(existingOrganizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
+            .Returns(0);
+
+        // Act
+        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Same(existingOrganizationUser, result.AsSuccess.ExistingOrganizationUser);
+    }
+
     private static void SetupHappyPath(
         Organization org,
         OrganizationInviteLink link,

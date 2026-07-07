@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -79,6 +80,12 @@ public class ConfirmOrganizationInviteLinkValidator(
             return membershipStatusError;
         }
 
+        var freeAdminError = await ValidateFreeOrganizationAdminLimitAsync(organization, existingOrganizationUser, user);
+        if (freeAdminError is not null)
+        {
+            return freeAdminError;
+        }
+
         // A seat is only consumed when a brand-new membership will be created. An existing pending
         // invitation already occupies a seat, so confirming it adds no capacity pressure.
         if (existingOrganizationUser is null)
@@ -126,6 +133,20 @@ public class ConfirmOrganizationInviteLinkValidator(
             { Status: OrganizationUserStatusType.Confirmed } => new ConfirmAlreadyOrganizationMember(),
             _ => null
         };
+
+    private async Task<Error?> ValidateFreeOrganizationAdminLimitAsync(
+        Organization targetOrganization, OrganizationUser? existingOrganizationUser, User user)
+    {
+        if (existingOrganizationUser?.Type is OrganizationUserType.Owner
+                or OrganizationUserType.Admin
+                && targetOrganization.PlanType == PlanType.Free
+                && await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id) > 0)
+        {
+            return new OnlyOneFreeOrganizationAdminAllowed();
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Enforces the membership policies that gate confirmation: Single Organization and Require Two-Factor
