@@ -41,9 +41,6 @@ internal sealed class GeneratePersonalCiphersStep(
         var companies = Companies.All;
         var personalDist = density?.PersonalCipherDistribution;
         var userFolderIds = context.Registry.UserFolderIds;
-        var expectedTotal = personalDist is not null
-            ? EstimateTotal(userDigests.Count, personalDist)
-            : userDigests.Count * countPerUser;
 
         // Force lazy generator init before parallel loop (prevents ??= data race)
         _ = (generator.Username, generator.Card, generator.Identity, generator.SecureNote);
@@ -66,6 +63,37 @@ internal sealed class GeneratePersonalCiphersStep(
             offsets[u] = runningOffset;
             runningOffset += userCount;
         }
+
+        // Guarantee the Owner (always userDigests[0]) has at least one personal cipher to archive
+        // for manual QA. Distribution.Select always assigns index 0 to the first (sparsest) bucket,
+        // and 0 % range always lands on the low end — without this, the Owner would get zero
+        // personal ciphers whenever archiving is configured, regardless of seed.
+        if (userDigests.Count > 0 && userCounts[0] == 0 && density is { ArchivedCipherRate: > 0 })
+        {
+            userCounts[0] = 1;
+            for (var u = 1; u < userDigests.Count; u++)
+            {
+                offsets[u]++;
+            }
+            runningOffset++;
+        }
+
+        var expectedTotal = Math.Max(runningOffset, 1);
+
+        // Archive and delete targets/ceilings are computed independently of GenerateCiphersStep's
+        // org-cipher pool — each pool enforces its own MaxArchivedCiphers/MaxDeletedCiphers cap
+        // rather than sharing one combined budget across steps. bothTarget is clamped by
+        // MaxDeletedCiphers too (not just archivedTarget) since it counts toward the delete ceiling
+        // as well as the archive ceiling.
+        var (archivedTarget, _, bothTarget, deletedOnlyTarget) = ArchiveDeleteDistribution.ComputeTargets(
+            expectedTotal,
+            density?.ArchivedCipherRate ?? 0, density?.DeletedCipherRate ?? 0, density?.ArchivedAndDeletedOverlapRate ?? 0,
+            density?.MaxArchivedCiphers ?? 0, density?.MaxDeletedCiphers ?? 0);
+
+        // globalIndex spans the whole personal-cipher pool (not just this user's block), so the
+        // selection is computed once against expectedTotal and shared read-only across the parallel
+        // per-user loop.
+        var selection = ArchiveDeleteDistribution.Select(expectedTotal, archivedTarget, bothTarget, deletedOnlyTarget);
 
         var userCiphers = new Cipher[userDigests.Count][];
 
@@ -94,6 +122,8 @@ internal sealed class GeneratePersonalCiphersStep(
                     var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId, reprompt: reprompt);
 
                     CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
+
+                    CipherComposer.AssignArchiveOrDeleteState(cipher, globalIndex, selection, _ => userDigest.UserId);
 
                     localCiphers[i] = cipher;
                 }
@@ -134,17 +164,5 @@ internal sealed class GeneratePersonalCiphersStep(
         context.Registry.CipherIds.AddRange(cipherIds);
 
         progress?.Report(new PhaseCompleted(SeederPhases.CreatingPersonalCiphers));
-    }
-
-    private static int EstimateTotal(int userCount, Distribution<(int Min, int Max)> dist)
-    {
-        var total = 0;
-        for (var i = 0; i < userCount; i++)
-        {
-            var range = dist.Select(i, userCount);
-            total += range.Min + (i % Math.Max(range.Max - range.Min + 1, 1));
-        }
-
-        return Math.Max(total, 1);
     }
 }
