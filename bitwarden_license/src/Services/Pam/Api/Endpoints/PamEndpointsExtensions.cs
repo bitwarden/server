@@ -14,8 +14,11 @@ public static class PamEndpointsExtensions
 {
     public static void MapPamEndpoints(this IEndpointRouteBuilder endpoints)
     {
+        endpoints.MapGroup("/leases").WithPamDefaults().MapLeaseEndpoints();
+        endpoints.MapGroup("/organizations/{orgId:guid}/audit").WithPamDefaults().MapAuditEndpoints();
         endpoints.MapGroup("/access-requests").WithPamDefaults().MapAccessRequestEndpoints();
         endpoints.MapGroup("/organizations/{orgId:guid}/access-rules").WithPamDefaults().MapAccessRuleEndpoints();
+        endpoints.MapGroup("/leases/ciphers/{id:guid}").WithPamDefaults().MapCipherLeaseEndpoints();
     }
 
     /// <summary>

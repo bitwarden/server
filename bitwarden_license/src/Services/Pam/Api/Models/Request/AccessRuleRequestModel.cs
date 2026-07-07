@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using Bit.Pam.Entities;
 
 namespace Bit.Services.Pam.Api.Models.Request;
 
@@ -65,4 +67,25 @@ public class AccessRuleRequestModel
     /// </summary>
     [Required]
     public IEnumerable<Guid> Collections { get; set; } = null!;
+
+    public AccessRule ToAccessRule(Guid organizationId) => new()
+    {
+        OrganizationId = organizationId,
+        Name = Name,
+        Description = Description,
+        Conditions = SerializeConditions(Conditions),
+        SingleActiveLease = SingleActiveLease,
+        DefaultLeaseDurationSeconds = DefaultLeaseDurationSeconds,
+        MaxLeaseDurationSeconds = MaxLeaseDurationSeconds,
+        Enabled = Enabled,
+        AllowsExtensions = AllowsExtensions,
+        MaxExtensionDurationSeconds = MaxExtensionDurationSeconds,
+    };
+
+    private static string SerializeConditions(object conditions) => conditions switch
+    {
+        JsonElement je when je.ValueKind == JsonValueKind.Null => string.Empty,
+        JsonElement je => je.GetRawText(),
+        _ => JsonSerializer.Serialize(conditions),
+    };
 }

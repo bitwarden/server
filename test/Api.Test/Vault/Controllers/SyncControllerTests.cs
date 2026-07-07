@@ -4,6 +4,7 @@ using AutoFixture;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
@@ -17,16 +18,19 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -37,6 +41,7 @@ namespace Bit.Api.Test.Controllers;
 
 [ControllerCustomize(typeof(SyncController))]
 [SutProviderCustomize]
+[Bit.Api.Test.Vault.AutoFixture.CipherLeaseGateBypassCustomize]
 public class SyncControllerTests
 {
     [Theory]
@@ -693,6 +698,172 @@ public class SyncControllerTests
         await organizationUserRepository.DidNotReceive().GetManyConfirmedAcceptedDetailsByUserAsync(Arg.Any<Guid>());
         Assert.Null(result.PoliciesNew);
         Assert.Null(result.Profile.OrganizationsNew);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_Leasing_FlagEnabled_CipherOnlyInLeasingCollection_ReturnsPartialData(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        var orgId = Guid.NewGuid();
+        var leasingCollectionId = Guid.NewGuid();
+        var cipherId = Guid.NewGuid();
+
+        var cipher = new CipherDetails
+        {
+            Id = cipherId,
+            Type = CipherType.Login,
+            OrganizationId = orgId,
+            Data = JsonSerializer.Serialize(new CipherLoginData
+            {
+                Name = "2.name|encrypted",
+                Username = "2.SENTINEL-username|encrypted",
+                Password = "2.SENTINEL-password|encrypted",
+                Uris = new[] { new CipherLoginData.CipherLoginUriData { Uri = "2.uri|encrypted" } },
+            }),
+        };
+
+        SetupLeasingSync(sutProvider, user, orgId,
+            ciphers: new List<CipherDetails> { cipher },
+            collections: new List<CollectionDetails> { new() { Id = leasingCollectionId, OrganizationId = orgId, AccessRuleId = Guid.NewGuid() } },
+            collectionCiphers: new List<CollectionCipher> { new() { CipherId = cipherId, CollectionId = leasingCollectionId } },
+            pamFlagEnabled: true);
+        // The gate withholds this leasing-gated cipher: its witness authorizes nothing, so sync delivers partial data.
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>(),
+                Arg.Any<IEnumerable<CollectionDetails>>(),
+                Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
+            .Returns(FullCipherAccess.ForCiphers(Array.Empty<Guid>()));
+
+        var result = await sutProvider.Sut.Get();
+
+        var synced = Assert.Single(result.Ciphers, c => c.Id == cipherId);
+        Assert.Null(synced.Data);
+        Assert.NotNull(synced.PartialData);
+        Assert.DoesNotContain("SENTINEL", synced.PartialData);
+        Assert.Contains("2.name|encrypted", synced.PartialData);
+        Assert.Contains("2.uri|encrypted", synced.PartialData);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_Leasing_FlagEnabled_CipherInMixedCollections_ReturnsFullData(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        var orgId = Guid.NewGuid();
+        var leasingCollectionId = Guid.NewGuid();
+        var normalCollectionId = Guid.NewGuid();
+        var cipherId = Guid.NewGuid();
+
+        var cipher = new CipherDetails
+        {
+            Id = cipherId,
+            Type = CipherType.Login,
+            OrganizationId = orgId,
+            Data = JsonSerializer.Serialize(new CipherLoginData
+            {
+                Name = "2.name|encrypted",
+                Username = "2.SENTINEL-username|encrypted",
+            }),
+        };
+
+        SetupLeasingSync(sutProvider, user, orgId,
+            ciphers: new List<CipherDetails> { cipher },
+            collections: new List<CollectionDetails>
+            {
+                new() { Id = leasingCollectionId, OrganizationId = orgId, AccessRuleId = Guid.NewGuid() },
+                new() { Id = normalCollectionId, OrganizationId = orgId, AccessRuleId = null },
+            },
+            collectionCiphers: new List<CollectionCipher>
+            {
+                new() { CipherId = cipherId, CollectionId = leasingCollectionId },
+                new() { CipherId = cipherId, CollectionId = normalCollectionId },
+            },
+            pamFlagEnabled: true);
+
+        var result = await sutProvider.Sut.Get();
+
+        var synced = Assert.Single(result.Ciphers, c => c.Id == cipherId);
+        Assert.Contains("SENTINEL-username|encrypted", synced.Data);
+        Assert.Null(synced.PartialData);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_Leasing_FlagDisabled_CipherOnlyInLeasingCollection_ReturnsFullData(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        var orgId = Guid.NewGuid();
+        var leasingCollectionId = Guid.NewGuid();
+        var cipherId = Guid.NewGuid();
+
+        var cipher = new CipherDetails
+        {
+            Id = cipherId,
+            Type = CipherType.Login,
+            OrganizationId = orgId,
+            Data = JsonSerializer.Serialize(new CipherLoginData
+            {
+                Name = "2.name|encrypted",
+                Username = "2.SENTINEL-username|encrypted",
+            }),
+        };
+
+        SetupLeasingSync(sutProvider, user, orgId,
+            ciphers: new List<CipherDetails> { cipher },
+            collections: new List<CollectionDetails> { new() { Id = leasingCollectionId, OrganizationId = orgId, AccessRuleId = Guid.NewGuid() } },
+            collectionCiphers: new List<CollectionCipher> { new() { CipherId = cipherId, CollectionId = leasingCollectionId } },
+            pamFlagEnabled: false);
+
+        var result = await sutProvider.Sut.Get();
+
+        var synced = Assert.Single(result.Ciphers, c => c.Id == cipherId);
+        Assert.Contains("SENTINEL-username|encrypted", synced.Data);
+        Assert.Null(synced.PartialData);
+    }
+
+    private static void SetupLeasingSync(
+        SutProvider<SyncController> sutProvider,
+        User user,
+        Guid orgId,
+        List<CipherDetails> ciphers,
+        List<CollectionDetails> collections,
+        List<CollectionCipher> collectionCiphers,
+        bool pamFlagEnabled)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        sutProvider.GetDependency<IUserAccountKeysQuery>().Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var enabledOrg = new Fixture().Create<OrganizationUserOrganizationDetails>();
+        enabledOrg.Enabled = true;
+        enabledOrg.OrganizationId = orgId;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Confirmed)
+            .Returns(new List<OrganizationUserOrganizationDetails> { enabledOrg });
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(user.Id).Returns(collections);
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByUserIdAsync(user.Id).Returns(collectionCiphers);
+
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility> { { orgId, new OrganizationAbility { Id = orgId } } });
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>().TwoFactorIsEnabledAsync(user).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.Pam).Returns(pamFlagEnabled);
     }
 
     private async Task AssertMethodsCalledAsync(IUserService userService,

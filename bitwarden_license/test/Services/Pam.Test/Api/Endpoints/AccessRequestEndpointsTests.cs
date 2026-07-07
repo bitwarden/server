@@ -26,8 +26,11 @@ public class AccessRequestEndpointsTests
         // The handlers must be known services so Minimal API binding treats the handler parameter as injected
         // (not an inferred request body) — the same registration AddPamServices performs in the app.
         // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
+        builder.Services.AddScoped<LeaseEndpointsHandler>();
+        builder.Services.AddScoped<AuditEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
+        builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
 
         var app = builder.Build();
         app.MapPamEndpoints();
@@ -40,12 +43,16 @@ public class AccessRequestEndpointsTests
             .ToList();
     }
 
+    private static List<RouteEndpoint> AccessRequestEndpoints() =>
+        MaterializeEndpoints()
+            .Where(e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName?.StartsWith("Pam_AccessRequests_") == true)
+            .ToList();
+
     [Fact]
     public void MapPamEndpoints_RegistersTheSevenAccessRequestRoutes_InTheInternalDoc()
     {
-        var endpoints = MaterializeEndpoints()
-            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRequests"))
-            .ToList();
+        // MapPamEndpoints maps the whole PAM surface; scope to the access-request routes this contract covers.
+        var endpoints = AccessRequestEndpoints();
 
         Assert.Equal(7, endpoints.Count);
         Assert.All(endpoints, endpoint =>
@@ -76,9 +83,7 @@ public class AccessRequestEndpointsTests
     [Fact]
     public void AccessRequestGroup_DocumentsErrorResponseModel_For400And404()
     {
-        var endpoint = MaterializeEndpoints()
-            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRequests"));
-        var produces = endpoint.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>();
+        var produces = AccessRequestEndpoints()[0].Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>();
 
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status400BadRequest && p.Type == typeof(ErrorResponseModel));
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status404NotFound && p.Type == typeof(ErrorResponseModel));

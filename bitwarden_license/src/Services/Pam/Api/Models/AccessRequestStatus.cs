@@ -5,8 +5,9 @@
 /// <c>2 = activated</c>, <c>3 = denied</c>, <c>4 = canceled</c>, <c>5 = expired</c>.
 /// </summary>
 /// <remarks>
-/// Scaffold only: a standalone copy of the domain request status so the DTOs carry the wire contract without coupling
-/// to the PAM domain. The real type lands with the rest of the PAM feature.
+/// A standalone copy of the domain request status so the DTOs carry the wire contract without coupling to the PAM
+/// domain; <see cref="DomainEnumMapping"/> converts between the two (deriving <see cref="Activated"/>, which the
+/// domain does not track as a distinct state).
 /// </remarks>
 public enum AccessRequestStatus : byte
 {

@@ -26,8 +26,11 @@ public class AccessRuleEndpointsTests
         // The handlers must be known services so Minimal API binding treats the handler parameter as injected
         // (not an inferred request body) — the same registration AddPamServices performs in the app.
         // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
+        builder.Services.AddScoped<LeaseEndpointsHandler>();
+        builder.Services.AddScoped<AuditEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
+        builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
 
         var app = builder.Build();
         app.MapPamEndpoints();
@@ -40,16 +43,22 @@ public class AccessRuleEndpointsTests
             .ToList();
     }
 
+    private static List<RouteEndpoint> AccessRuleEndpoints() =>
+        MaterializeEndpoints()
+            .Where(e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName?.StartsWith("Pam_AccessRules_") == true)
+            .ToList();
+
     [Fact]
     public void MapPamEndpoints_RegistersTheFiveAccessRuleRoutes_InTheInternalDoc()
     {
-        var endpoints = MaterializeEndpoints()
-            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
-            .ToList();
+        // MapPamEndpoints maps the whole PAM surface; scope to the access-rule routes this contract covers.
+        var endpoints = AccessRuleEndpoints();
 
         Assert.Equal(5, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
+        Assert.All(endpoints, endpoint =>
+            Assert.Contains("AccessRules", endpoint.Metadata.GetMetadata<ITagsMetadata>()!.Tags));
     }
 
     [Theory]
@@ -74,9 +83,7 @@ public class AccessRuleEndpointsTests
     [Fact]
     public void AccessRuleGroup_DocumentsErrorResponseModel_For400And404()
     {
-        var endpoint = MaterializeEndpoints()
-            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"));
-        var produces = endpoint.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>();
+        var produces = AccessRuleEndpoints()[0].Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>();
 
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status400BadRequest && p.Type == typeof(ErrorResponseModel));
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status404NotFound && p.Type == typeof(ErrorResponseModel));

@@ -77,6 +77,20 @@ public interface IMailService
     Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false);
     Task SendUpdatedOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager = false);
     Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email);
+    /// <summary>
+    /// Notifies a collection's managers (the approvers) that a new PAM access request is pending their review.
+    /// Sent as a single bulk message to all manager emails. Carries only server-readable request metadata; it
+    /// must never include the requested item or collection name, which are encrypted vault data.
+    /// </summary>
+    /// <param name="managerEmails">Email addresses of the collection's managers/approvers.</param>
+    /// <param name="organizationName">The organization the request belongs to.</param>
+    /// <param name="requesterName">Display name of the requester (falls back to email when blank).</param>
+    /// <param name="requesterEmail">Email address of the requester.</param>
+    /// <param name="notBefore">Start of the requested access window (UTC).</param>
+    /// <param name="notAfter">End of the requested access window (UTC).</param>
+    /// <param name="reason">The requester's stated reason for access.</param>
+    Task SendPamPendingAccessRequestEmailsAsync(IEnumerable<string> managerEmails, string organizationName,
+        string? requesterName, string requesterEmail, DateTime notBefore, DateTime notAfter, string? reason);
     Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email);
     Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);
     Task SendInvoiceUpcoming(

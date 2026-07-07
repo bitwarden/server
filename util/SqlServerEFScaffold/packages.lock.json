@@ -1626,11 +1626,10 @@
           "AspNetCore.HealthChecks.SqlServer": "[8.0.2, 8.0.2]",
           "AspNetCore.HealthChecks.Uris": "[8.0.1, 8.0.1]",
           "Azure.Messaging.EventGrid": "[5.0.0, 5.0.0]",
-          "Commercial.Core": "[2026.6.1, )",
-          "Commercial.Infrastructure.EntityFramework": "[2026.6.1, )",
-          "Pam": "[2026.6.1, )",
-          "Core": "[2026.6.1, )",
-          "HttpExtensions": "[2026.6.1, )",
+          "Commercial.Core": "[2026.6.2, )",
+          "Commercial.Infrastructure.EntityFramework": "[2026.6.2, )",
+          "Core": "[2026.6.2, )",
+          "HttpExtensions": "[2026.6.2, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.0, )",
@@ -1638,14 +1637,16 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
-          "SharedWeb": "[2026.6.1, )",
+          "Pam": "[2026.6.2, )",
+          "Pam.Domain": "[2026.6.2, )",
+          "SharedWeb": "[2026.6.2, )",
           "Swashbuckle.AspNetCore": "[10.1.7, 10.1.7]"
         }
       },
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "CsvHelper": "[33.1.0, 33.1.0]"
         }
       },
@@ -1653,15 +1654,8 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )"
-        }
-      },
-      "pam": {
-        "type": "Project",
-        "dependencies": {
-          "Core": "[2026.6.1, )",
-          "HttpExtensions": "[2026.6.1, )"
+          "Core": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )"
         }
       },
       "core": {
@@ -1680,6 +1674,7 @@
           "BitPay.Light": "[1.0.1907, 1.0.1907]",
           "Braintree": "[5.36.0, 5.36.0]",
           "CsvHelper": "[33.1.0, 33.1.0]",
+          "Data": "[2026.6.2, )",
           "DnsClient": "[1.8.0, 1.8.0]",
           "Duende.IdentityServer": "[7.4.6, 7.4.6]",
           "DuoUniversal": "[1.3.1, 1.3.1]",
@@ -1704,6 +1699,7 @@
           "Newtonsoft.Json": "[13.0.3, 13.0.3]",
           "OneOf": "[3.0.271, 3.0.271]",
           "Otp.NET": "[1.4.0, 1.4.0]",
+          "Pam.Domain": "[2026.6.2, )",
           "Quartz": "[3.15.1, 3.15.1]",
           "Quartz.Extensions.DependencyInjection": "[3.15.1, 3.15.1]",
           "Quartz.Extensions.Hosting": "[3.15.1, 3.15.1]",
@@ -1717,36 +1713,55 @@
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
       },
+      "data": {
+        "type": "Project"
+      },
       "httpextensions": {
         "type": "Project"
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
-          "Dapper": "[2.1.66, 2.1.66]"
+          "Core": "[2026.6.2, )",
+          "Dapper": "[2.1.66, 2.1.66]",
+          "Pam.Domain": "[2026.6.2, )"
         }
       },
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.4, 8.0.4]",
+          "Pam.Domain": "[2026.6.2, )",
           "Pomelo.EntityFrameworkCore.MySql": "[8.0.2, 8.0.2]",
           "linq2db": "[5.4.1, 5.4.1]",
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
         }
       },
+      "pam": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.6.2, )",
+          "HttpExtensions": "[2026.6.2, )",
+          "Pam.Domain": "[2026.6.2, )"
+        }
+      },
+      "pam.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Data": "[2026.6.2, )"
+        }
+      },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
-          "Infrastructure.Dapper": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
+          "Infrastructure.Dapper": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }
