@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Data.Distributions;
+﻿using Bit.Core.Vault.Entities;
+using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
@@ -107,6 +108,119 @@ public class CipherComposerTests
 
         Assert.Single(history);
         Assert.False(string.IsNullOrEmpty(history[0].Password));
+    }
+
+    [Fact]
+    public void BuildArchivesJson_ProducesExpectedShape()
+    {
+        // Uses a lowercase GUID with hex letters (not just digits) so the assertion actually
+        // exercises ToUpperInvariant() rather than passing regardless of casing.
+        var userId = Guid.Parse("aabbccdd-eeff-1122-3344-5566778899aa");
+        var archivedDate = new DateTime(2026, 1, 2, 3, 4, 5, 678, DateTimeKind.Utc);
+
+        var json = CipherComposer.BuildArchivesJson(userId, archivedDate);
+
+        Assert.Equal(
+            "{\"AABBCCDD-EEFF-1122-3344-5566778899AA\":\"2026-01-02T03:04:05.678Z\"}",
+            json);
+    }
+
+    [Theory]
+    [InlineData(7, 14)]
+    [InlineData(15, 90)]
+    public void DaysAgo_AlwaysWithinRequestedRange(int minDaysAgo, int maxDaysAgo)
+    {
+        var now = DateTime.UtcNow;
+
+        for (var index = 0; index < 200; index++)
+        {
+            var result = CipherComposer.DaysAgo(index, minDaysAgo, maxDaysAgo);
+            var daysAgo = (now - result).TotalDays;
+
+            Assert.True(daysAgo >= minDaysAgo - 0.01 && daysAgo <= maxDaysAgo + 0.01,
+                $"index {index}: expected {minDaysAgo}-{maxDaysAgo} days ago, got {daysAgo:F2}.");
+        }
+    }
+
+    [Fact]
+    public void DaysAgo_ArchivedOnlyRangeNeverOverlapsDeletedRange()
+    {
+        // The 15-90 (archived-only) and 7-14 (deleted) windows must never overlap, so an archived
+        // date is always chronologically before a deleted date for the same index — required for
+        // "both" ciphers where DeletedDate must postdate the Archives timestamp.
+        for (var index = 0; index < 200; index++)
+        {
+            var archivedDate = CipherComposer.DaysAgo(index, 15, 90);
+            var deletedDate = CipherComposer.DaysAgo(index, 7, 14);
+
+            Assert.True(archivedDate < deletedDate,
+                $"index {index}: archivedDate ({archivedDate:o}) must be before deletedDate ({deletedDate:o}).");
+        }
+    }
+
+    [Fact]
+    public void AssignArchiveOrDeleteState_IsBoth_SetsAllFourFields_ArchivedDateBeforeDeletedDate()
+    {
+        var cipher = new Cipher { CreationDate = DateTime.UtcNow };
+        var ownerId = Guid.NewGuid();
+        var selection = new ArchiveDeleteSets(
+            Archived: [3], Both: [3], DeletedOnly: [], ArchivedOrder: [3]);
+
+        CipherComposer.AssignArchiveOrDeleteState(cipher, 3, selection, _ => ownerId);
+
+        Assert.NotNull(cipher.Archives);
+        Assert.NotNull(cipher.DeletedDate);
+        Assert.Equal(cipher.DeletedDate, cipher.RevisionDate);
+        Assert.True(cipher.CreationDate < cipher.DeletedDate);
+        Assert.Contains(ownerId.ToString().ToUpperInvariant(), cipher.Archives);
+    }
+
+    [Fact]
+    public void AssignArchiveOrDeleteState_ArchivedOnly_SetsArchivesButLeavesDeletedDateNull()
+    {
+        var cipher = new Cipher { CreationDate = DateTime.UtcNow };
+        var ownerId = Guid.NewGuid();
+        var selection = new ArchiveDeleteSets(
+            Archived: [3], Both: [], DeletedOnly: [], ArchivedOrder: [3]);
+
+        CipherComposer.AssignArchiveOrDeleteState(cipher, 3, selection, _ => ownerId);
+
+        Assert.NotNull(cipher.Archives);
+        Assert.Null(cipher.DeletedDate);
+        Assert.Equal(cipher.CreationDate, cipher.RevisionDate);
+    }
+
+    [Fact]
+    public void AssignArchiveOrDeleteState_DeletedOnly_SetsDeletedDateButLeavesArchivesNull()
+    {
+        var cipher = new Cipher { CreationDate = DateTime.UtcNow };
+        var selection = new ArchiveDeleteSets(
+            Archived: [], Both: [], DeletedOnly: [3], ArchivedOrder: []);
+
+        CipherComposer.AssignArchiveOrDeleteState(
+            cipher, 3, selection, _ => throw new InvalidOperationException("must not be called"));
+
+        Assert.Null(cipher.Archives);
+        Assert.NotNull(cipher.DeletedDate);
+        Assert.Equal(cipher.DeletedDate, cipher.RevisionDate);
+    }
+
+    [Fact]
+    public void AssignArchiveOrDeleteState_UntouchedIndex_MutatesNothing()
+    {
+        var originalCreationDate = DateTime.UtcNow;
+        var cipher = new Cipher { CreationDate = originalCreationDate };
+        var originalRevisionDate = cipher.RevisionDate;
+        var selection = new ArchiveDeleteSets(
+            Archived: [], Both: [], DeletedOnly: [], ArchivedOrder: []);
+
+        CipherComposer.AssignArchiveOrDeleteState(
+            cipher, 3, selection, _ => throw new InvalidOperationException("must not be called"));
+
+        Assert.Equal(originalCreationDate, cipher.CreationDate);
+        Assert.Equal(originalRevisionDate, cipher.RevisionDate);
+        Assert.Null(cipher.Archives);
+        Assert.Null(cipher.DeletedDate);
     }
 
     private static PasswordStrength ClassifyStrength(string password)
