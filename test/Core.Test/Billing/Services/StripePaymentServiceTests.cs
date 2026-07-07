@@ -1664,11 +1664,13 @@ public class StripePaymentServiceTests
                 [
                     new SubscriptionItem
                     {
+                        Price = new Price { Id = "teams-org-monthly" },
                         Plan = new Plan { Id = "teams-org-monthly", ProductId = "prod_2019_teams_org", Nickname = "2019 Teams Org. (Monthly)", Amount = 800, Interval = "month" },
                         Quantity = 1
                     },
                     new SubscriptionItem
                     {
+                        Price = new Price { Id = "teams-org-seat-monthly" },
                         Plan = new Plan { Id = "teams-org-seat-monthly", ProductId = "prod_2019_teams_seat", Nickname = "2019 Teams Seat (Monthly)", Amount = 250, Interval = "month" },
                         Quantity = 2,
                         Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" }
@@ -1749,17 +1751,20 @@ public class StripePaymentServiceTests
                 [
                     new SubscriptionItem
                     {
+                        Price = new Price { Id = "teams-org-monthly" },
                         Plan = new Plan { Id = "teams-org-monthly", ProductId = "prod_2019_teams_org", Nickname = "2019 Teams Org. (Monthly)", Amount = 800, Interval = "month" },
                         Quantity = 1
                     },
                     new SubscriptionItem
                     {
+                        Price = new Price { Id = "teams-org-seat-monthly" },
                         Plan = new Plan { Id = "teams-org-seat-monthly", ProductId = "prod_2019_teams_seat", Nickname = "2019 Teams Seat (Monthly)", Amount = 250, Interval = "month" },
                         Quantity = 2,
                         Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" }
                     },
                     new SubscriptionItem
                     {
+                        Price = new Price { Id = "storage-gb-monthly" },
                         Plan = new Plan { Id = "storage-gb-monthly", ProductId = "prod_storage_old", Nickname = "Additional Storage GB (Monthly)", Amount = 50, Interval = "month" },
                         Quantity = 3,
                         Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" }
@@ -1844,6 +1849,7 @@ public class StripePaymentServiceTests
                 [
                     new SubscriptionItem
                     {
+                        Price = new Price { Id = "2020-teams-org-seat-monthly" },
                         Plan = new Plan { Id = "2020-teams-org-seat-monthly", ProductId = "prod_teams_2020", Nickname = "Teams Organization Seat (Monthly)", Amount = 400, Interval = "month" },
                         Quantity = 10
                     }
