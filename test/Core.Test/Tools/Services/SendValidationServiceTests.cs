@@ -285,4 +285,23 @@ public class SendValidationServiceTests
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ValidateUserCanSaveAsync(null, send));
     }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_SendDeletionDateExceedsDeletionHours_ThrowsBadRequest(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        send.DeletionDate = send.CreationDate.AddDays(7);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement { DisableSend = false });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, DeletionHours = 72 });
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+    }
 }
