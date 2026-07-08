@@ -10,7 +10,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Controllers;
+namespace Bit.Api.IntegrationTest.Auth.Controllers;
 
 public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

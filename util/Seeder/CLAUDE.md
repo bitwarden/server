@@ -98,6 +98,10 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 **Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
 
+## Data/ File Organization
+
+New files under `Data/` belong in the matching subfolder (`Distributions/`, `Enums/`, `Generators/`, `Static/`) — never loose at the top level. See `Data/README.md` for what each subfolder holds. If a new file's concern doesn't fit an existing subfolder, that's a signal to create one, not to drop it loose.
+
 ## The Recipe Contract
 
 Recipes follow strict rules:

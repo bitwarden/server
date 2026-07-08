@@ -37,6 +37,7 @@ public class OrganizationPlanExtensionsTests
         Assert.Equal(targetPlan.HasScim, organization.UseScim);
         Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
         Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
         Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
         Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
         Assert.True(organization.UsePasswordManager);
@@ -71,6 +72,7 @@ public class OrganizationPlanExtensionsTests
         Assert.Equal(targetPlan.HasScim, organization.UseScim);
         Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
         Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
         Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
         Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
         Assert.True(organization.UsePasswordManager);
@@ -178,6 +180,7 @@ public class OrganizationPlanExtensionsTests
         Assert.Equal(targetPlan.HasScim, organization.UseScim);
         Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
         Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
         Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
         Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
         Assert.True(organization.UsePasswordManager);
@@ -213,6 +216,7 @@ public class OrganizationPlanExtensionsTests
         Assert.Equal(targetPlan.HasScim, organization.UseScim);
         Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
         Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
         Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
         Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
         Assert.True(organization.UsePasswordManager);
@@ -249,6 +253,7 @@ public class OrganizationPlanExtensionsTests
         Assert.Equal(targetPlan.HasScim, organization.UseScim);
         Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
         Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
         Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
         Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
         Assert.True(organization.UsePasswordManager);
