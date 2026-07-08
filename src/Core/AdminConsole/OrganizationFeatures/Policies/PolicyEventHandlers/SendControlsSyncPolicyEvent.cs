@@ -152,6 +152,11 @@ public class SendControlsSyncPolicyEvent(
         {
             return true;
         }
+        // We allow for up to a minute of skew in the difference between the deletion date and the creation date
+        if (policyData.DeletionHours.HasValue && (send.DeletionDate.AddMinutes(-1) - send.CreationDate).TotalHours > policyData.DeletionHours.Value)
+        {
+            return true;
+        }
         return false;
     }
 }

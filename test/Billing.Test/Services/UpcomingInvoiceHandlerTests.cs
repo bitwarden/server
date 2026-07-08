@@ -4118,6 +4118,7 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
             !mail.View.HasDiscount &&
+            !mail.View.ShowProactiveDiscountCopy &&
             mail.View.IsAnnual &&
             mail.View.Seats == 320 &&
             mail.View.PerUserMonthlyPrice == "$6" &&
@@ -4178,7 +4179,69 @@ public class UpcomingInvoiceHandlerTests
         // Assert — the email is still sent, price-only, and the StripeException does not propagate.
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
-            !mail.View.HasDiscount));
+            !mail.View.HasDiscount &&
+            !mail.View.ShowProactiveDiscountCopy));
+    }
+
+    [Theory]
+    [InlineData("repeating", 12L, 12, true)]
+    [InlineData("once", null, 0, false)]
+    [InlineData("forever", null, 0, false)]
+    public async Task HandleAsync_WhenBusinessTier_SetsProactiveDiscountMonths_FromCouponDuration(
+        string duration, long? durationInMonths, int expectedMonths, bool expectedShow)
+    {
+        // Arrange — a proactive coupon whose Stripe duration drives the loyalty-discount copy. Only a
+        // "repeating" coupon has a finite month span; "once"/"forever" suppress the copy.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually2020
+        };
+        var enterprise2020Plan = new Enterprise2020Plan(isAnnual: true);
+        var enterprisePlan = new EnterprisePlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = "loyalty",
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterprisePlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+        _stripeAdapter.GetCouponAsync("loyalty", Arg.Any<CouponGetOptions>())
+            .Returns(new Coupon { PercentOff = 20, Duration = duration, DurationInMonths = durationInMonths });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.View.ProactiveDiscountMonths == expectedMonths &&
+            mail.View.ShowProactiveDiscountCopy == expectedShow));
     }
 
     [Fact]
