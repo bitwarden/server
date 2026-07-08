@@ -317,26 +317,25 @@ public class ServiceAccountsControllerTests
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), serviceAccount,
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        var revokedTokens = Enumerable.Range(0, 3).Select(_ => new ApiKey
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Name",
+            Scope = "Test Scope",
+            EncryptedPayload = "Test EncryptedPayload",
+            Key = "Test Key",
+        }).ToList();
         sutProvider.GetDependency<IRevokeAccessTokensCommand>()
             .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>())
-            .Returns(new List<ApiKey>
-            {
-                new()
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Test Name",
-                    Scope = "Test Scope",
-                    EncryptedPayload = "Test EncryptedPayload",
-                    Key = "Test Key",
-                },
-            });
+            .Returns(revokedTokens);
 
         await sutProvider.Sut.RevokeAccessTokensAsync(serviceAccount.Id, data);
         await sutProvider.GetDependency<IRevokeAccessTokensCommand>().Received(1)
             .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>());
+        // One AccessToken_Revoked event should be logged per revoked token.
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogServiceAccountEventAsync(Arg.Any<Guid>(),
-                Arg.Is<List<ServiceAccount>>(l => l.Contains(serviceAccount)),
+                Arg.Is<List<ServiceAccount>>(l => l.Count == revokedTokens.Count && l.All(sa => sa == serviceAccount)),
                 EventType.AccessToken_Revoked, Arg.Any<IdentityClientType>());
     }
 

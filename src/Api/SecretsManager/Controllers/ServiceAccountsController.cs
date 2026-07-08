@@ -275,7 +275,10 @@ public class ServiceAccountsController : Controller
         if (revokedAccessTokens.Any())
         {
             var userId = _userService.GetProperUserId(User).Value;
-            await _eventService.LogServiceAccountEventAsync(userId, [serviceAccount], EventType.AccessToken_Revoked, _currentContext.IdentityClientType);
+
+            // Emit one AccessToken_Revoked event per revoked token (a single request revokes many).
+            var eventPerRevokedToken = revokedAccessTokens.Select(_ => serviceAccount).ToList();
+            await _eventService.LogServiceAccountEventAsync(userId, eventPerRevokedToken, EventType.AccessToken_Revoked, _currentContext.IdentityClientType);
         }
     }
 }
