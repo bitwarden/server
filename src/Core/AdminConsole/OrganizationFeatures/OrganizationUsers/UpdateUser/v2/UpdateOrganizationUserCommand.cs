@@ -25,43 +25,31 @@ public class UpdateOrganizationUserCommand(
 {
     public async Task<CommandResult> UpdateUserAsync(UpdateOrganizationUserRequest request)
     {
-        var (organizationUser, organization, organizationAbility) = (request.OrganizationUser, request.Organization, request.OrganizationAbility);
+        var (organizationUser, organization) = (request.OrganizationUserToUpdate, request.Organization);
 
-        var validationResult = await validator.ValidateAsync(new UpdateOrganizationUserValidationRequest(
-            organizationUser,
-            request.Type,
-            request.PerformedBy,
-            request.PerformedByOrganizationUser,
-            request.CollectionsToSave?.ToList() ?? [],
-            request.GroupsToSave,
-            request.CurrentAccessIds,
-            organization,
-            organizationAbility,
-            request.PostedCollections));
+        var validationResult = await validator.ValidateAsync(request);
 
         if (validationResult.IsError)
         {
             return validationResult.AsError;
         }
 
-        var collectionsToSave = validationResult.Request.CollectionsToSave;
-        var groupsToSave = validationResult.Request.GroupsToSave;
+        var collectionsToSave = request.NewCollections?.ToList() ?? [];
+        var groupsToSave = request.NewGroups;
 
-        var enablingSecretsManager = !organizationUser.AccessSecretsManager && request.AccessSecretsManager;
+        var enablingSecretsManager = !organizationUser.AccessSecretsManager && request.NewAccessSecretsManager;
 
-        organizationUser.Type = request.Type;
-        organizationUser.Permissions = CoreHelpers.ClassToJsonData(request.Permissions);
-        organizationUser.AccessSecretsManager = request.AccessSecretsManager;
+        organizationUser.Type = request.NewType;
+        organizationUser.Permissions = CoreHelpers.ClassToJsonData(request.NewPermissions);
+        organizationUser.AccessSecretsManager = request.NewAccessSecretsManager;
 
-        // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
-        // updating Stripe.
+        // Only autoscale after validation passes, so we never touch Stripe for an invalid request.
         if (enablingSecretsManager)
         {
             var additionalSmSeatsRequired = await countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organizationUser.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                // Self-hosted instances are licensed for a fixed number of seats and cannot update their Stripe
-                // subscription, so autoscaling isn't possible. Reject rather than errantly attempting a purchase.
+                // Self-hosted instances can't autoscale their Stripe subscription; reject rather than attempt a purchase.
                 if (globalSettings.SelfHosted)
                 {
                     return new CannotAutoscaleSecretsManagerSeatsOnSelfHost();

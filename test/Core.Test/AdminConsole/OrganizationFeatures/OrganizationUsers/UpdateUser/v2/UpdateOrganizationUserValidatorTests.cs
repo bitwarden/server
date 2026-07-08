@@ -287,7 +287,7 @@ public class UpdateOrganizationUserValidatorTests
         Assert.True(result.IsValid);
     }
 
-    private static UpdateOrganizationUserValidationRequest CreateRequest(
+    private static UpdateOrganizationUserRequest CreateRequest(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUserType newType,
@@ -316,16 +316,11 @@ public class UpdateOrganizationUserValidatorTests
         var actingMembership = performedByOrganizationUser
                                ?? (performedBy is null ? ActingOrganizationUser(OrganizationUserType.Owner) : null);
 
-        return new UpdateOrganizationUserValidationRequest(
+        return new UpdateOrganizationUserRequest(
             organizationUser,
-            newType,
-            actingUser,
-            actingMembership,
-            collections ?? [],
-            groups,
-            currentAccessIds ?? [],
             organization ?? CreateOrganization(organizationUser.OrganizationId, PlanType.EnterpriseAnnually),
             ability ?? CreateAbility(organizationUser.OrganizationId, allowAdminAccessToAllCollectionItems: true),
+            currentAccessIds ?? [],
             // By default, treat every posted collection as an existing shared collection in the org so
             // validation passes; tests override this to exercise missing or default collections.
             postedCollections ?? (collections ?? [])
@@ -335,7 +330,14 @@ public class UpdateOrganizationUserValidatorTests
                     OrganizationId = organizationUser.OrganizationId,
                     Type = CollectionType.SharedCollection
                 })
-                .ToList());
+                .ToList(),
+            newType,
+            null,
+            false,
+            collections ?? [],
+            groups,
+            actingUser,
+            actingMembership);
     }
 
     // The acting user's own membership. Custom users are given ManageUsers by default, since that is the

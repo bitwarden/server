@@ -22,10 +22,10 @@ public class UpdateOrganizationUserValidator(
     IOrganizationUserValidationService organizationUserValidationService)
     : IUpdateOrganizationUserValidator
 {
-    public async Task<ValidationResult<UpdateOrganizationUserValidationRequest>> ValidateAsync(
-        UpdateOrganizationUserValidationRequest request)
+    public async Task<ValidationResult<UpdateOrganizationUserRequest>> ValidateAsync(
+        UpdateOrganizationUserRequest request)
     {
-        var organizationUser = request.OrganizationUser;
+        var organizationUser = request.OrganizationUserToUpdate;
 
         if (organizationUser.Id == Guid.Empty)
         {
@@ -45,28 +45,26 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new CannotAddSelfToCollection());
         }
 
-        // All posted collections must exist and belong to the organization. The API layer has already loaded
-        // and authorized these collections, so they are validated against the request rather than re-queried.
-        var collectionsToSave = request.CollectionsToSave;
+        // Posted collections must exist and belong to the organization; validated against the pre-loaded set.
+        var collectionsToSave = request.NewCollections ?? [];
         if (collectionsToSave.Count != 0)
         {
-            if (!CollectionsAreValid(collectionsToSave, request.PostedCollections, organizationUser.OrganizationId))
+            if (!CollectionsAreValid(collectionsToSave, request.ReferencedCollections, organizationUser.OrganizationId))
             {
                 return Invalid(request, new CollectionNotFound());
             }
 
-            // Default user collections ("My Items") cannot be assigned through member management; their presence
-            // here is invalid input (they are excluded from the current-access set upstream).
-            if (ContainsDefaultUserCollection(collectionsToSave, request.PostedCollections))
+            // Default user collections ("My Items") cannot be assigned through member management.
+            if (ContainsDefaultUserCollection(collectionsToSave, request.ReferencedCollections))
             {
                 return Invalid(request, new CannotAssignDefaultCollection());
             }
         }
 
         // All posted groups must exist and belong to the organization.
-        if (request.GroupsToSave?.Any() == true)
+        if (request.NewGroups?.Any() == true)
         {
-            var groupAccess = request.GroupsToSave.ToList();
+            var groupAccess = request.NewGroups.ToList();
             var groups = await groupRepository.GetManyByManyIds(groupAccess);
             if (!GroupsAreValid(groupAccess, groups, organizationUser.OrganizationId))
             {
@@ -119,7 +117,7 @@ public class UpdateOrganizationUserValidator(
             return true;
         }
 
-        // Since free organizations only support a few users there is not much point in avoiding N+1 queries for this.
+        // Free organizations have few users, so the extra query here is acceptable.
         var adminCount = await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(organizationUser.UserId!.Value);
         var isCurrentAdminOrOwner = organizationUser.Type is OrganizationUserType.Admin or OrganizationUserType.Owner;
 
@@ -137,14 +135,11 @@ public class UpdateOrganizationUserValidator(
     }
 
     /// <summary>
-    /// Prevents a caller from granting a role higher than their own (privilege escalation). Delegates the
-    /// authority decision to the shared <see cref="IOrganizationUserValidationService.CanManage"/> rules,
-    /// checking both the member's current role and the requested role so an existing higher-ranked member
-    /// cannot be modified from below either. System users act with full authority, so the check is skipped
-    /// for them. Provider authority is resolved inside the service from the acting user's id. The specific
-    /// error messages are preserved by mapping the denial back to which role was out of reach.
+    /// Prevents a caller from granting or modifying a role higher than their own. Delegates the authority
+    /// decision to <see cref="IOrganizationUserValidationService.CanManage"/>, checking both the member's
+    /// current and requested role. System users skip the check; a denial is mapped to a specific error.
     /// </summary>
-    private async Task<Error?> ValidateNotEscalatingAboveOwnRoleAsync(UpdateOrganizationUserValidationRequest request)
+    private async Task<Error?> ValidateNotEscalatingAboveOwnRoleAsync(UpdateOrganizationUserRequest request)
     {
         if (request.PerformedBy is SystemUser)
         {
@@ -154,16 +149,15 @@ public class UpdateOrganizationUserValidator(
         var actingUser = request.PerformedByOrganizationUser;
         var actingUserId = request.PerformedBy.UserId!.Value; // non-null: SystemUser already returned above
 
-        // The requested role is represented by a synthetic member carrying the same organization id, so the
-        // service can resolve provider authority against the correct organization.
+        // A synthetic member carrying the org id, so the service resolves provider authority against it.
         var requestedRole = new OrganizationUser
         {
             Type = request.NewType,
-            OrganizationId = request.OrganizationUser.OrganizationId
+            OrganizationId = request.OrganizationUserToUpdate.OrganizationId
         };
 
         var canManageCurrentRole =
-            await organizationUserValidationService.CanManage(actingUserId, actingUser, request.OrganizationUser) is null;
+            await organizationUserValidationService.CanManage(actingUserId, actingUser, request.OrganizationUserToUpdate) is null;
         var canManageNewRole =
             await organizationUserValidationService.CanManage(actingUserId, actingUser, requestedRole) is null;
 
@@ -172,9 +166,8 @@ public class UpdateOrganizationUserValidator(
             return null;
         }
 
-        // Map the denial to its specific message. An Owner (current or requested) can only be managed by an
-        // Owner; everything else that trips the check is a Custom user reaching above their authority.
-        if (request.OrganizationUser.Type == OrganizationUserType.Owner || request.NewType == OrganizationUserType.Owner)
+        // Only an Owner can manage an Owner; otherwise it's a Custom user reaching above their authority.
+        if (request.OrganizationUserToUpdate.Type == OrganizationUserType.Owner || request.NewType == OrganizationUserType.Owner)
         {
             return new OnlyOwnersCanManageOwners();
         }
@@ -182,15 +175,15 @@ public class UpdateOrganizationUserValidator(
         return new CustomUsersCannotManageAdminsOrOwners();
     }
 
-    private static bool IsAddingSelfToCollection(UpdateOrganizationUserValidationRequest request)
+    private static bool IsAddingSelfToCollection(UpdateOrganizationUserRequest request)
     {
         var editingSelf = request.PerformedBy is not SystemUser
-                          && request.OrganizationUser.UserId.HasValue
-                          && request.OrganizationUser.UserId == request.PerformedBy.UserId;
+                          && request.OrganizationUserToUpdate.UserId.HasValue
+                          && request.OrganizationUserToUpdate.UserId == request.PerformedBy.UserId;
 
         return editingSelf
                && !request.OrganizationAbility.AllowAdminAccessToAllCollectionItems
-               && request.CollectionsToSave.Any(c => !request.CurrentAccessIds.Contains(c.Id));
+               && (request.NewCollections ?? []).Any(c => !request.CurrentAccessIds.Contains(c.Id));
     }
 
     private static bool CollectionsAreValid(List<CollectionAccessSelection> collectionAccess,

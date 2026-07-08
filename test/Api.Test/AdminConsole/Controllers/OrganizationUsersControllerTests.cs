@@ -866,10 +866,10 @@ public class OrganizationUsersControllerTests
         Assert.IsType<NoContent>(result);
         Assert.NotNull(captured);
         // The default collection is dropped from the preserved set; the shared one is kept.
-        Assert.Contains(captured.CollectionsToSave, c => c.Id == sharedCollectionId);
-        Assert.DoesNotContain(captured.CollectionsToSave, c => c.Id == defaultCollectionId);
+        Assert.Contains(captured.NewCollections, c => c.Id == sharedCollectionId);
+        Assert.DoesNotContain(captured.NewCollections, c => c.Id == defaultCollectionId);
         // Both hydrated collections are still passed through so the validator can reject any posted default.
-        Assert.Contains(captured.PostedCollections, c => c.Id == defaultCollectionId);
+        Assert.Contains(captured.ReferencedCollections, c => c.Id == defaultCollectionId);
     }
 
     private static void PutSetup(SutProvider<OrganizationUsersController> sutProvider, Organization organization,

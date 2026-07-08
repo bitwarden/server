@@ -443,15 +443,15 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 organizationUser,
                 organization,
                 organizationAbility,
+                currentAccessIds,
+                postedCollections,
                 model.Type.Value,
                 model.Permissions,
                 model.AccessSecretsManager,
-                new StandardUser(userId, await _currentContext.OrganizationOwner(organization.Id)),
-                savingOrganizationUser,
                 collectionsToSave,
                 groupsToSave,
-                currentAccessIds,
-                postedCollections);
+                new StandardUser(userId, await _currentContext.OrganizationOwner(organization.Id)),
+                savingOrganizationUser);
 
             var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
             return Handle(result);

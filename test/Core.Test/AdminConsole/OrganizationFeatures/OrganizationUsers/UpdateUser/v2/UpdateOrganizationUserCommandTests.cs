@@ -203,23 +203,23 @@ public class UpdateOrganizationUserCommandTests
         organizationUser.OrganizationId = organization.Id;
 
         sutProvider.GetDependency<IUpdateOrganizationUserValidator>()
-            .ValidateAsync(Arg.Any<UpdateOrganizationUserValidationRequest>())
+            .ValidateAsync(Arg.Any<UpdateOrganizationUserRequest>())
             .Returns(ci => valid
-                ? ValidationResultHelpers.Valid(ci.Arg<UpdateOrganizationUserValidationRequest>())
-                : ValidationResultHelpers.Invalid(ci.Arg<UpdateOrganizationUserValidationRequest>(), new MustHaveConfirmedOwner()));
+                ? ValidationResultHelpers.Valid(ci.Arg<UpdateOrganizationUserRequest>())
+                : ValidationResultHelpers.Invalid(ci.Arg<UpdateOrganizationUserRequest>(), new MustHaveConfirmedOwner()));
 
         return new UpdateOrganizationUserRequest(
             organizationUser,
             organization,
             new OrganizationAbility { Id = organization.Id },
+            [],
+            [],
             type,
             null,
             targetAccessSecretsManager,
-            new StandardUser(organizationUser.UserId ?? Guid.NewGuid(), true),
-            new OrganizationUser { Type = OrganizationUserType.Owner },
             collections,
             groups,
-            [],
-            []);
+            new StandardUser(organizationUser.UserId ?? Guid.NewGuid(), true),
+            new OrganizationUser { Type = OrganizationUserType.Owner });
     }
 }

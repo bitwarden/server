@@ -5,9 +5,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUse
 public interface IUpdateOrganizationUserValidator
 {
     /// <summary>
-    /// Validates an organization user update. On success, the returned request carries the
-    /// collection access list with default user collections filtered out, ready to persist.
+    /// Validates an organization user update. On success, the returned request is ready to persist.
     /// </summary>
-    Task<ValidationResult<UpdateOrganizationUserValidationRequest>> ValidateAsync(
-        UpdateOrganizationUserValidationRequest request);
+    Task<ValidationResult<UpdateOrganizationUserRequest>> ValidateAsync(
+        UpdateOrganizationUserRequest request);
 }
