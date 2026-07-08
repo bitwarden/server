@@ -1018,9 +1018,9 @@ public class StripePaymentServiceTests
                 [
                     new SubscriptionItem
                     {
+                        Price = new Price { Metadata = new Dictionary<string, string> { { "isAddOn", "true" } } },
                         Plan = new Plan { ProductId = "prod_premium_access", Nickname = "Premium Access", Amount = 0, Interval = "year" },
-                        Quantity = 1,
-                        Metadata = new Dictionary<string, string> { { "isAddOn", "true" } }
+                        Quantity = 1
                     },
                     new SubscriptionItem
                     {
@@ -1101,9 +1101,9 @@ public class StripePaymentServiceTests
                 [
                     new SubscriptionItem
                     {
+                        Price = new Price { Metadata = new Dictionary<string, string> { { "isAddOn", "true" } } },
                         Plan = new Plan { ProductId = "prod_premium_access", Nickname = "Premium Access", Amount = 0, Interval = "year" },
-                        Quantity = 1,
-                        Metadata = new Dictionary<string, string> { { "isAddOn", "true" } }
+                        Quantity = 1
                     }
                 ]
             }
@@ -1759,15 +1759,13 @@ public class StripePaymentServiceTests
                     {
                         Price = new Price { Id = "teams-org-seat-monthly" },
                         Plan = new Plan { Id = "teams-org-seat-monthly", ProductId = "prod_2019_teams_seat", Nickname = "2019 Teams Seat (Monthly)", Amount = 250, Interval = "month" },
-                        Quantity = 2,
-                        Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" }
+                        Quantity = 2
                     },
                     new SubscriptionItem
                     {
-                        Price = new Price { Id = "storage-gb-monthly" },
+                        Price = new Price { Id = "storage-gb-monthly", Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" } },
                         Plan = new Plan { Id = "storage-gb-monthly", ProductId = "prod_storage_old", Nickname = "Additional Storage GB (Monthly)", Amount = 50, Interval = "month" },
-                        Quantity = 3,
-                        Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" }
+                        Quantity = 3
                     }
                 ]
             }
