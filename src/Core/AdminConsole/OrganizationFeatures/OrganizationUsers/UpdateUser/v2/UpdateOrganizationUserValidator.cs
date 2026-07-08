@@ -118,7 +118,6 @@ public class UpdateOrganizationUserValidator(
             return true;
         }
 
-        // Free organizations have few users, so the extra query here is acceptable.
         var adminCount = await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(organizationUser.UserId!.Value);
         var isCurrentAdminOrOwner = organizationUser.Type is OrganizationUserType.Admin or OrganizationUserType.Owner;
 
