@@ -63,6 +63,14 @@ public class Device : ITableObject<Guid>
     [MaxLength(43)]
     public string? ClientVersion { get; set; }
 
+    /// <summary>
+    /// Whether this device has opted into the new UI. Scoped per device: a user's choice on one
+    /// device does not affect their other devices. Defaults to false (legacy UI). The client
+    /// persists the user's toggle here; the server reads it to shape responses that differ
+    /// between the two UIs.
+    /// </summary>
+    public bool UseNewUi { get; set; }
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();

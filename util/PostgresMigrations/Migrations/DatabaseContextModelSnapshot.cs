@@ -1509,6 +1509,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<byte>("Type")
                         .HasColumnType("smallint");
 
+                    b.Property<bool>("UseNewUi")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 

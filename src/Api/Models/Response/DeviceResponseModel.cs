@@ -28,6 +28,7 @@ public class DeviceResponseModel : ResponseModel
         IsTrusted = device.IsTrusted();
         EncryptedUserKey = device.EncryptedUserKey;
         EncryptedPublicKey = device.EncryptedPublicKey;
+        UseNewUi = device.UseNewUi;
     }
 
     public Guid Id { get; set; }
@@ -43,4 +44,5 @@ public class DeviceResponseModel : ResponseModel
     [EncryptedString]
     [EncryptedStringLength(2000)]
     public string EncryptedPublicKey { get; set; }
+    public bool UseNewUi { get; set; }
 }

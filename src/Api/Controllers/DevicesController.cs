@@ -142,6 +142,21 @@ public class DevicesController : Controller
         return await PutKeys(identifier, model);
     }
 
+    [HttpPut("{identifier}/settings")]
+    public async Task<DeviceResponseModel> PutSettings(string identifier, [FromBody] DeviceSettingsRequestModel model)
+    {
+        var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
+        if (device == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _deviceService.SaveAsync(model.ToDevice(device));
+
+        var response = new DeviceResponseModel(device);
+        return response;
+    }
+
     [HttpPost("{identifier}/retrieve-keys")]
     [Obsolete("This endpoint is deprecated. The keys are on the regular device GET endpoints now.")]
     public async Task<ProtectedDeviceResponseModel> GetDeviceKeys(string identifier)

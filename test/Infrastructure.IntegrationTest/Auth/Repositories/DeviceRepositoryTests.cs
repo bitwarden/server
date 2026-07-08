@@ -847,4 +847,40 @@ public class DeviceRepositoryTests
         Assert.Null(after!.ClientVersion);
         Assert.NotNull(after.LastActivityDate);
     }
+
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task CreateAsync_DefaultsUseNewUiToFalse(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await CreateTestUserAsync(userRepository);
+
+        // Act — UseNewUi not set; entity default is false
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id);
+
+        // Assert
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.False(after!.UseNewUi);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task UpsertAsync_UpdatesUseNewUi_PersistsAcrossProviders(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id);
+
+        // Act — flip the per-device toggle and persist
+        device.UseNewUi = true;
+        await sutRepository.UpsertAsync(device);
+
+        // Assert — the value round-trips through Device_Update / DeviceView
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.True(after!.UseNewUi);
+    }
 }

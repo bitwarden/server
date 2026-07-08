@@ -1493,6 +1493,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<byte>("Type")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseNewUi")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 

@@ -1,4 +1,75 @@
-﻿CREATE PROCEDURE [dbo].[Device_Update]
+-- Add UseNewUi column to Device for the per-device new/legacy UI toggle.
+IF COL_LENGTH('[dbo].[Device]', 'UseNewUi') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[Device]
+        ADD [UseNewUi] BIT NOT NULL CONSTRAINT [DF_Device_UseNewUi] DEFAULT (0);
+END
+GO
+
+-- Refresh the view so SELECT * picks up the new column.
+EXECUTE sp_refreshview N'[dbo].[DeviceView]';
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Device_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @UserId UNIQUEIDENTIFIER,
+    @Name NVARCHAR(50),
+    @Type TINYINT,
+    @Identifier NVARCHAR(50),
+    @PushToken NVARCHAR(255),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @EncryptedUserKey VARCHAR(MAX) = NULL,
+    @EncryptedPublicKey VARCHAR(MAX) = NULL,
+    @EncryptedPrivateKey VARCHAR(MAX) = NULL,
+    @Active BIT = 1,
+    @LastActivityDate DATETIME2(7) = NULL,
+    @ClientVersion NVARCHAR(43) = NULL,
+    @UseNewUi BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[Device]
+    (
+        [Id],
+        [UserId],
+        [Name],
+        [Type],
+        [Identifier],
+        [PushToken],
+        [CreationDate],
+        [RevisionDate],
+        [EncryptedUserKey],
+        [EncryptedPublicKey],
+        [EncryptedPrivateKey],
+        [Active],
+        [LastActivityDate],
+        [ClientVersion],
+        [UseNewUi]
+    )
+    VALUES
+    (
+        @Id,
+        @UserId,
+        @Name,
+        @Type,
+        @Identifier,
+        @PushToken,
+        @CreationDate,
+        @RevisionDate,
+        @EncryptedUserKey,
+        @EncryptedPublicKey,
+        @EncryptedPrivateKey,
+        @Active,
+        @LastActivityDate,
+        @ClientVersion,
+        @UseNewUi
+    )
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Device_Update]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
@@ -53,3 +124,4 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO

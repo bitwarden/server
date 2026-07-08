@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Controllers;
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Data;
@@ -6,6 +7,7 @@ using Bit.Core.Auth.UserFeatures.DeviceTrust;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -95,5 +97,52 @@ public class DevicesControllerTest
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.GetAll());
+    }
+
+    [Fact]
+    public async Task PutSettings_UpdatesUseNewUi_ReturnsExpectedResult()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var identifier = Guid.NewGuid().ToString();
+        var device = new Device
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Name = "chrome",
+            Type = DeviceType.ChromeBrowser,
+            Identifier = identifier,
+            UseNewUi = false,
+        };
+
+        _userServiceMock.GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>()).Returns(userId);
+        _deviceRepositoryMock.GetByIdentifierAsync(identifier, userId).Returns(device);
+
+        var model = new DeviceSettingsRequestModel { UseNewUi = true };
+
+        // Act
+        var result = await _sut.PutSettings(identifier, model);
+
+        // Assert
+        Assert.True(result.UseNewUi);
+        await _deviceServiceMock.Received(1).SaveAsync(
+            Arg.Is<Device>(d => d.Id == device.Id && d.UseNewUi));
+    }
+
+    [Fact]
+    public async Task PutSettings_ThrowsNotFound_WhenDeviceDoesNotExist()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var identifier = Guid.NewGuid().ToString();
+
+        _userServiceMock.GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>()).Returns(userId);
+        _deviceRepositoryMock.GetByIdentifierAsync(identifier, userId).Returns((Device)null);
+
+        var model = new DeviceSettingsRequestModel { UseNewUi = true };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PutSettings(identifier, model));
+        await _deviceServiceMock.DidNotReceive().SaveAsync(Arg.Any<Device>());
     }
 }

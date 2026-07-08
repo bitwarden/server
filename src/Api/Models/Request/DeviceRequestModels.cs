@@ -75,6 +75,27 @@ public class DeviceTokenRequestModel
     }
 }
 
+public class DeviceSettingsRequestModel
+{
+    /// <inheritdoc cref="Device.UseNewUi" />
+    public bool? UseNewUi { get; set; }
+
+    /// <summary>
+    /// Applies the provided per-device settings to <paramref name="existingDevice"/>. This is a
+    /// partial update: only settings present on the request are changed; omitted (null) settings
+    /// are left as-is, matching the Device_Update stored procedure's passthrough behavior.
+    /// </summary>
+    public Device ToDevice(Device existingDevice)
+    {
+        if (UseNewUi.HasValue)
+        {
+            existingDevice.UseNewUi = UseNewUi.Value;
+        }
+
+        return existingDevice;
+    }
+}
+
 public class DeviceKeysRequestModel
 {
     /// <inheritdoc cref="Device.EncryptedUserKey" />

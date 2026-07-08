@@ -302,6 +302,9 @@ public static class FeatureFlagKeys
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
 
+    /* UIF Team */
+    public const string NewUiBetaSwitch = "new-ui-beta-switch";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
