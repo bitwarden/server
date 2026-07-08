@@ -1,9 +1,6 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-# `-dev` is required: the shell-form RUN steps (RID detection, sourcing
-# /tmp/rid.txt, dotnet restore/publish) need a shell + root, which the minimal
-# `dotnet-sdk:latest` lacks.
 FROM --platform=$BUILDPLATFORM cgr.dev/bitwarden.com/dotnet-sdk-fips:10-dev AS build
 
 USER root
@@ -11,9 +8,6 @@ USER root
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
 
-# Chainguard (Wolfi) is glibc-based, so target the glibc RIDs (linux-x64), NOT
-# the musl RIDs the Alpine image used — a musl self-contained binary will not
-# run on the glibc runtime base below.
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
@@ -43,11 +37,6 @@ RUN . /tmp/rid.txt && dotnet publish \
 ###############################################
 #                  App stage                  #
 ###############################################
-# This is a console app (not an ASP.NET service), so the leaner
-# `dotnet-runtime` is the correct family rather than `aspnet-runtime` — there
-# are no ports, no ASPNETCORE_* config, and no HTTP healthcheck. `-dev` is
-# required because the ENTRYPOINT runs `sh -c`, which the minimal distroless
-# `dotnet-runtime:latest` (nonroot, no shell) cannot execute.
 FROM cgr.dev/bitwarden.com/dotnet-runtime-fips:10-dev AS app
 
 USER root
@@ -62,8 +51,6 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 WORKDIR /app
 COPY --from=build /source/util/MsSqlMigratorUtility/out /app
 
-# Wolfi packages (apk), not Alpine: `icu-libs` -> `icu`. No curl/shadow/gosu
-# here — this image has no entrypoint.sh, no gosu step-down, and no healthcheck.
 RUN apk add --no-cache icu
 
 ENTRYPOINT ["sh", "-c", "/app/MsSqlMigratorUtility \"${MSSQL_CONN_STRING}\" ${@}", "--" ]
