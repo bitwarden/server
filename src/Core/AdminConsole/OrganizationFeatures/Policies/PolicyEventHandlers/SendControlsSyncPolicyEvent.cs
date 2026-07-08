@@ -46,7 +46,8 @@ public class SendControlsSyncPolicyEvent(
             enabled: postUpsertedPolicyState.Enabled && sendControlsPolicyData.DisableHideEmail,
             policyData: sendOptionsData);
 
-        if (featureService.IsEnabled(FeatureFlagKeys.SendControlsExistingSends)) {
+        if (featureService.IsEnabled(FeatureFlagKeys.SendControlsExistingSends))
+        {
             await UpdateSendsByPolicyAsync(postUpsertedPolicyState, sendControlsPolicyData);
         }
     }
