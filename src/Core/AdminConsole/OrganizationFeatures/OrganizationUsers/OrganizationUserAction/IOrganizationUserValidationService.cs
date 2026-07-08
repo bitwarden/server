@@ -16,12 +16,15 @@ public interface IOrganizationUserValidationService
     /// <item>Custom users with ManageUsers can manage Users and other Custom users.</item>
     /// <item>Everyone else has no authority.</item>
     /// </list>
-    /// Callers must separately confirm the acting user can manage members at all.
-    /// For a role change, call this for both the current and the new role.
+    /// This should be used in combination with an <c>AuthorizeAttribute</c> for the standard RBAC check on the
+    /// controller endpoint.
+    /// This will allow Owners to manage provider users, which is suitable for most organization-level concerns.
+    /// If your operation affects the provider user as a provider user (e.g. password reset, where account takeover
+    /// would enable escalation) you may not want to allow this.
     /// </summary>
+    /// <param name="actingUserId">The acting user's id, used to resolve provider authority.</param>
     /// <param name="actingUser">The acting user's membership, or <c>null</c> if not a confirmed member.</param>
     /// <param name="targetUser">The member being managed.</param>
-    /// <param name="actingUserIsProvider">Whether the acting user is a provider user, which grants Owner-level authority.</param>
     /// <returns><c>null</c> when allowed, otherwise a <see cref="CannotManageTargetUser"/>.</returns>
-    Error? CanManage(OrganizationUser? actingUser, OrganizationUser targetUser, bool actingUserIsProvider);
+    Task<Error?> CanManage(Guid actingUserId, OrganizationUser? actingUser, OrganizationUser targetUser);
 }

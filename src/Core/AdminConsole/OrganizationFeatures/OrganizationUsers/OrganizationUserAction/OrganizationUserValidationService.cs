@@ -1,13 +1,16 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 
 /// <inheritdoc />
-public class OrganizationUserValidationService : IOrganizationUserValidationService
+public class OrganizationUserValidationService(IProviderUserRepository providerUserRepository)
+    : IOrganizationUserValidationService
 {
-    public Error? CanManage(OrganizationUser? actingUser, OrganizationUser targetUser, bool actingUserIsProvider)
+    public async Task<Error?> CanManage(Guid actingUserId, OrganizationUser? actingUser, OrganizationUser targetUser)
     {
         var authorizedByRole = actingUser switch
         {
@@ -18,9 +21,16 @@ public class OrganizationUserValidationService : IOrganizationUserValidationServ
             _ => false
         };
 
-        // Provider users aren't org members but hold Owner-level authority.
-        return authorizedByRole || actingUserIsProvider
-            ? null
-            : new CannotManageTargetUser();
+        if (authorizedByRole)
+        {
+            return null;
+        }
+
+        // Provider users aren't org members but hold Owner-level authority. Mirrors CurrentContext.ProviderUserForOrgAsync.
+        var actingUserIsProvider = (await providerUserRepository
+                .GetManyOrganizationDetailsByUserAsync(actingUserId, ProviderUserStatusType.Confirmed))
+            .Any(po => po.OrganizationId == targetUser.OrganizationId);
+
+        return actingUserIsProvider ? null : new CannotManageTargetUser();
     }
 }
