@@ -3,7 +3,7 @@ name: exploring-bitwarden-data
 description: Read-only exploration of a local Bitwarden development database — answer business questions from live data, verify seeded fixtures, and introspect schema. Use whenever the user wants to query, count, look up, verify, or explore data in a local Bitwarden database ("how many orgs/users/ciphers", "show me collections", "check what the seeder created", "look up user X", "which orgs have feature Y"), even without the word SQL. Not for authoring stored procedures, migrations, or repository code (use writing-database-queries), and not for seeding or modifying data.
 argument-hint: "[mssql|mysql|postgresql] <question or SQL>"
 user-invocable: true
-allowed-tools: "Bash(which sqlcmd), Bash(sqlcmd:*)"
+allowed-tools: "Bash(which sqlcmd), Bash(sqlcmd:*), Bash(mysql:*), Bash(psql:*)"
 hooks:
   PreToolUse:
     - matcher: "Bash"
@@ -33,11 +33,11 @@ Read-only access to a local Bitwarden database, across all three dev providers.
 
 First arg picks the provider — `mssql` (default), `mysql`, or `postgresql`. Read the matching provider reference before composing SQL.
 
-| Provider        | Env prefix    | CLI                 | Reference                                                                 | Status    |
-| --------------- | ------------- | ------------------- | -------------------------------------------------------------------------- | --------- |
-| MSSQL           | `BW_MSSQL_*`  | `sqlcmd`            | [references/providers/mssql.md](references/providers/mssql.md)            | **Ready** |
-| MySQL           | `BW_MYSQL_*`  | `mysql`             | [references/providers/mysql.md](references/providers/mysql.md)            | **Ready** |
-| PostgreSQL      | `BW_POSTGRES_*` | `psql`            | [references/providers/postgresql.md](references/providers/postgresql.md)  | **Ready** |
+| Provider   | Env prefix      | CLI      | Reference                                                                | Status    |
+| ---------- | --------------- | -------- | ------------------------------------------------------------------------ | --------- |
+| MSSQL      | `BW_MSSQL_*`    | `sqlcmd` | [references/providers/mssql.md](references/providers/mssql.md)           | **Ready** |
+| MySQL      | `BW_MYSQL_*`    | `mysql`  | [references/providers/mysql.md](references/providers/mysql.md)           | **Ready** |
+| PostgreSQL | `BW_POSTGRES_*` | `psql`   | [references/providers/postgresql.md](references/providers/postgresql.md) | **Ready** |
 
 ## The repo is the schema's source of truth
 
