@@ -147,9 +147,8 @@ public class UpdateOrganizationUserValidator(
         }
 
         var actingUser = request.PerformedByOrganizationUser;
-        var actingUserId = request.PerformedBy.UserId!.Value; // non-null: SystemUser already returned above
+        var actingUserId = request.PerformedBy.UserId!.Value;
 
-        // A synthetic member carrying the org id, so the service resolves provider authority against it.
         var requestedRole = new OrganizationUser
         {
             Type = request.NewType,
