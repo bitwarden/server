@@ -61,21 +61,3 @@ from going stale.
 3. On the next stop, `stop_hook_active` is true, so the hook allows through
 4. Result: one reminder per stop — Claude reads the `.rs` source files and
    regenerates the reference
-
----
-
-## block-mutating-sql.sh
-
-**Event:** PreToolUse (fires before the Bash tool executes)
-
-**Registration:** Skill frontmatter in `.claude/skills/exploring-bitwarden-data/SKILL.md` — checked in and active for anyone using the skill.
-
-**Purpose:** Enforces read-only access to the Bitwarden database when Claude runs `sqlcmd` commands. Denies mutating operations before they reach the database.
-
-**How it works:**
-
-1. Triggers on Bash commands containing `sqlcmd`
-2. **Layer 1** — denies mutating SQL keywords: `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `CREATE`, `MERGE`, `EXEC`, `BULK INSERT`, `SELECT INTO`, `GRANT`, `REVOKE`, `DENY`
-3. **Layer 2** — denies dangerous primitives: `xp_*`, `sp_executesql`, `sp_OA*`, `RECONFIGURE`, `OPENROWSET`/`OPENQUERY`/`OPENDATASOURCE`
-4. **Layer 3** — denies sqlcmd escape commands: `:!!` (OS shell) and `:r` (file inclusion)
-5. Returns `permissionDecision: deny` with a descriptive message on any match; allows through otherwise

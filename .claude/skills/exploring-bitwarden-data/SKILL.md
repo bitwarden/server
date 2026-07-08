@@ -4,13 +4,6 @@ description: Read-only exploration of a local Bitwarden development database —
 argument-hint: "[mssql|mysql|postgresql] <question or SQL>"
 user-invocable: true
 allowed-tools: "Bash(which sqlcmd), Bash(sqlcmd:*), Bash(mysql:*), Bash(psql:*)"
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/block-mutating-sql.sh"
-          timeout: 5
 ---
 
 # Explore Bitwarden Database
@@ -20,8 +13,7 @@ Read-only access to a local Bitwarden database, across all three dev providers.
 ## Read-only, defense in depth
 
 1. Database login is read-only at the server — mutations will fail regardless of what you send.
-2. PreToolUse hook blocks non-read SQL at the bash boundary.
-3. Allowed: `SELECT`, `WITH` (CTEs), and `INFORMATION_SCHEMA` / `sys.*` introspection.
+2. Allowed: `SELECT`, `WITH` (CTEs), and `INFORMATION_SCHEMA` / `sys.*` introspection.
 
 ## Cross-provider rules
 
