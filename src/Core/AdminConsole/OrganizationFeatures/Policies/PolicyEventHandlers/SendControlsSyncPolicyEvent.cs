@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Exceptions;
+using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
@@ -19,7 +20,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandler
 public class SendControlsSyncPolicyEvent(
     IPolicyRepository policyRepository,
     TimeProvider timeProvider,
-    ISendRepository sendRepository) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
+    ISendRepository sendRepository,
+    IFeatureService featureService) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
 {
     public PolicyType Type => PolicyType.SendControls;
 
@@ -44,7 +46,10 @@ public class SendControlsSyncPolicyEvent(
             enabled: postUpsertedPolicyState.Enabled && sendControlsPolicyData.DisableHideEmail,
             policyData: sendOptionsData);
 
-        await UpdateSendsByPolicyAsync(postUpsertedPolicyState, sendControlsPolicyData);
+        if (featureService.IsEnabled(FeatureFlagKeys.SendControlsExistingSends))
+        {
+            await UpdateSendsByPolicyAsync(postUpsertedPolicyState, sendControlsPolicyData);
+        }
     }
 
     private async Task UpsertLegacyPolicyAsync<T>(
@@ -79,6 +84,7 @@ public class SendControlsSyncPolicyEvent(
         return Task.FromResult(string.Empty);
     }
 
+    // Enable or disable all Sends in an org based on whether they are compliant to org policy
     private async Task UpdateSendsByPolicyAsync(Policy postUpsertedPolicyState, SendControlsPolicyData sendControlsPolicyData)
     {
         var orgSendIds = await sendRepository.GetIdsByOrganizationIdAsync(postUpsertedPolicyState.OrganizationId);

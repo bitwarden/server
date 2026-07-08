@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -159,6 +160,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var nonCompliantSend1 = new Send
         {
@@ -205,6 +209,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var otherwiseCompliantSend1 = new Send
         {
@@ -251,6 +258,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -300,6 +310,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -354,6 +367,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -408,6 +424,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -469,6 +488,10 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
+
         var compliantSend = new Send
         {
             Id = Guid.NewGuid(),
@@ -517,6 +540,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var twoDaysAgo = DateTime.UtcNow.AddDays(-2);
         var nonCompliantSend = new Send
