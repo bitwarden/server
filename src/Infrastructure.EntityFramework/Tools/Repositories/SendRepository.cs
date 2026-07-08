@@ -194,9 +194,11 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
+        var orgUserIds = dbContext.OrganizationUsers
+            .Where(ou => ou.OrganizationId == organizationId && ou.UserId != null)
+            .Select(ou => ou.UserId);
         var orgUserSendIds = await dbContext.Sends
-            .Where(s => dbContext.OrganizationUsers
-                .Any(ou => ou.OrganizationId == organizationId && ou.UserId == s.UserId))
+            .Where(s => s.UserId != null && orgUserIds.Contains(s.UserId))
             .Select(s => s.Id)
             .ToListAsync();
         return Mapper.Map<List<Guid>>(orgUserSendIds);
