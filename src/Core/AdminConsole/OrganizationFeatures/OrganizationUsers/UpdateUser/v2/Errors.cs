@@ -15,3 +15,4 @@ public record CustomUsersCannotManageAdminsOrOwners() : BadRequestError("Custom 
 public record ManageMutuallyExclusive() : BadRequestError("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
 public record CustomPermissionsNotEnabled() : BadRequestError("To enable custom permissions the organization must be on an Enterprise plan.");
 public record CannotAssignDefaultCollection() : BadRequestError("Default collections cannot be assigned to a member.");
+public record CannotAutoscaleSecretsManagerSeatsOnSelfHost() : BadRequestError("Cannot autoscale on a self-hosted instance.");

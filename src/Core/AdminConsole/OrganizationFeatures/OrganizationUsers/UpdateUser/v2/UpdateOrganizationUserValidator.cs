@@ -75,7 +75,7 @@ public class UpdateOrganizationUserValidator(
         }
 
         // A caller cannot grant a role higher than their own.
-        var escalationError = ValidateNotEscalatingAboveOwnRole(request);
+        var escalationError = await ValidateNotEscalatingAboveOwnRoleAsync(request);
         if (escalationError is not null)
         {
             return Invalid(request, escalationError);
@@ -87,7 +87,6 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new CustomPermissionsNotEnabled());
         }
 
-        // The organization must retain at least one confirmed owner after the update.
         if (request.NewType != OrganizationUserType.Owner &&
             !await hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId,
                 [organizationUser.Id]))
@@ -95,7 +94,6 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new MustHaveConfirmedOwner());
         }
 
-        // The Manage permission is mutually exclusive with ReadOnly and HidePasswords.
         if (collectionsToSave.Count > 0 && collectionsToSave.Any(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords)))
         {
             return Invalid(request, new ManageMutuallyExclusive());
@@ -143,10 +141,10 @@ public class UpdateOrganizationUserValidator(
     /// authority decision to the shared <see cref="IOrganizationUserValidationService.CanManage"/> rules,
     /// checking both the member's current role and the requested role so an existing higher-ranked member
     /// cannot be modified from below either. System users act with full authority, so the check is skipped
-    /// for them. The specific error messages are preserved by mapping the denial back to which role was out
-    /// of reach.
+    /// for them. Provider authority is resolved inside the service from the acting user's id. The specific
+    /// error messages are preserved by mapping the denial back to which role was out of reach.
     /// </summary>
-    private Error? ValidateNotEscalatingAboveOwnRole(UpdateOrganizationUserValidationRequest request)
+    private async Task<Error?> ValidateNotEscalatingAboveOwnRoleAsync(UpdateOrganizationUserValidationRequest request)
     {
         if (request.PerformedBy is SystemUser)
         {
@@ -154,12 +152,20 @@ public class UpdateOrganizationUserValidator(
         }
 
         var actingUser = request.PerformedByOrganizationUser;
-        var isProvider = request.PerformedBy.IsOrganizationOwnerOrProvider;
+        var actingUserId = request.PerformedBy.UserId!.Value; // non-null: SystemUser already returned above
+
+        // The requested role is represented by a synthetic member carrying the same organization id, so the
+        // service can resolve provider authority against the correct organization.
+        var requestedRole = new OrganizationUser
+        {
+            Type = request.NewType,
+            OrganizationId = request.OrganizationUser.OrganizationId
+        };
 
         var canManageCurrentRole =
-            organizationUserValidationService.CanManage(actingUser, request.OrganizationUser, isProvider) is null;
+            await organizationUserValidationService.CanManage(actingUserId, actingUser, request.OrganizationUser) is null;
         var canManageNewRole =
-            organizationUserValidationService.CanManage(actingUser, new OrganizationUser { Type = request.NewType }, isProvider) is null;
+            await organizationUserValidationService.CanManage(actingUserId, actingUser, requestedRole) is null;
 
         if (canManageCurrentRole && canManageNewRole)
         {

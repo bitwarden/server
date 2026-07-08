@@ -6,6 +6,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using OneOf.Types;
 
@@ -18,6 +19,7 @@ public class UpdateOrganizationUserCommand(
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IPricingClient pricingClient,
     IEventService eventService,
+    IGlobalSettings globalSettings,
     TimeProvider timeProvider)
     : IUpdateOrganizationUserCommand
 {
@@ -58,7 +60,13 @@ public class UpdateOrganizationUserCommand(
             var additionalSmSeatsRequired = await countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organizationUser.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                // TODO: https://bitwarden.atlassian.net/browse/PM-17012
+                // Self-hosted instances are licensed for a fixed number of seats and cannot update their Stripe
+                // subscription, so autoscaling isn't possible. Reject rather than errantly attempting a purchase.
+                if (globalSettings.SelfHosted)
+                {
+                    return new CannotAutoscaleSecretsManagerSeatsOnSelfHost();
+                }
+
                 var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
                 var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                     .AdjustSeats(additionalSmSeatsRequired);

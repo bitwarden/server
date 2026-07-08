@@ -10,6 +10,7 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -154,6 +155,38 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
             .DidNotReceiveWithAnyArgs()
             .CountNewSmSeatsRequiredAsync(default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenEnablingSecretsManagerRequiresSeatsOnSelfHost_ReturnsErrorAndDoesNotUpdateSubscriptionOrPersist(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessSecretsManager = false;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessSecretsManager: true);
+
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, 1)
+            .Returns(1);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<CannotAutoscaleSecretsManagerSeatsOnSelfHost>(result.AsError);
+
+        // A self-hosted instance must never attempt a subscription update, and nothing should be persisted.
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default, default(IEnumerable<CollectionAccessSelection>));
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(default(OrganizationUser), default);
     }
 
     private static UpdateOrganizationUserRequest Setup(

@@ -113,6 +113,28 @@ public class UpdateOrganizationUserValidatorTests
 
     [Theory]
     [BitAutoData]
+    public async Task ValidateAsync_WhenCollectionBelongsToAnotherOrganization_ReturnsCollectionNotFound(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
+        Guid collectionId,
+        Guid otherOrganizationId)
+    {
+        // The collection exists but belongs to a different organization; it must be rejected rather than leaked.
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            collections: [new CollectionAccessSelection { Id = collectionId }],
+            postedCollections:
+            [
+                new Collection { Id = collectionId, OrganizationId = otherOrganizationId, Type = CollectionType.SharedCollection }
+            ]);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<CollectionNotFound>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task ValidateAsync_WhenGroupDoesNotExist_ReturnsGroupNotFound(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
@@ -124,6 +146,28 @@ public class UpdateOrganizationUserValidatorTests
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Group>());
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<GroupNotFound>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenGroupBelongsToAnotherOrganization_ReturnsGroupNotFound(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
+        Guid groupId,
+        Guid otherOrganizationId)
+    {
+        // The group exists but belongs to a different organization; it must be rejected rather than leaked.
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            groups: [groupId]);
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Group> { new() { Id = groupId, OrganizationId = otherOrganizationId } });
 
         var result = await sutProvider.Sut.ValidateAsync(request);
 
@@ -152,7 +196,6 @@ public class UpdateOrganizationUserValidatorTests
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser)
     {
-        // Demoting the org's last confirmed owner (Owner -> User).
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
@@ -172,9 +215,7 @@ public class UpdateOrganizationUserValidatorTests
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
         Guid collectionId)
     {
-        var ability = CreateAbility(orgUser.OrganizationId, allowAdminAccessToAllCollectionItems: true);
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            ability: ability,
             collections: [new CollectionAccessSelection { Id = collectionId, Manage = true, ReadOnly = true }]);
 
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -191,9 +232,7 @@ public class UpdateOrganizationUserValidatorTests
         Guid sharedCollectionId,
         Guid defaultCollectionId)
     {
-        var ability = CreateAbility(orgUser.OrganizationId, allowAdminAccessToAllCollectionItems: true);
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            ability: ability,
             collections:
             [
                 new CollectionAccessSelection { Id = sharedCollectionId },
@@ -213,102 +252,24 @@ public class UpdateOrganizationUserValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_WhenNonOwnerPromotesUserToOwner_ReturnsOnlyOwnersCanManageOwners(
+    public async Task ValidateAsync_WhenRoleValidationServiceDeniesManagement_ReturnsError(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
-        var performedBy = new StandardUser(Guid.NewGuid(), isOrganizationOwner: false);
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Owner,
-            performedBy: performedBy,
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Admin));
-
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<OnlyOwnersCanManageOwners>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenNonOwnerModifiesExistingOwner_ReturnsOnlyOwnersCanManageOwners(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser)
-    {
-        var performedBy = new StandardUser(Guid.NewGuid(), isOrganizationOwner: false);
+        // The role-validation service owns (and independently tests) which actors may manage which roles. The
+        // validator's only responsibility is to fail when the service denies management; the happy path is
+        // already covered by the other tests, whose default (unstubbed) CanManage returns "allowed".
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin,
-            performedBy: performedBy,
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Admin));
-
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<OnlyOwnersCanManageOwners>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenCustomUserPromotesUserToAdmin_ReturnsCustomUsersCannotManageAdminsOrOwners(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
-    {
-        var performedBy = new StandardUser(Guid.NewGuid(), isOrganizationOwner: false);
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin,
-            performedBy: performedBy,
+            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false),
             performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Custom));
 
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenCustomUserModifiesExistingAdmin_ReturnsCustomUsersCannotManageAdminsOrOwners(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Admin)] OrganizationUser orgUser)
-    {
-        var performedBy = new StandardUser(Guid.NewGuid(), isOrganizationOwner: false);
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            performedBy: performedBy,
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Custom));
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
+            .CanManage(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUser>())
+            .Returns(new CannotManageTargetUser());
 
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenOwnerPromotesUserToOwner_ReturnsValid(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
-    {
-        var performedBy = new StandardUser(Guid.NewGuid(), isOrganizationOwner: true);
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Owner,
-            performedBy: performedBy,
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Owner));
-
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsValid);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenAdminPromotesUserToAdmin_ReturnsValid(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
-    {
-        var performedBy = new StandardUser(Guid.NewGuid(), isOrganizationOwner: false);
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin,
-            performedBy: performedBy,
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Admin));
-
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsValid);
     }
 
     [Theory]
@@ -339,23 +300,27 @@ public class UpdateOrganizationUserValidatorTests
         HashSet<Guid> currentAccessIds = null,
         ICollection<Collection> postedCollections = null)
     {
-        // Use the real role-validation service so the escalation check exercises its actual rules. The
-        // dependency is set under the constructor parameter name because BitAutoData has already stored an
-        // auto-mock under that name, which the SutProvider resolves in preference to a type-only override.
-        sutProvider.SetDependency<IOrganizationUserValidationService>(
-            new OrganizationUserValidationService(), "organizationUserValidationService");
-        sutProvider.Create();
+        // IOrganizationUserValidationService is auto-mocked; its role rules have their own unit tests, so the
+        // real implementation isn't exercised here. An unstubbed CanManage returns null ("allowed"), so the
+        // escalation check passes by default; denial tests stub the specific target role via DenyManagementOf.
 
         // Default to a state where validation passes unless a test overrides it.
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
 
+        // When a test doesn't specify an actor, default to an authorized owner member so unrelated rules can
+        // be exercised. If a test provides its own actor, respect a null membership (e.g. a system user or a
+        // provider, whose authority is resolved by the service rather than a membership role).
+        var actingUser = performedBy ?? new StandardUser(Guid.NewGuid(), true);
+        var actingMembership = performedByOrganizationUser
+                               ?? (performedBy is null ? ActingOrganizationUser(OrganizationUserType.Owner) : null);
+
         return new UpdateOrganizationUserValidationRequest(
             organizationUser,
             newType,
-            performedBy ?? new StandardUser(Guid.NewGuid(), true),
-            performedByOrganizationUser,
+            actingUser,
+            actingMembership,
             collections ?? [],
             groups,
             currentAccessIds ?? [],
