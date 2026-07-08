@@ -1,5 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.Import;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -70,7 +72,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests
                 Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>())
             .Returns(orgUsers);
 
-        await sutProvider.Sut.ImportAsync(org.Id, newGroups, importedUsers, new List<string>(), false);
+        await sutProvider.Sut.ImportAsync(org.Id, newGroups, importedUsers, new List<string>(), false, true);
 
         var expectedNewUsersCount = importedUsers.Count - 1;
 
@@ -105,7 +107,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.ImportAsync(org.Id, [], [], [], true));
+            sutProvider.Sut.ImportAsync(org.Id, [], [], [], true, true));
 
         Assert.Contains("Sync failed. To proceed, disable the 'Remove and re-add users during next sync' setting and try again.", exception.Message);
 
@@ -179,7 +181,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests
                 Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>())
             .Returns(orgUsers);
 
-        await sutProvider.Sut.ImportAsync(org.Id, newGroups, importedUsers, new List<string>(), false);
+        await sutProvider.Sut.ImportAsync(org.Id, newGroups, importedUsers, new List<string>(), false, true);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
@@ -200,6 +202,138 @@ public class ImportOrganizationUsersAndGroupsCommandTests
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUserUserDetails, EventType, EventSystemUser, DateTime?)>>());
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task ImportAsync_InviteUsersAfterProvisioningDisabled_WithFeatureFlag_StagesNewUsers(
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
+            Organization org,
+            List<OrganizationUserUserDetails> existingUsers,
+            List<ImportedOrganizationUser> importedUsers,
+            List<ImportedGroup> newGroups)
+    {
+        SetupOrganizationConfigForImport(sutProvider, org, existingUsers, importedUsers);
+
+        var stagedUsers = new List<OrganizationUser>();
+
+        // fix mocked email format, mock the staged OrganizationUsers the command returns.
+        foreach (var u in importedUsers)
+        {
+            u.Email += "@bitwardentest.com";
+            stagedUsers.Add(new OrganizationUser
+            {
+                Id = Guid.NewGuid(),
+                Email = u.Email,
+                ExternalId = u.ExternalId,
+                Status = OrganizationUserStatusType.Staged
+            });
+        }
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
+
+        CommandResult<ICollection<OrganizationUser>> commandResult = stagedUsers;
+        sutProvider.GetDependency<ICreateStagedOrganizationUsersCommand>()
+            .RunAsync(Arg.Any<CreateStagedOrganizationUsersRequest>())
+            .Returns(commandResult);
+
+        await sutProvider.Sut.ImportAsync(org.Id, newGroups, importedUsers, new List<string>(), false, false);
+
+        // Stage new users instead of inviting them
+        await sutProvider.GetDependency<ICreateStagedOrganizationUsersCommand>().Received(1)
+            .RunAsync(Arg.Is<CreateStagedOrganizationUsersRequest>(r =>
+                r.Organization == org &&
+                r.EventSystemUser == EventSystemUser.PublicApi &&
+                r.Users.Count() == importedUsers.Count &&
+                r.Users.All(u => importedUsers.Any(iu => iu.Email == u.Email && iu.ExternalId == u.ExternalId))));
+
+        // No invites are sent
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs()
+            .InviteUsersAsync(default, default, default, default);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task ImportAsync_InviteUsersAfterProvisioningDisabled_WithoutFeatureFlag_InvitesNewUsers(
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
+            Organization org,
+            List<OrganizationUserUserDetails> existingUsers,
+            List<ImportedOrganizationUser> importedUsers,
+            List<ImportedGroup> newGroups)
+    {
+        SetupOrganizationConfigForImport(sutProvider, org, existingUsers, importedUsers);
+
+        var orgUsers = new List<OrganizationUser>();
+
+        // fix mocked email format, mock OrganizationUsers.
+        foreach (var u in importedUsers)
+        {
+            u.Email += "@bitwardentest.com";
+            orgUsers.Add(new OrganizationUser { Email = u.Email, ExternalId = u.ExternalId });
+        }
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
+            .Returns(false);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
+        sutProvider.GetDependency<IStripePaymentService>().HasSecretsManagerStandalone(org).Returns(true);
+        sutProvider.GetDependency<IOrganizationService>().InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
+                Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>())
+            .Returns(orgUsers);
+
+        await sutProvider.Sut.ImportAsync(org.Id, newGroups, importedUsers, new List<string>(), false, false);
+
+        // The feature flag is off, so the existing invite flow runs unchanged
+        await sutProvider.GetDependency<IOrganizationService>().Received(1)
+            .InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
+                Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites => invites.Count() == importedUsers.Count));
+        await sutProvider.GetDependency<ICreateStagedOrganizationUsersCommand>().DidNotReceiveWithAnyArgs()
+            .RunAsync(default);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task ImportAsync_InviteUsersAfterProvisioningEnabled_WithFeatureFlag_InvitesNewUsers(
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
+            Organization org,
+            List<OrganizationUserUserDetails> existingUsers,
+            List<ImportedOrganizationUser> importedUsers,
+            List<ImportedGroup> newGroups)
+    {
+        SetupOrganizationConfigForImport(sutProvider, org, existingUsers, importedUsers);
+
+        var orgUsers = new List<OrganizationUser>();
+
+        // fix mocked email format, mock OrganizationUsers.
+        foreach (var u in importedUsers)
+        {
+            u.Email += "@bitwardentest.com";
+            orgUsers.Add(new OrganizationUser { Email = u.Email, ExternalId = u.ExternalId });
+        }
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
+        sutProvider.GetDependency<IStripePaymentService>().HasSecretsManagerStandalone(org).Returns(true);
+        sutProvider.GetDependency<IOrganizationService>().InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
+                Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>())
+            .Returns(orgUsers);
+
+        await sutProvider.Sut.ImportAsync(org.Id, newGroups, importedUsers, new List<string>(), false, true);
+
+        // Invitations are requested, so the existing invite flow runs unchanged
+        await sutProvider.GetDependency<IOrganizationService>().Received(1)
+            .InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
+                Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites => invites.Count() == importedUsers.Count));
+        await sutProvider.GetDependency<ICreateStagedOrganizationUsersCommand>().DidNotReceiveWithAnyArgs()
+            .RunAsync(default);
     }
 
     private void SetupOrganizationConfigForImport(
