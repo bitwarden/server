@@ -749,6 +749,18 @@ public class StripePaymentService : IStripePaymentService
                 var matchedPhase1Items = new HashSet<SubscriptionInfo.BillingSubscription.BillingSubscriptionItem>();
                 var unmatchedPhase2Items = new List<SubscriptionSchedulePhaseItem>();
 
+                // A Packaged migration source (e.g. Teams 2019) folds its base-bundle and seat-overage lines
+                // into one migrated seat line. Drop the overage line up front (keyed on the source plan's seat
+                // price) so the passes below reprice the base line instead of leaving its legacy amount.
+                if (subscriber is Organization organization && ShouldCollapseSeatOverageLine(organization))
+                {
+                    var sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+                    if (sourcePlan.PasswordManager is { StripeSeatPlanId: not null and not "" } passwordManager)
+                    {
+                        items.RemoveAll(item => item.PriceId == passwordManager.StripeSeatPlanId);
+                    }
+                }
+
                 // Pass 1: Match by product ID
                 foreach (var phase2Item in phase2.Items)
                 {
@@ -792,17 +804,6 @@ public class StripePaymentService : IStripePaymentService
                             "Phase 2 item with product {ProductId} could not be matched to any Phase 1 item for subscription schedule ({ScheduleId})",
                             phase2Item.Price.ProductId,
                             subscription.ScheduleId);
-                    }
-                }
-
-                // Drop the seat-overage line a Packaged migration folds into the migrated seat line
-                // (Pass 2 above). Keyed on the seat price, so storage/Secrets Manager lines are kept.
-                if (subscriber is Organization organization && ShouldCollapseSeatOverageLine(organization))
-                {
-                    var sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
-                    if (sourcePlan.PasswordManager is { StripeSeatPlanId: not null and not "" } passwordManager)
-                    {
-                        items.RemoveAll(item => item.PriceId == passwordManager.StripeSeatPlanId);
                     }
                 }
 
