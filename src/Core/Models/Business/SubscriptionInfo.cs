@@ -183,9 +183,9 @@ public class SubscriptionInfo
                     Amount = ConvertFromStripeMinorUnits(item.Plan.Amount) ?? 0;
                     Interval = item.Plan.Interval;
 
-                    if (item.Metadata != null)
+                    if (item.Price?.Metadata != null)
                     {
-                        AddonSubscriptionItem = item.Metadata.TryGetValue("isAddOn", out var value) && bool.Parse(value);
+                        AddonSubscriptionItem = item.Price.Metadata.TryGetValue("isAddOn", out var value) && bool.Parse(value);
                     }
                 }
 
