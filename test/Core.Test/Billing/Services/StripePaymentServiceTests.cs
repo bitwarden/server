@@ -1664,16 +1664,15 @@ public class StripePaymentServiceTests
                 [
                     new SubscriptionItem
                     {
-                        Price = new Price { Id = "teams-org-monthly" },
-                        Plan = new Plan { Id = "teams-org-monthly", ProductId = "prod_2019_teams_org", Nickname = "2019 Teams Org. (Monthly)", Amount = 800, Interval = "month" },
-                        Quantity = 1
+                        Price = new Price { Id = "teams-org-seat-monthly" },
+                        Plan = new Plan { Id = "teams-org-seat-monthly", ProductId = "prod_2019_teams_seat", Nickname = "2019 Teams Seat (Monthly)", Amount = 250, Interval = "month" },
+                        Quantity = 2
                     },
                     new SubscriptionItem
                     {
-                        Price = new Price { Id = "teams-org-seat-monthly" },
-                        Plan = new Plan { Id = "teams-org-seat-monthly", ProductId = "prod_2019_teams_seat", Nickname = "2019 Teams Seat (Monthly)", Amount = 250, Interval = "month" },
-                        Quantity = 2,
-                        Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" }
+                        Price = new Price { Id = "teams-org-monthly" },
+                        Plan = new Plan { Id = "teams-org-monthly", ProductId = "prod_2019_teams_org", Nickname = "2019 Teams Org. (Monthly)", Amount = 800, Interval = "month" },
+                        Quantity = 1
                     }
                 ]
             }
@@ -1715,13 +1714,14 @@ public class StripePaymentServiceTests
         // Act
         var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
 
-        // Assert — only the collapsed x7 seat line remains; the legacy $2.50 overage line is gone.
+        // Assert — a single migrated seat line at the Phase 2 price/quantity; no surviving legacy amount.
         var item = Assert.Single(result.Subscription!.Items);
         Assert.Equal("prod_current_teams", item.ProductId);
         Assert.Equal("Teams Organization Seat", item.Name);
         Assert.Equal(4.00m, item.Amount);
         Assert.Equal(7, item.Quantity);
         Assert.DoesNotContain(result.Subscription.Items, i => i.PriceId == "teams-org-seat-monthly");
+        Assert.DoesNotContain(result.Subscription.Items, i => i.Amount == 8.00m);
     }
 
     [Theory]
