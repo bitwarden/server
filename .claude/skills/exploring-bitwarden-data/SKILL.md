@@ -13,7 +13,7 @@ hooks:
           timeout: 5
 ---
 
-# Explorer Bitwarden Database
+# Explore Bitwarden Database
 
 Read-only access to a local Bitwarden database, across all three dev providers.
 
