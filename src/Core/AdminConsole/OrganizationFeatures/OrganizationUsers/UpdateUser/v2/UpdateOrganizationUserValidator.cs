@@ -45,7 +45,6 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new CannotAddSelfToCollection());
         }
 
-        // Posted collections must exist and belong to the organization; validated against the pre-loaded set.
         var collectionsToSave = request.NewCollections ?? [];
         if (collectionsToSave.Count != 0)
         {
@@ -54,14 +53,12 @@ public class UpdateOrganizationUserValidator(
                 return Invalid(request, new CollectionNotFound());
             }
 
-            // Default user collections ("My Items") cannot be assigned through member management.
             if (ContainsDefaultUserCollection(collectionsToSave, request.ReferencedCollections))
             {
                 return Invalid(request, new CannotAssignDefaultCollection());
             }
         }
 
-        // All posted groups must exist and belong to the organization.
         if (request.NewGroups?.Any() == true)
         {
             var groupAccess = request.NewGroups.ToList();
@@ -72,11 +69,16 @@ public class UpdateOrganizationUserValidator(
             }
         }
 
-        // A caller cannot grant a role higher than their own.
         var escalationError = await ValidateNotEscalatingAboveOwnRoleAsync(request);
         if (escalationError is not null)
         {
             return Invalid(request, escalationError);
+        }
+
+        var grantError = ValidateCustomPermissionsGrant(request);
+        if (grantError is not null)
+        {
+            return Invalid(request, grantError);
         }
 
         // Custom permissions require an Enterprise plan.
@@ -175,6 +177,44 @@ public class UpdateOrganizationUserValidator(
         return new CustomUsersCannotManageAdminsOrOwners();
     }
 
+    /// <summary>
+    /// A Custom caller can only grant another member the custom permissions they themselves hold. Owners,
+    /// admins, providers (no membership), and system users are exempt: their authority already exceeds any
+    /// grantable custom permission.
+    /// </summary>
+    private static Error? ValidateCustomPermissionsGrant(UpdateOrganizationUserRequest request)
+    {
+        if (request.NewType != OrganizationUserType.Custom || request.NewPermissions is null)
+        {
+            return null;
+        }
+
+        // System users and providers (no membership) aren't constrained to a member's own permission set.
+        if (request.PerformedBy is SystemUser || request.PerformedByOrganizationUser is null)
+        {
+            return null;
+        }
+
+        if (request.PerformedByOrganizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin)
+        {
+            return null;
+        }
+
+        var actingPermissions = request.PerformedByOrganizationUser.GetPermissions() ?? new Permissions();
+
+        return GrantsPermissionNotHeldByActor(request.NewPermissions, actingPermissions)
+            ? new CustomUsersCanOnlyGrantOwnPermissions()
+            : null;
+    }
+
+    private static bool GrantsPermissionNotHeldByActor(Permissions requested, Permissions actorPermissions)
+    {
+        var actorClaims = actorPermissions.ClaimsMap.ToDictionary(c => c.ClaimName, c => c.Permission);
+
+        // Every permission being granted must also be held by the acting user.
+        return requested.ClaimsMap.Any(granted => granted.Permission && !actorClaims[granted.ClaimName]);
+    }
+
     private static bool IsAddingSelfToCollection(UpdateOrganizationUserRequest request)
     {
         var editingSelf = request.PerformedBy is not SystemUser
@@ -183,7 +223,7 @@ public class UpdateOrganizationUserValidator(
 
         return editingSelf
                && !request.OrganizationAbility.AllowAdminAccessToAllCollectionItems
-               && (request.NewCollections ?? []).Any(c => !request.CurrentAccessIds.Contains(c.Id));
+               && (request.NewCollections ?? []).Any(c => !request.CurrentCollectionsIds.Contains(c.Id));
     }
 
     private static bool CollectionsAreValid(List<CollectionAccessSelection> collectionAccess,

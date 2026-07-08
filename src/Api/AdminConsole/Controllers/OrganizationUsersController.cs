@@ -429,8 +429,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         {
             var (collectionsToSave, postedCollections) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess);
 
-            // The acting user's own membership drives the role-escalation check. Null when the caller is not
-            // an organization member (e.g. a provider), whose authority comes from the owner/provider flag.
+            // The acting user's own membership; null when the caller is not an org member (e.g. a provider).
             var actingContext = _currentContext.GetOrganization(organization.Id);
             OrganizationUser savingOrganizationUser = null;
             if (actingContext != null)
@@ -522,8 +521,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             .Concat(readonlyCollectionAccess)
             .ToList();
 
-        // The hydrated collections referenced by collectionsToSave (posted plus preserved read-only) so the
-        // validator can check existence and reject defaults without re-querying.
+        // Posted plus preserved collections, deduplicated, for the validator's existence and default checks.
         var collections = postedCollections
             .Concat(currentCollections)
             .DistinctBy(c => c.Id)

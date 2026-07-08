@@ -287,6 +287,58 @@ public class UpdateOrganizationUserValidatorTests
         Assert.True(result.IsValid);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenCustomActorGrantsPermissionTheyDoNotHold_ReturnsCustomUsersCanOnlyGrantOwnPermissions(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // A Custom actor holding only ManageUsers cannot grant a target a permission (ManageSso) it lacks.
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Custom,
+            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false),
+            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Custom),
+            newPermissions: new Permissions { ManageSso = true });
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<CustomUsersCanOnlyGrantOwnPermissions>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenCustomActorGrantsOnlyPermissionsTheyHold_ReturnsValid(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // The actor holds ManageUsers and grants only ManageUsers, which is within their own authority.
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Custom,
+            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false),
+            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Custom),
+            newPermissions: new Permissions { ManageUsers = true });
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenOwnerGrantsPermissionsBeyondAnyMember_ReturnsValid(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // An Owner is exempt from the grant-subset check and may grant any custom permission.
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Custom,
+            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: true),
+            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Owner),
+            newPermissions: new Permissions { ManageScim = true, ManageSso = true, AccessImportExport = true });
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+    }
+
     private static UpdateOrganizationUserRequest CreateRequest(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         OrganizationUser organizationUser,
@@ -298,11 +350,11 @@ public class UpdateOrganizationUserValidatorTests
         List<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> groups = null,
         HashSet<Guid> currentAccessIds = null,
-        ICollection<Collection> postedCollections = null)
+        ICollection<Collection> postedCollections = null,
+        Permissions newPermissions = null)
     {
-        // IOrganizationUserValidationService is auto-mocked; its role rules have their own unit tests, so the
-        // real implementation isn't exercised here. An unstubbed CanManage returns null ("allowed"), so the
-        // escalation check passes by default; denial tests stub the specific target role via DenyManagementOf.
+        // IOrganizationUserValidationService is auto-mocked; an unstubbed CanManage returns null ("allowed"),
+        // so the escalation check passes by default. Its role rules have their own unit tests.
 
         // Default to a state where validation passes unless a test overrides it.
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
@@ -332,7 +384,7 @@ public class UpdateOrganizationUserValidatorTests
                 })
                 .ToList(),
             newType,
-            null,
+            newPermissions,
             false,
             collections ?? [],
             groups,
