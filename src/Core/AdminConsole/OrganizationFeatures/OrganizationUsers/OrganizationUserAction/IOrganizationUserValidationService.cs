@@ -19,8 +19,10 @@ public interface IOrganizationUserValidationService
     /// This should be used in combination with an <c>AuthorizeAttribute</c> for the standard RBAC check on the
     /// controller endpoint.
     /// This will allow Owners to manage provider users, which is suitable for most organization-level concerns.
+    /// <remarks>
     /// If your operation affects the provider user as a provider user (e.g. password reset, where account takeover
     /// would enable escalation) you may not want to allow this.
+    /// </remarks>
     /// </summary>
     /// <param name="actingUserId">The acting user's id, used to resolve provider authority.</param>
     /// <param name="actingUser">The acting user's membership, or <c>null</c> if not a confirmed member.</param>
