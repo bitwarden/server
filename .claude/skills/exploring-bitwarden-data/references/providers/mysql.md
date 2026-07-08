@@ -19,7 +19,7 @@ echo "Bitwarden MySQL env vars OK" || echo "MISSING Bitwarden MySQL env var"
 
 ## Read-only guard — required on every connection
 
-Connect as the read-only user in `BW_MYSQL_USERNAME` (`bitwarden_data_reader`, `SELECT`-only). The bash hook only inspects `sqlcmd`, so it won't catch `mysql` writes — as defense-in-depth, also open every session with `SET SESSION TRANSACTION READ ONLY;` (verified: writes then fail with `ERROR 1792: Cannot execute statement in a READ ONLY transaction`; autocommit statements are implicit transactions, so plain INSERTs are covered). This guard is per-session, so it only holds if the statement is actually issued.
+Connect as the read-only user in `BW_MYSQL_USERNAME` (`bitwarden_data_reader`, `SELECT`-only). As defense-in-depth, also open every session with `SET SESSION TRANSACTION READ ONLY;` (verified: writes then fail with `ERROR 1792: Cannot execute statement in a READ ONLY transaction`; autocommit statements are implicit transactions, so plain INSERTs are covered). This guard is per-session, so it only holds if the statement is actually issued.
 
 ## Connecting
 

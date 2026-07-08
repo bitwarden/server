@@ -19,7 +19,7 @@ echo "Bitwarden PostgreSQL env vars OK" || echo "MISSING Bitwarden PostgreSQL en
 
 ## Read-only guard — required on every connection
 
-Connect as the read-only login in `BW_POSTGRES_USERNAME` (`bitwarden_data_reader`, `SELECT`-only). The bash hook only inspects `sqlcmd`, so it won't catch `psql` writes — as defense-in-depth, also open every session with `SET default_transaction_read_only = on;` (verified: writes then fail with `cannot execute INSERT in a read-only transaction`). This guard is per-session, so it only holds if the statement is actually issued.
+Connect as the read-only login in `BW_POSTGRES_USERNAME` (`bitwarden_data_reader`, `SELECT`-only). As defense-in-depth, also open every session with `SET default_transaction_read_only = on;` (verified: writes then fail with `cannot execute INSERT in a read-only transaction`). This guard is per-session, so it only holds if the statement is actually issued.
 
 ## Connecting
 
