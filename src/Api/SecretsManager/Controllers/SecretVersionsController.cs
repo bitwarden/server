@@ -141,7 +141,7 @@ public class SecretVersionsController : Controller
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
 
         var accessResults = await _secretRepository.AccessToSecretsAsync(secretIds, userId.Value, accessClient);
-        if (accessResults.Values.Any(access => !access.Read))
+        if (accessResults.Count != secretIds.Count || accessResults.Values.Any(access => !access.Read))
         {
             throw new NotFoundException();
         }
@@ -267,7 +267,7 @@ public class SecretVersionsController : Controller
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
         var accessResults = await _secretRepository.AccessToSecretsAsync(secretIds, userId.Value, accessClient);
-        if (accessResults.Values.Any(access => !access.Write))
+        if (accessResults.Count != secretIds.Count || accessResults.Values.Any(access => !access.Write))
         {
             throw new NotFoundException();
         }

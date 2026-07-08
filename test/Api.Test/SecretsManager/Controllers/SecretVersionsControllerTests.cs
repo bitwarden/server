@@ -492,4 +492,87 @@ public class SecretVersionsControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.GetManyByIdsAsync(versionIds));
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetManyByIds_AccessResultMissingSecret_Throws(
+        SutProvider<SecretVersionsController> sutProvider,
+        List<SecretVersion> versions,
+        Guid serviceAccountId,
+        Guid organizationId)
+    {
+        var accessibleSecretId = Guid.NewGuid();
+        var otherSecretId = Guid.NewGuid();
+        versions[0].SecretId = accessibleSecretId;
+        for (var i = 1; i < versions.Count; i++)
+        {
+            versions[i].SecretId = otherSecretId;
+        }
+        var versionIds = versions.Select(v => v.Id).ToList();
+        var secrets = new List<Secret>
+        {
+            new() { Id = accessibleSecretId, OrganizationId = organizationId },
+            new() { Id = otherSecretId, OrganizationId = organizationId },
+        };
+
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyByIdsAsync(versionIds).Returns(versions);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Any<IEnumerable<Guid>>()).Returns(secrets);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(serviceAccountId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
+        // Only one of the two derived secrets produces a row, even though it grants read.
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), serviceAccountId, AccessClientType.ServiceAccount)
+            .Returns(new Dictionary<Guid, (bool Read, bool Write)>
+            {
+                { accessibleSecretId, (true, false) },
+            });
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetManyByIdsAsync(versionIds));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkDelete_AccessResultMissingSecret_Throws(
+        SutProvider<SecretVersionsController> sutProvider,
+        List<SecretVersion> versions,
+        Guid serviceAccountId,
+        Guid organizationId)
+    {
+        var accessibleSecretId = Guid.NewGuid();
+        var otherSecretId = Guid.NewGuid();
+        versions[0].SecretId = accessibleSecretId;
+        for (var i = 1; i < versions.Count; i++)
+        {
+            versions[i].SecretId = otherSecretId;
+        }
+        var ids = versions.Select(v => v.Id).ToList();
+        var secrets = new List<Secret>
+        {
+            new() { Id = accessibleSecretId, OrganizationId = organizationId },
+            new() { Id = otherSecretId, OrganizationId = organizationId },
+        };
+
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyByIdsAsync(ids).Returns(versions);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Any<IEnumerable<Guid>>()).Returns(secrets);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(serviceAccountId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
+        // Only one of the two derived secrets produces a row, even though it grants write.
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), serviceAccountId, AccessClientType.ServiceAccount)
+            .Returns(new Dictionary<Guid, (bool Read, bool Write)>
+            {
+                { accessibleSecretId, (true, true) },
+            });
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.BulkDeleteAsync(ids));
+
+        await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
+            .DeleteManyByIdAsync(default!);
+    }
 }
