@@ -86,3 +86,10 @@ public record ConfirmTwoFactorRequiredForMembership()
     public string PropertyName => "organizationId";
     public string Type => "two_factor_required_for_membership";
 }
+
+public record ConfirmOnlyOneFreeOrganizationAdminAllowed()
+    : OnlyOneFreeOrganizationAdminAllowed(), IValidationError
+{
+    public string PropertyName => "organizationId";
+    public string Type => "only_one_free_organization_admin_allowed";
+}

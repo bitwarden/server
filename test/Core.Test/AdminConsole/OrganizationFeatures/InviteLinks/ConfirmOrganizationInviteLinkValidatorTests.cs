@@ -499,7 +499,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<OnlyOneFreeOrganizationAdminAllowed>(result.AsError);
+        Assert.IsType<ConfirmOnlyOneFreeOrganizationAdminAllowed>(result.AsError);
     }
 
     [Theory, BitAutoData]

@@ -142,7 +142,7 @@ public class ConfirmOrganizationInviteLinkValidator(
                 && targetOrganization.PlanType == PlanType.Free
                 && await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id) > 0)
         {
-            return new OnlyOneFreeOrganizationAdminAllowed();
+            return new ConfirmOnlyOneFreeOrganizationAdminAllowed();
         }
 
         return null;
