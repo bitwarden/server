@@ -34,18 +34,21 @@ Known users, groups, collections, and permissions you can point a client to.
 dotnet run -- preset --name qa.{name} --mangle
 ```
 
-| Preset                            | Org Fixture         | Roster                 | Ciphers                | Use Case                                      |
-| --------------------------------- | ------------------- | ---------------------- | ---------------------- | --------------------------------------------- |
-| enterprise-basic                  | redwood-analytics   | enterprise-basic       | enterprise-basic       | Standard enterprise org                       |
-| collection-permissions-enterprise | cobalt-logistics    | collection-permissions | collection-permissions | Permission edge cases                         |
-| dunder-mifflin-enterprise-full    | dunder-mifflin      | dunder-mifflin         | autofill-testing       | Large handcrafted org                         |
-| families-basic                    | adams-family        | family                 | 150 generated          | Families plan with personal vaults + reprompt |
-| stark-free-basic                  | stark-industries    | 1 generated user       | autofill-testing       | Free plan personal vault                      |
-| zero-knowledge-labs-enterprise    | zero-knowledge-labs | zero-knowledge-labs    | zero-knowledge-labs    | Full ZKL org with named folders + favorites   |
+| Preset                            | Org Fixture          | Roster                 | Ciphers                 | Use Case                                          |
+| --------------------------------- | -------------------- | ---------------------- | ----------------------- | ------------------------------------------------- |
+| enterprise-basic                  | redwood-analytics    | enterprise-basic       | enterprise-basic        | Standard enterprise org                           |
+| collection-permissions-enterprise | cobalt-logistics     | collection-permissions | collection-permissions  | Permission edge cases                             |
+| dunder-mifflin-enterprise-full    | dunder-mifflin       | dunder-mifflin         | autofill-testing        | Large handcrafted org                             |
+| families-basic                    | adams-family         | family                 | 150 generated           | Families plan with personal vaults + reprompt     |
+| stark-free-basic                  | stark-industries     | 1 generated user       | autofill-testing        | Free plan personal vault                          |
+| zero-knowledge-labs-enterprise    | zero-knowledge-labs  | zero-knowledge-labs    | zero-knowledge-labs     | Full ZKL org with named folders + favorites       |
+| paper-trail-partners-team         | paper-trail-partners | paper-trail-partners   | encryption-modes (34)   | Teams org: encryption modes across a shared vault |
 
 `families-basic` and `stark-free-basic` mix fixtures with generated data (ciphers and personal ciphers).
 
 `zero-knowledge-labs-enterprise` uses all three assignment types: `collectionAssignments` (ciphers to department collections), `folderAssignments` (per-user folder organization), and `favoriteAssignments` (per-user favorites).
+
+`qa.paper-trail-partners-team` seeds the same `encryption-modes` fixture as `individual.encryption-modes`, but into a Teams-plan org (**Paper Trail Partners**) whose owner sits in an **All-Access** group, so the owner sees all 34 ciphers. Log in as `trail.owner@papertrail.example`.
 
 ## Scale
 
@@ -85,15 +88,18 @@ Individual user accounts with no organization. Useful for testing personal vault
 dotnet run -- preset --name individual.{name} --mangle
 ```
 
-| Preset         | Account Type  | Folders | Ciphers     | Assignments |
-| -------------- | ------------- | ------- | ----------- | ----------- |
-| free           | Free          | —       | 0           | —           |
-| premium        | Premium (1GB) | —       | 0           | —           |
-| blob-migration | Premium (1GB) | —       | 7 (fixture) | —           |
+| Preset           | Account Type  | Folders | Ciphers      | Assignments |
+| ---------------- | ------------- | ------- | ------------ | ----------- |
+| free             | Free          | —       | 0            | —           |
+| premium          | Premium (1GB) | —       | 0            | —           |
+| blob-migration   | Premium (1GB) | —       | 7 (fixture)  | —           |
+| encryption-modes | Premium (1GB) | —       | 34 (fixture) | —           |
 
 `free` and `premium` create accounts with no vault data — useful for testing account setup flows. Cipher count is set to 0 (TBD).
 
-**Login emails:** `free` uses `freeuser@individual.example`; `premium` uses `premuser@individual.example`; `blob-migration` uses `blobmigration@individual.example`.
+`encryption-modes` seeds 34 ciphers spanning all eight cipher types (login, card, identity, secure note, SSH key, bank account, driver's license, passport), both cipher-encryption modes (user-key and cipher-key), all three attachment schemes (v0/v1/v2), and some archived/deleted items. The same fixture is seeded into an org vault by `qa.paper-trail-partners-team` (see QA above).
+
+**Login emails:** `free` uses `freeuser@individual.example`; `premium` uses `premuser@individual.example`; `blob-migration` uses `blobmigration@individual.example`; `encryption-modes` uses `encryptionmodes@individual.example`.
 
 ## Validation
 
