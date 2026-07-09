@@ -453,10 +453,10 @@
       },
       "MailKit": {
         "type": "Transitive",
-        "resolved": "4.16.0",
-        "contentHash": "trJ82DOpAmo8i1jO1vNE+dGn4mPRyeYfy4swRcAGgMJhPoI1Kohf4OFJJf0+YIj4iUxgxPn8W+ht7e7KiYzSjg==",
+        "resolved": "4.17.0",
+        "contentHash": "1nUAVLxM9fhT/78we6/AGsCesnpn5dRNLLeRqOfr52Wnk87pzVwo5YMTMyqnmoXrYc7piGhmayiMA/OgDluIjg==",
         "dependencies": {
-          "MimeKit": "4.16.0"
+          "MimeKit": "4.17.0"
         }
       },
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
@@ -1191,8 +1191,8 @@
       },
       "MimeKit": {
         "type": "Transitive",
-        "resolved": "4.16.0",
-        "contentHash": "X0LFxeM4gPRIhODyY/HYS9b+zRZ7y//v59rFzgS6wLxcPuZThnMtNZHtrr0fjLyRRkg3gqJBtvW36XfUzZ7Djw==",
+        "resolved": "4.17.0",
+        "contentHash": "h/KXsCreJf8RpR/PSAtlbvYtZFndp9N8Wn1Bs248AL7ITyhn+AiIY5bLTvt60tbN2mu6g8KadtBNWygTji2lqg==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.6.2",
           "System.Security.Cryptography.Pkcs": "10.0.0"
@@ -1775,7 +1775,7 @@
           "Fido2.AspNet": "[3.0.1, 3.0.1]",
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "LaunchDarkly.ServerSdk": "[8.11.0, 8.11.0]",
-          "MailKit": "[4.16.0, 4.16.0]",
+          "MailKit": "[4.17.0, 4.17.0]",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.8, 10.0.8]",
           "Microsoft.AspNetCore.DataProtection": "[10.0.8, 10.0.8]",
           "Microsoft.Azure.Cosmos": "[3.52.0, 3.52.0]",

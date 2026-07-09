@@ -14,6 +14,8 @@ public class SendControlsPolicyData : IPolicyDataModel
     [Display(Name = "AllowedDomains")]
     [StringLength(1000)]
     public string? AllowedDomains { get; set; }
+    [Display(Name = "DeletionHours")]
+    public int? DeletionHours { get; set; }
     [Display(Name = "AllowedSendTypes")]
     public SendType[]? AllowedSendTypes { get; set; }
 }
