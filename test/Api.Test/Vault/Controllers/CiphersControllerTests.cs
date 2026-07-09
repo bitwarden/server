@@ -63,17 +63,18 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Put_OpaqueLoginCipherWithOldClient_SkipsFido2VersionCheck(
+    public async Task Put_BlobEncryptedLoginCipherWithOldClient_SkipsFido2VersionCheck(
         User user,
         SutProvider<CiphersController> sutProvider)
     {
+        const string blob = "{\"format_version\":1,\"wrapped_cek\":\"abc\",\"envelope\":\"def\"}";
         var cipherId = Guid.NewGuid();
         var cipherDetails = new CipherDetails
         {
             Id = cipherId,
             UserId = user.Id,
             Type = CipherType.Login,
-            Data = "2.iv|ct|mac",
+            Data = blob,
             Edit = true,
             ViewPassword = true,
         };
@@ -92,13 +93,13 @@ public class CiphersControllerTests
         {
             Type = CipherType.Login,
             Name = "2.name|encrypted",
-            Data = "2.iv|ct|mac",
+            Data = blob,
         };
 
         var response = await sutProvider.Sut.Put(cipherId, model);
 
         Assert.NotNull(response);
-        Assert.Equal("2.iv|ct|mac", response.Data);
+        Assert.Equal(blob, response.Data);
         Assert.Null(response.Login);
         await sutProvider.GetDependency<ICipherService>()
             .Received(1)
