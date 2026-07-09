@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -57,7 +58,8 @@ public class OrganizationUserControllerPutTests
             savingUserId,
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
-            model.Groups);
+            model.Groups,
+            model.DefaultUserCollectionName);
     }
 
     [Theory]
@@ -109,7 +111,8 @@ public class OrganizationUserControllerPutTests
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
             // Main assertion: groups are not updated (are null)
-            null);
+            null,
+            model.DefaultUserCollectionName);
     }
 
     [Theory]
@@ -145,7 +148,8 @@ public class OrganizationUserControllerPutTests
             savingUserId,
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
-            model.Groups);
+            model.Groups,
+            model.DefaultUserCollectionName);
     }
 
     [Theory]
@@ -226,7 +230,8 @@ public class OrganizationUserControllerPutTests
                 cas.First(c => c.Id == editedCollectionId).Manage == true &&
                 cas.First(c => c.Id == editedCollectionId).ReadOnly == false &&
                 cas.First(c => c.Id == editedCollectionId).HidePasswords == false),
-            model.Groups);
+            model.Groups,
+            model.DefaultUserCollectionName);
     }
 
     [Theory]
@@ -278,7 +283,7 @@ public class OrganizationUserControllerPutTests
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(orgId)
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(orgId)
             .Returns(organizationAbility);
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
 

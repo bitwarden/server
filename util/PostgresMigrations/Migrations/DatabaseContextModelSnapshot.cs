@@ -399,11 +399,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("EncryptedInviteKey")
+                    b.Property<string>("Invite")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("EncryptedOrgKey")
                         .HasColumnType("text");
 
                     b.Property<Guid>("OrganizationId")
@@ -411,6 +408,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("SupportsConfirmation")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -1060,6 +1060,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("CohortId", "CreationDate", "Id")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")

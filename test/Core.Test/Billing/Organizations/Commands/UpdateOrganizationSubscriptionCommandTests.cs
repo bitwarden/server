@@ -1058,6 +1058,46 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_WithSchedule_CustomerDiscount_CarriedOntoFuturePhaseOnly()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(
+            customer: new Customer
+            {
+                Id = "cus_123",
+                Address = new Address { Country = "US" },
+                TaxExempt = TaxExempt.None,
+                Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+            },
+            items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [("price_seats", 5)], [("price_seats_new", 5)]);
+        schedule.Phases[1].Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "migration-coupon" }];
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 3)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                // Future phase: customer discount stacks with the existing migration coupon.
+                opts.Phases[1].Discounts.Any(d => d.Coupon == "retention") &&
+                opts.Phases[1].Discounts.Any(d => d.Coupon == "migration-coupon") &&
+                // Active phase: customer discount NOT carried (would double-apply on the current period).
+                (opts.Phases[0].Discounts == null || opts.Phases[0].Discounts.All(d => d.Coupon != "retention"))));
+    }
+
+    [Fact]
     public async Task Run_UpdateItemQuantity_WithSchedule_UpdatesBothPhases()
     {
         var organization = CreateOrganization();

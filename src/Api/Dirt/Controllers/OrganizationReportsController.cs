@@ -3,6 +3,7 @@ using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
@@ -31,7 +32,7 @@ public class OrganizationReportsController : Controller
     private readonly IGetOrganizationReportApplicationDataQuery _getOrganizationReportApplicationDataQuery;
     private readonly IUpdateOrganizationReportApplicationDataCommand _updateOrganizationReportApplicationDataCommand;
     private readonly IFeatureService _featureService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationReportStorageService _storageService;
     private readonly ICreateOrganizationReportCommand _createReportCommand;
     private readonly IOrganizationReportRepository _organizationReportRepo;
@@ -50,7 +51,7 @@ public class OrganizationReportsController : Controller
         IGetOrganizationReportApplicationDataQuery getOrganizationReportApplicationDataQuery,
         IUpdateOrganizationReportApplicationDataCommand updateOrganizationReportApplicationDataCommand,
         IFeatureService featureService,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IOrganizationReportStorageService storageService,
         ICreateOrganizationReportCommand createReportCommand,
         IOrganizationReportRepository organizationReportRepo,
@@ -68,7 +69,7 @@ public class OrganizationReportsController : Controller
         _getOrganizationReportApplicationDataQuery = getOrganizationReportApplicationDataQuery;
         _updateOrganizationReportApplicationDataCommand = updateOrganizationReportApplicationDataCommand;
         _featureService = featureService;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _storageService = storageService;
         _createReportCommand = createReportCommand;
         _organizationReportRepo = organizationReportRepo;
@@ -80,16 +81,15 @@ public class OrganizationReportsController : Controller
 
     /// <summary>
     /// Creates a new organization report for the specified organization.
-    /// When the Access Intelligence V2 feature flag is enabled, validates the file size and returns
-    /// a presigned upload URL for the report file along with the created report metadata.
+    /// When the new architecture is enabled and the request includes a file size, validates it and
+    /// returns a presigned upload URL for the report file along with the created report metadata.
     /// Otherwise, creates the report with inline data.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="request">The request model containing report data and optional file metadata.</param>
-    /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with upload URL when V2 is enabled,
-    /// or an <see cref="OrganizationReportResponseModel"/> otherwise.</returns>
+    /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with upload URL when the request
+    /// includes a file size, or an <see cref="OrganizationReportResponseModel"/> otherwise.</returns>
     [HttpPost("{organizationId}")]
-    [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> CreateOrganizationReportAsync(
         Guid organizationId,
         [FromBody] AddOrganizationReportRequestModel request)
@@ -98,13 +98,18 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
+        // File storage only exists under the new architecture, so gate the file path on the (stable)
+        // AccessIntelligenceNewArchitecture flag. Within that, select the path from the request shape
+        // rather than the file-storage flag (AccessIntelligenceVersion2): the client chooses its shape
+        // from that flag via a config cache that can lag the server by up to an hour (pronounced in
+        // self-hosted), so branching on it here would 500 whenever the two disagree. Honoring the shape
+        // lets file-storage flag staleness degrade gracefully.
+        var isNewArchitecture = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture);
+        if (isNewArchitecture && request.FileSize.HasValue)
         {
-            if (!request.FileSize.HasValue)
-            {
-                throw new BadRequestException("File size is required.");
-            }
-
+            // This caps the claimed file-size value only. The file itself is uploaded separately to
+            // blob storage via UploadReportFileAsync, so no large body flows through this endpoint and
+            // no request-body size limit belongs here (that limit lives on the upload endpoint).
             if (request.FileSize.Value > Constants.FileSize501mb)
             {
                 throw new BadRequestException("Max file size is 500 MB.");
@@ -141,15 +146,15 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        var isAccessIntelligenceV2 = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2);
+        var isNewArchitecture = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture);
 
-        var latestReport = isAccessIntelligenceV2
+        var latestReport = isNewArchitecture
             ? await _getOrganizationReportQuery.ReadLatestOrganizationReportAsync(organizationId)
             : await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
 
         var response = new OrganizationReportResponseModel(latestReport);
 
-        if (isAccessIntelligenceV2)
+        if (isNewArchitecture)
         {
             var fileData = latestReport.GetReportFile();
             if (fileData is { Validated: true })
@@ -202,7 +207,7 @@ public class OrganizationReportsController : Controller
     /// <param name="request">The request model containing updated report data.</param>
     /// <returns>An <see cref="OrganizationReportResponseModel"/> with the updated report.</returns>
     [HttpPatch("{organizationId}/{reportId}")]
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     public async Task<IActionResult> UpdateOrganizationReportAsync(
         Guid organizationId,
         Guid reportId,
@@ -280,13 +285,13 @@ public class OrganizationReportsController : Controller
     /// <summary>
     /// Renews the file upload URL for an organization report that has not yet been validated.
     /// Returns a fresh presigned upload URL for the report file, allowing the client to retry
-    /// an upload after the original URL has expired. Requires the Access Intelligence V2 feature flag.
+    /// an upload after the original URL has expired. Requires the Access Intelligence new-architecture feature flag.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="reportId">The unique identifier of the report with the pending file upload.</param>
     /// <param name="reportFileId">The identifier of the report file entry to renew the upload URL for.</param>
     /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with the renewed upload URL.</returns>
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     [HttpGet("{organizationId}/{reportId}/file/renew")]
     public async Task<OrganizationReportFileResponseModel> RenewFileUploadUrlAsync(
         Guid organizationId, Guid reportId, [FromQuery] string reportFileId)
@@ -316,12 +321,12 @@ public class OrganizationReportsController : Controller
     /// Handles Azure Event Grid webhook notifications for blob storage events.
     /// When a <c>Microsoft.Storage.BlobCreated</c> event is received, validates the uploaded
     /// report file against the corresponding organization report. Orphaned blobs (with no
-    /// matching report) are deleted. Requires the Access Intelligence V2 feature flag.
+    /// matching report) are deleted. Requires the Access Intelligence new-architecture feature flag.
     /// This endpoint is anonymous to allow Azure Event Grid to call it directly.
     /// </summary>
     /// <returns>An <see cref="ObjectResult"/> acknowledging the Event Grid event.</returns>
     [AllowAnonymous]
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     [HttpPost("file/validate/azure")]
     public async Task<ObjectResult> AzureValidateFileAsync()
     {
@@ -367,12 +372,12 @@ public class OrganizationReportsController : Controller
     /// <summary>
     /// Uploads a report data file for a self-hosted organization report via multipart form data.
     /// Validates the uploaded file size against the expected size (with a 1 MB leeway) and marks
-    /// the report file as validated upon success. Requires the Access Intelligence V2 feature flag.
+    /// the report file as validated upon success. Requires the Access Intelligence new-architecture feature flag.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="reportId">The unique identifier of the report to attach the file to.</param>
     /// <param name="reportFileId">The identifier of the report file entry to upload against.</param>
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     [HttpPost("{organizationId}/{reportId}/file")]
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
@@ -448,7 +453,7 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2) && !fileData.Validated)
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture) && !fileData.Validated)
         {
             throw new NotFoundException();
         }
@@ -469,15 +474,11 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException();
         }
 
-        // TODO: Re-enable this access control in PM-37469
-        // Temporarily disabling this access control to allow for proper access control and billing
-        // setup to be done.
-        //
-        // var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        // if (orgAbility is null || !orgAbility.UseRiskInsights)
-        // {
-        //     throw new BadRequestException("Your organization's plan does not support this feature.");
-        // }
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (orgAbility is null || !orgAbility.UseRiskInsights)
+        {
+            throw new BadRequestException("Your organization's plan does not support this feature.");
+        }
     }
 
     private static void EnsureValidIds(Guid organizationId, Guid? reportId = null)

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -159,7 +160,8 @@ public class UpdateOrganizationSubscriptionCommand(
                 CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
 
             var (sourcePlan, targetPlan) = await ResolvePhasePlansAsync(organization);
-            var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes, sourcePlan, targetPlan);
+            var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes, sourcePlan, targetPlan,
+                subscription.Customer?.Discount);
 
             await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                 new SubscriptionScheduleUpdateOptions
@@ -354,7 +356,8 @@ public class UpdateOrganizationSubscriptionCommand(
         List<SubscriptionSchedulePhase> migrationPhases,
         IReadOnlyList<OrganizationSubscriptionChange> changes,
         Plan sourcePlan,
-        Plan targetPlan)
+        Plan targetPlan,
+        Discount? customerDiscount)
     {
         var phase1IsPostMigration = migrationPhases.Count == 1
             && IsPostMigrationPhase(migrationPhases[0], sourcePlan, targetPlan);
@@ -366,7 +369,8 @@ public class UpdateOrganizationSubscriptionCommand(
             phase1, changes,
             source: sourcePlan,
             target: phase1IsPostMigration ? targetPlan : sourcePlan,
-            suppressDiscounts: phase1IsPostMigration));
+            suppressDiscounts: phase1IsPostMigration,
+            customerDiscount: null));
 
         if (migrationPhases.Count >= 2)
         {
@@ -374,7 +378,8 @@ public class UpdateOrganizationSubscriptionCommand(
                 migrationPhases[1], changes,
                 source: sourcePlan,
                 target: targetPlan,
-                suppressDiscounts: false));
+                suppressDiscounts: false,
+                customerDiscount: customerDiscount));
         }
 
         return phases;
@@ -413,16 +418,22 @@ public class UpdateOrganizationSubscriptionCommand(
         IReadOnlyList<OrganizationSubscriptionChange> changes,
         Plan source,
         Plan target,
-        bool suppressDiscounts) =>
+        bool suppressDiscounts,
+        Discount? customerDiscount) =>
         new()
         {
             StartDate = sourcePhase.StartDate,
             EndDate = sourcePhase.EndDate,
             Items = ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
+            // A future phase carries the customer-level discount so it stacks at renewal; the active
+            // phase (customerDiscount is null) mirrors verbatim — re-adding would double-apply now.
             Discounts = suppressDiscounts
                 ? []
-                : sourcePhase.Discounts?.Select(d =>
-                    new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                : customerDiscount is null
+                    ? sourcePhase.Discounts?.Select(d =>
+                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList()
+                    : customerDiscount.MergeDiscountCouponIds(sourcePhase.Discounts?.Select(d => d.CouponId))
+                        .ToPhaseDiscountOptions(),
             Metadata = sourcePhase.Metadata,
             ProrationBehavior = sourcePhase.ProrationBehavior
         };
