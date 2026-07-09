@@ -1832,7 +1832,10 @@
       "admin": {
         "type": "Project",
         "dependencies": {
+<<<<<<< HEAD
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
+=======
+>>>>>>> origin/main
           "Commercial.Core": "[2026.6.2, )",
           "Commercial.Infrastructure.EntityFramework": "[2026.6.2, )",
           "Core": "[2026.6.2, )",
@@ -1856,7 +1859,10 @@
           "AspNetCore.HealthChecks.SqlServer": "[8.0.2, 8.0.2]",
           "AspNetCore.HealthChecks.Uris": "[8.0.1, 8.0.1]",
           "Azure.Messaging.EventGrid": "[5.0.0, 5.0.0]",
+<<<<<<< HEAD
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
+=======
+>>>>>>> origin/main
           "Commercial.Core": "[2026.6.2, )",
           "Commercial.Infrastructure.EntityFramework": "[2026.6.2, )",
           "Core": "[2026.6.2, )",
@@ -1887,7 +1893,10 @@
       "billing": {
         "type": "Project",
         "dependencies": {
+<<<<<<< HEAD
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
+=======
+>>>>>>> origin/main
           "Commercial.Core": "[2026.6.2, )",
           "Core": "[2026.6.2, )",
           "MarkDig": "[1.1.0, 1.1.0]",
@@ -1996,7 +2005,10 @@
       "identity": {
         "type": "Project",
         "dependencies": {
+<<<<<<< HEAD
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
+=======
+>>>>>>> origin/main
           "Core": "[2026.6.2, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
@@ -2084,7 +2096,10 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
+<<<<<<< HEAD
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
+=======
+>>>>>>> origin/main
           "Core": "[2026.6.2, )",
           "Infrastructure.Dapper": "[2026.6.2, )",
           "Infrastructure.EntityFramework": "[2026.6.2, )",

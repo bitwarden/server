@@ -30,7 +30,7 @@ using NSubstitute;
 using Xunit;
 using static Bit.Core.KeyManagement.Enums.SignatureAlgorithm;
 
-namespace Bit.Api.IntegrationTest.Controllers;
+namespace Bit.Api.IntegrationTest.Auth.Controllers;
 
 public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

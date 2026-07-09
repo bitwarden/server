@@ -36,8 +36,8 @@ public class RefreshOrganizationInviteLinkCommand(
         {
             OrganizationId = existing.OrganizationId,
             AllowedDomains = existing.AllowedDomains,
-            EncryptedInviteKey = request.EncryptedInviteKey,
-            EncryptedOrgKey = request.EncryptedOrgKey,
+            Invite = request.Invite,
+            SupportsConfirmation = request.SupportsConfirmation,
             CreationDate = now,
             RevisionDate = now,
         };

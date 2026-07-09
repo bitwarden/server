@@ -391,11 +391,8 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("EncryptedInviteKey")
+                    b.Property<string>("Invite")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EncryptedOrgKey")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
@@ -403,6 +400,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("SupportsConfirmation")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
