@@ -1,6 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -189,6 +191,118 @@ public class UpdateOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(default(OrganizationUser), default);
     }
 
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task UpdateUserAsync_WhenDemotingPrivilegedUser_WithNameAndUseMyItemsAndPolicyEnabled_CreatesDefaultCollection(
+        OrganizationUserType existingType,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser organizationUser,
+        string defaultUserCollectionName)
+    {
+        organization.UseMyItems = true;
+        organizationUser.Type = existingType;
+        var request = Setup(sutProvider, organization, organizationUser,
+            type: OrganizationUserType.User, defaultUserCollectionName: defaultUserCollectionName);
+        SetupDataOwnershipPolicy(sutProvider, organizationUser.UserId!.Value, OrganizationDataOwnershipState.Enabled);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).CreateDefaultCollectionsAsync(
+            organizationUser.OrganizationId,
+            Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)),
+            defaultUserCollectionName);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task UpdateUserAsync_WhenDemotingPrivilegedUser_WithUseMyItemsDisabled_DoesNotCreateDefaultCollection(
+        OrganizationUserType existingType,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser organizationUser,
+        string defaultUserCollectionName)
+    {
+        organization.UseMyItems = false;
+        organizationUser.Type = existingType;
+        var request = Setup(sutProvider, organization, organizationUser,
+            type: OrganizationUserType.User, defaultUserCollectionName: defaultUserCollectionName);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
+            .CreateDefaultCollectionsAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task UpdateUserAsync_WhenDemotingPrivilegedUser_WithPolicyDisabled_DoesNotCreateDefaultCollection(
+        OrganizationUserType existingType,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser organizationUser,
+        string defaultUserCollectionName)
+    {
+        organization.UseMyItems = true;
+        organizationUser.Type = existingType;
+        var request = Setup(sutProvider, organization, organizationUser,
+            type: OrganizationUserType.User, defaultUserCollectionName: defaultUserCollectionName);
+        SetupDataOwnershipPolicy(sutProvider, organizationUser.UserId!.Value, OrganizationDataOwnershipState.Disabled);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
+            .CreateDefaultCollectionsAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task UpdateUserAsync_WhenExistingUserIsNotPrivileged_DoesNotCreateDefaultCollection(
+        OrganizationUserType existingType,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser organizationUser,
+        string defaultUserCollectionName)
+    {
+        organization.UseMyItems = true;
+        organizationUser.Type = existingType;
+        var request = Setup(sutProvider, organization, organizationUser,
+            type: OrganizationUserType.User, defaultUserCollectionName: defaultUserCollectionName);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
+            .CreateDefaultCollectionsAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task UpdateUserAsync_WhenDemotingPrivilegedUser_WithoutName_DoesNotCreateDefaultCollection(
+        OrganizationUserType existingType,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser organizationUser)
+    {
+        organization.UseMyItems = true;
+        organizationUser.Type = existingType;
+        var request = Setup(sutProvider, organization, organizationUser, type: OrganizationUserType.User);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
+            .CreateDefaultCollectionsAsync(default, default, default);
+    }
+
     private static UpdateOrganizationUserRequest Setup(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
@@ -197,7 +311,8 @@ public class UpdateOrganizationUserCommandTests
         List<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> groups = null,
         bool valid = true,
-        bool targetAccessSecretsManager = false)
+        bool targetAccessSecretsManager = false,
+        string defaultUserCollectionName = null)
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
         organizationUser.OrganizationId = organization.Id;
@@ -220,6 +335,15 @@ public class UpdateOrganizationUserCommandTests
             collections,
             groups,
             new StandardUser(organizationUser.UserId ?? Guid.NewGuid(), true),
-            new OrganizationUser { Type = OrganizationUserType.Owner });
+            new OrganizationUser { Type = OrganizationUserType.Owner },
+            defaultUserCollectionName);
+    }
+
+    private static void SetupDataOwnershipPolicy(SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Guid userId, OrganizationDataOwnershipState state)
+    {
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(state, []));
     }
 }

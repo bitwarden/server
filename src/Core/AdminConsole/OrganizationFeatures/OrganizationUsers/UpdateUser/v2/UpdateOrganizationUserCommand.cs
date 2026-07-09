@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
@@ -20,6 +22,8 @@ public class UpdateOrganizationUserCommand(
     IPricingClient pricingClient,
     IEventService eventService,
     IGlobalSettings globalSettings,
+    ICollectionRepository collectionRepository,
+    IPolicyRequirementQuery policyRequirementQuery,
     TimeProvider timeProvider)
     : IUpdateOrganizationUserCommand
 {
@@ -36,6 +40,8 @@ public class UpdateOrganizationUserCommand(
 
         var collectionsToSave = request.NewCollections?.ToList() ?? [];
         var groupsToSave = request.NewGroups;
+
+        var shouldCreateDefaultCollection = await ShouldCreateDefaultCollectionOnDemotionAsync(request);
 
         var enablingSecretsManager = !organizationUser.AccessSecretsManager && request.NewAccessSecretsManager;
 
@@ -69,8 +75,36 @@ public class UpdateOrganizationUserCommand(
             await organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupsToSave, timeProvider.GetUtcNow().UtcDateTime);
         }
 
+        if (shouldCreateDefaultCollection)
+        {
+            await collectionRepository.CreateDefaultCollectionsAsync(
+                organizationUser.OrganizationId,
+                [organizationUser.Id],
+                request.DefaultUserCollectionName!);
+        }
+
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
 
         return new None();
+    }
+
+    private async Task<bool> ShouldCreateDefaultCollectionOnDemotionAsync(UpdateOrganizationUserRequest request)
+    {
+        var organizationUser = request.OrganizationUserToUpdate;
+
+        var isDemotedFromPrivilegedRole =
+            organizationUser.Type is OrganizationUserType.Admin or OrganizationUserType.Owner
+            && request.NewType is not (OrganizationUserType.Admin or OrganizationUserType.Owner);
+
+        if (!isDemotedFromPrivilegedRole
+            || !organizationUser.UserId.HasValue
+            || !request.Organization.UseMyItems
+            || string.IsNullOrWhiteSpace(request.DefaultUserCollectionName))
+        {
+            return false;
+        }
+
+        var policy = await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId.Value);
+        return policy.State == OrganizationDataOwnershipState.Enabled;
     }
 }

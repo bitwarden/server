@@ -450,7 +450,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 collectionsToSave,
                 groupsToSave,
                 new StandardUser(userId, await _currentContext.OrganizationOwner(organization.Id)),
-                savingOrganizationUser);
+                savingOrganizationUser,
+                model.DefaultUserCollectionName);
 
             var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
             return Handle(result);

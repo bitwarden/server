@@ -436,7 +436,8 @@ public class UpdateOrganizationUserValidatorTests
             collections ?? [],
             groups,
             actingUser,
-            actingMembership);
+            actingMembership,
+            null);
     }
 
     // The acting user's own membership. Custom users are given ManageUsers by default, since that is the
