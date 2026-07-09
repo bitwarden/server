@@ -35,6 +35,13 @@ public class Cipher : ITableObject<Guid>, ICloneable
 
     public bool IsDataBlobEncrypted()
     {
+        // Blob-encrypted data is a JSON object carrying a top-level "format_version"
+        // key; legacy field-level CipherData JSON never contains it.
+        return HasTopLevelProperty("format_version");
+    }
+
+    private bool HasTopLevelProperty(string propertyName)
+    {
         if (string.IsNullOrWhiteSpace(Data))
         {
             return false;
@@ -44,9 +51,7 @@ public class Cipher : ITableObject<Guid>, ICloneable
         {
             var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(Data));
 
-            // Blob-encrypted data is a JSON object carrying a top-level "format_version"
-            // key; legacy field-level CipherData JSON never contains it. Probe only the
-            // top-level properties rather than materializing the whole document.
+            // Probe only the top-level properties rather than materializing the whole document.
             if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
             {
                 return false;
@@ -54,7 +59,7 @@ public class Cipher : ITableObject<Guid>, ICloneable
 
             while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
             {
-                if (reader.ValueTextEquals("format_version"))
+                if (reader.ValueTextEquals(propertyName))
                 {
                     return true;
                 }
