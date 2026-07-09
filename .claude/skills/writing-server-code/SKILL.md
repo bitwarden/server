@@ -27,6 +27,16 @@ When caching is needed, follow the conventions in [CACHING.md](https://github.co
 
 Always use `CoreHelpers.GenerateComb()` for entity IDs — never `Guid.NewGuid()`. Sequential COMBs prevent SQL Server index fragmentation that random GUIDs cause on clustered indexes, which is critical for Bitwarden's database performance at scale.
 
+### Library shape
+
+When creating or modifying code under `src/Libraries/`, follow the canonical shape described in [src/Libraries/LIBRARY.md](../../../src/Libraries/LIBRARY.md). Key rules:
+
+- Types are `internal` by default; go `public` only when a consumer outside the library legitimately needs them.
+- Expose the library through two extension methods: `AddFoo(this IServiceCollection)` and `MapFooEndpoints(this IEndpointRouteBuilder)`.
+- Declare a strongly-typed `FooSettings` class rather than extending `GlobalSettings`; the host binds it, the library consumes `IOptions<FooSettings>`.
+- The library owns its data access end-to-end (interface + Dapper + EF Core implementations) and `AddFoo` chooses the implementation based on the configured database provider.
+- Cross-library interaction happens only through public surface — never reach into another library's `internal` types.
+
 ## Critical Rules
 
 These are the most frequently violated conventions. Claude cannot fetch the linked docs at runtime, so these are inlined here:
