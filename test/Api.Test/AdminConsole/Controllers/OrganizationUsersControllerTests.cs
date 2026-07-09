@@ -816,7 +816,7 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>()
             .Received(1)
             .UpdateUserAsync(Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUserType>(), userId,
-                Arg.Any<List<CollectionAccessSelection>>(), Arg.Any<IEnumerable<Guid>>());
+                Arg.Any<List<CollectionAccessSelection>>(), Arg.Any<IEnumerable<Guid>>(), model.DefaultUserCollectionName);
         await sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .DidNotReceiveWithAnyArgs()
             .UpdateUserAsync(default);
