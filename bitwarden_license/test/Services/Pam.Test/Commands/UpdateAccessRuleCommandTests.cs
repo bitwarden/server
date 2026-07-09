@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Models;
@@ -111,7 +112,38 @@ public class UpdateAccessRuleCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_MissingExisting_ThrowsNotFoundWithoutValidating(AccessRule update)
+    public async Task UpdateAsync_CollectionGovernedByAnotherRule_ThrowsBadRequest(AccessRuleDetails existing,
+        AccessRule update, AccessRule otherRule, Collection collection)
+    {
+        var sutProvider = SetupSutProvider();
+        var orgId = existing.OrganizationId;
+        update.Name = "renamed";
+        update.Conditions = """{"kind":"human_approval"}""";
+        otherRule.OrganizationId = orgId;
+        otherRule.Name = "other";
+        collection.OrganizationId = orgId;
+        collection.AccessRuleId = otherRule.Id;   // a different rule
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetDetailsByIdAsync(existing.Id)
+            .Returns(existing);
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(update.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(new List<AccessRule> { existing, otherRule });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { collection });
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, new[] { collection.Id }));
+        Assert.Contains("already governed by another access rule", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_MissingExisting_ThrowsNotFound(AccessRule update)
     {
         var sutProvider = SetupSutProvider();
         sutProvider.GetDependency<IAccessRuleRepository>()

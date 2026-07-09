@@ -73,6 +73,152 @@ public class CreateAccessRuleCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task CreateAsync_CollectionInDifferentOrg_ThrowsBadRequest(AccessRule rule, Collection collection)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "test";
+        rule.Conditions = """{"kind":"human_approval"}""";
+        collection.OrganizationId = Guid.NewGuid();
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(rule.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(rule.OrganizationId)
+            .Returns(new List<AccessRule>());
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { collection });
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAsync(rule, new[] { collection.Id }));
+        Assert.Contains("do not belong to this organization", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_CollectionGovernedByAnotherRule_ThrowsBadRequest(
+        AccessRule rule, AccessRule otherRule, Collection collection)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "test";
+        rule.Conditions = """{"kind":"human_approval"}""";
+        otherRule.OrganizationId = rule.OrganizationId;
+        otherRule.Name = "other";
+        collection.OrganizationId = rule.OrganizationId;
+        collection.AccessRuleId = otherRule.Id;   // governed by another rule
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(rule.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(rule.OrganizationId)
+            .Returns(new List<AccessRule> { otherRule });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { collection });
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAsync(rule, new[] { collection.Id }));
+        Assert.Contains("already governed by another access rule", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_CollectionNotFound_ThrowsBadRequest(AccessRule rule, Guid missingCollectionId)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "test";
+        rule.Conditions = """{"kind":"human_approval"}""";
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(rule.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(rule.OrganizationId)
+            .Returns(new List<AccessRule>());
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>());
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAsync(rule, new[] { missingCollectionId }));
+        Assert.Contains("could not be found", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_EmptyName_ThrowsBadRequest(AccessRule rule)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "  ";
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
+        Assert.Contains("Name is required", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_InvalidRule_ThrowsBadRequest(AccessRule rule)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "test";
+        rule.Conditions = """{"kind":"bogus"}""";
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(rule.Conditions)
+            .Returns(AccessRuleValidationResult.Invalid("Unsupported rule kind"));
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
+        Assert.Equal("Unsupported rule kind", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_DuplicateName_ThrowsBadRequest(AccessRule rule, AccessRule existing)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "duplicate";
+        rule.Conditions = """{"kind":"human_approval"}""";
+        existing.OrganizationId = rule.OrganizationId;
+        existing.Name = "Duplicate";   // case-insensitive collision
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(rule.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(rule.OrganizationId)
+            .Returns(new List<AccessRule> { existing });
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
+        Assert.Contains("already exists", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_AllowsExtensionsWithoutMax_ThrowsBadRequest(AccessRule rule)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "extendable";
+        rule.AllowsExtensions = true;
+        rule.MaxExtensionDurationSeconds = null;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
+        Assert.Contains("maximum extension length", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory]
+    [BitAutoData(0)]
+    [BitAutoData(-1)]
+    public async Task CreateAsync_AllowsExtensionsWithNonPositiveMax_ThrowsBadRequest(int maxExtensionDurationSeconds, AccessRule rule)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "extendable";
+        rule.AllowsExtensions = true;
+        rule.MaxExtensionDurationSeconds = maxExtensionDurationSeconds;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
+        Assert.Contains("maximum extension length", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
     public async Task CreateAsync_AllowsExtensionsWithPositiveMax_Persists(AccessRule rule)
     {
         var sutProvider = SetupSutProvider();

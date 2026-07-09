@@ -41,7 +41,19 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             throw new NotFoundException();
         }
 
-        var desiredCollectionIds = await _validator.ValidateAsync(organizationId, update, collectionIds, id);
+        var validation = _validator.Validate(update.Conditions);
+        if (!validation.IsValid)
+        {
+            throw new BadRequestException(validation.Error!);
+        }
+
+        var siblings = await _repository.GetManyByOrganizationIdAsync(organizationId);
+        if (siblings.Any(p => p.Id != id && string.Equals(p.Name, update.Name, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new BadRequestException("A rule with that name already exists.");
+        }
+
+        var desiredCollectionIds = await ValidateCollectionsAsync(organizationId, id, collectionIds);
 
         // Persist a plain AccessRule: the AccessRuleDetails returned by GetDetailsByIdAsync carries an extra
         // CollectionIds property that the base ReplaceAsync would otherwise forward to AccessRule_Update.
@@ -83,5 +95,35 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
         return AccessRuleDetails.From(toPersist, desiredCollectionIds);
+    }
+
+    private async Task<List<Guid>> ValidateCollectionsAsync(Guid organizationId, Guid accessRuleId,
+        IEnumerable<Guid> collectionIds)
+    {
+        var distinctIds = collectionIds.Distinct().ToList();
+        if (distinctIds.Count == 0)
+        {
+            return distinctIds;
+        }
+
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(distinctIds);
+        if (collections.Count != distinctIds.Count)
+        {
+            throw new BadRequestException("One or more collections could not be found.");
+        }
+
+        if (collections.Any(c => c.OrganizationId != organizationId))
+        {
+            throw new BadRequestException("One or more collections do not belong to this organization.");
+        }
+
+        // Deletes clear Collection.AccessRuleId and the FK forbids dangling links, so any set link points at an
+        // existing rule; only a link to a different rule is a conflict.
+        if (collections.Any(c => c.AccessRuleId.HasValue && c.AccessRuleId != accessRuleId))
+        {
+            throw new BadRequestException("One or more collections are already governed by another access rule.");
+        }
+
+        return distinctIds;
     }
 }

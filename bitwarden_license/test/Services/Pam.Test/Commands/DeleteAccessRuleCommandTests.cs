@@ -17,7 +17,7 @@ public class DeleteAccessRuleCommandTests
 {
     [Theory, BitAutoData]
     public async Task DeleteAsync_HappyPath_HardDeletes(
-        AccessRule existing, SutProvider<DeleteAccessRuleCommand> sutProvider)
+        AccessRule existing, Guid deletedBy, SutProvider<DeleteAccessRuleCommand> sutProvider)
     {
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetByIdAsync(existing.Id)
