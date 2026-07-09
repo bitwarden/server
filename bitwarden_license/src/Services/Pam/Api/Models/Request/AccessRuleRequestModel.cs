@@ -25,9 +25,10 @@ public class AccessRuleRequestModel
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// The condition tree that decides how access is granted under this rule — for example requiring human
-    /// approval, or restricting to certain times of day or source IPs. Sent as a JSON object and stored verbatim;
-    /// an empty or null value means the rule imposes no conditions.
+    /// The conditions that decide how access is granted under this rule — for example requiring human
+    /// approval, or restricting to certain times of day or source IPs. Sent as a JSON array of condition
+    /// objects and stored verbatim. Required — a null or omitted value is rejected; an empty array means
+    /// the rule imposes no conditions, so requests under it resolve automatically.
     /// </summary>
     [Required]
     public object Conditions { get; set; } = null!;
