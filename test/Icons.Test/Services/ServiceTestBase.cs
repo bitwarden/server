@@ -1,4 +1,5 @@
-﻿using Bit.Icons.Extensions;
+﻿using Bit.Icons;
+using Bit.Icons.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +21,7 @@ public class ServiceTestBase
 
         _services.ConfigureHttpClients();
         _services.AddHtmlParsing();
+        _services.AddSingleton(new IconsSettings());
         _services.AddServices();
 
         _provider = _services.BuildServiceProvider();
