@@ -92,6 +92,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
     private readonly IAcceptOrganizationInviteLinkCommand _acceptOrganizationInviteLinkCommand;
+    private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
     private readonly IFeatureService _featureService;
     private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommandVNext;
 
@@ -129,6 +130,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
         IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery,
         IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand,
+        IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
         IFeatureService featureService,
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext)
     {
@@ -166,6 +168,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
         _acceptOrganizationInviteLinkCommand = acceptOrganizationInviteLinkCommand;
+        _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
         _featureService = featureService;
         _updateOrganizationUserCommandVNext = updateOrganizationUserCommandVNext;
     }
@@ -929,6 +932,28 @@ public class OrganizationUsersController : BaseAdminConsoleController
             Code = model.Code,
             User = user,
             ResetPasswordKey = model.ResetPasswordKey,
+        });
+
+        return Handle(result, _ => TypedResults.Ok());
+    }
+
+    [HttpPost("/organizations/users/invite-link/confirm")]
+    [RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
+    public async Task<IResult> ConfirmInviteLink([FromBody] ConfirmOrganizationInviteLinkRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _confirmOrganizationInviteLinkCommand.ConfirmAsync(new ConfirmOrganizationInviteLinkRequest
+        {
+            Code = model.Code,
+            User = user,
+            OrgUserKey = model.OrgUserKey,
+            ResetPasswordKey = model.ResetPasswordKey,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
         });
 
         return Handle(result, _ => TypedResults.Ok());
