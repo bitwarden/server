@@ -64,6 +64,7 @@ internal static class PresetLoader
         if (preset.Ciphers?.Fixture is not null)
         {
             builder.UsePersonalVaultCiphers(preset.Ciphers.Fixture);
+            builder.UseCipherAttachments(preset.Ciphers.Fixture, personal: true);
         }
         else if (preset.Ciphers is { Count: > 0 })
         {
@@ -87,7 +88,7 @@ internal static class PresetLoader
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → OrgApiKey → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+    /// Resolution order: Org → OrgApiKey → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
     /// </remarks>
     private static void BuildRecipe(string presetName, SeedPreset preset, ISeedReader reader, IServiceCollection services)
     {
@@ -170,6 +171,7 @@ internal static class PresetLoader
         if (preset.Ciphers?.Fixture is not null)
         {
             builder.UseCiphers(preset.Ciphers.Fixture, skipCollectionAssignment: hasCollectionAssignments);
+            builder.UseCipherAttachments(preset.Ciphers.Fixture, personal: false);
         }
         else if (preset.Ciphers is not null && preset.Ciphers.Count > 0)
         {

@@ -348,6 +348,29 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Create attachments for fixture ciphers that declare an <c>attachments</c> array, each in a
+    /// specified historical encryption mode. A no-op when the fixture declares no attachments.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="fixture">Cipher fixture name without extension (the same fixture the ciphers came from)</param>
+    /// <param name="personal">True for a personal vault (encrypt with the user key); false for an organization vault (org key)</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no fixture ciphers exist</exception>
+    internal static RecipeBuilder UseCipherAttachments(this RecipeBuilder builder, string fixture, bool personal)
+    {
+        if (!builder.HasFixtureCiphers)
+        {
+            throw new InvalidOperationException(
+                "Cipher attachments require fixture ciphers. Call UseCiphers() or UsePersonalVaultCiphers() first.");
+        }
+
+        builder.AddStep(_ => personal
+            ? CreateCipherAttachmentsStep.ForPersonalVault(fixture)
+            : CreateCipherAttachmentsStep.ForOrganization(fixture));
+        return builder;
+    }
+
+    /// <summary>
     /// Generate ciphers with configurable type and password strength distributions.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
