@@ -47,7 +47,6 @@ public class BaseRequestValidatorTests
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly ISsoRequestValidator _ssoRequestValidator;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly FakeLogger<BaseRequestValidatorTests> _logger;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
@@ -72,7 +71,6 @@ public class BaseRequestValidatorTests
         _deviceValidator = Substitute.For<IDeviceValidator>();
         _twoFactorAuthenticationValidator = Substitute.For<ITwoFactorAuthenticationValidator>();
         _ssoRequestValidator = Substitute.For<ISsoRequestValidator>();
-        _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _logger = new FakeLogger<BaseRequestValidatorTests>();
         _currentContext = Substitute.For<ICurrentContext>();
         _globalSettings = Substitute.For<GlobalSettings>();
@@ -94,7 +92,6 @@ public class BaseRequestValidatorTests
             _deviceValidator,
             _twoFactorAuthenticationValidator,
             _ssoRequestValidator,
-            _organizationUserRepository,
             _logger,
             _currentContext,
             _globalSettings,
