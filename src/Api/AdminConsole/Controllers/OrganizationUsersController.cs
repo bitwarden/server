@@ -469,7 +469,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var (collectionsToSaveV1, _) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess);
 
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
-            collectionsToSaveV1, groupsToSave);
+            collectionsToSaveV1, groupsToSave, model.DefaultUserCollectionName);
 
         return TypedResults.Ok();
     }

@@ -64,7 +64,8 @@ public class OrganizationUserControllerPutTests
             savingUserId,
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
-            model.Groups);
+            model.Groups,
+            model.DefaultUserCollectionName);
     }
 
     [Theory]
@@ -116,7 +117,8 @@ public class OrganizationUserControllerPutTests
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
             // Main assertion: groups are not updated (are null)
-            null);
+            null,
+            model.DefaultUserCollectionName);
     }
 
     [Theory]
@@ -152,7 +154,8 @@ public class OrganizationUserControllerPutTests
             savingUserId,
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
-            model.Groups);
+            model.Groups,
+            model.DefaultUserCollectionName);
     }
 
     [Theory]
@@ -239,7 +242,8 @@ public class OrganizationUserControllerPutTests
                 cas.First(c => c.Id == editedCollectionId).Manage == true &&
                 cas.First(c => c.Id == editedCollectionId).ReadOnly == false &&
                 cas.First(c => c.Id == editedCollectionId).HidePasswords == false),
-            model.Groups);
+            model.Groups,
+            model.DefaultUserCollectionName);
     }
 
     [Theory]
