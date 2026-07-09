@@ -138,6 +138,7 @@ public static class FeatureFlagKeys
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
+    public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
     public const string PolicyDrawers = "pm-34804-policy-drawers";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
