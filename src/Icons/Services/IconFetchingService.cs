@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using AngleSharp.Html.Parser;
 using Bit.Icons.Extensions;

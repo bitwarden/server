@@ -1,5 +1,4 @@
-﻿using Bit.Icons;
-using Bit.Icons.Extensions;
+﻿using Bit.Icons.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
