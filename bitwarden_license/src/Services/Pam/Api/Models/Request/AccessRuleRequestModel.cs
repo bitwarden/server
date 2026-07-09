@@ -84,7 +84,6 @@ public class AccessRuleRequestModel
 
     private static string SerializeConditions(object conditions) => conditions switch
     {
-        JsonElement je when je.ValueKind == JsonValueKind.Null => string.Empty,
         JsonElement je => je.GetRawText(),
         _ => JsonSerializer.Serialize(conditions),
     };

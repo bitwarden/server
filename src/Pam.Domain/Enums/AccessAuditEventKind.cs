@@ -43,7 +43,7 @@ public enum AccessAuditEventKind : byte
     RuleCreated = 30,
     RuleUpdated = 31,
 
-    /// <summary>A rule was soft-deleted; actor = <c>AccessRule.DeletedBy</c>, occurring at <c>DeletedDate</c>.</summary>
+    /// <summary>A rule was hard-deleted; the event carries the actor and rule name since the row does not survive.</summary>
     RuleDeleted = 32,
 
     // System controls

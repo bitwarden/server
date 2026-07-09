@@ -16,7 +16,7 @@ namespace Bit.Services.Pam.Test.Commands;
 public class DeleteAccessRuleCommandTests
 {
     [Theory, BitAutoData]
-    public async Task DeleteAsync_HappyPath_SoftDeletes(
+    public async Task DeleteAsync_HappyPath_HardDeletes(
         AccessRule existing, Guid deletedBy, SutProvider<DeleteAccessRuleCommand> sutProvider)
     {
         sutProvider.GetDependency<IAccessRuleRepository>()

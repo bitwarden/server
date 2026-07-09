@@ -1,5 +1,4 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
@@ -57,9 +56,7 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
             throw new BadRequestException("A rule with that name already exists.");
         }
 
-        // existing is already filtered to live (non-deleted) rules, so its ids are the rules that genuinely govern.
-        var liveRuleIds = existing.Select(r => r.Id).ToHashSet();
-        var desiredCollectionIds = await ValidateCollectionsAsync(rule.OrganizationId, collectionIds, liveRuleIds);
+        var desiredCollectionIds = await ValidateCollectionsAsync(rule.OrganizationId, collectionIds);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         rule.CreationDate = now;
@@ -87,8 +84,7 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
         return AccessRuleDetails.From(created, desiredCollectionIds);
     }
 
-    private async Task<List<Guid>> ValidateCollectionsAsync(
-        Guid organizationId, IEnumerable<Guid> collectionIds, IReadOnlySet<Guid> liveRuleIds)
+    private async Task<List<Guid>> ValidateCollectionsAsync(Guid organizationId, IEnumerable<Guid> collectionIds)
     {
         var distinctIds = collectionIds.Distinct().ToList();
         if (distinctIds.Count == 0)
@@ -107,16 +103,13 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
             throw new BadRequestException("One or more collections do not belong to this organization.");
         }
 
-        if (collections.Any(c => IsGovernedByAnotherRule(c, liveRuleIds)))
+        // Deletes clear Collection.AccessRuleId and the FK forbids dangling links, so any set link points at an
+        // existing rule. A new rule has no Id yet, so any association is a conflict.
+        if (collections.Any(c => c.AccessRuleId.HasValue))
         {
             throw new BadRequestException("One or more collections are already governed by another access rule.");
         }
 
         return distinctIds;
     }
-
-    // A new rule has no Id yet, so any LIVE association is a conflict. A collection still pointing at a soft-deleted
-    // rule (the link is preserved for the audit trail) is no longer governed -- only a link to a live rule counts.
-    private static bool IsGovernedByAnotherRule(Collection collection, IReadOnlySet<Guid> liveRuleIds) =>
-        collection.AccessRuleId.HasValue && liveRuleIds.Contains(collection.AccessRuleId.Value);
 }

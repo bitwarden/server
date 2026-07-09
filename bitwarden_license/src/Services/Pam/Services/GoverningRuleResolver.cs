@@ -49,8 +49,8 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             .Where(c => collectionIds.Contains(c.Id) && c.AccessRuleId.HasValue);
 
         // Load every rule on the collections through which the caller reaches the cipher, keeping each paired with
-        // the collection it gates. A rule that no longer loads (e.g. a soft-deleted one, which the read filters out)
-        // is skipped, so a deleted rule stops governing.
+        // the collection it gates. A rule that no longer loads (deleted after the collection was read — deletes clear
+        // the link, so this is only a race) is skipped, so a deleted rule stops governing.
         var candidates = new List<(Collection Collection, AccessRule Rule)>();
         foreach (var collection in governedCollections)
         {
