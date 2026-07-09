@@ -1,0 +1,17 @@
+name: Platform community signal
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions: {}
+
+jobs:
+  signal:
+    name: Signal platform-community review
+    uses: bitwarden/gh-actions/.github/workflows/_platform-community-signal.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+    with:
+      config_path: .github/platform-community-paths.yml
