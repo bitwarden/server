@@ -856,4 +856,107 @@ public sealed class RustSdkCipherTests
         Assert.DoesNotContain("X12345678", cipher.Data);
         Assert.DoesNotContain("ID123456", cipher.Data);
     }
+
+    [Fact]
+    public void EncryptAttachment_V0_HasNoAttachmentKey()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var data = "legacy attachment body"u8.ToArray();
+
+        var enc = RustSdkService.EncryptAttachment(data, orgKeys.Key, null, "notes.txt", 0);
+
+        // v0 attachments carry no attachment key.
+        Assert.Null(enc.Key);
+        // The blob is an AES-256-CBC-HMAC EncArrayBuffer (type byte 0x02).
+        Assert.Equal((byte)2, enc.Data[0]);
+        Assert.Equal(enc.Data.Length, enc.Size);
+        // The filename is encrypted with the vault key.
+        Assert.StartsWith("2.", enc.FileName);
+        Assert.Equal("notes.txt", RustSdkService.DecryptString(enc.FileName, orgKeys.Key));
+    }
+
+    [Fact]
+    public void EncryptAttachment_V1_WrapsAttachmentKeyWithVaultKey()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var data = "user-key wrapped body"u8.ToArray();
+
+        var enc = RustSdkService.EncryptAttachment(data, orgKeys.Key, null, "report.pdf", 1);
+
+        Assert.NotNull(enc.Key);
+        Assert.StartsWith("2.", enc.Key);
+        Assert.Equal((byte)2, enc.Data[0]);
+        Assert.Equal(enc.Data.Length, enc.Size);
+        // The filename is encrypted with the vault key (never the attachment key).
+        Assert.Equal("report.pdf", RustSdkService.DecryptString(enc.FileName, orgKeys.Key));
+    }
+
+    [Fact]
+    public void EncryptAttachment_V2_WrapsAttachmentKeyWithCipherKey()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var wrappedCipherKey = GetWrappedCipherKey(orgKeys.Key);
+        var data = "cipher-key wrapped body"u8.ToArray();
+
+        var enc = RustSdkService.EncryptAttachment(data, orgKeys.Key, wrappedCipherKey, "m5.pdf", 2);
+
+        Assert.NotNull(enc.Key);
+        Assert.StartsWith("2.", enc.Key);
+        Assert.Equal((byte)2, enc.Data[0]);
+        Assert.Equal(enc.Data.Length, enc.Size);
+    }
+
+    [Fact]
+    public void EncryptAttachment_V2_WithoutCipherKey_Throws()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var data = "x"u8.ToArray();
+
+        Assert.Throws<RustSdkException>(() =>
+            RustSdkService.EncryptAttachment(data, orgKeys.Key, null, "x.txt", 2));
+    }
+
+    [Fact]
+    public void EncryptFieldsWithCipherKey_EncryptsFieldsUnderCipherKey()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = new CipherViewDto
+        {
+            Name = "Cipher-Key Login",
+            Type = CipherTypes.Login,
+            Login = new LoginViewDto { Username = "user@example.com", Password = "pw" }
+        };
+
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFieldsWithCipherKey(json, fieldPathsJson, orgKeys.Key);
+
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var root = doc.RootElement;
+
+        // A wrapped cipher key is injected onto the cipher.
+        var wrappedCipherKey = root.GetProperty("key").GetString()!;
+        Assert.StartsWith("2.", wrappedCipherKey);
+
+        // Fields are encrypted with the cipher key — the vault key alone cannot decrypt them.
+        var encryptedName = root.GetProperty("name").GetString()!;
+        Assert.StartsWith("2.", encryptedName);
+        Assert.Throws<RustSdkException>(() => RustSdkService.DecryptString(encryptedName, orgKeys.Key));
+    }
+
+    private static string GetWrappedCipherKey(string vaultKey)
+    {
+        var cipher = new CipherViewDto
+        {
+            Name = "seed",
+            Type = CipherTypes.Login,
+            Login = new LoginViewDto { Username = "u" }
+        };
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFieldsWithCipherKey(json, fieldPathsJson, vaultKey);
+        using var doc = JsonDocument.Parse(encryptedJson);
+        return doc.RootElement.GetProperty("key").GetString()!;
+    }
 }
