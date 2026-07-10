@@ -9,6 +9,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -29,6 +30,7 @@ public class UpdateOrganizationUserCommand(
     IPolicyRequirementQuery policyRequirementQuery,
     IUserRepository userRepository,
     IChangeEmailCommand changeEmailCommand,
+    IPushNotificationService pushNotificationService,
     TimeProvider timeProvider)
     : IUpdateOrganizationUserCommand
 {
@@ -94,6 +96,8 @@ public class UpdateOrganizationUserCommand(
         try
         {
             await changeEmailCommand.ChangeEmailAsync(request.UserToUpdate!, request.NewEmail!);
+            // Notify the member's devices that their account state changed so clients re-sync.
+            await pushNotificationService.PushSyncSettingsAsync(request.UserToUpdate!.Id);
             return null;
         }
         catch (BadRequestException ex)
