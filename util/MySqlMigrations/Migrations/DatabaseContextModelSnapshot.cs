@@ -1796,6 +1796,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<bool>("AccessPam")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("tinyint(1)");
 
