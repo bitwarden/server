@@ -119,7 +119,11 @@ public enum AccessAuditEventKind : byte
     /// <summary>A rotation daemon was registered. Spec outcome <c>daemon_registered</c>.</summary>
     DaemonRegistered = 70,
 
-    /// <summary>A rotation daemon was revoked. Spec outcome <c>daemon_revoked</c>.</summary>
+    /// <summary>
+    /// A rotation daemon was revoked. Legacy: the revoke action was replaced by the reversible disable/enable pair
+    /// plus a permanent delete (see <see cref="DaemonDisabled"/>, <see cref="DaemonEnabled"/>,
+    /// <see cref="DaemonDeleted"/>); no action emits this anymore, but it is retained so historical rows still read.
+    /// </summary>
     DaemonRevoked = 71,
 
     /// <summary>A daemon was assigned to a target system. Spec outcome <c>daemon_assigned</c>.</summary>
@@ -142,4 +146,16 @@ public enum AccessAuditEventKind : byte
 
     /// <summary>A target system's password policy or session-termination capability was updated. Spec outcome <c>target_policy_updated</c>.</summary>
     TargetSystemPolicyUpdated = 78,
+
+    // Daemon lifecycle (continued). The fleet range above (70-73) is full, so the disable/enable/delete kinds that
+    // replaced revoke continue here.
+
+    /// <summary>A rotation daemon was disabled (reversible pause; credential retained).</summary>
+    DaemonDisabled = 79,
+
+    /// <summary>A disabled rotation daemon was re-enabled.</summary>
+    DaemonEnabled = 80,
+
+    /// <summary>A rotation daemon was permanently deleted (row removed and its credential invalidated).</summary>
+    DaemonDeleted = 81,
 }

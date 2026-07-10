@@ -104,7 +104,8 @@ public static class ServiceCollectionExtensions
 
         // Admin commands
         services.AddScoped<IRegisterDaemonCommand, RegisterDaemonCommand>();
-        services.AddScoped<IRevokeDaemonCommand, RevokeDaemonCommand>();
+        services.AddScoped<ISetDaemonStatusCommand, SetDaemonStatusCommand>();
+        services.AddScoped<IDeleteDaemonCommand, DeleteDaemonCommand>();
         services.AddScoped<IAssignDaemonToTargetCommand, AssignDaemonToTargetCommand>();
         services.AddScoped<IUnassignDaemonFromTargetCommand, UnassignDaemonFromTargetCommand>();
         services.AddScoped<IRegisterTargetSystemCommand, RegisterTargetSystemCommand>();

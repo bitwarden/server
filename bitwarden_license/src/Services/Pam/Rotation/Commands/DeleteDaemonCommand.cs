@@ -1,4 +1,4 @@
-﻿using Bit.Core.Exceptions;
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -8,15 +8,15 @@ using Bit.Services.Pam.Rotation.Commands.Interfaces;
 
 namespace Bit.Services.Pam.Rotation.Commands;
 
-/// <inheritdoc cref="IRevokeDaemonCommand" />
-public class RevokeDaemonCommand : IRevokeDaemonCommand
+/// <inheritdoc cref="IDeleteDaemonCommand" />
+public class DeleteDaemonCommand : IDeleteDaemonCommand
 {
     private readonly IPamDaemonRepository _daemonRepository;
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
-    public RevokeDaemonCommand(
+    public DeleteDaemonCommand(
         IPamDaemonRepository daemonRepository,
         IApiKeyRepository apiKeyRepository,
         IAccessAuditEventEmitter accessAuditEventEmitter,
@@ -28,7 +28,7 @@ public class RevokeDaemonCommand : IRevokeDaemonCommand
         _timeProvider = timeProvider;
     }
 
-    public async Task RevokeAsync(Guid organizationId, Guid actingUserId, Guid daemonId)
+    public async Task DeleteAsync(Guid organizationId, Guid actingUserId, Guid daemonId)
     {
         var daemon = await _daemonRepository.GetByIdAsync(daemonId);
         if (daemon is null || daemon.OrganizationId != organizationId)
@@ -36,17 +36,12 @@ public class RevokeDaemonCommand : IRevokeDaemonCommand
             throw new NotFoundException();
         }
 
-        if (daemon.Status != PamDaemonStatus.Enrolled)
-        {
-            throw new BadRequestException("This daemon has already been revoked.");
-        }
-
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // audit (before/after): record the revoke attempt, then the outcome around the point of no return.
+        // audit (before/after): record the attempt, then the outcome around the point of no return.
         var audit = new AccessAuditEventData
         {
-            Kind = AccessAuditEventKind.DaemonRevoked,
+            Kind = AccessAuditEventKind.DaemonDeleted,
             OccurredAt = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
@@ -55,12 +50,11 @@ public class RevokeDaemonCommand : IRevokeDaemonCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        daemon.Status = PamDaemonStatus.Revoked;
-        daemon.RevisionDate = now;
-        await _daemonRepository.ReplaceAsync(daemon);
+        // Remove the daemon first (PamDaemon_DeleteById clears its target assignments in the same transaction, since
+        // that FK is ON DELETE NO ACTION), then delete its ApiKey credential. Order matters: the PamDaemon -> ApiKey
+        // FK is also NO ACTION, so the referencing daemon row must be gone before the credential can be deleted.
+        await _daemonRepository.DeleteAsync(daemon);
 
-        // Delete the credential itself (SM's revocation semantics) -- the daemon row stays, since assignments and
-        // the audit trail reference it, and re-enrollment (the deferred ReissueDaemonCredential) mints a new one.
         var apiKey = await _apiKeyRepository.GetByIdAsync(daemon.ApiKeyId);
         if (apiKey is not null)
         {

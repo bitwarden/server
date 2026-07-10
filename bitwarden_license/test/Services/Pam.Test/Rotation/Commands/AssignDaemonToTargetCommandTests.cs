@@ -78,10 +78,10 @@ public class AssignDaemonToTargetCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task AssignAsync_DaemonRevoked_ThrowsBadRequest(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
+    public async Task AssignAsync_DaemonDisabled_ThrowsBadRequest(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
     {
         var sutProvider = Setup();
-        daemon.Status = PamDaemonStatus.Revoked;
+        daemon.Status = PamDaemonStatus.Disabled;
         target.OrganizationId = daemon.OrganizationId;
         target.Method = PamTargetSystemMethod.Automatic;
         sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
@@ -98,7 +98,7 @@ public class AssignDaemonToTargetCommandTests
     public async Task AssignAsync_TargetManual_ThrowsBadRequest(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
     {
         var sutProvider = Setup();
-        daemon.Status = PamDaemonStatus.Enrolled;
+        daemon.Status = PamDaemonStatus.Enabled;
         target.OrganizationId = daemon.OrganizationId;
         target.Method = PamTargetSystemMethod.Manual;
         sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
@@ -115,7 +115,7 @@ public class AssignDaemonToTargetCommandTests
     public async Task AssignAsync_DuplicateAssignment_ThrowsBadRequest(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
     {
         var sutProvider = Setup();
-        daemon.Status = PamDaemonStatus.Enrolled;
+        daemon.Status = PamDaemonStatus.Enabled;
         target.OrganizationId = daemon.OrganizationId;
         target.Method = PamTargetSystemMethod.Automatic;
         sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
@@ -133,7 +133,7 @@ public class AssignDaemonToTargetCommandTests
     public async Task AssignAsync_HappyPath_CreatesAssignment(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
     {
         var sutProvider = Setup();
-        daemon.Status = PamDaemonStatus.Enrolled;
+        daemon.Status = PamDaemonStatus.Enabled;
         target.OrganizationId = daemon.OrganizationId;
         target.Method = PamTargetSystemMethod.Automatic;
         sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
@@ -151,7 +151,7 @@ public class AssignDaemonToTargetCommandTests
     public async Task AssignAsync_HappyPath_EmitsAttemptThenOutcome(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
     {
         var sutProvider = Setup();
-        daemon.Status = PamDaemonStatus.Enrolled;
+        daemon.Status = PamDaemonStatus.Enabled;
         target.OrganizationId = daemon.OrganizationId;
         target.Method = PamTargetSystemMethod.Automatic;
         sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);

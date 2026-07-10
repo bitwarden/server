@@ -57,10 +57,10 @@ public class DaemonRequestEndpointFilterTests
     }
 
     [Fact]
-    public async Task InvokeAsync_DaemonRevoked_ThrowsNotFound_SkipsNext()
+    public async Task InvokeAsync_DaemonDisabled_ThrowsNotFound_SkipsNext()
     {
         var daemonId = Guid.NewGuid();
-        var daemon = new PamDaemon { Id = daemonId, OrganizationId = Guid.NewGuid(), Status = PamDaemonStatus.Revoked };
+        var daemon = new PamDaemon { Id = daemonId, OrganizationId = Guid.NewGuid(), Status = PamDaemonStatus.Disabled };
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.PamDaemonId.Returns(daemonId);
         var daemonRepository = Substitute.For<IPamDaemonRepository>();
@@ -80,7 +80,7 @@ public class DaemonRequestEndpointFilterTests
     {
         var daemonId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
-        var daemon = new PamDaemon { Id = daemonId, OrganizationId = orgId, Status = PamDaemonStatus.Enrolled };
+        var daemon = new PamDaemon { Id = daemonId, OrganizationId = orgId, Status = PamDaemonStatus.Enabled };
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.PamDaemonId.Returns(daemonId);
         var daemonRepository = Substitute.For<IPamDaemonRepository>();
@@ -102,7 +102,7 @@ public class DaemonRequestEndpointFilterTests
     {
         var daemonId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
-        var daemon = new PamDaemon { Id = daemonId, OrganizationId = orgId, Status = PamDaemonStatus.Enrolled };
+        var daemon = new PamDaemon { Id = daemonId, OrganizationId = orgId, Status = PamDaemonStatus.Enabled };
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.PamDaemonId.Returns(daemonId);
         var daemonRepository = Substitute.For<IPamDaemonRepository>();
@@ -124,7 +124,7 @@ public class DaemonRequestEndpointFilterTests
     {
         var daemonId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
-        var daemon = new PamDaemon { Id = daemonId, OrganizationId = orgId, Status = PamDaemonStatus.Enrolled };
+        var daemon = new PamDaemon { Id = daemonId, OrganizationId = orgId, Status = PamDaemonStatus.Enabled };
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.PamDaemonId.Returns(daemonId);
         var daemonRepository = Substitute.For<IPamDaemonRepository>();

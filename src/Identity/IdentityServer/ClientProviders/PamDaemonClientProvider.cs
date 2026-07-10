@@ -14,7 +14,7 @@ namespace Bit.Identity.IdentityServer.ClientProviders;
 /// Resolves the OAuth client-credentials <see cref="Client"/> for a PAM rotation daemon. The daemon's machine
 /// credential is a generic <c>dbo.ApiKey</c> row (mirrors Secrets Manager's machine-account mechanic in
 /// <see cref="SecretsManagerApiKeyProvider"/>) with a null <c>ServiceAccountId</c>; the owner link is inverted via
-/// <c>PamDaemon.ApiKeyId</c>. Authentication is denied unless the daemon is Enrolled and its organization has PAM
+/// <c>PamDaemon.ApiKeyId</c>. Authentication is denied unless the daemon is Enabled and its organization has PAM
 /// enabled and licensed — the server never holds the daemon's plaintext org key, only the ciphertext
 /// <c>EncryptedPayload</c> handed back on every token response (zero-knowledge; see
 /// <see cref="Duende.IdentityServer.Models.Client.Properties"/> "encryptedPayload").
@@ -47,7 +47,7 @@ internal class PamDaemonClientProvider : IClientProvider
 
         var daemonDetails = await _pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKeyId);
         if (daemonDetails == null
-            || daemonDetails.Status != PamDaemonStatus.Enrolled
+            || daemonDetails.Status != PamDaemonStatus.Enabled
             || !daemonDetails.OrganizationEnabled
             || !daemonDetails.OrganizationUsePam)
         {

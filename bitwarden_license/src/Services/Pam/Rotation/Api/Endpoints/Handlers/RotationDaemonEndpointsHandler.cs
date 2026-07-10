@@ -9,16 +9,17 @@ using Bit.Services.Pam.Rotation.Queries.Interfaces;
 namespace Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>organizations/{orgId}/rotation/daemons</c> resource: fleet registration, revocation, and
-/// target assignment. Every method is org admin/owner-gated (see <see cref="EnsureAdminAsync"/>, copied from
-/// <c>AccessRuleEndpointsHandler</c>); the commands underneath additionally re-verify every id argument belongs to
-/// the route organization (404, never 403 -- no existence oracle over comb GUIDs).
+/// Handler for the <c>organizations/{orgId}/rotation/daemons</c> resource: fleet registration, enable/disable,
+/// deletion, and target assignment. Every method is org admin/owner-gated (see <see cref="EnsureAdminAsync"/>, copied
+/// from <c>AccessRuleEndpointsHandler</c>); the commands underneath additionally re-verify every id argument belongs
+/// to the route organization (404, never 403 -- no existence oracle over comb GUIDs).
 /// </summary>
 public class RotationDaemonEndpointsHandler(
     ICurrentContext currentContext,
     IListDaemonsQuery listDaemonsQuery,
     IRegisterDaemonCommand registerDaemonCommand,
-    IRevokeDaemonCommand revokeDaemonCommand,
+    ISetDaemonStatusCommand setDaemonStatusCommand,
+    IDeleteDaemonCommand deleteDaemonCommand,
     IAssignDaemonToTargetCommand assignDaemonToTargetCommand,
     IUnassignDaemonFromTargetCommand unassignDaemonFromTargetCommand)
 {
@@ -40,11 +41,25 @@ public class RotationDaemonEndpointsHandler(
         return new RegisterDaemonResponseModel(result);
     }
 
-    public async Task Revoke(Guid orgId, Guid id)
+    public async Task Enable(Guid orgId, Guid id)
     {
         await EnsureAdminAsync(orgId);
 
-        await revokeDaemonCommand.RevokeAsync(orgId, currentContext.UserId!.Value, id);
+        await setDaemonStatusCommand.SetStatusAsync(orgId, currentContext.UserId!.Value, id, enable: true);
+    }
+
+    public async Task Disable(Guid orgId, Guid id)
+    {
+        await EnsureAdminAsync(orgId);
+
+        await setDaemonStatusCommand.SetStatusAsync(orgId, currentContext.UserId!.Value, id, enable: false);
+    }
+
+    public async Task Delete(Guid orgId, Guid id)
+    {
+        await EnsureAdminAsync(orgId);
+
+        await deleteDaemonCommand.DeleteAsync(orgId, currentContext.UserId!.Value, id);
     }
 
     public async Task AssignTarget(Guid orgId, Guid id, AssignDaemonTargetRequestModel model)
