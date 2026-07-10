@@ -936,37 +936,11 @@ public class CollectControllerTests
     }
 
     [Theory]
-    [AutoData]
-    public async Task Post_OrganizationClientExportedVault_NonMember_SkipsEvent(
-        Guid userId, Guid orgId, Organization organization)
-    {
-        _currentContext.UserId.Returns(userId);
-        organization.Id = orgId;
-        _organizationRepository.GetByIdAsync(orgId).Returns(organization);
-        // Caller is NOT a member of the org.
-        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns((OrganizationUser)null);
-        var events = new List<EventModel>
-        {
-            new EventModel
-            {
-                Type = EventType.Organization_ClientExportedVault,
-                OrganizationId = orgId,
-                Date = DateTime.UtcNow
-            }
-        };
-
-        var result = await _sut.Post(events);
-
-        Assert.IsType<OkResult>(result);
-        await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
-        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
-        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
-    }
-
-    [Theory]
+    [BitAutoData(EventType.Organization_ClientExportedVault)]
     [BitAutoData(EventType.Organization_AutoConfirmEnabled_Admin)]
     [BitAutoData(EventType.Organization_AutoConfirmDisabled_Admin)]
-    public async Task Post_OrganizationAutoConfirmAdmin_NonMember_SkipsEvent(
+    [BitAutoData(EventType.Organization_InviteLinkClientCopied)]
+    public async Task Post_OrganizationEvent_NonMember_SkipsEvent(
         EventType eventType, Guid userId, Guid orgId, Organization organization)
     {
         _currentContext.UserId.Returns(userId);
@@ -979,34 +953,6 @@ public class CollectControllerTests
             new EventModel
             {
                 Type = eventType,
-                OrganizationId = orgId,
-                Date = DateTime.UtcNow
-            }
-        };
-
-        var result = await _sut.Post(events);
-
-        Assert.IsType<OkResult>(result);
-        await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
-        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
-        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
-    }
-
-    [Theory]
-    [AutoData]
-    public async Task Post_OrganizationClientCopiedInviteLink_NonMember_SkipsEvent(
-        Guid userId, Guid orgId, Organization organization)
-    {
-        _currentContext.UserId.Returns(userId);
-        organization.Id = orgId;
-        _organizationRepository.GetByIdAsync(orgId).Returns(organization);
-        // Caller is NOT a member of the org.
-        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns((OrganizationUser)null);
-        var events = new List<EventModel>
-        {
-            new EventModel
-            {
-                Type = EventType.Organization_InviteLinkClientCopied,
                 OrganizationId = orgId,
                 Date = DateTime.UtcNow
             }
