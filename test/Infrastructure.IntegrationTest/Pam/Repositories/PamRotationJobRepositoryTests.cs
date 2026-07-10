@@ -848,7 +848,7 @@ public class PamRotationJobRepositoryTests
             OrganizationId = organizationId,
             Name = $"daemon-{Guid.NewGuid()}",
             ApiKeyId = apiKey.Id,
-            Status = PamDaemonStatus.Enrolled,
+            Status = PamDaemonStatus.Enabled,
         });
     }
 

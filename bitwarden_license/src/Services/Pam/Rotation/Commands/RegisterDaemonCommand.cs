@@ -80,7 +80,7 @@ public class RegisterDaemonCommand : IRegisterDaemonCommand
             OrganizationId = organizationId,
             Name = name,
             ApiKeyId = createdApiKey.Id,
-            Status = PamDaemonStatus.Enrolled,
+            Status = PamDaemonStatus.Enabled,
             CreationDate = now,
             RevisionDate = now,
         };

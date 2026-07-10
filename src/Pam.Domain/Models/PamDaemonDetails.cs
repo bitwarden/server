@@ -6,7 +6,7 @@ namespace Bit.Pam.Models;
 /// A <see cref="PamDaemon"/> together with its owning organization's licensing state — the read model
 /// <c>PamDaemonClientProvider</c> loads by <see cref="Entities.PamDaemon.ApiKeyId"/> on every token request to
 /// decide whether the daemon may authenticate. A daemon may authenticate only when <see cref="PamDaemon.Status"/> is
-/// <see cref="Enums.PamDaemonStatus.Enrolled"/> and both <see cref="OrganizationEnabled"/> and
+/// <see cref="Enums.PamDaemonStatus.Enabled"/> and both <see cref="OrganizationEnabled"/> and
 /// <see cref="OrganizationUsePam"/> are true.
 /// </summary>
 public class PamDaemonDetails : PamDaemon

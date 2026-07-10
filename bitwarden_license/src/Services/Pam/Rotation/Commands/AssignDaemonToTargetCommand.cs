@@ -44,9 +44,9 @@ public class AssignDaemonToTargetCommand : IAssignDaemonToTargetCommand
 
         // Both rows were just loaded against the same route organization, so daemon.OrganizationId ==
         // target.OrganizationId == organizationId holds by construction (the cross-cutting same-org invariant).
-        if (daemon.Status != PamDaemonStatus.Enrolled)
+        if (daemon.Status != PamDaemonStatus.Enabled)
         {
-            throw new BadRequestException("This daemon has been revoked.");
+            throw new BadRequestException("This daemon is disabled.");
         }
 
         if (target.Method != PamTargetSystemMethod.Automatic)

@@ -26,7 +26,7 @@ public class PamDaemonRepositoryTests
             OrganizationId = organization.Id,
             Name = "prod-daemon",
             ApiKeyId = apiKey.Id,
-            Status = PamDaemonStatus.Enrolled,
+            Status = PamDaemonStatus.Enabled,
         });
 
         var persisted = await pamDaemonRepository.GetByIdAsync(daemon.Id);
@@ -35,7 +35,7 @@ public class PamDaemonRepositoryTests
         Assert.Equal(organization.Id, persisted!.OrganizationId);
         Assert.Equal("prod-daemon", persisted.Name);
         Assert.Equal(apiKey.Id, persisted.ApiKeyId);
-        Assert.Equal(PamDaemonStatus.Enrolled, persisted.Status);
+        Assert.Equal(PamDaemonStatus.Enabled, persisted.Status);
         Assert.Null(persisted.LastHeartbeatAt);
     }
 
@@ -57,14 +57,14 @@ public class PamDaemonRepositoryTests
             OrganizationId = organization.Id,
             Name = "prod-daemon",
             ApiKeyId = apiKey.Id,
-            Status = PamDaemonStatus.Enrolled,
+            Status = PamDaemonStatus.Enabled,
         });
 
         var details = await pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKey.Id);
 
         Assert.NotNull(details);
         Assert.Equal(daemon.Id, details!.Id);
-        Assert.Equal(PamDaemonStatus.Enrolled, details.Status);
+        Assert.Equal(PamDaemonStatus.Enabled, details.Status);
         Assert.True(details.OrganizationEnabled);
         Assert.True(details.OrganizationUsePam);
 
@@ -102,7 +102,7 @@ public class PamDaemonRepositoryTests
             OrganizationId = organization.Id,
             Name = "prod-daemon",
             ApiKeyId = apiKey.Id,
-            Status = PamDaemonStatus.Enrolled,
+            Status = PamDaemonStatus.Enabled,
         });
         var minInterval = TimeSpan.FromSeconds(15);
         var firstHeartbeat = DateTime.UtcNow;
@@ -151,7 +151,7 @@ public class PamDaemonRepositoryTests
             OrganizationId = organization.Id,
             Name = "daemon",
             ApiKeyId = apiKey.Id,
-            Status = PamDaemonStatus.Enrolled,
+            Status = PamDaemonStatus.Enabled,
         });
 
         Assert.False(await pamDaemonRepository.AssignmentExistsAsync(daemon.Id, target.Id));
@@ -196,14 +196,14 @@ public class PamDaemonRepositoryTests
             OrganizationId = organization.Id,
             Name = "daemon",
             ApiKeyId = apiKey.Id,
-            Status = PamDaemonStatus.Enrolled,
+            Status = PamDaemonStatus.Enabled,
         });
         var originalOrganizationId = daemon.OrganizationId;
         var originalApiKeyId = daemon.ApiKeyId;
         var newRevisionDate = DateTime.UtcNow.AddMinutes(10);
 
         daemon.Name = "renamed-daemon";
-        daemon.Status = PamDaemonStatus.Revoked;
+        daemon.Status = PamDaemonStatus.Disabled;
         daemon.RevisionDate = newRevisionDate;
         daemon.OrganizationId = Guid.NewGuid();
         daemon.ApiKeyId = Guid.NewGuid();
@@ -212,7 +212,7 @@ public class PamDaemonRepositoryTests
         var persisted = await pamDaemonRepository.GetByIdAsync(daemon.Id);
         Assert.NotNull(persisted);
         Assert.Equal("renamed-daemon", persisted!.Name);
-        Assert.Equal(PamDaemonStatus.Revoked, persisted.Status);
+        Assert.Equal(PamDaemonStatus.Disabled, persisted.Status);
         Assert.Equal(newRevisionDate, persisted.RevisionDate);
         Assert.Equal(originalOrganizationId, persisted.OrganizationId);
         Assert.Equal(originalApiKeyId, persisted.ApiKeyId);

@@ -59,7 +59,7 @@ public class RegisterDaemonCommandTests
             d.OrganizationId == organizationId
             && d.Name == name
             && d.ApiKeyId == apiKeyId
-            && d.Status == PamDaemonStatus.Enrolled
+            && d.Status == PamDaemonStatus.Enabled
             && d.CreationDate == _now
             && d.RevisionDate == _now));
 

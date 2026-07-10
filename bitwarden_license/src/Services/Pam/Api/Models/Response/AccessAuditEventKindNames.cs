@@ -48,6 +48,9 @@ public static class AccessAuditEventKindNames
     public const string ManualRotationRecorded = "manualRotationRecorded";
     public const string DaemonRegistered = "daemonRegistered";
     public const string DaemonRevoked = "daemonRevoked";
+    public const string DaemonDisabled = "daemonDisabled";
+    public const string DaemonEnabled = "daemonEnabled";
+    public const string DaemonDeleted = "daemonDeleted";
     public const string DaemonAssignedToTarget = "daemonAssignedToTarget";
     public const string DaemonUnassignedFromTarget = "daemonUnassignedFromTarget";
     public const string TargetSystemRegistered = "targetSystemRegistered";
@@ -96,6 +99,9 @@ public static class AccessAuditEventKindNames
         AccessAuditEventKind.ManualRotationRecorded => ManualRotationRecorded,
         AccessAuditEventKind.DaemonRegistered => DaemonRegistered,
         AccessAuditEventKind.DaemonRevoked => DaemonRevoked,
+        AccessAuditEventKind.DaemonDisabled => DaemonDisabled,
+        AccessAuditEventKind.DaemonEnabled => DaemonEnabled,
+        AccessAuditEventKind.DaemonDeleted => DaemonDeleted,
         AccessAuditEventKind.DaemonAssignedToTarget => DaemonAssignedToTarget,
         AccessAuditEventKind.DaemonUnassignedFromTarget => DaemonUnassignedFromTarget,
         AccessAuditEventKind.TargetSystemRegistered => TargetSystemRegistered,

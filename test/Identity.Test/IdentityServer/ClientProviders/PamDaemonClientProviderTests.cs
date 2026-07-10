@@ -69,12 +69,12 @@ public class PamDaemonClientProviderTests
     }
 
     [Fact]
-    public async Task GetAsync_DaemonRevoked_ReturnsNull()
+    public async Task GetAsync_DaemonDisabled_ReturnsNull()
     {
         var apiKeyId = Guid.NewGuid();
         _apiKeyRepository.GetByIdAsync(apiKeyId).Returns(CreateApiKey(apiKeyId));
         _pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKeyId)
-            .Returns(CreateDaemonDetails(apiKeyId, status: PamDaemonStatus.Revoked));
+            .Returns(CreateDaemonDetails(apiKeyId, status: PamDaemonStatus.Disabled));
 
         var client = await _sut.GetAsync(apiKeyId.ToString());
 
@@ -108,7 +108,7 @@ public class PamDaemonClientProviderTests
     }
 
     [Fact]
-    public async Task GetAsync_EnrolledDaemonLicensedOrg_ReturnsClientCredentialsClient()
+    public async Task GetAsync_EnabledDaemonLicensedOrg_ReturnsClientCredentialsClient()
     {
         var apiKeyId = Guid.NewGuid();
         var apiKey = CreateApiKey(apiKeyId);
@@ -163,7 +163,7 @@ public class PamDaemonClientProviderTests
 
     private static PamDaemonDetails CreateDaemonDetails(
         Guid apiKeyId,
-        PamDaemonStatus status = PamDaemonStatus.Enrolled,
+        PamDaemonStatus status = PamDaemonStatus.Enabled,
         bool organizationEnabled = true,
         bool organizationUsePam = true) => PamDaemonDetails.From(
             new PamDaemon

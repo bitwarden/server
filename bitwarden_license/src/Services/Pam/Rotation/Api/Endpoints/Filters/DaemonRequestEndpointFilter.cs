@@ -11,11 +11,11 @@ namespace Bit.Services.Pam.Rotation.Api.Endpoints.Filters;
 /// <summary>
 /// Runs on every daemon-facing rotation route, after <see cref="Bit.Core.Auth.Identity.Policies.PamRotationDaemon"/>
 /// authorization has already established the caller as a RotationDaemon-scoped bearer token. A bearer JWT can
-/// outlive a revocation or a license lapse by up to its lifetime, so this filter re-verifies the daemon end to end on
-/// every request: the token's <c>sub</c> claim (<see cref="ICurrentContext.PamDaemonId"/>) must still name a
-/// <see cref="PamDaemonStatus.Enrolled"/> daemon whose organization is both licensed for PAM and not suspended.
-/// Every rejection is a <see cref="NotFoundException"/> (404) -- never a distinct error -- so a revoked daemon or a
-/// disabled organization cannot be distinguished from an unknown one.
+/// outlive a disable, a delete, or a license lapse by up to its lifetime, so this filter re-verifies the daemon end to
+/// end on every request: the token's <c>sub</c> claim (<see cref="ICurrentContext.PamDaemonId"/>) must still name an
+/// <see cref="PamDaemonStatus.Enabled"/> daemon whose organization is both licensed for PAM and not suspended.
+/// Every rejection is a <see cref="NotFoundException"/> (404) -- never a distinct error -- so a disabled, deleted, or
+/// otherwise ineligible daemon cannot be distinguished from an unknown one.
 ///
 /// On success this also doubles as the daemon's heartbeat (spec <c>DaemonConnection</c>): it conditionally bumps
 /// <see cref="PamDaemon.LastHeartbeatAt"/> (the repository only writes when the existing value is stale, so a
@@ -42,7 +42,7 @@ public class DaemonRequestEndpointFilter : IEndpointFilter
         var daemonId = currentContext.PamDaemonId ?? throw new NotFoundException();
 
         var daemon = await daemonRepository.GetByIdAsync(daemonId);
-        if (daemon is null || daemon.Status != PamDaemonStatus.Enrolled)
+        if (daemon is null || daemon.Status != PamDaemonStatus.Enabled)
         {
             throw new NotFoundException();
         }
