@@ -57,15 +57,6 @@ public class Startup
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
 
-        if (usingServiceBusAppCache)
-        {
-            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
-        }
-        else
-        {
-            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
-        }
-
         services.AddEventWriteServices(globalSettings);
         services.AddScoped<IEventService, EventService>();
 
