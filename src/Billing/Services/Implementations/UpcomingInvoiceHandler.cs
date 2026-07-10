@@ -493,7 +493,9 @@ public class UpcomingInvoiceHandler(
                 PerUserMonthlyPrice = FormatCurrency(perUserMonthly, culture),
                 IsAnnual = targetPlan.IsAnnual,
                 TotalPrice = FormatCurrency(total, culture),
-                DiscountLines = [.. discounts.Select(discount => discount.Display)]
+                DiscountLines = [.. discounts.Select(discount => discount.Display)],
+                ProactiveDiscountMonths = discounts
+                    .FirstOrDefault(discount => discount.CouponId == cohort.ProactiveDiscountCouponCode)?.Months ?? 0
             }
         });
     }
@@ -512,7 +514,15 @@ public class UpcomingInvoiceHandler(
         {
             var occupied = (await organizationRepository
                 .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
-            return sourcePlan.ResolveMigratedSeatCount(occupied, organization.Seats);
+            var passwordManagerSeats = sourcePlan.ResolveMigratedSeatCount(occupied, organization.Seats);
+
+            // Floor the quote on the Stripe SM seat line so the email matches the billed PM seats (SM <= PM).
+            var secretsManagerSeatQuantity = subscription.Items.Data
+                .FirstOrDefault(item =>
+                    sourcePlan.SecretsManager is not null &&
+                    item.Price?.Id == sourcePlan.SecretsManager.StripeSeatPlanId)?.Quantity ?? 0;
+
+            return (int)Math.Max((long)passwordManagerSeats, secretsManagerSeatQuantity);
         }
 
         var seatItem = subscription.Items.Data
@@ -532,7 +542,7 @@ public class UpcomingInvoiceHandler(
         return (int)(seats ?? 0);
     }
 
-    private sealed record Discount(bool IsPercentage, decimal Value, string Display);
+    private sealed record Discount(bool IsPercentage, decimal Value, string Display, string CouponId, long Months);
 
     private async Task<List<Discount>> ResolveDiscountsAsync(
         OrganizationPlanMigrationCohort cohort,
@@ -545,15 +555,19 @@ public class UpcomingInvoiceHandler(
 
         Discount? MapCoupon(Coupon? coupon, string couponId)
         {
+            var months = coupon?.DurationInMonths ?? 0;
+
             if (coupon?.PercentOff is { } percentOff)
             {
-                return new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%");
+                return new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%",
+                    CouponId: couponId, Months: months);
             }
 
             if (coupon?.AmountOff is { } amountOffMinorUnits)
             {
                 var amountOff = amountOffMinorUnits / 100M;
-                return new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture));
+                return new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture),
+                    CouponId: couponId, Months: months);
             }
 
             logger.LogError(
