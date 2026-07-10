@@ -47,6 +47,9 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IChangeEmailCommand>()
             .Received(1)
             .ChangeEmailAsync(userToUpdate, "new@claimed.example.com");
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(1)
+            .PushSyncSettingsAsync(userToUpdate.Id);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .ReplaceAsync(organizationUser, Arg.Any<IEnumerable<CollectionAccessSelection>>());
@@ -70,6 +73,9 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IChangeEmailCommand>()
             .DidNotReceiveWithAnyArgs()
             .ChangeEmailAsync(default, default);
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushSyncSettingsAsync(default);
     }
 
     [Theory]
@@ -93,6 +99,9 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IChangeEmailCommand>()
             .DidNotReceiveWithAnyArgs()
             .ChangeEmailAsync(default, default);
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushSyncSettingsAsync(default);
     }
 
     [Theory]
@@ -130,6 +139,9 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceiveWithAnyArgs()
             .LogOrganizationUserEventAsync(default(OrganizationUser), default);
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushSyncSettingsAsync(default);
     }
 
     private static UpdateOrganizationUserRequest Setup(
