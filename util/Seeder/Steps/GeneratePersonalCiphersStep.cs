@@ -22,7 +22,8 @@ internal sealed class GeneratePersonalCiphersStep(
     int countPerUser,
     Distribution<CipherType>? typeDist = null,
     Distribution<PasswordStrength>? pwDist = null,
-    DensityProfile? density = null) : IStep
+    DensityProfile? density = null,
+    int repromptEveryNthCipher = 0) : IStep
 {
     public void Execute(SeederContext context)
     {
@@ -32,6 +33,7 @@ internal sealed class GeneratePersonalCiphersStep(
         }
 
         var generator = context.RequireGenerator();
+        var progress = context.GetProgress();
 
         var userDigests = context.Registry.UserDigests;
         var typeDistribution = typeDist ?? CipherTypeDistributions.Realistic;
@@ -39,9 +41,6 @@ internal sealed class GeneratePersonalCiphersStep(
         var companies = Companies.All;
         var personalDist = density?.PersonalCipherDistribution;
         var userFolderIds = context.Registry.UserFolderIds;
-        var expectedTotal = personalDist is not null
-            ? EstimateTotal(userDigests.Count, personalDist)
-            : userDigests.Count * countPerUser;
 
         // Force lazy generator init before parallel loop (prevents ??= data race)
         _ = (generator.Username, generator.Card, generator.Identity, generator.SecureNote);
@@ -65,28 +64,87 @@ internal sealed class GeneratePersonalCiphersStep(
             runningOffset += userCount;
         }
 
+        // Guarantee the Owner (always userDigests[0]) has at least one personal cipher to archive
+        // for manual QA. Distribution.Select always assigns index 0 to the first (sparsest) bucket,
+        // and 0 % range always lands on the low end — without this, the Owner would get zero
+        // personal ciphers whenever archiving is configured, regardless of seed.
+        if (userDigests.Count > 0 && userCounts[0] == 0 && density is { ArchivedCipherRate: > 0 })
+        {
+            userCounts[0] = 1;
+            for (var u = 1; u < userDigests.Count; u++)
+            {
+                offsets[u]++;
+            }
+            runningOffset++;
+        }
+
+        var expectedTotal = Math.Max(runningOffset, 1);
+
+        // Archive and delete targets/ceilings are computed independently of GenerateCiphersStep's
+        // org-cipher pool — each pool enforces its own MaxArchivedCiphers/MaxDeletedCiphers cap
+        // rather than sharing one combined budget across steps. bothTarget is clamped by
+        // MaxDeletedCiphers too (not just archivedTarget) since it counts toward the delete ceiling
+        // as well as the archive ceiling.
+        var (archivedTarget, _, bothTarget, deletedOnlyTarget) = ArchiveDeleteDistribution.ComputeTargets(
+            expectedTotal,
+            density?.ArchivedCipherRate ?? 0, density?.DeletedCipherRate ?? 0, density?.ArchivedAndDeletedOverlapRate ?? 0,
+            density?.MaxArchivedCiphers ?? 0, density?.MaxDeletedCiphers ?? 0);
+
+        // globalIndex spans the whole personal-cipher pool (not just this user's block), so the
+        // selection is computed once against expectedTotal and shared read-only across the parallel
+        // per-user loop.
+        var selection = ArchiveDeleteDistribution.Select(expectedTotal, archivedTarget, bothTarget, deletedOnlyTarget);
+
         var userCiphers = new Cipher[userDigests.Count][];
 
-        Parallel.For(0, userDigests.Count, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, u =>
-        {
-            var userDigest = userDigests[u];
-            var localCount = userCounts[u];
-            var baseOffset = offsets[u];
-            var localCiphers = new Cipher[localCount];
+        progress?.Report(new PhaseStarted(SeederPhases.CreatingPersonalCiphers, expectedTotal));
+        var batchSize = Math.Max(1, expectedTotal / 100);
 
-            for (var i = 0; i < localCount; i++)
+        Parallel.For(
+            0,
+            userDigests.Count,
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            localInit: () => 0,
+            body: (u, _, localTicked) =>
             {
-                var globalIndex = baseOffset + i;
-                var cipherType = typeDistribution.Select(globalIndex, expectedTotal);
-                var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId);
+                var userDigest = userDigests[u];
+                var localCount = userCounts[u];
+                var baseOffset = offsets[u];
+                var localCiphers = new Cipher[localCount];
 
-                CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
+                for (var i = 0; i < localCount; i++)
+                {
+                    var globalIndex = baseOffset + i;
+                    var cipherType = typeDistribution.Select(globalIndex, expectedTotal);
+                    var reprompt = repromptEveryNthCipher > 0 && globalIndex % repromptEveryNthCipher == 0
+                        ? CipherRepromptType.Password
+                        : CipherRepromptType.None;
+                    var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId, reprompt: reprompt);
 
-                localCiphers[i] = cipher;
-            }
+                    CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
 
-            userCiphers[u] = localCiphers;
-        });
+                    CipherComposer.AssignArchiveOrDeleteState(cipher, globalIndex, selection, _ => userDigest.UserId);
+
+                    localCiphers[i] = cipher;
+                }
+
+                userCiphers[u] = localCiphers;
+
+                localTicked += localCount;
+                if (progress is not null && localTicked >= batchSize)
+                {
+                    progress.Report(new PhaseAdvanced(SeederPhases.CreatingPersonalCiphers, localTicked));
+                    localTicked = 0;
+                }
+                return localTicked;
+            },
+            localFinally: localTicked =>
+            {
+                if (progress is not null && localTicked > 0)
+                {
+                    progress.Report(new PhaseAdvanced(SeederPhases.CreatingPersonalCiphers, localTicked));
+                }
+            });
 
         // Flatten jagged array into context lists
         var ciphers = new List<Cipher>(expectedTotal);
@@ -104,17 +162,7 @@ internal sealed class GeneratePersonalCiphersStep(
 
         context.Ciphers.AddRange(ciphers);
         context.Registry.CipherIds.AddRange(cipherIds);
-    }
 
-    private static int EstimateTotal(int userCount, Distribution<(int Min, int Max)> dist)
-    {
-        var total = 0;
-        for (var i = 0; i < userCount; i++)
-        {
-            var range = dist.Select(i, userCount);
-            total += range.Min + (i % Math.Max(range.Max - range.Min + 1, 1));
-        }
-
-        return Math.Max(total, 1);
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingPersonalCiphers));
     }
 }

@@ -2,7 +2,6 @@
 using System.Data.Common;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
@@ -371,13 +370,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds)
+    public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds, DateTime revisionDate)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 "[dbo].[GroupUser_UpdateGroups]",
-                new { OrganizationUserId = orgUserId, GroupIds = groupIds.ToGuidIdArrayTVP() },
+                new { OrganizationUserId = orgUserId, GroupIds = groupIds.ToGuidIdArrayTVP(), RevisionDate = revisionDate },
                 commandType: CommandType.StoredProcedure);
         }
     }
@@ -559,39 +558,14 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task RevokeAsync(Guid id)
+    public async Task RevokeAsync(Guid id, RevocationReason reason)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_Deactivate]",
-                new { Id = id },
-                commandType: CommandType.StoredProcedure);
-        }
+        await RevokeManyAsync([id], reason);
     }
 
     public async Task RestoreAsync(Guid id, OrganizationUserStatusType status)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_Activate]",
-                new { Id = id, Status = status },
-                commandType: CommandType.StoredProcedure);
-        }
-    }
-
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<OrganizationUserPolicyDetails>(
-                $"[{Schema}].[{Table}_ReadByUserIdWithPolicyDetails]",
-                new { UserId = userId, PolicyType = policyType },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
+        await RestoreManyAsync([id], status);
     }
 
     public async Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(
@@ -633,16 +607,30 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    public async Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason reason)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationUser_SetStatusForUsersByGuidIdArray]",
+            "[dbo].[OrganizationUser_UpdateManyRevoke]",
             new
             {
                 OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
-                Status = OrganizationUserStatusType.Revoked
+                RevocationReason = (byte?)reason
+            },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task RestoreManyAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_UpdateManyRestore]",
+            new
+            {
+                OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
+                Status = status
             },
             commandType: CommandType.StoredProcedure);
     }
@@ -713,6 +701,27 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         return rowCount > 0;
     }
 
+    public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IReadOnlyCollection<AcceptedOrganizationUserToConfirm> usersToConfirm)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var confirmedIds = await connection.QueryAsync<Guid>(
+            $"[{Schema}].[OrganizationUser_UpdateManyStatusKey]",
+            new
+            {
+                UsersJson = JsonSerializer.Serialize(usersToConfirm.Select(u => new
+                {
+                    Id = u.OrganizationUserId,
+                    u.Key,
+                })),
+                RevisionDate = DateTime.UtcNow
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return confirmedIds.ToList();
+    }
+
     public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -740,5 +749,18 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 commandType: CommandType.StoredProcedure,
                 transaction: transaction);
         };
+    }
+
+    public async Task<ICollection<OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUser>(
+                "[dbo].[OrganizationUser_ReadByPendingAutoConfirm]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
     }
 }

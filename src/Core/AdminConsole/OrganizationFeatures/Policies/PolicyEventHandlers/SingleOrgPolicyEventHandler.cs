@@ -95,8 +95,7 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
 
         var currentActiveRevocableOrganizationUsers =
             (await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
-            .Where(ou => ou.Status != OrganizationUserStatusType.Invited &&
-                         ou.Status != OrganizationUserStatusType.Revoked &&
+            .Where(ou => ou.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed &&
                          ou.Type != OrganizationUserType.Owner &&
                          ou.Type != OrganizationUserType.Admin &&
                          !(performedBy is StandardUser stdUser && stdUser.UserId == ou.UserId))
@@ -112,10 +111,13 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
         var usersToRevoke = currentActiveRevocableOrganizationUsers.Where(ou =>
             allRevocableUserOrgs.Any(uo => uo.UserId == ou.UserId &&
                 uo.OrganizationId != organizationId &&
-                uo.Status != OrganizationUserStatusType.Invited)).ToList();
+                uo.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked)).ToList();
 
         var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-            new RevokeOrganizationUsersRequest(organizationId, usersToRevoke, performedBy));
+            new RevokeOrganizationUsersRequest(organizationId,
+                usersToRevoke,
+                performedBy,
+                RevocationReason.SingleOrgPolicyNonCompliance));
 
         if (commandResult.HasErrors)
         {

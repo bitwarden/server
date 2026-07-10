@@ -1,7 +1,5 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -34,6 +32,7 @@ public class CipherService : ICipherService
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ISecurityTaskRepository _securityTaskRepository;
     private readonly IPushNotificationService _pushService;
+    private readonly ICipherSyncPushService _cipherSyncPushService;
     private readonly IAttachmentStorageService _attachmentStorageService;
     private readonly IEventService _eventService;
     private readonly IUserService _userService;
@@ -41,8 +40,7 @@ public class CipherService : ICipherService
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
     private readonly IGetCipherPermissionsForUserQuery _getCipherPermissionsForUserQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IFeatureService _featureService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IPricingClient _pricingClient;
 
     public CipherService(
@@ -54,14 +52,14 @@ public class CipherService : ICipherService
         ICollectionCipherRepository collectionCipherRepository,
         ISecurityTaskRepository securityTaskRepository,
         IPushNotificationService pushService,
+        ICipherSyncPushService cipherSyncPushService,
         IAttachmentStorageService attachmentStorageService,
         IEventService eventService,
         IUserService userService,
         GlobalSettings globalSettings,
         IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
         IPolicyRequirementQuery policyRequirementQuery,
-        IApplicationCacheService applicationCacheService,
-        IFeatureService featureService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IPricingClient pricingClient)
     {
         _cipherRepository = cipherRepository;
@@ -72,19 +70,19 @@ public class CipherService : ICipherService
         _collectionCipherRepository = collectionCipherRepository;
         _securityTaskRepository = securityTaskRepository;
         _pushService = pushService;
+        _cipherSyncPushService = cipherSyncPushService;
         _attachmentStorageService = attachmentStorageService;
         _eventService = eventService;
         _userService = userService;
         _globalSettings = globalSettings;
         _getCipherPermissionsForUserQuery = getCipherPermissionsForUserQuery;
         _policyRequirementQuery = policyRequirementQuery;
-        _applicationCacheService = applicationCacheService;
-        _featureService = featureService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _pricingClient = pricingClient;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
-         IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false, bool limitCollectionScope = true)
+        IEnumerable<Guid>? collectionIds = null, bool skipPermissionCheck = false, bool limitCollectionScope = true)
     {
         if (!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
         {
@@ -109,7 +107,7 @@ public class CipherService : ICipherService
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Created);
 
             // push
-            await _pushService.PushSyncCipherCreateAsync(cipher, null);
+            await _cipherSyncPushService.PushSyncCipherCreateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
         }
         else
         {
@@ -119,12 +117,12 @@ public class CipherService : ICipherService
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
             // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
+            await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
         }
     }
 
     public async Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
-        IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false)
+        IEnumerable<Guid>? collectionIds = null, bool skipPermissionCheck = false)
     {
         if (!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
         {
@@ -159,11 +157,14 @@ public class CipherService : ICipherService
             if (cipher.OrganizationId.HasValue)
             {
                 var org = await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value);
-                cipher.OrganizationUseTotp = org.UseTotp;
+                if (org != null)
+                {
+                    cipher.OrganizationUseTotp = org.UseTotp;
+                }
             }
 
             // push
-            await _pushService.PushSyncCipherCreateAsync(cipher, null);
+            await _cipherSyncPushService.PushSyncCipherCreateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
         }
         else
         {
@@ -174,18 +175,18 @@ public class CipherService : ICipherService
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
             // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
+            await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
         }
     }
 
     public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment, Guid savingUserId, bool orgAdmin = false)
     {
-        await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, orgAdmin, attachment.Size);
-
         if (attachment == null)
         {
             throw new BadRequestException("Cipher attachment does not exist");
         }
+
+        await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, orgAdmin, attachment.Size);
 
         await _attachmentStorageService.UploadNewAttachmentAsync(stream, cipher, attachment);
 
@@ -223,11 +224,13 @@ public class CipherService : ICipherService
         });
         cipher.AddAttachment(attachmentId, data);
 
+        await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentCreated);
+
         // Update the revision date when an attachment is added
         cipher.RevisionDate = DateTime.UtcNow;
         await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
-        await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, Array.Empty<Guid>());
 
         return (attachmentId, uploadUrl);
     }
@@ -262,7 +265,6 @@ public class CipherService : ICipherService
             };
 
             await _cipherRepository.UpdateAttachmentAsync(attachment);
-            await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentCreated);
             cipher.AddAttachment(attachmentId, data);
 
             if (!await ValidateCipherAttachmentFile(cipher, data))
@@ -277,12 +279,14 @@ public class CipherService : ICipherService
             throw;
         }
 
+        await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentCreated);
+
         // Update the revision date when an attachment is added
         cipher.RevisionDate = DateTime.UtcNow;
         await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, Array.Empty<Guid>());
     }
 
     public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, string key,
@@ -374,7 +378,7 @@ public class CipherService : ICipherService
             return false;
         }
         // Update Send data if necessary
-        if (realSize != attachmentData.Size)
+        if (realSize.HasValue && realSize != attachmentData.Size)
         {
             attachmentData.Size = realSize.Value;
         }
@@ -395,9 +399,14 @@ public class CipherService : ICipherService
         return valid;
     }
 
-    public async Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId)
+    public async Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher? cipher, string attachmentId)
     {
-        var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var attachments = cipher.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
 
         if (!attachments.TryGetValue(attachmentId, out var data))
         {
@@ -424,12 +433,14 @@ public class CipherService : ICipherService
             throw new BadRequestException("You do not have permissions to delete this.");
         }
 
+        var collectionIds = await GetCollectionIdsForPushAsync(cipherDetails);
+
         await _cipherRepository.DeleteAsync(cipherDetails);
         await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
 
         // push
-        await _pushService.PushSyncCipherDeleteAsync(cipherDetails);
+        await _cipherSyncPushService.PushSyncCipherDeleteAsync(cipherDetails, collectionIds);
     }
 
     public async Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false)
@@ -481,7 +492,8 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
-        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId], orgAdmin);
+        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId], orgAdmin)
+            ?? throw new NotFoundException();
     }
 
     public async Task PurgeAsync(Guid organizationId)
@@ -557,11 +569,11 @@ public class CipherService : ICipherService
     public async Task ShareAsync(Cipher originalCipher, Cipher cipher, Guid organizationId,
         IEnumerable<Guid> collectionIds, Guid sharingUserId, DateTime? lastKnownRevisionDate)
     {
-        var attachments = cipher.GetAttachments();
-        var hasOldAttachments = attachments?.Values?.Any(a => a.Key == null) ?? false;
+        var attachments = cipher.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
+        var hasOldAttachments = attachments.Values.Any(a => a.Key == null);
         var updatedCipher = false;
         var migratedAttachments = false;
-        var originalAttachments = CoreHelpers.CloneObject(originalCipher.GetAttachments());
+        var originalAttachments = CoreHelpers.CloneObject(originalCipher.GetAttachments()) ?? new Dictionary<string, CipherAttachment.MetaData>();
 
         try
         {
@@ -575,7 +587,7 @@ public class CipherService : ICipherService
 
             if (hasOldAttachments)
             {
-                var attachmentsWithUpdatedMetadata = originalCipher.GetAttachments();
+                var attachmentsWithUpdatedMetadata = originalCipher.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
                 var attachmentsToUpdateMetadata = CoreHelpers.CloneObject(attachments);
                 foreach (var updatedMetadata in attachmentsWithUpdatedMetadata.Where(a => a.Value?.TempMetadata != null))
                 {
@@ -598,7 +610,7 @@ public class CipherService : ICipherService
             if (hasOldAttachments)
             {
                 // migrate old attachments
-                foreach (var attachment in attachments.Values.Where(a => a.TempMetadata != null).Select(a => a.TempMetadata))
+                foreach (var attachment in attachments.Values.Where(a => a.TempMetadata != null).Select(a => a.TempMetadata!))
                 {
                     await _attachmentStorageService.StartShareAttachmentAsync(cipher.Id, organizationId,
                         attachment);
@@ -653,7 +665,7 @@ public class CipherService : ICipherService
         }
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
     public async Task<IEnumerable<CipherDetails>> ShareManyAsync(IEnumerable<(CipherDetails cipher, DateTime? lastKnownRevisionDate)> cipherInfos,
@@ -721,7 +733,7 @@ public class CipherService : ICipherService
         await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_UpdatedCollections);
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
     public async Task SoftDeleteAsync(CipherDetails cipherDetails, Guid deletingUserId, bool orgAdmin = false)
@@ -744,7 +756,7 @@ public class CipherService : ICipherService
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipherDetails, null);
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     public async Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId, bool orgAdmin)
@@ -799,7 +811,7 @@ public class CipherService : ICipherService
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Restored);
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipherDetails, null);
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     public async Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false)
@@ -849,6 +861,10 @@ public class CipherService : ICipherService
         foreach (var cipherId in cipherIds)
         {
             var cipher = await _cipherRepository.GetByIdAsync(cipherId);
+            if (cipher == null)
+            {
+                throw new NotFoundException();
+            }
             await ValidateChangeInCollectionsAsync(cipher, collectionIds, userId);
         }
     }
@@ -867,7 +883,7 @@ public class CipherService : ICipherService
     {
         var user = await _userService.GetUserByIdAsync(userId);
         var organizationAbility = cipher.OrganizationId.HasValue ?
-            await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
+            await _organizationAbilityCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
 
         return NormalCipherPermissions.CanDelete(user, cipher, organizationAbility);
     }
@@ -876,7 +892,7 @@ public class CipherService : ICipherService
     {
         var user = await _userService.GetUserByIdAsync(userId);
         var organizationAbility = cipher.OrganizationId.HasValue ?
-            await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
+            await _organizationAbilityCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
 
         return NormalCipherPermissions.CanRestore(user, cipher, organizationAbility);
     }
@@ -896,7 +912,7 @@ public class CipherService : ICipherService
         }
     }
 
-    private async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, bool orgAdmin)
+    private async Task<DeleteAttachmentResponseData?> DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, bool orgAdmin)
     {
         if (attachmentData == null || string.IsNullOrWhiteSpace(attachmentData.AttachmentId))
         {
@@ -920,7 +936,7 @@ public class CipherService : ICipherService
         }
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, Array.Empty<Guid>());
 
         return new DeleteAttachmentResponseData(cipher);
     }
@@ -952,6 +968,11 @@ public class CipherService : ICipherService
         if (cipher.UserId.HasValue)
         {
             var user = await _userRepository.GetByIdAsync(cipher.UserId.Value);
+            if (user == null)
+            {
+                throw new NotFoundException();
+            }
+
             if (!(await _userService.CanAccessPremium(user)))
             {
                 throw new BadRequestException("You must have premium status to use attachments.");
@@ -981,6 +1002,11 @@ public class CipherService : ICipherService
         else if (cipher.OrganizationId.HasValue)
         {
             var org = await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value);
+            if (org == null)
+            {
+                throw new NotFoundException();
+            }
+
             if (!org.MaxStorageGb.HasValue)
             {
                 throw new BadRequestException("This organization cannot use attachments.");
@@ -990,6 +1016,16 @@ public class CipherService : ICipherService
         }
 
         return storageBytesRemaining;
+    }
+
+    private async Task<ICollection<Guid>?> GetCollectionIdsForPushAsync(Cipher cipher)
+    {
+        if (!cipher.OrganizationId.HasValue)
+        {
+            return null;
+        }
+
+        return await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
     }
 
     private async Task ValidateCipherCanBeShared(
@@ -1044,11 +1080,6 @@ public class CipherService : ICipherService
     /// </summary>
     private async Task<bool> IgnoreStorageLimitsOnMigrationAsync(Guid userId, Organization organization)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems))
-        {
-            return false;
-        }
-
         if (!organization.UsePolicies)
         {
             return false;
@@ -1060,10 +1091,15 @@ public class CipherService : ICipherService
     }
 
     // Validates that a cipher is not being added to a default collection when it is only currently only in shared collections
-    private async Task ValidateChangeInCollectionsAsync(Cipher updatedCipher, IEnumerable<Guid> newCollectionIds, Guid userId)
+    private async Task ValidateChangeInCollectionsAsync(Cipher updatedCipher, IEnumerable<Guid>? newCollectionIds, Guid userId)
     {
 
         if (updatedCipher.Id == Guid.Empty || !updatedCipher.OrganizationId.HasValue)
+        {
+            return;
+        }
+
+        if (newCollectionIds == null)
         {
             return;
         }
@@ -1106,6 +1142,9 @@ public class CipherService : ICipherService
             CipherCardData cardData => JsonSerializer.Serialize(cardData),
             CipherSecureNoteData noteData => JsonSerializer.Serialize(noteData),
             CipherSSHKeyData sshKeyData => JsonSerializer.Serialize(sshKeyData),
+            CipherBankAccountData bankAccountData => JsonSerializer.Serialize(bankAccountData),
+            CipherDriversLicenseData driversLicenseData => JsonSerializer.Serialize(driversLicenseData),
+            CipherPassportData passportData => JsonSerializer.Serialize(passportData),
             _ => throw new ArgumentException("Unsupported cipher data type.", nameof(data))
         };
     }
@@ -1114,11 +1153,14 @@ public class CipherService : ICipherService
     {
         return cipher.Type switch
         {
-            CipherType.Login => JsonSerializer.Deserialize<CipherLoginData>(cipher.Data),
-            CipherType.Identity => JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data),
-            CipherType.Card => JsonSerializer.Deserialize<CipherCardData>(cipher.Data),
-            CipherType.SecureNote => JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data),
-            CipherType.SSHKey => JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data),
+            CipherType.Login => JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!,
+            CipherType.Identity => JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data)!,
+            CipherType.Card => JsonSerializer.Deserialize<CipherCardData>(cipher.Data)!,
+            CipherType.SecureNote => JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data)!,
+            CipherType.SSHKey => JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data)!,
+            CipherType.BankAccount => JsonSerializer.Deserialize<CipherBankAccountData>(cipher.Data)!,
+            CipherType.DriversLicense => JsonSerializer.Deserialize<CipherDriversLicenseData>(cipher.Data)!,
+            CipherType.Passport => JsonSerializer.Deserialize<CipherPassportData>(cipher.Data)!,
             _ => throw new ArgumentException("Unsupported cipher type.", nameof(cipher))
         };
     }
@@ -1160,7 +1202,7 @@ public class CipherService : ICipherService
             .Select(id => id!.Value)
             .ToList();
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(organizationIds);
+        var organizationAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(organizationIds);
         return organizationAbilities;
     }
 }

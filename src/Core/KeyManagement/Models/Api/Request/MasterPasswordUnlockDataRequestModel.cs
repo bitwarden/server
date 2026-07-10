@@ -14,7 +14,7 @@ public class MasterPasswordUnlockDataRequestModel
     [Required]
     [EncryptedString]
     public required string MasterKeyWrappedUserKey { get; init; }
-    [Required]
+    [Required(AllowEmptyStrings = false)]
     [StringLength(256)]
     public required string Salt { get; init; }
 

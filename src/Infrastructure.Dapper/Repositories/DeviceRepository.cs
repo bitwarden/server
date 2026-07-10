@@ -108,6 +108,28 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         }
     }
 
+    public async Task UpdateLastActivityByIdAsync(Guid deviceId, string? clientVersion)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_UpdateLastActivityById]",
+                new { Id = deviceId, LastActivityDate = DateTime.UtcNow, ClientVersion = clientVersion },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task UpdateLastActivityByIdentifierAndUserIdAsync(string identifier, Guid userId, string? clientVersion)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_UpdateLastActivityByIdentifierUserId]",
+                new { Identifier = identifier, UserId = userId, LastActivityDate = DateTime.UtcNow, ClientVersion = clientVersion },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
     public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices)
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>

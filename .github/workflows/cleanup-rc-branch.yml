@@ -21,20 +21,28 @@ jobs:
           client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Retrieve bot secrets
-        id: retrieve-bot-secrets
+        id: retrieve-secret
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
-          keyvault: bitwarden-ci
-          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+          keyvault: gh-org-bitwarden
+          secrets: "BW-GHAPP-ID,BW-GHAPP-KEY"
 
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
+
+      - name: Generate GH App token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        id: app-token
+        with:
+          app-id: ${{ steps.retrieve-secret.outputs.BW-GHAPP-ID }}
+          private-key: ${{ steps.retrieve-secret.outputs.BW-GHAPP-KEY }}
+          owner: ${{ github.repository_owner }}
 
       - name: Checkout main
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: main
-          token: ${{ steps.retrieve-bot-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          token: ${{ steps.app-token.outputs.token }}
           persist-credentials: false
           fetch-depth: 0
 

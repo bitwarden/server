@@ -10,6 +10,7 @@ using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -18,7 +19,6 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Commands.Interfaces;
@@ -47,7 +47,7 @@ public class CiphersController : Controller
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
@@ -62,7 +62,7 @@ public class CiphersController : Controller
         ILogger<CiphersController> logger,
         GlobalSettings globalSettings,
         IOrganizationCiphersQuery organizationCiphersQuery,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         ICollectionRepository collectionRepository,
         IArchiveCiphersCommand archiveCiphersCommand,
         IUnarchiveCiphersCommand unarchiveCiphersCommand)
@@ -76,7 +76,7 @@ public class CiphersController : Controller
         _logger = logger;
         _globalSettings = globalSettings;
         _organizationCiphersQuery = organizationCiphersQuery;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _collectionRepository = collectionRepository;
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
@@ -367,7 +367,7 @@ public class CiphersController : Controller
         }
 
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var organizationAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
         var responses = ciphers.Select(cipher =>
             new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings));
 
@@ -438,7 +438,7 @@ public class CiphersController : Controller
             deletableOrgCipherList.AddRange(unassignedCiphers.Select(c => new CipherDetails(c) { Manage = true }));
         }
 
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var organizationAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
         var deletableOrgCiphers = deletableOrgCipherList
             .Where(c => NormalCipherPermissions.CanDelete(user, c, organizationAbility))
             .ToDictionary(c => c.Id);
@@ -487,7 +487,7 @@ public class CiphersController : Controller
             return true;
         }
 
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
 
         // Owners/Admins can only edit all ciphers if the organization has the setting enabled
         if (orgAbility is { AllowAdminAccessToAllCollectionItems: true } && org is
@@ -1609,15 +1609,20 @@ public class CiphersController : Controller
                     try
                     {
                         var blobName = eventGridEvent.Subject.Split($"{AzureAttachmentStorageService.EventGridEnabledContainerName}/blobs/")[1];
-                        var (cipherId, organizationId, attachmentId) = AzureAttachmentStorageService.IdentifiersFromBlobName(blobName);
+                        var (cipherId, _, attachmentId) = AzureAttachmentStorageService.IdentifiersFromBlobName(blobName);
                         var cipher = await _cipherRepository.GetByIdAsync(new Guid(cipherId));
                         var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
 
                         if (cipher == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
                         {
-                            if (_attachmentStorageService is AzureSendFileStorageService azureFileStorageService)
+                            if (_attachmentStorageService.FileUploadType == FileUploadType.Azure)
                             {
-                                await azureFileStorageService.DeleteBlobAsync(blobName);
+                                await _attachmentStorageService.DeleteAttachmentAsync(new Guid(cipherId),
+                                    new CipherAttachment.MetaData
+                                    {
+                                        AttachmentId = attachmentId,
+                                        ContainerName = AzureAttachmentStorageService.EventGridEnabledContainerName,
+                                    });
                             }
 
                             return;
@@ -1645,7 +1650,7 @@ public class CiphersController : Controller
 
     private void ValidateClientVersionForFido2CredentialSupport(Cipher cipher)
     {
-        if (cipher.Type == Core.Vault.Enums.CipherType.Login)
+        if (cipher.Type == Core.Vault.Enums.CipherType.Login && !cipher.IsDataBlobEncrypted())
         {
             var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
             if (loginData?.Fido2Credentials != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
@@ -1685,7 +1690,7 @@ public class CiphersController : Controller
     {
         if (cipher.OrganizationId.HasValue)
         {
-            return await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value);
+            return await _organizationAbilityCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value);
         }
         return null;
     }
@@ -1707,7 +1712,7 @@ public class CiphersController : Controller
             return new Dictionary<Guid, OrganizationAbility>();
         }
 
-        return await _applicationCacheService.GetOrganizationAbilitiesAsync(orgIds);
+        return await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgIds);
     }
 
 }

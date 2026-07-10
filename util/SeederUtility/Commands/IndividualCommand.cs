@@ -16,9 +16,10 @@ public class IndividualCommand
             args.Validate();
 
             using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
-            var recipe = new IndividualUserRecipe(deps.ToDependencies());
 
-            var result = recipe.Seed(args.ToOptions());
+            var result = ConsoleProgressReporter.RunWithProgress(
+                deps.ToDependencies(),
+                d => new IndividualUserRecipe(d).Seed(args.ToOptions()));
 
             ConsoleOutput.PrintRow("User", result.UserId);
             if (result.Email is not null)
@@ -38,7 +39,7 @@ public class IndividualCommand
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
+            Console.Error.WriteLine($"Error: {ex}");
             Environment.Exit(1);
         }
     }

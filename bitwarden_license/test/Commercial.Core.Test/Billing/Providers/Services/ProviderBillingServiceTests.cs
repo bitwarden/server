@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
 using Bit.Commercial.Core.Billing.Providers.Services;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -19,6 +20,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
@@ -438,29 +440,71 @@ public class ProviderBillingServiceTests
             Arg.Is<CustomerCreateOptions>(options => options.TaxExempt == StripeConstants.TaxExempt.None));
     }
 
+    [Theory, BitAutoData]
+    public async Task CreateCustomerForClientOrganization_FlagOn_DoesNotSetTaxExempt(
+        Provider provider,
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+        organization.Name = "Name";
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        var providerCustomer = new Customer
+        {
+            Address = new Address { Country = "DE", PostalCode = "10115" },
+            TaxIds = new StripeList<TaxId> { Data = [] },
+            TaxExempt = StripeConstants.TaxExempt.Reverse
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider, Arg.Any<CustomerGetOptions>())
+            .Returns(providerCustomer);
+
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
+            .Returns(new Bit.Core.Settings.GlobalSettings.BaseServiceUriSettings(new Bit.Core.Settings.GlobalSettings())
+            {
+                CloudRegion = "US"
+            });
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
+            .Returns(new Customer { Id = "customer_id" });
+
+        await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateCustomerAsync(
+            Arg.Is<CustomerCreateOptions>(options => options.TaxExempt == null));
+    }
+
     #endregion
 
     #region GenerateClientInvoiceReport
 
     [Theory, BitAutoData]
     public async Task GenerateClientInvoiceReport_NullInvoiceId_ThrowsArgumentNullException(
+        Guid providerId,
         SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GenerateClientInvoiceReport(null));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GenerateClientInvoiceReport(providerId, null));
 
     [Theory, BitAutoData]
     public async Task GenerateClientInvoiceReport_NoInvoiceItems_ReturnsNull(
+        Guid providerId,
         string invoiceId,
         SutProvider<ProviderBillingService> sutProvider)
     {
-        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns([]);
+        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByProviderIdAndInvoiceId(providerId, invoiceId).Returns([]);
 
-        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
+        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(providerId, invoiceId);
 
         Assert.Null(reportContent);
     }
 
     [Theory, BitAutoData]
     public async Task GenerateClientInvoiceReport_Succeeds(
+        Guid providerId,
         string invoiceId,
         SutProvider<ProviderBillingService> sutProvider)
     {
@@ -479,9 +523,9 @@ public class ProviderBillingServiceTests
             }
         };
 
-        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns(invoiceItems);
+        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByProviderIdAndInvoiceId(providerId, invoiceId).Returns(invoiceItems);
 
-        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
+        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(providerId, invoiceId);
 
         using var memoryStream = new MemoryStream(reportContent);
 
@@ -1227,6 +1271,37 @@ public class ProviderBillingServiceTests
             await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress));
 
         Assert.Equal("Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.", actual.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_FlagOn_DoesNotSetTaxExempt(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        BillingAddress billingAddress)
+    {
+        provider.Name = "MSP";
+        billingAddress.Country = "FR";
+        billingAddress.TaxId = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.Card, Token = "token" };
+        var expected = new Customer { Id = "customer_id" };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
+            .Returns(expected);
+
+        var actual = await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateCustomerAsync(
+            Arg.Is<CustomerCreateOptions>(options =>
+                options.Address.Country == billingAddress.Country &&
+                options.TaxExempt == null));
+
+        Assert.Equivalent(expected, actual);
     }
 
     #endregion
@@ -2335,6 +2410,344 @@ public class ProviderBillingServiceTests
             Arg.Is<CustomerUpdateOptions>(options =>
                 options.Email == null &&
                 options.Description == provider.Name));
+    }
+
+    #endregion
+
+    #region AddExistingOrganization
+
+    // Releasing any active migration subscription schedule before the Stripe cancel keeps
+    // 2020-plan orgs with an attached SubscriptionSchedule from tripping a Stripe-side cancel
+    // failure. Dropping the org's migration cohort assignment is delegated to Release by
+    // passing organization.Id; the assignment-cleanup behavior itself is owned and covered by
+    // PriceIncreaseScheduler.Release (see PriceIncreaseSchedulerTests).
+
+    private static void ArrangeAddExistingOrganizationHappyPath(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        Organization organization,
+        PlanType planType = PlanType.EnterpriseAnnually2020)
+    {
+        organization.PlanType = planType;
+        organization.Seats = 10;
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CancelSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionCancelOptions>())
+            .Returns(new Subscription
+            {
+                Id = organization.GatewaySubscriptionId,
+                LatestInvoice = new Invoice { Status = StripeConstants.InvoiceStatus.Open }
+            });
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Any<PlanType>())
+            .Returns(MockPlans.Get(PlanType.EnterpriseMonthly));
+
+        sutProvider.GetDependency<IProviderPlanRepository>()
+            .GetByProviderId(provider.Id)
+            .Returns([
+                new ProviderPlan
+                {
+                    PlanType = PlanType.EnterpriseMonthly,
+                    SeatMinimum = 100,
+                    AllocatedSeats = 0,
+                    PurchasedSeats = 0
+                }
+            ]);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>()
+            .GetManyDetailsByProviderAsync(provider.Id)
+            .Returns([]);
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomer(organization)
+            .Returns(new Customer { Balance = 0 });
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_ReleasesMigrationScheduleWithOrgGatewayIds_BeforeStripeOperations(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — provider and org have distinct gateway IDs so a regression that passed
+        // the provider's IDs to Release instead of the org's would fail the Received check.
+        provider.Type = ProviderType.Msp;
+        provider.GatewayCustomerId = "cus_provider_msp";
+        provider.GatewaySubscriptionId = "sub_provider_msp";
+        organization.GatewayCustomerId = "cus_org_msp";
+        organization.GatewaySubscriptionId = "sub_org_msp";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var orgCustomerId = organization.GatewayCustomerId;
+        var orgSubscriptionId = organization.GatewaySubscriptionId;
+        var orgId = organization.Id;
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — Release must run first, with the Organization's own gateway IDs and its
+        // own Id (not the Provider's), and must precede both Stripe mutations. Passing
+        // organization.Id is what delegates the migration cohort cleanup to Release.
+        Received.InOrder(() =>
+        {
+            priceIncreaseScheduler.Release(orgCustomerId, orgSubscriptionId, orgId);
+            stripeAdapter.UpdateSubscriptionAsync(orgSubscriptionId, Arg.Any<SubscriptionUpdateOptions>());
+            stripeAdapter.CancelSubscriptionAsync(orgSubscriptionId, Arg.Any<SubscriptionCancelOptions>());
+        });
+        await priceIncreaseScheduler.Received(1).Release(orgCustomerId, orgSubscriptionId, orgId);
+        await priceIncreaseScheduler.Received(0)
+            .Release(provider.GatewayCustomerId, Arg.Any<string>(), Arg.Any<Guid?>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_DelegatesCohortCleanupToRelease_AfterStripeCancel(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — 2020-plan org. The service no longer touches the cohort assignment
+        // repository directly; it hands organization.Id to Release, which owns the cleanup.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_with_assignment";
+        organization.GatewaySubscriptionId = "sub_with_assignment";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var customerId = organization.GatewayCustomerId;
+        var subscriptionId = organization.GatewaySubscriptionId;
+        var orgId = organization.Id;
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — Release is invoked once with organization.Id (delegating cohort cleanup)
+        // before the Stripe cancel and the org-transition writes.
+        Received.InOrder(() =>
+        {
+            priceIncreaseScheduler.Release(customerId, subscriptionId, orgId);
+            stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
+            organizationRepository.ReplaceAsync(organization);
+            providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
+        });
+        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_ContinuesEntireFlow_AfterReleaseSucceeds(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_full_flow";
+        organization.GatewaySubscriptionId = "sub_full_flow";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+        // Capture before Act — AddExistingOrganization clears GatewaySubscriptionId
+        // on the entity as part of the transition to provider-managed.
+        var customerId = organization.GatewayCustomerId;
+        var subscriptionId = organization.GatewaySubscriptionId;
+        var orgId = organization.Id;
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert
+        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
+        await organizationRepository.Received(1).ReplaceAsync(organization);
+        Assert.Equal(MockPlans.Get(PlanType.EnterpriseMonthly).HasRiskInsights, organization.UseRiskInsights);
+        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Is<ProviderOrganization>(po =>
+            po.ProviderId == provider.Id && po.OrganizationId == organization.Id && po.Key == key));
+        await eventService.Received(1).LogProviderOrganizationEventAsync(
+            Arg.Is<ProviderOrganization>(po => po.OrganizationId == organization.Id),
+            EventType.ProviderOrganization_Added);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_CompletesAndDelegatesCohortCleanup_ForMoeProvider(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — same flow under a BusinessUnit (MOE) provider. Exercises the
+        // BusinessUnit branch of GetManagedPlanTypeAsync and confirms Release receives
+        // organization.Id (delegating cohort cleanup) regardless of provider type.
+        //
+        // The discriminating setup: provider plan is TeamsMonthly while the org is on
+        // EnterpriseAnnually2020. The MSP switch would map EnterpriseAnnually2020 →
+        // EnterpriseMonthly, so a final PlanType of TeamsMonthly can only have come
+        // from the BusinessUnit branch reading the provider's first plan. Without this
+        // mismatch, deleting the entire BusinessUnit branch would still pass the test.
+        provider.Type = ProviderType.BusinessUnit;
+        organization.GatewayCustomerId = "cus_moe_baseline";
+        organization.GatewaySubscriptionId = "sub_moe_baseline";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        sutProvider.GetDependency<IProviderPlanRepository>()
+            .GetByProviderId(provider.Id)
+            .Returns([
+                new ProviderPlan
+                {
+                    PlanType = PlanType.TeamsMonthly,
+                    SeatMinimum = 100,
+                    AllocatedSeats = 0,
+                    PurchasedSeats = 0
+                }
+            ]);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.TeamsMonthly)
+            .Returns(MockPlans.Get(PlanType.TeamsMonthly));
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var customerId = organization.GatewayCustomerId;
+        var subscriptionId = organization.GatewaySubscriptionId;
+        var orgId = organization.Id;
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — Release (with organization.Id) precedes the Stripe operations and the
+        // org transition commits, and the org lands on the provider's first plan
+        // (TeamsMonthly) — proving the BusinessUnit branch ran.
+        Received.InOrder(() =>
+        {
+            priceIncreaseScheduler.Release(customerId, subscriptionId, orgId);
+            stripeAdapter.UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
+            stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
+            organizationRepository.ReplaceAsync(organization);
+            providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
+        });
+        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organization.Id && o.PlanType == PlanType.TeamsMonthly));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_PropagatesAndShortCircuits_WhenReleaseFails(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — Release throws before any other I/O. No Stripe cancel, no repo writes,
+        // no event log should fire.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_release_fails";
+        organization.GatewaySubscriptionId = "sub_release_fails";
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+        var subscriptionId = organization.GatewaySubscriptionId;
+
+        priceIncreaseScheduler
+            .Release(organization.GatewayCustomerId, subscriptionId, organization.Id)
+            .ThrowsAsync(new StripeException("simulated release failure"));
+
+        // Act
+        await Assert.ThrowsAsync<StripeException>(() =>
+            sutProvider.Sut.AddExistingOrganization(provider, organization, key));
+
+        // Assert — nothing downstream of Release fired.
+        await stripeAdapter.Received(0)
+            .UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
+        await stripeAdapter.Received(0)
+            .CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
+        await organizationRepository.Received(0).ReplaceAsync(Arg.Any<Organization>());
+        await providerOrganizationRepository.Received(0).CreateAsync(Arg.Any<ProviderOrganization>());
+        await eventService.Received(0).LogProviderOrganizationEventAsync(
+            Arg.Any<ProviderOrganization>(), Arg.Any<EventType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_StripeCancelSucceeds_OnlyWhenReleasePrecedesIt(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — simulates the Stripe-side contract this PR exists to satisfy:
+        // CancelSubscriptionAsync throws when an active SubscriptionSchedule is attached.
+        // The mock returns success only after Release has run; without Release, the cancel
+        // call throws the same error shape Stripe would produce in production. This locks
+        // in the "Release must precede cancel" invariant at the contract level, not just
+        // at the call-order level — a refactor that removes the Release call but preserves
+        // call order would still fail this test.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_stripe_contract";
+        organization.GatewaySubscriptionId = "sub_stripe_contract";
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        organization.Seats = 10;
+
+        var releaseHasRun = false;
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        priceIncreaseScheduler
+            .When(s => s.Release(
+                organization.GatewayCustomerId, organization.GatewaySubscriptionId, organization.Id))
+            .Do(_ => releaseHasRun = true);
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .CancelSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionCancelOptions>())
+            .Returns(_ => releaseHasRun
+                ? Task.FromResult(new Subscription
+                {
+                    Id = organization.GatewaySubscriptionId,
+                    LatestInvoice = new Invoice { Status = StripeConstants.InvoiceStatus.Open }
+                })
+                : Task.FromException<Subscription>(new StripeException(
+                    "This subscription is owned by an active subscription schedule.")));
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Any<PlanType>())
+            .Returns(MockPlans.Get(PlanType.EnterpriseMonthly));
+        sutProvider.GetDependency<IProviderPlanRepository>()
+            .GetByProviderId(provider.Id)
+            .Returns([
+                new ProviderPlan
+                {
+                    PlanType = PlanType.EnterpriseMonthly,
+                    SeatMinimum = 100,
+                    AllocatedSeats = 0,
+                    PurchasedSeats = 0
+                }
+            ]);
+        sutProvider.GetDependency<IProviderOrganizationRepository>()
+            .GetManyDetailsByProviderAsync(provider.Id)
+            .Returns([]);
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomer(organization)
+            .Returns(new Customer { Balance = 0 });
+
+        // Act — must not throw. If Release were removed or moved after Cancel, the
+        // arranged StripeException would surface and Assert.ThrowsAsync would be needed.
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — both calls fired, Release first.
+        await priceIncreaseScheduler.Received(1)
+            .Release(organization.GatewayCustomerId, "sub_stripe_contract", organization.Id);
+        await stripeAdapter.Received(1)
+            .CancelSubscriptionAsync("sub_stripe_contract", Arg.Any<SubscriptionCancelOptions>());
     }
 
     #endregion

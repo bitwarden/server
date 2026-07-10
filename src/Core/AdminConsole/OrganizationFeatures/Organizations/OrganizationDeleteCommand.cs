@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -7,6 +8,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Services;
 using Microsoft.Extensions.Logging;
 
@@ -14,32 +16,35 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 {
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICipherService _cipherService;
     private readonly ISubscriberService _subscriberService;
     private readonly IFeatureService _featureService;
+    private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<OrganizationDeleteCommand> _logger;
 
     public OrganizationDeleteCommand(
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IOrganizationRepository organizationRepository,
         IStripePaymentService paymentService,
         ISsoConfigRepository ssoConfigRepository,
         ICipherService cipherService,
         ISubscriberService subscriberService,
         IFeatureService featureService,
+        ISendFileStorageService sendFileStorageService,
         ILogger<OrganizationDeleteCommand> logger)
     {
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _organizationRepository = organizationRepository;
         _paymentService = paymentService;
         _ssoConfigRepository = ssoConfigRepository;
         _cipherService = cipherService;
         _subscriberService = subscriberService;
         _featureService = featureService;
+        _sendFileStorageService = sendFileStorageService;
         _logger = logger;
     }
 
@@ -70,9 +75,10 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             }
         }
 
+        await _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
         await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
         await _organizationRepository.DeleteAsync(organization);
-        await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
+        await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
 
     private async Task ValidateDeleteOrganizationAsync(Organization organization)

@@ -16,9 +16,10 @@ public class OrganizationCommand
             args.Validate();
 
             using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
-            var recipe = new OrganizationRecipe(deps.ToDependencies());
 
-            var result = recipe.Seed(args.ToOptions());
+            var result = ConsoleProgressReporter.RunWithProgress(
+                deps.ToDependencies(),
+                d => new OrganizationRecipe(d).Seed(args.ToOptions()));
 
             ConsoleOutput.PrintRow("Organization", result.OrganizationId);
             if (result.OwnerEmail is not null)
@@ -39,7 +40,7 @@ public class OrganizationCommand
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
+            Console.Error.WriteLine($"Error: {ex}");
             Environment.Exit(1);
         }
     }

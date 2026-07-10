@@ -1,14 +1,11 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -39,13 +36,11 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         ISsoRequestValidator ssoRequestValidator,
-        IOrganizationUserRepository organizationUserRepository,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
@@ -54,7 +49,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
-        IClientVersionValidator clientVersionValidator)
+        IClientVersionValidator clientVersionValidator,
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
         : base(
             userManager,
             userService,
@@ -62,12 +58,10 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             deviceValidator,
             twoFactorAuthenticationValidator,
             ssoRequestValidator,
-            organizationUserRepository,
             logger,
             currentContext,
             globalSettings,
             userRepository,
-            policyService,
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
@@ -75,7 +69,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             authRequestRepository,
             mailService,
             userAccountKeysQuery,
-            clientVersionValidator)
+            clientVersionValidator,
+            updateDeviceLastActivityCommand)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
@@ -98,7 +93,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             token.TokenIsValid(WebAuthnLoginAssertionOptionsScope.Authentication);
         var deviceResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(rawDeviceResponse);
 
-        if (!verified)
+        if (!verified || deviceResponse == null || token.Options == null)
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidRequest);
             return;

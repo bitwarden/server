@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -10,6 +11,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -27,14 +29,14 @@ public class OrganizationDeleteCommandTests
         SutProvider<OrganizationDeleteCommand> sutProvider)
     {
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
         var cipherService = sutProvider.GetDependency<ICipherService>();
 
         await sutProvider.Sut.DeleteAsync(organization);
 
         await cipherService.Received(1).DeleteAttachmentsForOrganizationAsync(organization.Id);
         await organizationRepository.Received(1).DeleteAsync(organization);
-        await applicationCacheService.Received(1).DeleteOrganizationAbilityAsync(organization.Id);
+        await organizationAbilityCacheService.Received(1).DeleteOrganizationAbilityAsync(organization.Id);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
@@ -45,7 +47,7 @@ public class OrganizationDeleteCommandTests
         ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
         var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
 
         ssoConfigRepository.GetByOrganizationIdAsync(organization.Id).Returns(ssoConfig);
 
@@ -55,7 +57,7 @@ public class OrganizationDeleteCommandTests
         Assert.Contains("You cannot delete an Organization that is using Key Connector.", exception.Message);
 
         await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default);
-        await applicationCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
+        await organizationAbilityCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
@@ -147,5 +149,33 @@ public class OrganizationDeleteCommandTests
         await sutProvider.Sut.DeleteAsync(organization);
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).DeleteAsync(organization);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_WithFileSends_DeletesFilesBeforeDbRecords(
+        Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
+    {
+        // Ensuring that the file is deleted first avoids the following situation:
+        // 1. DB row is deleted successfully
+        // 2. File blob fails to delete
+        // 3. File blob still exists but with no parent Send
+        var callOrder = new List<string>();
+        sutProvider.GetDependency<ISendFileStorageService>()
+            .DeleteFilesForOrganizationAsync(organization.Id)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("file"));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .DeleteAsync(organization)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("db"));
+
+        await sutProvider.Sut.DeleteAsync(organization);
+
+        await sutProvider.GetDependency<ISendFileStorageService>()
+            .Received(1).DeleteFilesForOrganizationAsync(organization.Id);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1).DeleteAsync(organization);
+        Assert.Equal(new[] { "file", "db" }, callOrder);
     }
 }

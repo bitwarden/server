@@ -4,22 +4,14 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-## Docker-related files
-**/Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
-**/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
-**/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-shot
-**/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-shot
-**/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-shot
+# CODEOWNERS owners
+.github/CODEOWNERS @bitwarden/tech-leads
 
 # Scanning tools
 .checkmarx/ @bitwarden/team-appsec
 
-## BRE team owns these workflows ##
-.github/workflows/publish.yml @bitwarden/dept-bre
-
 ## These are shared workflows ##
 .github/workflows/_move_edd_db_scripts.yml
-.github/workflows/release.yml
 
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
@@ -93,6 +85,8 @@ bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 **/*invoice* @bitwarden/team-billing-dev
 **/*OrganizationLicense* @bitwarden/team-billing-dev
 **/Billing @bitwarden/team-billing-dev
+test/Billing.IntegrationTest @bitwarden/team-billing-dev
+**/AppHost @bitwarden/team-billing-dev @bitwarden/dept-architecture # joint ownership
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
 
@@ -109,8 +103,19 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 # The PushType enum is expected to be editted by anyone without need for Platform review
 src/Core/Platform/Push/PushType.cs
 
+# PAM
+bitwarden_license/src/Services/Pam @bitwarden/team-pam-dev
+bitwarden_license/test/Services/Pam.Test @bitwarden/team-pam-dev
+
 # SDK
 util/RustSdk @bitwarden/team-sdk-sme
+
+## Docker-related files
+**/Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
+**/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
+**/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-shot
+**/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-shot
+**/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-shot
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json

@@ -18,7 +18,9 @@ BEGIN
         [RevisionDate],
         [Permissions],
         [ResetPasswordKey],
-        [AccessSecretsManager]
+        [AccessSecretsManager],
+        [RevocationReason],
+        [StatusNew]
         )
     SELECT
         OUI.[Id],
@@ -33,7 +35,9 @@ BEGIN
         OUI.[RevisionDate],
         OUI.[Permissions],
         OUI.[ResetPasswordKey],
-        OUI.[AccessSecretsManager]
+        OUI.[AccessSecretsManager],
+        OUI.[RevocationReason],
+        OUI.[StatusNew]
     FROM
         OPENJSON(@jsonData)
         WITH (
@@ -49,6 +53,8 @@ BEGIN
             [RevisionDate] DATETIME2(7) '$.RevisionDate',
             [Permissions] NVARCHAR (MAX) '$.Permissions',
             [ResetPasswordKey] VARCHAR (MAX) '$.ResetPasswordKey',
-            [AccessSecretsManager] BIT '$.AccessSecretsManager'
+            [AccessSecretsManager] BIT '$.AccessSecretsManager',
+            [RevocationReason] TINYINT '$.RevocationReason',
+            [StatusNew] SMALLINT '$.StatusNew'
         ) OUI
 END

@@ -4,8 +4,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
-using Bit.Core.AdminConsole.Services;
-using Bit.Core.AdminConsole.Services.Implementations;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -14,14 +12,13 @@ public static class PolicyServiceCollectionExtensions
 {
     public static void AddPolicyServices(this IServiceCollection services)
     {
-        services.AddScoped<IPolicyService, PolicyService>();
         services.AddScoped<ISavePolicyCommand, SavePolicyCommand>();
         services.AddScoped<IPolicyRequirementQuery, PolicyRequirementQuery>();
         services.AddScoped<IPolicyQuery, PolicyQuery>();
         services.AddScoped<IPolicyEventHandlerFactory, PolicyEventHandlerHandlerFactory>();
 
-        services.AddScoped<IAutomaticUserConfirmationPolicyEnforcementValidator, AutomaticUserConfirmationPolicyEnforcementValidator>();
-        services.AddScoped<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator, AutomaticUserConfirmationOrganizationPolicyComplianceValidator>();
+        services.AddScoped<IAutomaticUserConfirmationPolicyEnforcementHandler, AutomaticUserConfirmationPolicyEnforcementHandler>();
+        services.AddScoped<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler, AutomaticUserConfirmationOrganizationPolicyComplianceHandler>();
 
         services.AddPolicyRequirements();
         services.AddPolicyUpdateEvents();
@@ -56,5 +53,6 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireTwoFactorPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SingleOrganizationPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, AutomaticUserConfirmationPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, MasterPasswordPolicyRequirementFactory>();
     }
 }

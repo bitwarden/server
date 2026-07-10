@@ -1,5 +1,7 @@
 ﻿#nullable enable
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
@@ -26,6 +28,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     private readonly IGroupRepository _groupRepository;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly TimeProvider _timeProvider;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public UpdateOrganizationUserCommand(
         IEventService eventService,
@@ -37,7 +41,9 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        TimeProvider timeProvider,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _eventService = eventService;
         _organizationService = organizationService;
@@ -49,6 +55,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         _groupRepository = groupRepository;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
+        _timeProvider = timeProvider;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     /// <summary>
@@ -62,7 +70,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     /// <exception cref="BadRequestException"></exception>
     public async Task UpdateUserAsync(OrganizationUser organizationUser, OrganizationUserType existingUserType,
         Guid? savingUserId,
-        List<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess)
+        List<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess,
+        string? defaultUserCollectionName = null)
     {
         // Avoid multiple enumeration
         var collectionAccessList = collectionAccess?.ToList() ?? [];
@@ -139,7 +148,21 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 
         if (groupAccess != null)
         {
-            await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupAccess);
+            await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupAccess, _timeProvider.GetUtcNow().UtcDateTime);
+        }
+
+        var isDemotedFromPrivilegedRole = existingUserType is OrganizationUserType.Admin or OrganizationUserType.Owner
+            && organizationUser.Type is not (OrganizationUserType.Admin or OrganizationUserType.Owner);
+        if (isDemotedFromPrivilegedRole
+            && organizationUser.UserId.HasValue
+            && organization.UseMyItems
+            && !string.IsNullOrWhiteSpace(defaultUserCollectionName)
+            && (await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId.Value)).State == OrganizationDataOwnershipState.Enabled)
+        {
+            await _collectionRepository.CreateDefaultCollectionsAsync(
+                organizationUser.OrganizationId,
+                [organizationUser.Id],
+                defaultUserCollectionName);
         }
 
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);

@@ -15,6 +15,7 @@ The SeederApi consists of three main components:
 1. **Controllers** - HTTP endpoints for seeding, querying, and managing test data
 2. **Services** - Business logic for scene and query execution
 3. **Models** - Request/response models for API communication
+4. **Jobs** - Scheduled jobs run through JobsHostedService.
 
 ### Key Components
 
@@ -23,6 +24,7 @@ The SeederApi consists of three main components:
 - **InfoController** (`/alive`, `/version`) - Health check and version information
 - **SceneService** - Manages scene execution and cleanup with play ID tracking
 - **QueryService** - Executes read-only query operations
+- **Cleanup Job** - Executes every 15 minutes to delete old play data.
 
 ## How To Use
 
@@ -109,9 +111,17 @@ curl -X DELETE http://localhost:5000/seed/batch \
 
 #### Delete All Seeded Data
 
+Deletes seeded data tagged with a play ID older than the provided date. Date is optional and defaults to 1 day prior to the current time of the request.
+
 ```bash
-curl -X DELETE http://localhost:5000/seed
+curl -X DELETE http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -d '"2026-03-23T10:45:47.0690009-10:00"'
 ```
+
+#### PlayData is ephemeral
+
+A scheduled job runs every fifteen minutes that deletes data tagged with a play ID older than 1 day. Any data you want to persist for an extended period of time must not be tagged with a play ID.
 
 ### Health Checks
 
@@ -143,6 +153,32 @@ The SeederApi requires the following configuration:
 
 - **Database Connection** - Connection string to the Bitwarden database
 - **Global Settings** - Standard Bitwarden `GlobalSettings` configuration
+- **Distributed Cache** - Required for queries that read codes from the persistent distributed cache (e.g.
+  `UserEmailTokenCodeQuery`, which reads email 2FA / user-verification OTP codes). The SeederApi must share the
+  **same cache backend** as the server (Identity/Api) that generated the code.
+
+#### Shared Distributed Cache
+
+Code-reading queries look up the code in the persistent keyed `IDistributedCache`, so they only succeed when
+the SeederApi and the code-generating server point at the same backend. Configure a shared backend under
+`globalSettings.distributedCache`:
+
+```json
+"globalSettings": {
+  "distributedCache": {
+    "redis": { "connectionString": "<same Redis connection as Identity/Api>" }
+  }
+}
+```
+
+Cosmos DB (`distributedCache.cosmos.connectionString`) or, for self-hosted deployments, the SQL Server
+`dbo.Cache` table are the other shared-backend options.
+
+> [!IMPORTANT]
+> Without a shared backend, SeederApi falls back to an in-memory cache that is local to the process, so
+> code-reading queries return `Found: false` even though the code was generated elsewhere. See
+> `AddDistributedCache` in `src/SharedWeb/Utilities/ServiceCollectionExtensions.cs` for the backend selection
+> logic.
 
 ## Play ID Tracking
 

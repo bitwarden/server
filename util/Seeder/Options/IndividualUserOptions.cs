@@ -18,6 +18,11 @@ public record IndividualUserOptions
     public string? LastName { get; init; }
 
     /// <summary>
+    /// Optional email.
+    /// </summary>
+    public string? Email { get; init; }
+
+    /// <summary>
     /// Whether the user has a premium subscription (enables 1 GB storage).
     /// </summary>
     public bool Premium { get; init; }
@@ -37,4 +42,10 @@ public record IndividualUserOptions
     /// Use 600,000 for production-realistic e2e testing.
     /// </summary>
     public int KdfIterations { get; init; } = 5_000;
+
+    /// <summary>
+    /// When true, writes a user license file to LicenseDirectory after seeding.
+    /// Required for self-hosted instances that validate premium status by reading the license file.
+    /// </summary>
+    public bool SelfHosted { get; init; }
 }

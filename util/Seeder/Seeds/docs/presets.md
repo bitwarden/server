@@ -2,6 +2,14 @@
 
 Complete catalog of all seeder presets, organized by purpose. Use `--mangle` to avoid collisions with existing data.
 
+## Cipher generation knobs
+
+These options apply to any preset that uses generated (count-based) ciphers — QA, Scale, and Individual alike. Add them to the `"ciphers"` or `"personalCiphers"` block in the preset JSON. Schema reference: `Seeds/schemas/preset.schema.json`.
+
+| Knob                     | Type    | Default | Description                                                                                                                                   |
+| ------------------------ | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repromptEveryNthCipher` | integer | 0       | Set `Reprompt=Password` on every Nth generated cipher. `0` = disabled. Example: `5` flags ciphers at indices 0, 5, 10, … ≈ 20% reprompt rate. |
+
 ## Features
 
 Test specific Bitwarden features. Fixture-based data for deterministic results.
@@ -26,14 +34,14 @@ Known users, groups, collections, and permissions you can point a client to.
 dotnet run -- preset --name qa.{name} --mangle
 ```
 
-| Preset                            | Org Fixture         | Roster                 | Ciphers                | Use Case                                    |
-| --------------------------------- | ------------------- | ---------------------- | ---------------------- | ------------------------------------------- |
-| enterprise-basic                  | redwood-analytics   | enterprise-basic       | enterprise-basic       | Standard enterprise org                     |
-| collection-permissions-enterprise | cobalt-logistics    | collection-permissions | collection-permissions | Permission edge cases                       |
-| dunder-mifflin-enterprise-full    | dunder-mifflin      | dunder-mifflin         | autofill-testing       | Large handcrafted org                       |
-| families-basic                    | adams-family        | family                 | 150 generated          | Families plan with personal vaults          |
-| stark-free-basic                  | stark-industries    | 1 generated user       | autofill-testing       | Free plan personal vault                    |
-| zero-knowledge-labs-enterprise    | zero-knowledge-labs | zero-knowledge-labs    | zero-knowledge-labs    | Full ZKL org with named folders + favorites |
+| Preset                            | Org Fixture         | Roster                 | Ciphers                | Use Case                                      |
+| --------------------------------- | ------------------- | ---------------------- | ---------------------- | --------------------------------------------- |
+| enterprise-basic                  | redwood-analytics   | enterprise-basic       | enterprise-basic       | Standard enterprise org                       |
+| collection-permissions-enterprise | cobalt-logistics    | collection-permissions | collection-permissions | Permission edge cases                         |
+| dunder-mifflin-enterprise-full    | dunder-mifflin      | dunder-mifflin         | autofill-testing       | Large handcrafted org                         |
+| families-basic                    | adams-family        | family                 | 150 generated          | Families plan with personal vaults + reprompt |
+| stark-free-basic                  | stark-industries    | 1 generated user       | autofill-testing       | Free plan personal vault                      |
+| zero-knowledge-labs-enterprise    | zero-knowledge-labs | zero-knowledge-labs    | zero-knowledge-labs    | Full ZKL org with named folders + favorites   |
 
 `families-basic` and `stark-free-basic` mix fixtures with generated data (ciphers and personal ciphers).
 
@@ -65,6 +73,7 @@ dotnet run -- preset --name scale.{name} --mangle
 - **Cipher types**: Most use `realistic` (60% Login, 15% SecureNote, 12% Card, 10% Identity, 3% SSHKey). Umbrella Corp uses `documentationHeavy` (40/40 Login/SecureNote). Tyrell Corp uses `developerFocused` (50% Login, 20% SSHKey).
 - **Personal ciphers**: Sterling Cooper and Wayne Enterprises use `realistic` distribution. Weyland-Yutani uses `lightUsage`. Use `heavyUsage` only for small/mid orgs — at XL scale it produces 300K+ ciphers and will timeout.
 - **Folders**: Wayne Enterprises uses `enterprise` folder distribution. Weyland-Yutani uses `minimal`.
+- **Archive & delete**: All nine presets set `cipherAssignment.deletedRate` (2-5%, capped at 25) and `archivedRate` (4-8%, capped at 50), tuned to each org's orphan-rate/permission story — tidier orgs (Central Perk) trend lower, locked-down/hierarchical orgs (Bluth Company, Tyrell Corp) and Initech's high-orphan mega-dump trend higher. Both rates apply to org ciphers (archived-for a round-robin-selected org member); the three presets with personal ciphers enabled (Sterling Cooper, Wayne Enterprises, Weyland-Yutani) apply the same rates a second time against their personal-cipher pool, so those three seed archived/deleted items in both places.
 
 For per-preset expected values and verification queries, see [verification.md](verification.md).
 
@@ -76,14 +85,15 @@ Individual user accounts with no organization. Useful for testing personal vault
 dotnet run -- preset --name individual.{name} --mangle
 ```
 
-| Preset        | Account Type | Folders                              | Ciphers                      | Assignments              |
-| ------------- | ------------ | ------------------------------------ | ---------------------------- | ------------------------ |
-| free          | Free         | —                                    | 0                            | —                        |
-| premium       | Premium (1GB)| —                                    | 0                            | —                        |
+| Preset         | Account Type  | Folders | Ciphers     | Assignments |
+| -------------- | ------------- | ------- | ----------- | ----------- |
+| free           | Free          | —       | 0           | —           |
+| premium        | Premium (1GB) | —       | 0           | —           |
+| blob-migration | Premium (1GB) | —       | 7 (fixture) | —           |
 
 `free` and `premium` create accounts with no vault data — useful for testing account setup flows. Cipher count is set to 0 (TBD).
 
-**Login emails:** `free` uses `freeuser@individual.example`; `premium` uses `premuser@individual.example`.
+**Login emails:** `free` uses `freeuser@individual.example`; `premium` uses `premuser@individual.example`; `blob-migration` uses `blobmigration@individual.example`.
 
 ## Validation
 

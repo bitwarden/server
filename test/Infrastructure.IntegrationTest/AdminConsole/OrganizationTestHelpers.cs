@@ -4,7 +4,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-
+using Bit.Core.Utilities;
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole;
 
 /// <summary>
@@ -16,7 +16,7 @@ public static class OrganizationTestHelpers
 {
     public static Task<User> CreateTestUserAsync(this IUserRepository userRepository, string identifier = "test")
     {
-        var id = Guid.NewGuid();
+        var id = CoreHelpers.GenerateComb();
         return userRepository.CreateAsync(new User
         {
             Id = id,
@@ -34,7 +34,7 @@ public static class OrganizationTestHelpers
         int? seatCount = null,
         string identifier = "test")
     {
-        var id = Guid.NewGuid();
+        var id = CoreHelpers.GenerateComb();
         return organizationRepository.CreateAsync(new Organization
         {
             Name = $"{identifier}-{id}",
@@ -97,6 +97,8 @@ public static class OrganizationTestHelpers
             UsePhishingBlocker = true,
             UseDisableSmAdsForUsers = true,
             UseMyItems = true,
+            UseInviteLinks = true,
+            UsePam = true,
         });
     }
 
@@ -163,6 +165,22 @@ public static class OrganizationTestHelpers
             Type = OrganizationUserType.Owner
         });
 
+    /// <summary>
+    /// Creates a Staged member (provisioned but not invited) for the specified organization and user.
+    /// Staged members do not consume a seat and are not subject to organization policies.
+    /// </summary>
+    public static Task<OrganizationUser> CreateStagedTestOrganizationUserAsync(
+        this IOrganizationUserRepository organizationUserRepository,
+        Organization organization,
+        User user)
+        => organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Staged,
+            Type = OrganizationUserType.User
+        });
+
     public static Task<Group> CreateTestGroupAsync(
         this IGroupRepository groupRepository,
         Organization organization,
@@ -190,8 +208,8 @@ public static class OrganizationTestHelpers
             Code = Guid.NewGuid(),
             OrganizationId = organization.Id,
             AllowedDomains = "[\"example.com\"]",
-            EncryptedInviteKey = $"encrypted-key-{identifier}",
-            EncryptedOrgKey = $"encrypted-org-key-{identifier}",
+            Invite = $"invite-blob-{identifier}",
+            SupportsConfirmation = true,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         });

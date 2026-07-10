@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Context;
 using Bit.Core.Services;
-using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -55,7 +54,8 @@ public class Startup
         // Services
         var usingServiceBusAppCache = CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
-        services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
+        services.AddOrganizationAbilityCache(globalSettings);
+        services.AddProviderAbilityCache(globalSettings);
 
         if (usingServiceBusAppCache)
         {

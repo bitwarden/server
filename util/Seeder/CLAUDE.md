@@ -98,6 +98,10 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 **Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
 
+## Data/ File Organization
+
+New files under `Data/` belong in the matching subfolder (`Distributions/`, `Enums/`, `Generators/`, `Static/`) — never loose at the top level. See `Data/README.md` for what each subfolder holds. If a new file's concern doesn't fit an existing subfolder, that's a signal to create one, not to drop it loose.
+
 ## The Recipe Contract
 
 Recipes follow strict rules:
@@ -124,11 +128,13 @@ The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarde
 ## Data Flow
 
 ### Pipeline path (fixture → entity)
+
 ```
 SeedVaultItem → CipherSeed.FromSeedItem() → CipherSeed → {Type}CipherSeeder.Create(options) → CipherViewDto → encrypt_fields (Rust FFI) → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
 ```
 
 ### Core encryption (shared by all paths)
+
 ```
 CipherViewDto → JSON + [EncryptProperty] field paths → encrypt_fields (Rust FFI, bitwarden_crypto) → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
 ```
@@ -148,6 +154,34 @@ Same domain = same seed = reproducible data:
 ```csharp
 var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
+
+## Scenarios
+
+Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an engineering problem to a Seeder command.
+
+**Maintenance rules:**
+
+- When adding a new preset, check if an existing scenario should reference it as a variation
+- When adding a new command or flag, check if it enables a new scenario or changes an existing one
+- When CLI flags, commands, or preset names change, scan all `*.md` files under `Seeds/` and `SeederUtility/` for stale references
+- Scenario files follow the template in `Seeds/docs/scenarios/README.md`
+- Never duplicate CLI flag documentation — link to `SeederUtility/README.md`
+- Never duplicate preset catalog details — link to `Seeds/docs/presets.md`
+- Scenarios describe _why_ (the problem). READMEs describe _how_ (the tool). Keep the split clean.
+
+**File relationships:**
+
+- `SeederUtility/README.md` → CLI reference (commands, flags, examples) → links to scenarios
+- `Seeds/docs/presets.md` → what exists (the catalog) → scenarios link back to it
+- `Seeds/docs/scenarios/` → why you'd use it (problem → command)
+
+## Collection Management Settings
+
+**Collection management settings are not plan-gated.** `AllowAdminAccessToAllCollectionItems`, `LimitCollectionCreation`, `LimitCollectionDeletion`, and `LimitItemDeletion` apply identically across all plan types. They are org-level admin settings, not billing-plan features.
+
+**These settings alter access control behavior.** When seeding scenarios that test member vs. admin permissions, collection creation/deletion policies, or item-level access, set them explicitly in the preset rather than relying on defaults.
+
+**Configurable in presets and CLI.** Use the JSON preset `organization` block (e.g. `"limitCollectionCreation": true`) or the CLI flags: `--limit-collection-creation`, `--limit-collection-deletion`, `--limit-item-deletion`, `--allow-admin-collection-access`.
 
 ## Security Reminders
 

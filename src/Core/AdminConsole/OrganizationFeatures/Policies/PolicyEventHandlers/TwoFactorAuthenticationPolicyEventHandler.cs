@@ -67,8 +67,7 @@ public class TwoFactorAuthenticationPolicyEventHandler : IOnPolicyPreUpdateEvent
 
         var currentActiveRevocableOrganizationUsers =
             (await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
-            .Where(ou => ou.Status != OrganizationUserStatusType.Invited &&
-                         ou.Status != OrganizationUserStatusType.Revoked &&
+            .Where(ou => ou.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed &&
                          ou.Type != OrganizationUserType.Owner &&
                          ou.Type != OrganizationUserType.Admin &&
                          !(performedBy is StandardUser stdUser && stdUser.UserId == ou.UserId))
@@ -97,7 +96,10 @@ public class TwoFactorAuthenticationPolicyEventHandler : IOnPolicyPreUpdateEvent
         }
 
         var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-            new RevokeOrganizationUsersRequest(organizationId, nonCompliantUsers.Select(x => x.user), performedBy));
+            new RevokeOrganizationUsersRequest(organizationId,
+                nonCompliantUsers.Select(x => x.user),
+                performedBy,
+                RevocationReason.TwoFactorPolicyNonCompliance));
 
         if (commandResult.HasErrors)
         {

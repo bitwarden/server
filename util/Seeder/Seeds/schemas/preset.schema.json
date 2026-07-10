@@ -30,6 +30,12 @@
           "type": "string",
           "description": "Organization domain (used with inline creation and generator seeding)."
         },
+        "claimedDomains": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Claimed (verified) organization domains to seed. Each becomes a verified OrganizationDomain row."
+        },
         "seats": {
           "type": "integer",
           "minimum": 1,
@@ -48,6 +54,26 @@
             "families-annually"
           ],
           "description": "Billing plan type. Defaults to enterprise-annually if omitted."
+        },
+        "useAutomaticUserConfirmation": {
+          "type": "boolean",
+          "description": "When true, invited users are automatically confirmed without manual admin approval."
+        },
+        "allowAdminAccessToAllCollectionItems": {
+          "type": "boolean",
+          "description": "When true, admins, owners, and some custom users can read/write all collections and items."
+        },
+        "limitItemDeletion": {
+          "type": "boolean",
+          "description": "When true, members can only delete items when they have Can Manage permission."
+        },
+        "limitCollectionCreation": {
+          "type": "boolean",
+          "description": "When true, only owners, admins, and some custom users can create collections."
+        },
+        "limitCollectionDeletion": {
+          "type": "boolean",
+          "description": "When true, only owners, admins, and some custom users can delete collections."
         }
       }
     },
@@ -136,6 +162,12 @@
           "type": "boolean",
           "default": false,
           "description": "When true, assigns generated ciphers to user folders round-robin. Requires 'folders' to be true."
+        },
+        "repromptEveryNthCipher": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Set Reprompt=Password on every Nth generated cipher. 0 = disabled."
         }
       }
     },
@@ -148,6 +180,12 @@
           "type": "integer",
           "minimum": 1,
           "description": "Number of personal ciphers to generate per user."
+        },
+        "repromptEveryNthCipher": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Set Reprompt=Password on every Nth generated personal cipher. 0 = disabled."
         }
       },
       "required": ["countPerUser"]
@@ -357,6 +395,34 @@
               "minimum": 1,
               "maximum": 10,
               "description": "Maximum number of collections a multi-collection cipher can belong to. Default: 2."
+            },
+            "archivedRate": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Fraction of ciphers that get an archived state. Applies independently to both the personal-vault and org cipher pools, each against its own size and maxArchivedCiphers cap. Default: 0."
+            },
+            "deletedRate": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Fraction of personal-vault and org ciphers that get a deleted (DeletedDate) state, computed independently per pool. Default: 0."
+            },
+            "archivedAndDeletedOverlapRate": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Fraction of the eligible cipher pool (personal or org, computed independently per pool) deliberately made both archived and deleted. Drawn from the archived set. Default: 0."
+            },
+            "maxArchivedCiphers": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Absolute cap on archived ciphers produced in one run. Default: 50."
+            },
+            "maxDeletedCiphers": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Absolute cap on deleted ciphers produced in one run. Default: 25."
             }
           }
         },

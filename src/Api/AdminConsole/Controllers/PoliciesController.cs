@@ -134,14 +134,7 @@ public class PoliciesController : Controller
 
     [HttpPut("{type}")]
     [Authorize<ManagePoliciesRequirement>]
-    public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] PolicyRequestModel model)
-    {
-        return await PutVNext(orgId, type, new SavePolicyRequest { Policy = model });
-    }
-
-    [HttpPut("{type}/vnext")]
-    [Authorize<ManagePoliciesRequirement>]
-    public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
+    public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
     {
         var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, type, _currentContext);
 
