@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -159,6 +160,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var nonCompliantSend1 = new Send
         {
@@ -205,6 +209,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var otherwiseCompliantSend1 = new Send
         {
@@ -251,6 +258,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -300,6 +310,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -354,6 +367,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -408,6 +424,9 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -469,6 +488,10 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
+
         var compliantSend = new Send
         {
             Id = Guid.NewGuid(),
@@ -486,6 +509,61 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<ISendRepository>()
             .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([compliantSend, nonCompliantSend]);
+
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
+            new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
+
+        await sutProvider.GetDependency<ISendRepository>()
+            .Received(1)
+            .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count() == 1 && l.ElementAt(0) == compliantSend.Id), false);
+        await sutProvider.GetDependency<ISendRepository>()
+            .Received(1)
+            .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count() == 1 && l.ElementAt(0) == nonCompliantSend.Id), true);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExecutePostUpsertSideEffectAsync_DeletionHoursDisablesNoncompliantSends(
+        [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
+        [Policy(PolicyType.DisableSend, enabled: false)] Policy existingDisableSendPolicy,
+        [Policy(PolicyType.SendOptions, enabled: false)] Policy existingSendOptionsPolicy,
+        SutProvider<SendControlsSyncPolicyEvent> sutProvider)
+    {
+        postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
+        existingDisableSendPolicy.OrganizationId = policyUpdate.OrganizationId;
+        existingSendOptionsPolicy.OrganizationId = policyUpdate.OrganizationId;
+        postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DeletionHours = 72 });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.DisableSend)
+            .Returns(existingDisableSendPolicy);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
+            .Returns(existingSendOptionsPolicy);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
+            .Returns(true);
+
+        var twoDaysAgo = DateTime.UtcNow.AddDays(-2);
+        var nonCompliantSend = new Send
+        {
+            Id = Guid.NewGuid(),
+            CreationDate = twoDaysAgo,
+            DeletionDate = twoDaysAgo.AddDays(7)
+        };
+        var compliantSend = new Send
+        {
+            Id = Guid.NewGuid(),
+            CreationDate = twoDaysAgo,
+            DeletionDate = twoDaysAgo.AddDays(3)
+        };
+        var sendIds = new List<Guid>([nonCompliantSend.Id, compliantSend.Id]);
+        sutProvider.GetDependency<ISendRepository>()
+            .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(sendIds);
+        sutProvider.GetDependency<ISendRepository>()
+            .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([nonCompliantSend, compliantSend]);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
             new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);

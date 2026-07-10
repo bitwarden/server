@@ -35,6 +35,11 @@ public class SendControlsPolicyRequirement : IPolicyRequirement
     /// Indicates the types of Send that can be created
     /// </summary>
     public SendType[]? AllowedSendTypes { get; init; }
+
+    /// <summary>
+    /// Indicates the deletion date interval that Sends must use
+    /// </summary>
+    public int? DeletionHours { get; init; }
 }
 
 public class SendControlsPolicyRequirementFactory : BasePolicyRequirementFactory<SendControlsPolicyRequirement>
@@ -54,6 +59,7 @@ public class SendControlsPolicyRequirementFactory : BasePolicyRequirementFactory
                     WhoCanAccess = result.WhoCanAccess ?? data.WhoCanAccess,
                     AllowedDomains = result.AllowedDomains ?? data.AllowedDomains,
                     AllowedSendTypes = result.AllowedSendTypes ?? data.AllowedSendTypes,
+                    DeletionHours = result.DeletionHours ?? data.DeletionHours,
                 });
     }
 }

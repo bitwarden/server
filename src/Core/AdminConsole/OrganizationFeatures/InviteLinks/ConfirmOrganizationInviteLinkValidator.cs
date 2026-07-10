@@ -1,15 +1,17 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Diagnostics;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -56,18 +58,18 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         if (!organization.UseInviteLinks)
         {
-            return new InviteLinkNotAvailable();
+            return new ConfirmInviteLinkNotAvailable();
         }
 
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
         {
-            return new EmailDomainNotAllowed();
+            return new ConfirmEmailDomainNotAllowed();
         }
 
         // Provider users cannot confirm via invite links.
         if ((await providerUserRepository.GetManyByUserAsync(user.Id)).Count != 0)
         {
-            return new ProviderUsersCannotAcceptInviteLink();
+            return new ConfirmProviderUsersCannotAcceptInviteLink();
         }
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
@@ -76,6 +78,12 @@ public class ConfirmOrganizationInviteLinkValidator(
         if (membershipStatusError is not null)
         {
             return membershipStatusError;
+        }
+
+        var freeAdminError = await ValidateFreeOrganizationAdminLimitAsync(organization, existingOrganizationUser, user);
+        if (freeAdminError is not null)
+        {
+            return freeAdminError;
         }
 
         // A seat is only consumed when a brand-new membership will be created. An existing pending
@@ -121,10 +129,24 @@ public class ConfirmOrganizationInviteLinkValidator(
     private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser) =>
         existingOrganizationUser switch
         {
-            { RevocationReason: not null } => new OrganizationAccessRevoked(),
-            { Status: OrganizationUserStatusType.Confirmed } => new AlreadyOrganizationMember(),
+            { RevocationReason: not null } => new ConfirmOrganizationAccessRevoked(),
+            { Status: OrganizationUserStatusType.Confirmed } => new ConfirmAlreadyOrganizationMember(),
             _ => null
         };
+
+    private async Task<Error?> ValidateFreeOrganizationAdminLimitAsync(
+        Organization targetOrganization, OrganizationUser? existingOrganizationUser, User user)
+    {
+        if (existingOrganizationUser?.Type is OrganizationUserType.Owner
+                or OrganizationUserType.Admin
+                && targetOrganization.PlanType == PlanType.Free
+                && await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id) > 0)
+        {
+            return new ConfirmOnlyOneFreeOrganizationAdminAllowed();
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Enforces the membership policies that gate confirmation: Single Organization and Require Two-Factor
@@ -140,7 +162,16 @@ public class ConfirmOrganizationInviteLinkValidator(
         var singleOrgError = singleOrgRequirement.CanJoinOrganization(organizationId, allOrganizationMemberships);
         if (singleOrgError is not null)
         {
-            return singleOrgError;
+            // Translate the shared policy error into the link-confirm validation-problem variant so the
+            // endpoint always returns the RFC 7807 shape. CanJoinOrganization only produces the two errors
+            // below; a new one must be mapped here rather than silently falling back to a plain 400.
+            return singleOrgError switch
+            {
+                UserIsAMemberOfAnotherOrganization => new ConfirmUserIsAMemberOfAnotherOrganization(),
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new ConfirmUserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy(),
+                _ => throw new UnreachableException(
+                    $"Unmapped Single Organization policy error: {singleOrgError.GetType().Name}")
+            };
         }
 
         if (!await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
@@ -149,7 +180,7 @@ public class ConfirmOrganizationInviteLinkValidator(
                 .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
             if (twoFactorRequirement.IsTwoFactorRequiredForOrganization(organizationId))
             {
-                return new TwoFactorRequiredForMembership();
+                return new ConfirmTwoFactorRequiredForMembership();
             }
         }
 
@@ -172,7 +203,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         return InviteUsersPasswordManagerValidator.ValidatePasswordManager(subscriptionUpdate)
             is PasswordManagerValidation.Invalid<PasswordManagerSubscriptionUpdate>
-            ? new OrganizationHasNoAvailableSeats()
+            ? new ConfirmOrganizationHasNoAvailableSeats()
             : null;
     }
 }

@@ -29,6 +29,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
@@ -149,6 +150,7 @@ public static class OrganizationServiceCollectionExtensions
 
     private static void AddOrganizationUserCommands(this IServiceCollection services)
     {
+        services.TryAddScoped<IOrganizationUserValidationService, OrganizationUserValidationService>();
         services.AddScoped<IRemoveOrganizationUserCommand, RemoveOrganizationUserCommand>();
         services.AddScoped<IRevokeNonCompliantOrganizationUserCommand, RevokeNonCompliantOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
@@ -209,6 +211,7 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IRefreshOrganizationInviteLinkCommand, RefreshOrganizationInviteLinkCommand>();
         services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
+        services.TryAddScoped<IConfirmOrganizationInviteLinkCommand, ConfirmOrganizationInviteLinkCommand>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
