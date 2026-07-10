@@ -33,7 +33,15 @@ public static class ServiceCollectionExtension
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
         services.TryAddSingleton<ISeedReader, SeedReader>();
 
-        services.AddDataProtection().SetApplicationName("Bitwarden");
+        var dpBuilder = services.AddDataProtection().SetApplicationName("Bitwarden");
+        // Persist DataProtection keys to a shared directory when configured, so
+        // records this tool encrypts are decryptable by the running app. Needed
+        // when seeding an instance whose components share a DataProtection key ring
+        // (e.g. self-host). No-op when the directory isn't set.
+        if (!string.IsNullOrWhiteSpace(globalSettings.DataProtection.Directory))
+        {
+            dpBuilder.PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
+        }
 
         services.AddDatabaseRepositories(globalSettings);
 
