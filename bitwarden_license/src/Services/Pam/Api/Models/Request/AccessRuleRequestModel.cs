@@ -2,7 +2,7 @@
 
 namespace Bit.Services.Pam.Api.Models.Request;
 
-public class AccessRuleRequestModel
+public class AccessRuleRequestModel : IValidatableObject
 {
     /// <summary>
     /// The rule's display name, shown wherever rules are listed and managed. Required; up to 256 characters.
@@ -23,12 +23,18 @@ public class AccessRuleRequestModel
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// The condition tree that decides how access is granted under this rule — for example requiring human
-    /// approval, or restricting to certain times of day or source IPs. Sent as a JSON object and stored verbatim;
-    /// an empty or null value means the rule imposes no conditions.
+    /// The conditions that govern when this access rule permits a request.
+    /// Each condition is a typed union discriminated by the <c>kind</c> field.
+    /// Supported kinds: <c>human_approval</c> (bare object, no payload) and
+    /// <c>ip_allowlist</c> (requires a non-empty <c>cidrs</c> list of canonical,
+    /// host-bit-free CIDR strings). Unknown kinds are rejected (fail-closed).
+    /// The field itself is required: omitting it fails validation, while an explicitly empty
+    /// array is valid and means the rule imposes no conditions.
+    /// Maximum 10 conditions per rule.
     /// </summary>
     [Required]
-    public object Conditions { get; set; } = null!;
+    [MaxLength(10)]
+    public List<AccessConditionModel> Conditions { get; set; } = null!;
 
     /// <summary>
     /// When true, the rule enforces a per-cipher singleton (at most one active lease per cipher across all users).
@@ -65,4 +71,50 @@ public class AccessRuleRequestModel
     /// </summary>
     [Required]
     public IEnumerable<Guid> Collections { get; set; } = null!;
+
+    /// <inheritdoc />
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        // Recurse into condition items — Validator.TryValidateObject does not walk collection
+        // elements automatically, so we validate each condition and prefix member names with the
+        // index so callers can identify which item failed.
+        for (var i = 0; i < Conditions.Count; i++)
+        {
+            var condition = Conditions[i];
+            // JSON binding produces a null element for a literal null in the array; reject it here
+            // rather than letting ValidationContext throw.
+            if (condition is null)
+            {
+                yield return new ValidationResult(
+                    $"Conditions[{i}] must not be null.",
+                    [$"Conditions[{i}]"]);
+                continue;
+            }
+
+            // A condition that bound to the base type had no 'kind' discriminator (binding falls
+            // back to the concrete base rather than throwing — see AccessConditionModel). Reject
+            // it instead of accepting a meaningless no-op condition.
+            if (condition.GetType() == typeof(AccessConditionModel))
+            {
+                yield return new ValidationResult(
+                    $"Conditions[{i}] must include a 'kind' discriminator.",
+                    [$"Conditions[{i}]"]);
+                continue;
+            }
+
+            var conditionContext = new ValidationContext(condition);
+            var conditionResults = new List<ValidationResult>();
+            if (!Validator.TryValidateObject(condition, conditionContext, conditionResults, validateAllProperties: true))
+            {
+                foreach (var result in conditionResults)
+                {
+                    var memberNames = result.MemberNames
+                        .Select(m => $"Conditions[{i}].{m}")
+                        .DefaultIfEmpty($"Conditions[{i}]")
+                        .ToArray();
+                    yield return new ValidationResult(result.ErrorMessage, memberNames);
+                }
+            }
+        }
+    }
 }

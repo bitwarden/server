@@ -34,6 +34,11 @@ public static class PamEndpointsExtensions
         // Every PAM endpoint funnels thrown exceptions through PamExceptionHandlerEndpointFilter, which renders
         // them as ErrorResponseModel. Produces<T> is only available on RouteHandlerBuilder, so document the common
         // cases once for the whole group by adding the ApiExplorer metadata directly.
+        //
+        // Known limitation: binding-time rejections (malformed JSON, unknown/missing condition 'kind', unknown
+        // members) are produced by RequestDelegateFactory BEFORE any endpoint filter runs, so those 400s have an
+        // empty body rather than the ErrorResponseModel shape documented here. Only validation and handler
+        // failures carry the structured body.
         group.WithMetadata(
             new ProducesResponseTypeMetadata(StatusCodes.Status400BadRequest, typeof(ErrorResponseModel), ["application/json"]),
             new ProducesResponseTypeMetadata(StatusCodes.Status404NotFound, typeof(ErrorResponseModel), ["application/json"]));

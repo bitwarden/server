@@ -8,6 +8,12 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddPamServices(this IServiceCollection services)
     {
+        // The SDK's serde tagging accepts the 'kind' discriminator at any position in the object;
+        // without this flag System.Text.Json requires it first and fails binding with an
+        // exception that surfaces as a 500 (see AccessConditionModel).
+        services.ConfigureHttpJsonOptions(options =>
+            options.SerializerOptions.AllowOutOfOrderMetadataProperties = true);
+
         // Minimal API endpoint handlers. The endpoints (see PamEndpointsExtensions) resolve these from DI.
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();

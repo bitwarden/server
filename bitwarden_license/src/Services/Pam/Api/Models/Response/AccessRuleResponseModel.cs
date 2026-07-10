@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using Bit.HttpExtensions;
+﻿using Bit.HttpExtensions;
+using Bit.Services.Pam.Api.Models.Request;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -36,11 +36,11 @@ public class AccessRuleResponseModel : ResponseModel
     public bool Enabled { get; set; }
 
     /// <summary>
-    /// The condition tree that decides how access is granted under this rule — for example requiring human
-    /// approval, or restricting to certain times of day or source IPs. Returned as a JSON object; null when the
-    /// rule imposes no conditions.
+    /// The conditions that govern when this access rule permits a request — for example requiring
+    /// human approval, or restricting to certain source IPs. An empty list means the rule imposes
+    /// no conditions.
     /// </summary>
-    public JsonElement? Conditions { get; set; }
+    public List<AccessConditionModel> Conditions { get; set; } = [];
 
     /// <summary>
     /// When true, the rule enforces a per-cipher singleton (at most one active lease per cipher across all users).
