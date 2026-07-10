@@ -154,10 +154,7 @@ public class CollectController : Controller
                         continue;
                     }
 
-                    // Verify the caller is a member of the target organization before logging.
-                    // Without this guard any authenticated user could forge these audit-log
-                    // events into any organization (see PM-38773). Mirrors the membership check
-                    // used by the Organization_ItemOrganization_* and PhishingBlocker_* branches.
+                    // Drop the event if the caller is not a member of the target organization.
                     var orgMembership = await _organizationUserRepository.GetByOrganizationAsync(
                         eventModel.OrganizationId.Value, _currentContext.UserId.Value);
                     if (orgMembership == null)
