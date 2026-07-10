@@ -252,11 +252,15 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     }
 
     /*
-    * Test to verify /Account/ExternalCallback returns error when an existing user
-    * (not using Key Connector) has no org user record - they were removed from the organization.
+    * Test to verify /Account/ExternalCallback redirects an existing user (not using
+    * Key Connector) with no OrganizationUser row back to the web vault's /login with
+    * the OrgMembershipRequired errorCode + context. Covers both the user who clicked
+    * an open invite link (client has the invite stashed) and the user with no pending
+    * invite at all — the server cannot tell them apart, so this single redirect
+    * contract serves both.
     */
     [Fact]
-    public async Task ExternalCallback_WithExistingUser_AndNoOrgUser_ReturnsError()
+    public async Task ExternalCallback_WithExistingUser_AndNoOrgUser_RedirectsToWebVaultLogin()
     {
         // Arrange
         var testData = await new SsoTestDataBuilder()
@@ -264,15 +268,30 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
             .WithUser()
             .BuildAsync();
 
-        var client = testData.Factory.CreateClient();
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false // Capture the redirect rather than following to the (non-existent) web vault.
+        });
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert - Should fail because user exists but has no org user record
-        var stringResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains("You were removed from the organization managing single sign-on for your account. Contact the organization administrator", stringResponse);
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        // Assert — 302 to the web vault /login with the expected query-string context.
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+
+        var location = response.Headers.Location!.ToString();
+        Assert.Contains("/login?", location);
+        Assert.Contains("error=ssoOrgMembershipRequired", location);
+
+        // The redirect carries the seeded user's email, the org id (stable match key), and
+        // the org display name (URL-encoded, for the toast) so the web client can pre-fill
+        // /login and dispatch its match/no-match split.
+        Assert.Contains($"email={Uri.EscapeDataString(testData.User!.Email)}", location);
+        Assert.Contains($"organizationId={testData.Organization!.Id}", location);
+        Assert.Contains(
+            $"organizationName={Uri.EscapeDataString(testData.Organization!.DisplayName())}",
+            location);
     }
 
     /*

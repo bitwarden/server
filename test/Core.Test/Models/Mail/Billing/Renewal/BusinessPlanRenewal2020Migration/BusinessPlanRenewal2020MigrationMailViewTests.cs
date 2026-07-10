@@ -47,9 +47,38 @@ public class BusinessPlanRenewal2020MigrationMailViewTests
         Assert.Equal(expected, view.TotalPeriod);
     }
 
+    [Fact]
+    public void ShowProactiveDiscountCopy_IsFalse_WhenNoMonths()
+    {
+        var view = BuildView(proactiveDiscountMonths: 0);
+
+        Assert.False(view.ShowProactiveDiscountCopy);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(12)]
+    public void ShowProactiveDiscountCopy_IsTrue_WhenPositiveMonths(int months)
+    {
+        var view = BuildView(proactiveDiscountMonths: months);
+
+        Assert.True(view.ShowProactiveDiscountCopy);
+    }
+
+    [Theory]
+    [InlineData(1, "next month")]
+    [InlineData(12, "next 12 months")]
+    public void ProactiveDiscountDurationPhrase_FollowsMonthCount(int months, string expected)
+    {
+        var view = BuildView(proactiveDiscountMonths: months);
+
+        Assert.Equal(expected, view.ProactiveDiscountDurationPhrase);
+    }
+
     private static BusinessPlanRenewal2020MigrationMailView BuildView(
         List<string>? discountLines = null,
-        bool isAnnual = true) =>
+        bool isAnnual = true,
+        int proactiveDiscountMonths = 0) =>
         new()
         {
             RenewalDate = "June 12, 2026",
@@ -57,6 +86,7 @@ public class BusinessPlanRenewal2020MigrationMailViewTests
             PerUserMonthlyPrice = "$6.00",
             IsAnnual = isAnnual,
             TotalPrice = "$23,040.00",
-            DiscountLines = discountLines ?? []
+            DiscountLines = discountLines ?? [],
+            ProactiveDiscountMonths = proactiveDiscountMonths
         };
 }

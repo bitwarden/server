@@ -264,6 +264,7 @@ public class UpgradePremiumToOrganizationCommand(
             UsersGetPremium = targetPlan.UsersGetPremium,
             UseCustomPermissions = targetPlan.HasCustomPermissions,
             UseScim = targetPlan.HasScim,
+            UseRiskInsights = targetPlan.HasRiskInsights,
             Plan = targetPlan.Name,
             Gateway = GatewayType.Stripe,
             Enabled = true,

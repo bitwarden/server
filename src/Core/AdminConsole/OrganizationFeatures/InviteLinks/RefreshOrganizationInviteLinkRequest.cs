@@ -3,10 +3,14 @@
 public record RefreshOrganizationInviteLinkRequest
 {
     public required Guid OrganizationId { get; init; }
-    public required string EncryptedInviteKey { get; init; }
 
     /// <summary>
-    /// The organization key encrypted for the invite link. Currently unused; will be populated in a future stage.
+    /// The invite link cryptographic blob.
     /// </summary>
-    public string? EncryptedOrgKey { get; init; }
+    public required string Invite { get; init; }
+
+    /// <summary>
+    /// Indicates if the link supports user auto confirmation (not supported yet).
+    /// </summary>
+    public required bool SupportsConfirmation { get; init; }
 }
