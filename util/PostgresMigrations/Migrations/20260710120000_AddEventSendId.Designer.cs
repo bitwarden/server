@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260626233053_AddEventSendId")]
+    [Migration("20260710120000_AddEventSendId")]
     partial class AddEventSendId
     {
         /// <inheritdoc />
