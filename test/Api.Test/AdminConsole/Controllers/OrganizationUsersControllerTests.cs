@@ -847,6 +847,27 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task Put_WhenFeatureFlagEnabled_PassesRequestedEmailToV2Request(
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, organizationAbility, userId, featureEnabled: true);
+        model.Email = "new@claimed.example.com";
+
+        V2_UpdateUserCommand.UpdateOrganizationUserRequest captured = null;
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Do<V2_UpdateUserCommand.UpdateOrganizationUserRequest>(r => captured = r))
+            .Returns(new CommandResult(new None()));
+
+        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.IsType<NoContent>(result);
+        Assert.NotNull(captured);
+        Assert.Equal("new@claimed.example.com", captured.NewEmail);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task Put_WhenFeatureFlagEnabledAndCommandFails_MapsErrorToStatus(
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)

@@ -441,6 +441,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 model.AccessSecretsManager,
                 collectionAccessToSave,
                 groupsToSave,
+                model.Email,
+                model.DefaultUserCollectionName,
                 new StandardUser(
                     userId,
                     await _currentContext.OrganizationOwner(organization.Id),
