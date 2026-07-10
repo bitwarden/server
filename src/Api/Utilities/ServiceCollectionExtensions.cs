@@ -1,4 +1,6 @@
-﻿using Bit.Api.AdminConsole.Authorization;
+﻿using System.Reflection;
+using System.Text.Json.Serialization;
+using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.Tools.Authorization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -75,6 +77,50 @@ public static class ServiceCollectionExtensions
             });
 
             config.DescribeAllParametersInCamelCase();
+
+            // Emit oneOf/discriminator for polymorphic type hierarchies that explicitly opt in via
+            // [JsonPolymorphic] + [JsonDerivedType] attributes (currently only AccessConditionModel).
+            // We use explicit selectors instead of the default assembly-scanning SubTypesSelector
+            // because the default scanner picks up the entire ResponseModel/ErrorResponseModel
+            // inheritance tree, which pulls two same-named ErrorResponseModel classes into the same
+            // document and causes a schemaId collision. Explicit selectors scope polymorphism strictly
+            // to [JsonPolymorphic] opt-in hierarchies, leaving everything else untouched.
+            config.UseOneOfForPolymorphism();
+            config.SelectSubTypesUsing(baseType =>
+                baseType.GetCustomAttributes<JsonDerivedTypeAttribute>(inherit: false)
+                    .Select(a => a.DerivedType));
+            config.SelectDiscriminatorNameUsing(baseType =>
+            {
+                if (!baseType.GetCustomAttributes<JsonDerivedTypeAttribute>(inherit: false).Any())
+                {
+                    return null;
+                }
+
+                // System.Text.Json's discriminator when [JsonPolymorphic] is absent or sets no
+                // name is "$type"; mirror that default so an opted-in hierarchy never emits oneOf
+                // schemas without a discriminator (Swashbuckle skips the discriminator entirely
+                // when this selector returns null, and clients generated from such a spec omit
+                // the property the server requires).
+                return baseType.GetCustomAttribute<JsonPolymorphicAttribute>(inherit: false)
+                    ?.TypeDiscriminatorPropertyName ?? "$type";
+            });
+            config.SelectDiscriminatorValueUsing(subType =>
+            {
+                // [JsonDerivedType] is declared on the BASE type; walk up until we find it.
+                var t = subType.BaseType;
+                while (t != null)
+                {
+                    var attr = t.GetCustomAttributes<JsonDerivedTypeAttribute>(inherit: false)
+                        .FirstOrDefault(a => a.DerivedType == subType);
+                    if (attr != null)
+                    {
+                        return attr.TypeDiscriminator?.ToString();
+                    }
+                    t = t.BaseType;
+                }
+                return null;
+            });
+
             // config.UseReferencedDefinitionsForEnums();
 
             config.InitializeSwaggerFilters(environment);
