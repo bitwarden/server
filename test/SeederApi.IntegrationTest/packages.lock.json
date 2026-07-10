@@ -238,6 +238,11 @@
         "resolved": "5.1.1",
         "contentHash": "rpYtIczkzGpf+EkZgDr9CClTdemhsrwA/W5hMoPjLkRFnXzH44zDLoovXeKtmxb1ykXK9aJVODSpiJml8CTw2g=="
       },
+      "CommandDotNet": {
+        "type": "Transitive",
+        "resolved": "7.0.5",
+        "contentHash": "ylfToPNWZLw29qe1NCI6Rc7ixWp3MzKNqmMwERBnfB2iS8U4QI9mgV3Zrj3/ZbIWBhJAZlOwDIR66nGFPggAvg=="
+      },
       "CsvHelper": {
         "type": "Transitive",
         "resolved": "33.1.0",
@@ -411,10 +416,10 @@
       },
       "MailKit": {
         "type": "Transitive",
-        "resolved": "4.16.0",
-        "contentHash": "trJ82DOpAmo8i1jO1vNE+dGn4mPRyeYfy4swRcAGgMJhPoI1Kohf4OFJJf0+YIj4iUxgxPn8W+ht7e7KiYzSjg==",
+        "resolved": "4.17.0",
+        "contentHash": "1nUAVLxM9fhT/78we6/AGsCesnpn5dRNLLeRqOfr52Wnk87pzVwo5YMTMyqnmoXrYc7piGhmayiMA/OgDluIjg==",
         "dependencies": {
-          "MimeKit": "4.16.0"
+          "MimeKit": "4.17.0"
         }
       },
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
@@ -830,8 +835,8 @@
       },
       "MimeKit": {
         "type": "Transitive",
-        "resolved": "4.16.0",
-        "contentHash": "X0LFxeM4gPRIhODyY/HYS9b+zRZ7y//v59rFzgS6wLxcPuZThnMtNZHtrr0fjLyRRkg3gqJBtvW36XfUzZ7Djw==",
+        "resolved": "4.17.0",
+        "contentHash": "h/KXsCreJf8RpR/PSAtlbvYtZFndp9N8Wn1Bs248AL7ITyhn+AiIY5bLTvt60tbN2mu6g8KadtBNWygTji2lqg==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.6.2",
           "System.Security.Cryptography.Pkcs": "10.0.0"
@@ -1085,6 +1090,19 @@
           "Serilog.Sinks.File": "3.2.0"
         }
       },
+      "Spectre.Console": {
+        "type": "Transitive",
+        "resolved": "0.55.2",
+        "contentHash": "yc0g12YJpmZHofGJLTQX02/uqfzJ6XHRx6pe9rANNjleQptXMHPxD9KI2/DWkXiJWddc+4oizEdGox15c89hhw==",
+        "dependencies": {
+          "Spectre.Console.Ansi": "0.55.2"
+        }
+      },
+      "Spectre.Console.Ansi": {
+        "type": "Transitive",
+        "resolved": "0.55.2",
+        "contentHash": "tN3KEJQQZwLW9HJnG5YTSAxfBwxsmg1wVuGvhGG2rM+pbl+NGaHU8pDcNofPlOXlgpkbpBMxI5t9o9qPfy3sHQ=="
+      },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
         "resolved": "2.1.6",
@@ -1275,7 +1293,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.6.0, 10.6.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1305,7 +1323,7 @@
           "Fido2.AspNet": "[3.0.1, 3.0.1]",
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "LaunchDarkly.ServerSdk": "[8.11.0, 8.11.0]",
-          "MailKit": "[4.16.0, 4.16.0]",
+          "MailKit": "[4.17.0, 4.17.0]",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.8, 10.0.8]",
           "Microsoft.AspNetCore.DataProtection": "[10.0.8, 10.0.8]",
           "Microsoft.Azure.Cosmos": "[3.52.0, 3.52.0]",
@@ -1339,7 +1357,7 @@
       "identity": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.0, )",
@@ -1347,13 +1365,13 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
-          "SharedWeb": "[2026.6.0, )"
+          "SharedWeb": "[2026.6.1, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1361,7 +1379,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1374,17 +1392,17 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Common": "[2026.6.0, )",
-          "Identity": "[2026.6.0, )",
+          "Common": "[2026.6.1, )",
+          "Identity": "[2026.6.1, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[10.0.8, 10.0.8]",
-          "Migrator": "[2026.6.0, )",
-          "Seeder": "[2026.6.0, )"
+          "Migrator": "[2026.6.1, )",
+          "Seeder": "[2026.6.1, )"
         }
       },
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -1396,26 +1414,34 @@
         "type": "Project",
         "dependencies": {
           "Bogus": "[35.6.5, 35.6.5]",
-          "Core": "[2026.6.0, )",
-          "Infrastructure.EntityFramework": "[2026.6.0, )",
-          "RustSdk": "[2026.6.0, )",
-          "SharedWeb": "[2026.6.0, )"
+          "Core": "[2026.6.1, )",
+          "Infrastructure.EntityFramework": "[2026.6.1, )",
+          "RustSdk": "[2026.6.1, )",
+          "SharedWeb": "[2026.6.1, )"
         }
       },
       "seederapi": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
-          "Seeder": "[2026.6.0, )",
-          "SharedWeb": "[2026.6.0, )"
+          "Core": "[2026.6.1, )",
+          "Seeder": "[2026.6.1, )",
+          "SharedWeb": "[2026.6.1, )"
+        }
+      },
+      "seederutility": {
+        "type": "Project",
+        "dependencies": {
+          "CommandDotNet": "[7.0.5, 7.0.5]",
+          "Seeder": "[2026.6.1, )",
+          "Spectre.Console": "[0.55.2, 0.55.2]"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
-          "Infrastructure.Dapper": "[2026.6.0, )",
-          "Infrastructure.EntityFramework": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
+          "Infrastructure.Dapper": "[2026.6.1, )",
+          "Infrastructure.EntityFramework": "[2026.6.1, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }

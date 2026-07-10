@@ -8,5 +8,7 @@ internal sealed class OrderedStep(IStep inner, int order) : IStep
 {
     internal int Order { get; } = order;
 
-    public void Execute(SeederContext context) => inner.Execute(context);
+    internal IStep Inner { get; } = inner;
+
+    public void Execute(SeederContext context) => Inner.Execute(context);
 }

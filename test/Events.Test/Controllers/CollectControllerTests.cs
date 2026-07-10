@@ -872,6 +872,54 @@ public class CollectControllerTests
     }
 
     [Theory]
+    [AutoData]
+    public async Task Post_OrganizationClientCopiedInviteLink_WithValidOrg_LogsOrgEvent(
+        Guid userId, Guid orgId, Organization organization)
+    {
+        _currentContext.UserId.Returns(userId);
+        organization.Id = orgId;
+        _organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        var eventDate = DateTime.UtcNow;
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = EventType.Organization_InviteLinkClientCopied,
+                OrganizationId = orgId,
+                Date = eventDate
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _organizationRepository.Received(1).GetByIdAsync(orgId);
+        await _eventService.Received(1).LogOrganizationEventAsync(organization, EventType.Organization_InviteLinkClientCopied, eventDate);
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task Post_OrganizationClientCopiedInviteLink_WithoutOrgId_SkipsEvent(Guid userId)
+    {
+        _currentContext.UserId.Returns(userId);
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = EventType.Organization_InviteLinkClientCopied,
+                OrganizationId = null,
+                Date = DateTime.UtcNow
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
+    }
+
+    [Theory]
     [BitAutoData(EventType.PhishingBlocker_SiteAccessed)]
     [BitAutoData(EventType.PhishingBlocker_SiteExited)]
     [BitAutoData(EventType.PhishingBlocker_Bypassed)]

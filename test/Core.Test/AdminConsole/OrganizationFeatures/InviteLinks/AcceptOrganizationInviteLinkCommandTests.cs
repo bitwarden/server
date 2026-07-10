@@ -415,6 +415,9 @@ public class AcceptOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
     }
 
     [Theory, BitAutoData]
@@ -552,6 +555,12 @@ public class AcceptOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
             .Received(1)
             .PushAsync(user.Id, organization.Id);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(
+                Arg.Is<OrganizationUser>(ou => ou.OrganizationId == organization.Id && ou.UserId == user.Id),
+                EventType.OrganizationUser_InviteLinkAccepted);
     }
 
     [Theory, BitAutoData]

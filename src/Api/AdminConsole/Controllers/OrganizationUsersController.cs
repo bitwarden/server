@@ -10,6 +10,7 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
@@ -67,7 +68,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
@@ -89,6 +90,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
     private readonly IAcceptOrganizationInviteLinkCommand _acceptOrganizationInviteLinkCommand;
+    private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -102,7 +104,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
@@ -123,7 +125,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
         IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
         IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery,
-        IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand)
+        IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand,
+        IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -137,7 +140,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _authorizationService = authorizationService;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _ssoConfigRepository = ssoConfigRepository;
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
@@ -159,6 +162,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
         _acceptOrganizationInviteLinkCommand = acceptOrganizationInviteLinkCommand;
+        _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
     }
 
     [HttpGet("{id}")]
@@ -406,7 +410,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         // Authorization check:
         // If admins are not allowed access to all collections, you cannot add yourself to a group.
         // No error is thrown for this, we just don't update groups.
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+        var organizationAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId);
         var groupsToSave = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
             ? null
             : model.Groups;
@@ -463,7 +467,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var existingUserType = organizationUser.Type;
 
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
-            collectionsToSave, groupsToSave);
+            collectionsToSave, groupsToSave, model.DefaultUserCollectionName);
     }
 
     [HttpPost("{id}")]
@@ -782,7 +786,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpGet("pending-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>> GetPendingAutoConfirmUsersAsync(Guid orgId)
     {
         var pendingUsers = await _getPendingAutoConfirmUsersQuery.GetPendingAutoConfirmUsersAsync(orgId);
@@ -792,7 +795,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPost("bulk-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkAutomaticallyConfirmOrganizationUsersAsync(
         [BindOrganization] Organization organization,
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
@@ -866,6 +868,28 @@ public class OrganizationUsersController : BaseAdminConsoleController
             Code = model.Code,
             User = user,
             ResetPasswordKey = model.ResetPasswordKey,
+        });
+
+        return Handle(result, _ => TypedResults.Ok());
+    }
+
+    [HttpPost("/organizations/users/invite-link/confirm")]
+    [RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
+    public async Task<IResult> ConfirmInviteLink([FromBody] ConfirmOrganizationInviteLinkRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _confirmOrganizationInviteLinkCommand.ConfirmAsync(new ConfirmOrganizationInviteLinkRequest
+        {
+            Code = model.Code,
+            User = user,
+            OrgUserKey = model.OrgUserKey,
+            ResetPasswordKey = model.ResetPasswordKey,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
         });
 
         return Handle(result, _ => TypedResults.Ok());

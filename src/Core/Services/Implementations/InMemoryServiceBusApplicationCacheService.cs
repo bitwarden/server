@@ -54,16 +54,6 @@ public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCach
         var task = _topicMessageSender.SendMessageAsync(message);
     }
 
-    public async Task BaseUpsertOrganizationAbilityAsync(Organization organization)
-    {
-        await base.UpsertOrganizationAbilityAsync(organization);
-    }
-
-    public async Task BaseDeleteOrganizationAbilityAsync(Guid organizationId)
-    {
-        await base.DeleteOrganizationAbilityAsync(organizationId);
-    }
-
     public override async Task DeleteProviderAbilityAsync(Guid providerId)
     {
         await base.DeleteProviderAbilityAsync(providerId);
