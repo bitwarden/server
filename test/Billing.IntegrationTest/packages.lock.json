@@ -1992,6 +1992,7 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
+          "Pam.Domain": "[2026.6.2, )",
           "SharedWeb": "[2026.6.2, )"
         }
       },

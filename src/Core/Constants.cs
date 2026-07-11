@@ -301,6 +301,7 @@ public static class FeatureFlagKeys
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
+    public const string PamRotation = "pm-39040-pam-rotation";
 
     public static List<string> GetAllKeys()
     {
@@ -318,6 +319,7 @@ public static class FeatureFlagKeys
             // PAM is enabled by default for dev/demo purposes only.
             // This MUST be set to false (or removed) before going to production.
             { Pam, "true" },
+            { PamRotation, "true" },
         };
     }
 }
