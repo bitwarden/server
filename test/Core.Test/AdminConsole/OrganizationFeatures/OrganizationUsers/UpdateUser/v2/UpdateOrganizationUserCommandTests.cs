@@ -144,6 +144,163 @@ public class UpdateOrganizationUserCommandTests
             .PushSyncSettingsAsync(default);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenNameChanging_LoadsUserPersistsNameAndPushesSync(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = organizationUser.UserId!.Value, Email = "member@claimed.example.com", Name = "Old Name" };
+        var request = Setup(sutProvider, organization, organizationUser, newName: "New Name");
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(organizationUser.UserId!.Value)
+            .Returns(userToUpdate);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("New Name", userToUpdate.Name);
+        await sutProvider.GetDependency<IUserRepository>()
+            .Received(1)
+            .ReplaceAsync(userToUpdate);
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(1)
+            .PushSyncSettingsAsync(userToUpdate.Id);
+        // A name-only change never touches the email command.
+        await sutProvider.GetDependency<IChangeEmailCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .ChangeEmailAsync(default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenNameBlank_ClearsNameToNull(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = organizationUser.UserId!.Value, Email = "member@claimed.example.com", Name = "Old Name" };
+        var request = Setup(sutProvider, organization, organizationUser, newName: "   ");
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(organizationUser.UserId!.Value)
+            .Returns(userToUpdate);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(userToUpdate.Name);
+        await sutProvider.GetDependency<IUserRepository>()
+            .Received(1)
+            .ReplaceAsync(userToUpdate);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenNameUnchanged_DoesNotPersistUserOrPushSync(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = organizationUser.UserId!.Value, Email = "member@claimed.example.com", Name = "Same Name" };
+        var request = Setup(sutProvider, organization, organizationUser, newName: "Same Name");
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(organizationUser.UserId!.Value)
+            .Returns(userToUpdate);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default(User));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushSyncSettingsAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenNameNull_DoesNotLoadUserOrPersistName(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        var request = Setup(sutProvider, organization, organizationUser, newName: null);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByIdAsync(default);
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default(User));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenNameAndEmailChanging_WritesAccountOnceViaChangeEmailAndPushesOnce(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = organizationUser.UserId!.Value, Email = "old@claimed.example.com", Name = "Old Name" };
+        var request = Setup(sutProvider, organization, organizationUser,
+            newEmail: "new@claimed.example.com", newName: "New Name");
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(organizationUser.UserId!.Value)
+            .Returns(userToUpdate);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("New Name", userToUpdate.Name);
+        // The email command persists the account (name included); we must not also call ReplaceAsync directly.
+        await sutProvider.GetDependency<IChangeEmailCommand>()
+            .Received(1)
+            .ChangeEmailAsync(userToUpdate, "new@claimed.example.com");
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default(User));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(1)
+            .PushSyncSettingsAsync(userToUpdate.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenNameRequestedButMemberHasNoAccount_SkipsNameChange(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.UserId = null;
+        var request = Setup(sutProvider, organization, organizationUser, newName: "New Name");
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByIdAsync(default);
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default(User));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushSyncSettingsAsync(default);
+    }
+
     private static UpdateOrganizationUserRequest Setup(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
@@ -154,7 +311,8 @@ public class UpdateOrganizationUserCommandTests
         bool valid = true,
         bool targetAccessSecretsManager = false,
         string defaultUserCollectionName = null,
-        string newEmail = null)
+        string newEmail = null,
+        string newName = null)
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
         organizationUser.OrganizationId = organization.Id;
@@ -176,6 +334,7 @@ public class UpdateOrganizationUserCommandTests
             collections,
             groups,
             newEmail,
+            newName,
             defaultUserCollectionName,
             new StandardUser(organizationUser.UserId ?? Guid.NewGuid(), true),
             new OrganizationUser { Type = OrganizationUserType.Owner });
