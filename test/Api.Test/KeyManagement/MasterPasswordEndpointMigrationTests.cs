@@ -3,7 +3,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Api.Auth.Controllers;
-using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.KeyManagement.Models.Api.Request;
@@ -88,22 +87,22 @@ public class MasterPasswordEndpointMigrationTests
         // ── Auth/Api/AccountsController ────────────────────────────────────────────
         "AccountsController.PostPassword(PasswordRequestModel)",
         "AccountsController.PostSetPasswordAsync(SetInitialPasswordRequestModel)",
-        "AccountsController.PostKdf(PasswordRequestModel)",
         "AccountsController.PutUpdateTempPasswordAsync(UpdateTempPasswordRequestModel)",
         "AccountsController.PutUpdateTdePasswordAsync(UpdateTdeOffboardingPasswordRequestModel)",
+        "AccountsController.PostKdf(ChangeKdfRequestModel)",
 
         // ── Auth/Identity/AccountsController ────────────────────────────────────────────
         "AccountsController.PostRegisterFinish(RegisterFinishRequestModel)",
 
         // ── KeyManagement/AccountsKeyManagementController ──────────────────────
-        "AccountsKeyManagementController.RotateUserAccountKeysAsync(RotateUserAccountKeysAndDataRequestModel)",
+        "AccountsKeyManagementController.PasswordChangeAndRotateUserAccountKeysAsync(RotateUserAccountKeysAndDataRequestModel)",
 
         // ── Auth/EmergencyAccessController ─────────────────────────────────────
         "EmergencyAccessController.Password(EmergencyAccessPasswordRequestModel)",
 
         // ── AdminConsole/OrganizationUsersController ───────────────────────────
         "OrganizationUsersController.PutResetPasswordEnrollment(OrganizationUserResetPasswordEnrollmentRequestModel)",
-        "OrganizationUsersController.PutResetPassword(OrganizationUserResetPasswordRequestModel)",
+        "OrganizationUsersController.RecoverAccount(OrganizationUserResetPasswordRequestModel)",
     };
 
     /// <summary>
@@ -115,7 +114,37 @@ public class MasterPasswordEndpointMigrationTests
     /// </summary>
     private static readonly HashSet<string> FullyMigratedEndpoints = new()
     {
-        "AccountsKeyManagementController.RotateUserAccountKeysAsync(RotateUserAccountKeysAndDataRequestModel)",
+        "AccountsKeyManagementController.PasswordChangeAndRotateUserAccountKeysAsync(RotateUserAccountKeysAndDataRequestModel)",
+    };
+
+    /// <summary>
+    /// The known set of generated HTTP routes for endpoints that accept V2 unlock/authentication
+    /// payloads (i.e. have at least one V2 property). Format: "VERB /path".
+    ///
+    /// This is the at-a-glance list of which API paths currently accept the new unlock and
+    /// authentication types. If <see cref="V2Endpoints_GeneratedPaths_MatchManifest"/> fails,
+    /// the test output shows which routes to add or remove.
+    /// </summary>
+    private static readonly HashSet<string> ExpectedV2EndpointPaths = new()
+    {
+        // ── Auth/Api/AccountsController ────────────────────────────────────────
+        "POST /accounts/password",
+        "POST /accounts/set-password",
+        "POST /accounts/kdf",
+        "PUT /accounts/update-temp-password",
+        "PUT /accounts/update-tde-offboarding-password",
+
+        // ── Auth/Identity/AccountsController ────────────────────────────────────
+        "POST /accounts/register/finish",
+
+        // ── KeyManagement/AccountsKeyManagementController (fully migrated) ──────
+        "POST /accounts/key-management/rotate-user-account-keys",
+
+        // ── Auth/EmergencyAccessController ─────────────────────────────────────
+        "POST /emergency-access/{id}/password",
+
+        // ── AdminConsole/OrganizationUsersController ───────────────────────────
+        "PUT /organizations/{orgId}/users/{id}/recover-account",
     };
 
     /// <summary>
@@ -250,19 +279,24 @@ public class MasterPasswordEndpointMigrationTests
 
         // ── Models with both legacy and V2 (in-progress migration) ─────────────
         "SetInitialPasswordRequestModel",
+        "ChangeKdfRequestModel",
 
-        // ── V2-only models (fully migrated) ────────────────────────────────────
+        // ── V2-only models ─────────────────────────────────────────────────────
         "RotateUserAccountKeysAndDataRequestModel",
+        // V2 unlock data is conditionally required per UnlockMethod (validated via
+        // IValidatableObject), so this is tracked but not in FullyMigratedRequestModels.
+        "UnlockMethodRequestModel",
 
         // ── Core assembly models (used by Identity controllers) ────────────────
         "RegisterFinishRequestModel",
         "AuthRequestUpdateRequestModel",
+        "RecoverAccountRequest",
 
         // ── Core entities and data models (internal data flow) ─────────────────
         "AuthRequest",
         "OrganizationAdminAuthRequest",
         "PendingAuthRequestDetails",
-        "RotateUserAccountKeysData",
+        "PasswordChangeAndRotateUserAccountKeysData",
 
         // ── Response models (API surface — data returned to client) ────────────
         "AuthRequestResponseModel",
@@ -280,7 +314,7 @@ public class MasterPasswordEndpointMigrationTests
     private static readonly HashSet<string> FullyMigratedRequestModels = new()
     {
         "RotateUserAccountKeysAndDataRequestModel",
-        "RotateUserAccountKeysData",
+        "PasswordChangeAndRotateUserAccountKeysData",
     };
 
     /// <summary>
@@ -353,6 +387,64 @@ public class MasterPasswordEndpointMigrationTests
         Assert.True(stale.Count == 0,
             $"Found {stale.Count} stale endpoint(s) in manifest that no longer exist. " +
             $"Remove from {nameof(ExpectedEndpoints)}:\n" +
+            string.Join("\n", stale.Select(s => $"  \"{s}\",")));
+    }
+
+    /// <summary>
+    /// Enumerates the generated HTTP routes (verb + path) for every endpoint that accepts
+    /// V2 unlock/authentication payloads and asserts they match <see cref="ExpectedV2EndpointPaths"/>.
+    ///
+    /// This gives an at-a-glance manifest of which API paths accept the new unlock and
+    /// authentication types, and fails when a new V2 endpoint appears or a route changes
+    /// without the manifest being updated.
+    /// </summary>
+    [Fact]
+    public void V2Endpoints_GeneratedPaths_MatchManifest()
+    {
+        var v2Endpoints = DiscoverEndpoints()
+            .Where(e => e.V2Properties.Count > 0)
+            .OrderBy(e => e.RouteSignature)
+            .ToList();
+
+        _output.WriteLine("=== V2 Unlock/Authentication Endpoint Routes ===\n");
+        foreach (var endpoint in v2Endpoints)
+        {
+            _output.WriteLine($"  [{endpoint.Status}] {endpoint.RouteSignature}");
+            _output.WriteLine($"    Handler: {endpoint.Signature}");
+            _output.WriteLine($"    V2:      {string.Join(", ", endpoint.V2Properties.Select(FormatPropertyInfo))}");
+        }
+
+        var discoveredPaths = v2Endpoints.Select(e => e.RouteSignature).ToHashSet();
+
+        var untracked = discoveredPaths.Except(ExpectedV2EndpointPaths).OrderBy(s => s).ToList();
+        var stale = ExpectedV2EndpointPaths.Except(discoveredPaths).OrderBy(s => s).ToList();
+
+        if (untracked.Count > 0)
+        {
+            _output.WriteLine("\n--- UNTRACKED (add to ExpectedV2EndpointPaths): ---");
+            foreach (var sig in untracked)
+            {
+                _output.WriteLine($"  \"{sig}\",");
+            }
+        }
+
+        if (stale.Count > 0)
+        {
+            _output.WriteLine("\n--- STALE (remove from ExpectedV2EndpointPaths): ---");
+            foreach (var sig in stale)
+            {
+                _output.WriteLine($"  \"{sig}\",");
+            }
+        }
+
+        Assert.True(untracked.Count == 0,
+            $"Found {untracked.Count} untracked V2 endpoint route(s). " +
+            $"Add to {nameof(ExpectedV2EndpointPaths)}:\n" +
+            string.Join("\n", untracked.Select(s => $"  \"{s}\",")));
+
+        Assert.True(stale.Count == 0,
+            $"Found {stale.Count} stale V2 endpoint route(s) in manifest that no longer exist. " +
+            $"Remove from {nameof(ExpectedV2EndpointPaths)}:\n" +
             string.Join("\n", stale.Select(s => $"  \"{s}\",")));
     }
 
@@ -567,10 +659,14 @@ public class MasterPasswordEndpointMigrationTests
                     continue;
                 }
 
+                var (httpMethod, routePath) = ComputeRoute(controllerType, action);
+
                 results.Add(new EndpointInfo(
                     ControllerName: controllerType.Name,
                     ActionName: action.Name,
                     BodyParameterType: bodyType,
+                    HttpMethod: httpMethod,
+                    RoutePath: routePath,
                     LegacyProperties: legacyProps,
                     V2Properties: v2Props));
             }
@@ -698,6 +794,67 @@ public class MasterPasswordEndpointMigrationTests
         return $"{prop.Name}:{prop.PropertyType.Name}";
     }
 
+    /// <summary>
+    /// Derives the generated HTTP route for an action by combining the controller-level
+    /// [Route] template with the action-level [HttpVerb] template, mirroring how
+    /// ASP.NET Core attribute routing composes the final URL.
+    /// </summary>
+    private static (string HttpMethod, string Path) ComputeRoute(Type controllerType, MethodInfo action)
+    {
+        var controllerTemplate = controllerType.GetCustomAttribute<RouteAttribute>(inherit: true)?.Template;
+
+        var httpAttr = action.GetCustomAttributes(inherit: true).OfType<HttpMethodAttribute>().First();
+        var httpMethod = string.Join(",", httpAttr.HttpMethods);
+
+        var combined = CombineRouteTemplates(controllerTemplate, httpAttr.Template);
+        var path = NormalizePath(SubstituteRouteTokens(combined, controllerType));
+
+        return (httpMethod, path);
+    }
+
+    /// <summary>
+    /// Combines controller and action route templates. An action template beginning with
+    /// '/' (or '~/') is absolute and overrides the controller prefix.
+    /// </summary>
+    private static string CombineRouteTemplates(string? controllerTemplate, string? actionTemplate)
+    {
+        if (!string.IsNullOrEmpty(actionTemplate) &&
+            (actionTemplate.StartsWith('/') || actionTemplate.StartsWith("~/")))
+        {
+            return actionTemplate.TrimStart('~');
+        }
+
+        var parts = new[] { controllerTemplate, actionTemplate }
+            .Where(p => !string.IsNullOrEmpty(p))
+            .Select(p => p!.Trim('/'));
+
+        return "/" + string.Join("/", parts);
+    }
+
+    private static string SubstituteRouteTokens(string path, Type controllerType)
+    {
+        var controllerName = controllerType.Name.EndsWith("Controller", StringComparison.Ordinal)
+            ? controllerType.Name[..^"Controller".Length]
+            : controllerType.Name;
+
+        return path.Replace("[controller]", controllerName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizePath(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return "/";
+        }
+
+        while (path.Contains("//", StringComparison.Ordinal))
+        {
+            path = path.Replace("//", "/", StringComparison.Ordinal);
+        }
+
+        return path.StartsWith('/') ? path : "/" + path;
+    }
+
     #endregion
 
     #region Types
@@ -706,11 +863,20 @@ public class MasterPasswordEndpointMigrationTests
         string ControllerName,
         string ActionName,
         Type BodyParameterType,
+        string HttpMethod,
+        string RoutePath,
         List<string> LegacyProperties,
         List<PropertyInfo> V2Properties)
     {
         public string Signature =>
             $"{ControllerName}.{ActionName}({BodyParameterType.Name})";
+
+        /// <summary>
+        /// The generated HTTP route for the endpoint, e.g. "POST /accounts/kdf".
+        /// Derived from the controller-level [Route] template and the action-level
+        /// [HttpVerb] template.
+        /// </summary>
+        public string RouteSignature => $"{HttpMethod} {RoutePath}";
 
         public MigrationStatus Status =>
             (LegacyProperties.Count > 0, V2Properties.Count > 0) switch
