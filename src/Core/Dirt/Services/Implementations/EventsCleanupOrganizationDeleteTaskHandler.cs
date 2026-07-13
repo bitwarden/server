@@ -20,5 +20,5 @@ public class EventsCleanupOrganizationDeleteTaskHandler : IOrganizationDeleteTas
     public OrganizationDeleteTaskType TaskType => OrganizationDeleteTaskType.EventsCleanup;
 
     public Task<int> DeleteBatchAsync(OrganizationDeleteTask task, CancellationToken cancellationToken)
-        => _eventRepository.DeleteManyByOrganizationIdAsync(task.OrganizationId);
+        => _eventRepository.DeleteManyByOrganizationIdAsync(task.OrganizationId, cancellationToken);
 }

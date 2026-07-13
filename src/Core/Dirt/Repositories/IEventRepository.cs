@@ -37,5 +37,5 @@ public interface IEventRepository
     /// Deletes all events for the given organization and returns the number deleted.
     /// Used to purge orphaned event logs when an organization is deleted (GDPR).
     /// </summary>
-    Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId);
+    Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default);
 }
