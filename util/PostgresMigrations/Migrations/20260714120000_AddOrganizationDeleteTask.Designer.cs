@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260617191032_AddOrganizationDeleteTask")]
+    [Migration("20260714120000_AddOrganizationDeleteTask")]
     partial class AddOrganizationDeleteTask
     {
         /// <inheritdoc />

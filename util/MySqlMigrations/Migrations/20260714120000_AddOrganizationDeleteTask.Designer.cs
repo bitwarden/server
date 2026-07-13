@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260617191026_AddOrganizationDeleteTask")]
+    [Migration("20260714120000_AddOrganizationDeleteTask")]
     partial class AddOrganizationDeleteTask
     {
         /// <inheritdoc />
