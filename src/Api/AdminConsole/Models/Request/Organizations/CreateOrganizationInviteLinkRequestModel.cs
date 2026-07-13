@@ -15,23 +15,24 @@ public class CreateOrganizationInviteLinkRequestModel
     public required IEnumerable<string> AllowedDomains { get; set; }
 
     /// <summary>
-    /// The invite key encrypted with the organization key.
+    /// An opaque cryptographic blob. The server only stores and transports it, so its format is not
+    /// validated here.
     /// </summary>
     [Required]
-    [EncryptedString]
-    public required string EncryptedInviteKey { get; set; }
+    [EncryptedStringLength(3000)]
+    public required string Invite { get; set; }
 
     /// <summary>
-    /// The organization key encrypted for the invite link. Currently unused; will be populated in a future stage.
+    /// Indicates if the link supports user auto confirmation (not supported yet).
     /// </summary>
-    [EncryptedString]
-    public string? EncryptedOrgKey { get; set; }
+    [Required]
+    public required bool SupportsConfirmation { get; set; }
 
     public CreateOrganizationInviteLinkRequest ToCommandRequest(Guid organizationId) => new()
     {
         OrganizationId = organizationId,
         AllowedDomains = AllowedDomains,
-        EncryptedInviteKey = EncryptedInviteKey,
-        EncryptedOrgKey = EncryptedOrgKey,
+        Invite = Invite,
+        SupportsConfirmation = SupportsConfirmation,
     };
 }
