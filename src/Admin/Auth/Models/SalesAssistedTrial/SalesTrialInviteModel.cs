@@ -35,5 +35,12 @@ public class SalesTrialInviteModel : IValidatableObject
                 "Payment cannot be optional when there is no trial period.",
                 [nameof(PaymentOptional)]);
         }
+
+        if (ProductTier == ProductTierType.TeamsStarter)
+        {
+            yield return new ValidationResult(
+                "Teams Starter is no longer available for new trials.",
+                [nameof(ProductTier)]);
+        }
     }
 }

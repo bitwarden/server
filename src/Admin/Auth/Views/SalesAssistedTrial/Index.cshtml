@@ -1,4 +1,5 @@
 @using Bit.Core.Billing.Enums
+@using Bit.SharedWeb.Utilities
 @model Bit.Admin.Auth.Models.SalesAssistedTrial.SalesTrialInviteModel
 @{
     ViewData["Title"] = "Send Sales-Assisted Trial Invitation";
@@ -32,7 +33,24 @@
 
         <div class="mb-3">
             <label asp-for="ProductTier" class="form-label"></label>
-            <select asp-for="ProductTier" class="form-select" asp-items="Html.GetEnumSelectList<ProductTierType>()"></select>
+            @{
+                // Teams Starter is a deprecated tier and must not be offered for new
+                // sales-assisted trials. There is no data-driven "available tiers" signal at
+                // this (ProductTierType) granularity to filter on — Plan.Disabled/Available
+                // is a per-SKU (PlanType) flag from the Pricing Service, one level more
+                // specific than this coarse tier grouping. Hand-filtering the enum mirrors
+                // the codebase's own existing precedent for excluding this exact value
+                // (_OrganizationForm.cshtml's PlanType.TeamsStarter filter).
+                var productTiers = Enum.GetValues<ProductTierType>()
+                    .Where(t => t != ProductTierType.TeamsStarter)
+                    .Select(t => new SelectListItem
+                    {
+                        Value = ((int)t).ToString(),
+                        Text = t.GetDisplayAttribute()?.GetName() ?? t.ToString()
+                    })
+                    .ToList();
+            }
+            <select asp-for="ProductTier" class="form-select" asp-items="productTiers"></select>
             <span asp-validation-for="ProductTier" class="text-danger"></span>
         </div>
 
