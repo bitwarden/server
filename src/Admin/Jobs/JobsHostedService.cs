@@ -5,6 +5,7 @@ using Bit.Core.Dirt.Services;
 using Bit.Core.Dirt.Services.Implementations;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Quartz;
 
 namespace Bit.Admin.Jobs;
@@ -106,7 +107,8 @@ public class JobsHostedService : BaseJobsHostedService
         {
             services.AddTransient<AliveJob>();
             services.AddTransient<OrganizationDeleteTasksJob>();
-            services.AddTransient<IOrganizationDeleteTaskHandler, EventsCleanupOrganizationDeleteTaskHandler>();
+            services.TryAddEnumerable(
+                ServiceDescriptor.Transient<IOrganizationDeleteTaskHandler, EventsCleanupOrganizationDeleteTaskHandler>());
         }
         services.AddTransient<DatabaseUpdateStatisticsJob>();
         services.AddTransient<DatabaseRebuildlIndexesJob>();
