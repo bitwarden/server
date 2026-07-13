@@ -318,18 +318,21 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             // deletion, so durable downstream cleanup is never lost if the delete commits.
             // One row is created per supplied task type.
             var creationDate = DateTime.UtcNow;
-            foreach (var deleteTaskType in deleteTaskTypes)
-            {
-                var deleteTask = new Dirt.Models.OrganizationDeleteTask
+            var deleteTasks = deleteTaskTypes
+                .Select(taskType =>
                 {
-                    OrganizationId = organization.Id,
-                    TaskType = deleteTaskType,
-                    CreationDate = creationDate,
-                    RevisionDate = creationDate,
-                };
-                deleteTask.SetNewId();
-                await dbContext.OrganizationDeleteTasks.AddAsync(deleteTask);
-            }
+                    var deleteTask = new Dirt.Models.OrganizationDeleteTask
+                    {
+                        OrganizationId = organization.Id,
+                        TaskType = taskType,
+                        CreationDate = creationDate,
+                        RevisionDate = creationDate,
+                    };
+                    deleteTask.SetNewId();
+                    return deleteTask;
+                })
+                .ToList();
+            await dbContext.OrganizationDeleteTasks.AddRangeAsync(deleteTasks);
 
             await dbContext.SaveChangesAsync();
             await organizationDeleteTransaction.CommitAsync();
