@@ -217,6 +217,55 @@ public class SendEmailOtpRequestValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async Task ValidateRequestAsync_MixedCaseEmail_NormalizesEmailForCacheKeyAndClaim(
+        SutProvider<SendEmailOtpRequestValidator> sutProvider,
+        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        EmailOtp emailOtp,
+        Guid sendId,
+        string otp)
+    {
+        // Arrange
+        const string mixedCaseEmail = " Alice@Example.COM ";
+        const string normalizedEmail = "alice@example.com";
+
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, mixedCaseEmail, otp);
+        var context = new ExtensionGrantValidationContext
+        {
+            Request = tokenRequest
+        };
+
+        // The allow-list keeps the original casing; the case-insensitive membership check must still
+        // match after the request email is normalized.
+        emailOtp = emailOtp with { emails = [mixedCaseEmail.Trim()] };
+
+        // The OTP cache key is built from the normalized email, so the stub must key off it.
+        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, normalizedEmail);
+
+        sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .ValidateTokenAsync(
+                otp,
+                SendAccessConstants.OtpToken.TokenProviderName,
+                SendAccessConstants.OtpToken.Purpose,
+                expectedUniqueId)
+            .Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
+
+        // Assert
+        Assert.False(result.IsError);
+
+        // The send_access email claim carries the normalized address so event-log accessor attribution
+        // resolves the same User regardless of the database provider's collation case sensitivity.
+        Assert.Contains(result.Subject.Claims, c => c.Type == Claims.SendAccessClaims.Email && c.Value == normalizedEmail);
+
+        // OTP validation ran against the normalized cache key, not the raw mixed-case input.
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .Received(1)
+            .ValidateTokenAsync(otp, SendAccessConstants.OtpToken.TokenProviderName, SendAccessConstants.OtpToken.Purpose, expectedUniqueId);
+    }
+
+    [Theory, BitAutoData]
     public async Task ValidateRequestAsync_InvalidOtp_ReturnsInvalidRequest(
         SutProvider<SendEmailOtpRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,

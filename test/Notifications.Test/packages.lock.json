@@ -1701,7 +1701,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.6.2, )",
+          "Core": "[2026.7.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.6.0, 10.6.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1731,12 +1731,7 @@
           "DuoUniversal": "[1.3.1, 1.3.1]",
           "Fido2.AspNet": "[3.0.1, 3.0.1]",
           "Handlebars.Net": "[2.1.6, 2.1.6]",
-<<<<<<< HEAD
-          "MailKit": "[4.16.0, 4.16.0]",
-=======
-          "LaunchDarkly.ServerSdk": "[8.11.0, 8.11.0]",
           "MailKit": "[4.17.0, 4.17.0]",
->>>>>>> origin/main
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.8, 10.0.8]",
           "Microsoft.AspNetCore.DataProtection": "[10.0.8, 10.0.8]",
           "Microsoft.Azure.Cosmos": "[3.52.0, 3.52.0]",
@@ -1779,8 +1774,8 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Common": "[2026.6.2, )",
-          "Core": "[2026.6.2, )",
+          "Common": "[2026.7.0, )",
+          "Core": "[2026.7.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.Diagnostics.Testing": "[10.6.0, 10.6.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1791,7 +1786,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.2, )",
+          "Core": "[2026.7.0, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1799,7 +1794,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.2, )",
+          "Core": "[2026.7.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1813,7 +1808,7 @@
         "type": "Project",
         "dependencies": {
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
-          "Core": "[2026.6.2, )",
+          "Core": "[2026.7.0, )",
           "MessagePack": "[3.1.7, 3.1.7]",
           "Microsoft.AspNetCore.SignalR.Protocols.MessagePack": "[10.0.9, 10.0.9]",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.8, 10.0.8]",
@@ -1824,16 +1819,16 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
-          "SharedWeb": "[2026.6.2, )"
+          "SharedWeb": "[2026.7.0, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
-          "Core": "[2026.6.2, )",
-          "Infrastructure.Dapper": "[2026.6.2, )",
-          "Infrastructure.EntityFramework": "[2026.6.2, )",
+          "Core": "[2026.7.0, )",
+          "Infrastructure.Dapper": "[2026.7.0, )",
+          "Infrastructure.EntityFramework": "[2026.7.0, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",

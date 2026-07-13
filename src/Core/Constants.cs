@@ -138,6 +138,7 @@ public static class FeatureFlagKeys
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
+    public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
     public const string PolicyDrawers = "pm-34804-policy-drawers";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
@@ -292,7 +293,6 @@ public static class FeatureFlagKeys
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string EventManagementForSplunk = "event-management-for-splunk";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
-    public const string AccessIntelligenceTrendChart = "pm-26961-access-intelligence-trend-chart";
     public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
 

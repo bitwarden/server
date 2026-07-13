@@ -85,6 +85,25 @@ public class ServerContextBuilderTests
         Assert.Equal(orgId.ToString(), org.Key);
     }
 
+    [Fact]
+    public void Build_SendClient_ReturnsValidAnonymousDefaultContext()
+    {
+        // A send-access token carries no user/org identity (and CurrentContext is short-circuited for it),
+        // so Build must still produce a valid, flag-resolving context. Without a default-kind context the
+        // evaluation context is invalid and every IsEnabled check silently returns its default.
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.IdentityClientType.Returns(IdentityClientType.Send);
+
+        var builder = new ServerContextBuilder(BuildAccessor(currentContext));
+
+        var context = builder.Build();
+
+        Assert.True(context.Valid);
+        Assert.True(context.TryGetContextByKind(ContextKind.Default, out var send));
+        Assert.Equal(AnonymousUser, send.Key);
+        Assert.True(send.Anonymous);
+    }
+
     private static IHttpContextAccessor BuildAccessor(ICurrentContext currentContext)
     {
         var services = new ServiceCollection();
