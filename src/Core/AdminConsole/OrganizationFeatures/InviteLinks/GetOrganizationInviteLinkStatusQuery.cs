@@ -41,7 +41,8 @@ public class GetOrganizationInviteLinkStatusQuery(
 
         var sso = seatsAvailable ? await GetSsoStatusAsync(organization) : null;
 
-        return new OrganizationInviteLinkStatus(organization.Name, seatsAvailable, sso);
+        return new OrganizationInviteLinkStatus(
+            organization.Name, seatsAvailable, inviteLink.SupportsConfirmation, sso);
     }
 
     private async Task<OrganizationInviteLinkSsoStatus?> GetSsoStatusAsync(Organization organization)

@@ -237,6 +237,7 @@ public class OrganizationInviteLinksControllerTests
         var okResult = Assert.IsType<Ok<OrganizationInviteLinkStatusResponseModel>>(result);
         Assert.Equal(status.OrganizationName, okResult.Value!.OrganizationName);
         Assert.Equal(status.SeatsAvailable, okResult.Value.SeatsAvailable);
+        Assert.Equal(status.SupportsConfirmation, okResult.Value.SupportsConfirmation);
     }
 
     [Theory, BitAutoData]
