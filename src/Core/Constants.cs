@@ -303,6 +303,9 @@ public static class FeatureFlagKeys
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
 
+    /* VFO */
+    public const string VFO1Foundation = "vfo1-foundation";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
