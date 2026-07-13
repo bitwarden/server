@@ -153,6 +153,32 @@ The SeederApi requires the following configuration:
 
 - **Database Connection** - Connection string to the Bitwarden database
 - **Global Settings** - Standard Bitwarden `GlobalSettings` configuration
+- **Distributed Cache** - Required for queries that read codes from the persistent distributed cache (e.g.
+  `UserEmailTokenCodeQuery`, which reads email 2FA / user-verification OTP codes). The SeederApi must share the
+  **same cache backend** as the server (Identity/Api) that generated the code.
+
+#### Shared Distributed Cache
+
+Code-reading queries look up the code in the persistent keyed `IDistributedCache`, so they only succeed when
+the SeederApi and the code-generating server point at the same backend. Configure a shared backend under
+`globalSettings.distributedCache`:
+
+```json
+"globalSettings": {
+  "distributedCache": {
+    "redis": { "connectionString": "<same Redis connection as Identity/Api>" }
+  }
+}
+```
+
+Cosmos DB (`distributedCache.cosmos.connectionString`) or, for self-hosted deployments, the SQL Server
+`dbo.Cache` table are the other shared-backend options.
+
+> [!IMPORTANT]
+> Without a shared backend, SeederApi falls back to an in-memory cache that is local to the process, so
+> code-reading queries return `Found: false` even though the code was generated elsewhere. See
+> `AddDistributedCache` in `src/SharedWeb/Utilities/ServiceCollectionExtensions.cs` for the backend selection
+> logic.
 
 ## Play ID Tracking
 

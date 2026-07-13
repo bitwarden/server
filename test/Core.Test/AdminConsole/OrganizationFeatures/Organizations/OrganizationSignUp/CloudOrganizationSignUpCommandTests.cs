@@ -58,9 +58,15 @@ public class CloudICloudOrganizationSignUpCommandTests
             Arg.Is<Organization>(o =>
                 o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats
                 && o.SmSeats == null
-                && o.SmServiceAccounts == null));
+                && o.SmServiceAccounts == null
+                && o.UseRiskInsights == plan.HasRiskInsights));
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
+
+        // Families does not enable RiskInsights, so the created organization must have UseRiskInsights false.
+        Assert.False(plan.HasRiskInsights);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
+            Arg.Is<Organization>(o => !o.UseRiskInsights));
 
         Assert.NotNull(result.Organization);
         Assert.NotNull(result.OrganizationUser);
@@ -162,7 +168,8 @@ public class CloudICloudOrganizationSignUpCommandTests
             Arg.Is<Organization>(o =>
                 o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats
                 && o.SmSeats == plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats
-                && o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + signup.AdditionalServiceAccounts));
+                && o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + signup.AdditionalServiceAccounts
+                && o.UseRiskInsights == plan.HasRiskInsights));
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
 
@@ -367,7 +374,11 @@ public class CloudICloudOrganizationSignUpCommandTests
         Assert.NotNull(result.Organization);
         Assert.NotNull(result.OrganizationUser);
 
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(Arg.Any<Organization>());
+        // Enterprise enables RiskInsights, so the created organization must have UseRiskInsights set to true.
+        var enterprisePlan = MockPlans.Get(signup.Plan);
+        Assert.True(enterprisePlan.HasRiskInsights);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
+            Arg.Is<Organization>(o => o.UseRiskInsights));
     }
 
     [Theory]
