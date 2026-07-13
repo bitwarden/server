@@ -41,7 +41,8 @@
             @foreach (var product in Enum.GetValues<ProductType>())
             {
                 <div class="form-check">
-                    <input type="checkbox" name="Products" value="@product" id="product-@product" class="form-check-input" />
+                    <input type="checkbox" name="Products" value="@product" id="product-@product" class="form-check-input"
+                           checked="@(Model.Products != null && Model.Products.Contains(product))" />
                     <label for="product-@product" class="form-check-label">@product</label>
                 </div>
             }

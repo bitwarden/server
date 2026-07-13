@@ -117,12 +117,19 @@ public class SalesAssistedTrialControllerTests
         SutProvider<SalesAssistedTrialController> sutProvider)
     {
         var model = BuildValidModel();
+        model.Products = new[] { ProductType.SecretsManager };
         SetUpAuthenticatedSender(sutProvider);
         sutProvider.Sut.ModelState.AddModelError(nameof(model.Email), "The Email field is required.");
 
         var result = await sutProvider.Sut.Index(model);
 
-        Assert.IsType<ViewResult>(result);
+        var viewResult = Assert.IsType<ViewResult>(result);
+        // The redisplayed model must carry exactly what the user submitted — including their
+        // Products selection — so the view can re-render checkbox state faithfully rather than
+        // silently resetting it (see Index.cshtml's `checked` binding on the Products checkboxes).
+        var redisplayedModel = Assert.IsType<SalesTrialInviteModel>(viewResult.Model);
+        Assert.Equal(model.Products, redisplayedModel.Products);
+
         await sutProvider.GetDependency<ISendSalesAssistedTrialInvitationCommand>()
             .DidNotReceiveWithAnyArgs()
             .HandleAsync(default!, default, default!, default, default!, default, default);
