@@ -37,18 +37,54 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async Task ValidateAsync_WithCodeMismatch_ReturnsInviteLinkNotFound(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = Guid.NewGuid().ToString();
+
+        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(inviteLink);
+
+        // Act — pass a different code than the one stored on the link
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.NewGuid(),
+            User = user,
+        };
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkNotFound>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
     public async Task ValidateAsync_WithOrganizationNotFound_ReturnsInviteLinkNotFound(
         OrganizationInviteLink inviteLink,
         User user,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
         // Arrange
+        inviteLink.Code = Guid.NewGuid().ToString();
+
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(inviteLink.Code)
+            .GetByOrganizationIdAsync(inviteLink.OrganizationId)
             .Returns(inviteLink);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = inviteLink.OrganizationId,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -66,9 +102,10 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         // Arrange
         organization.Enabled = false;
         inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = Guid.NewGuid().ToString();
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(inviteLink.Code)
+            .GetByOrganizationIdAsync(organization.Id)
             .Returns(inviteLink);
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -76,7 +113,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(organization);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -95,9 +137,10 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         organization.Enabled = true;
         organization.UseInviteLinks = false;
         inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = Guid.NewGuid().ToString();
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(inviteLink.Code)
+            .GetByOrganizationIdAsync(organization.Id)
             .Returns(inviteLink);
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -105,7 +148,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(organization);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -126,7 +174,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         user.Email = "user@notallowed.example.com";
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -150,7 +203,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns([providerUser]);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -175,7 +233,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(revokedOrganizationUser);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -202,7 +265,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(revokedEmailInvite);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -228,7 +296,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(existingOrganizationUser);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -257,7 +330,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(existingOrganizationUser);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -287,7 +365,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(new OrganizationSeatCounts { Users = 4, Sponsored = 0 });
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -317,7 +400,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns([membershipInAnotherOrganization]);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -351,7 +439,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             ]));
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -381,7 +474,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(false);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -409,7 +507,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(true);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -427,7 +530,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         SetupHappyPath(organization, inviteLink, user, sutProvider);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -457,7 +565,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(invitedOrganizationUser);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -494,7 +607,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(1);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -526,7 +644,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .Returns(0);
 
         // Act
-        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
@@ -546,11 +669,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         org.MaxAutoscaleSeats = null;
         org.PlanType = PlanType.EnterpriseAnnually;
         link.OrganizationId = org.Id;
+        link.Code = Guid.NewGuid().ToString();
         link.AllowedDomains = "[\"example.com\"]";
         user.Email = "user@example.com";
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(link.Code)
+            .GetByOrganizationIdAsync(org.Id)
             .Returns(link);
 
         sutProvider.GetDependency<IOrganizationRepository>()

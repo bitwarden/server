@@ -22,12 +22,11 @@ public class OrganizationInviteLinksControllerTests
 {
     [Theory, BitAutoData]
     public async Task Create_WithValidInput_Success(
-        Guid orgId,
         OrganizationInviteLink inviteLink,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
-        inviteLink.OrganizationId = orgId;
         inviteLink.AllowedDomains = "[\"acme.com\"]";
+        inviteLink.Code = Guid.NewGuid().ToString();
 
         var model = new CreateOrganizationInviteLinkRequestModel
         {
@@ -40,19 +39,19 @@ public class OrganizationInviteLinksControllerTests
             .CreateAsync(Arg.Any<CreateOrganizationInviteLinkRequest>())
             .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
 
-        var result = await sutProvider.Sut.Create(orgId, model);
+        var result = await sutProvider.Sut.Create(inviteLink.OrganizationId, model);
 
         var createdResult = Assert.IsType<Created<OrganizationInviteLinkResponseModel>>(result);
-        Assert.Equal($"organizations/{orgId}/invite-link", createdResult.Location);
+        Assert.Equal($"organizations/{inviteLink.OrganizationId}/invite-link", createdResult.Location);
         Assert.NotNull(createdResult.Value);
         Assert.Equal(inviteLink.Id, createdResult.Value.Id);
-        Assert.Equal(inviteLink.Code, createdResult.Value.Code);
-        Assert.Equal(orgId, createdResult.Value.OrganizationId);
+        Assert.Equal(Guid.Parse(inviteLink.Code), createdResult.Value.Code);
+        Assert.Equal(inviteLink.OrganizationId, createdResult.Value.OrganizationId);
 
         await sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
             .Received(1)
             .CreateAsync(Arg.Is<CreateOrganizationInviteLinkRequest>(r =>
-                r.OrganizationId == orgId &&
+                r.OrganizationId == inviteLink.OrganizationId &&
                 r.Invite == "invite-blob"));
     }
 
@@ -80,23 +79,22 @@ public class OrganizationInviteLinksControllerTests
 
     [Theory, BitAutoData]
     public async Task Get_WhenLinkExists_ReturnsOkWithModel(
-        Guid orgId,
         OrganizationInviteLink inviteLink,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
-        inviteLink.OrganizationId = orgId;
         inviteLink.AllowedDomains = "[\"acme.com\"]";
+        inviteLink.Code = Guid.NewGuid().ToString();
 
         sutProvider.GetDependency<IGetOrganizationInviteLinkQuery>()
-            .GetAsync(orgId)
+            .GetAsync(inviteLink.OrganizationId)
             .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
 
-        var result = await sutProvider.Sut.Get(orgId);
+        var result = await sutProvider.Sut.Get(inviteLink.OrganizationId);
 
         var okResult = Assert.IsType<Ok<OrganizationInviteLinkResponseModel>>(result);
         Assert.NotNull(okResult.Value);
         Assert.Equal(inviteLink.Id, okResult.Value.Id);
-        Assert.Equal(orgId, okResult.Value.OrganizationId);
+        Assert.Equal(inviteLink.OrganizationId, okResult.Value.OrganizationId);
     }
 
     [Theory, BitAutoData]
@@ -153,12 +151,11 @@ public class OrganizationInviteLinksControllerTests
 
     [Theory, BitAutoData]
     public async Task Update_WithValidInput_ReturnsOk(
-        Guid orgId,
         OrganizationInviteLink inviteLink,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
-        inviteLink.OrganizationId = orgId;
         inviteLink.AllowedDomains = "[\"acme.com\"]";
+        inviteLink.Code = Guid.NewGuid().ToString();
 
         var model = new UpdateOrganizationInviteLinkRequestModel
         {
@@ -169,17 +166,17 @@ public class OrganizationInviteLinksControllerTests
             .UpdateAsync(Arg.Any<UpdateOrganizationInviteLinkRequest>())
             .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
 
-        var result = await sutProvider.Sut.Update(orgId, model);
+        var result = await sutProvider.Sut.Update(inviteLink.OrganizationId, model);
 
         var okResult = Assert.IsType<Ok<OrganizationInviteLinkResponseModel>>(result);
         Assert.NotNull(okResult.Value);
         Assert.Equal(inviteLink.Id, okResult.Value.Id);
-        Assert.Equal(orgId, okResult.Value.OrganizationId);
+        Assert.Equal(inviteLink.OrganizationId, okResult.Value.OrganizationId);
 
         await sutProvider.GetDependency<IUpdateOrganizationInviteLinkCommand>()
             .Received(1)
             .UpdateAsync(Arg.Is<UpdateOrganizationInviteLinkRequest>(r =>
-                r.OrganizationId == orgId));
+                r.OrganizationId == inviteLink.OrganizationId));
     }
 
     [Theory, BitAutoData]
@@ -229,7 +226,7 @@ public class OrganizationInviteLinksControllerTests
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
         sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
-            .GetStatusAsync(model.Code)
+            .GetStatusAsync(model.OrganizationId, model.Code)
             .Returns(new CommandResult<OrganizationInviteLinkStatus>(status));
 
         var result = await sutProvider.Sut.GetStatus(model);
@@ -245,7 +242,7 @@ public class OrganizationInviteLinksControllerTests
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
         sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
-            .GetStatusAsync(model.Code)
+            .GetStatusAsync(model.OrganizationId, model.Code)
             .Returns(new CommandResult<OrganizationInviteLinkStatus>(new InviteLinkNotFound()));
 
         var result = await sutProvider.Sut.GetStatus(model);
@@ -259,7 +256,7 @@ public class OrganizationInviteLinksControllerTests
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
         sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
-            .GetStatusAsync(model.Code)
+            .GetStatusAsync(model.OrganizationId, model.Code)
             .Returns(new CommandResult<OrganizationInviteLinkStatus>(new InviteLinkNotAvailable()));
 
         var result = await sutProvider.Sut.GetStatus(model);
@@ -279,7 +276,7 @@ public class OrganizationInviteLinksControllerTests
         }
 
         sutProvider.GetDependency<IGetOrganizationInviteLinkPoliciesQuery>()
-            .GetPoliciesAsync(model.Code)
+            .GetPoliciesAsync(model.OrganizationId, model.Code)
             .Returns(new CommandResult<ICollection<Policy>>(policies));
 
         var result = await sutProvider.Sut.GetPolicies(model);
@@ -295,7 +292,7 @@ public class OrganizationInviteLinksControllerTests
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
         sutProvider.GetDependency<IGetOrganizationInviteLinkPoliciesQuery>()
-            .GetPoliciesAsync(model.Code)
+            .GetPoliciesAsync(model.OrganizationId, model.Code)
             .Returns(new CommandResult<ICollection<Policy>>(new InviteLinkNotFound()));
 
         var result = await sutProvider.Sut.GetPolicies(model);
@@ -309,7 +306,7 @@ public class OrganizationInviteLinksControllerTests
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
         sutProvider.GetDependency<IGetOrganizationInviteLinkPoliciesQuery>()
-            .GetPoliciesAsync(model.Code)
+            .GetPoliciesAsync(model.OrganizationId, model.Code)
             .Returns(new CommandResult<ICollection<Policy>>(new InviteLinkNotAvailable()));
 
         var result = await sutProvider.Sut.GetPolicies(model);

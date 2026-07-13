@@ -77,7 +77,7 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
 
         // Act
         var response = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/confirm", BuildConfirmRequest(code));
+            "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, code));
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -101,7 +101,7 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
 
         // Act
         var response = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/confirm", BuildConfirmRequest(Guid.NewGuid()));
+            "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, Guid.NewGuid()));
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -115,13 +115,13 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
         var (joinerClient, _) = await CreateJoinerClientAsync();
 
         var firstResponse = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/confirm", BuildConfirmRequest(code));
+            "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, code));
         Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
 
         // Act
         // Confirming again finds the already-confirmed membership and fails with a 400 validation problem.
         var secondResponse = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/confirm", BuildConfirmRequest(code));
+            "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, code));
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, secondResponse.StatusCode);
@@ -162,9 +162,10 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
         return (joinerClient, joinerEmail);
     }
 
-    private static ConfirmOrganizationInviteLinkRequestModel BuildConfirmRequest(Guid code) =>
+    private static ConfirmOrganizationInviteLinkRequestModel BuildConfirmRequest(Guid organizationId, Guid code) =>
         new()
         {
+            OrganizationId = organizationId,
             Code = code,
             OrgUserKey = _validEncryptedKey,
             DefaultUserCollectionName = _validEncryptedKey,

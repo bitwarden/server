@@ -16,12 +16,7 @@ public class OrganizationInviteLink : ITableObject<Guid>
     /// <summary>
     /// A random, secret code embedded in the invite link to ensure it cannot be guessed.
     /// </summary>
-    /// <remarks>
-    /// Uses <see cref="Guid.NewGuid"/> rather than a sequential/comb GUID because this is not
-    /// a table identifier and therefore does not need index-friendly ordering. A comb GUID's embedded
-    /// timestamp would also make the code partially predictable.
-    /// </remarks>
-    public Guid Code { get; set; } = Guid.NewGuid();
+    public string Code { get; set; } = null!;
     /// <summary>
     /// The ID of the <see cref="Organization"/> this invite link belongs to.
     /// </summary>
@@ -73,6 +68,22 @@ public class OrganizationInviteLink : ITableObject<Guid>
         if (Id == default)
         {
             Id = CoreHelpers.GenerateComb();
+        }
+    }
+
+    /// <summary>
+    /// Initializes <see cref="Code"/> to a new random GUID string.
+    /// </summary>
+    /// <remarks>
+    /// Uses <see cref="Guid.NewGuid"/> rather than a sequential/comb GUID because this is a
+    /// bearer secret — not a table identifier — and does not need index-friendly ordering.
+    /// A comb GUID's embedded timestamp would also make the code partially predictable.
+    /// </remarks>
+    public void SetNewCode()
+    {
+        if (string.IsNullOrEmpty(Code))
+        {
+            Code = Guid.NewGuid().ToString();
         }
     }
 }

@@ -15,25 +15,26 @@ public class GetOrganizationInviteLinkPoliciesQueryTests
 {
     [Theory, BitAutoData]
     public async Task GetPoliciesAsync_WithValidInput_ReturnsOnlyEnabledPolicies(
-        Guid code,
         OrganizationInviteLink inviteLink,
         Organization organization,
         List<Policy> policies,
         SutProvider<GetOrganizationInviteLinkPoliciesQuery> sutProvider)
     {
+        var code = Guid.NewGuid();
+        organization.Id = inviteLink.OrganizationId;
         organization.UsePolicies = true;
-        inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = code.ToString();
 
         policies[0].Enabled = true;
         policies[1].Enabled = false;
         policies[2].Enabled = true;
 
-        SetupMocks(sutProvider, code, inviteLink, organization);
+        SetupMocks(sutProvider, inviteLink, organization);
         sutProvider.GetDependency<IPolicyRepository>()
-            .GetManyByOrganizationIdAsync(organization.Id)
+            .GetManyByOrganizationIdAsync(inviteLink.OrganizationId)
             .Returns(policies);
 
-        var result = await sutProvider.Sut.GetPoliciesAsync(code);
+        var result = await sutProvider.Sut.GetPoliciesAsync(inviteLink.OrganizationId, code);
 
         Assert.True(result.IsSuccess);
         var returned = result.AsSuccess.ToList();
@@ -43,13 +44,28 @@ public class GetOrganizationInviteLinkPoliciesQueryTests
 
     [Theory, BitAutoData]
     public async Task GetPoliciesAsync_InviteLinkNotFound_ReturnsNotFoundError(
+        Guid organizationId,
         Guid code,
         SutProvider<GetOrganizationInviteLinkPoliciesQuery> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(code).ReturnsNull();
+            .GetByOrganizationIdAsync(organizationId).ReturnsNull();
 
-        var result = await sutProvider.Sut.GetPoliciesAsync(code);
+        var result = await sutProvider.Sut.GetPoliciesAsync(organizationId, code);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkNotFound>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPoliciesAsync_CodeMismatch_ReturnsNotFoundError(
+        OrganizationInviteLink inviteLink,
+        SutProvider<GetOrganizationInviteLinkPoliciesQuery> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .GetByOrganizationIdAsync(inviteLink.OrganizationId).Returns(inviteLink);
+
+        var result = await sutProvider.Sut.GetPoliciesAsync(inviteLink.OrganizationId, Guid.NewGuid());
 
         Assert.True(result.IsError);
         Assert.IsType<InviteLinkNotFound>(result.AsError);
@@ -57,16 +73,18 @@ public class GetOrganizationInviteLinkPoliciesQueryTests
 
     [Theory, BitAutoData]
     public async Task GetPoliciesAsync_OrganizationNotFound_ReturnsNotFoundError(
-        Guid code,
         OrganizationInviteLink inviteLink,
         SutProvider<GetOrganizationInviteLinkPoliciesQuery> sutProvider)
     {
+        var code = Guid.NewGuid();
+        inviteLink.Code = code.ToString();
+
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(code).Returns(inviteLink);
+            .GetByOrganizationIdAsync(inviteLink.OrganizationId).Returns(inviteLink);
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(inviteLink.OrganizationId).ReturnsNull();
 
-        var result = await sutProvider.Sut.GetPoliciesAsync(code);
+        var result = await sutProvider.Sut.GetPoliciesAsync(inviteLink.OrganizationId, code);
 
         Assert.True(result.IsError);
         Assert.IsType<InviteLinkNotFound>(result.AsError);
@@ -74,20 +92,21 @@ public class GetOrganizationInviteLinkPoliciesQueryTests
 
     [Theory, BitAutoData]
     public async Task GetPoliciesAsync_OrganizationDisabled_ReturnsNotFoundError(
-        Guid code,
         OrganizationInviteLink inviteLink,
         Organization organization,
         SutProvider<GetOrganizationInviteLinkPoliciesQuery> sutProvider)
     {
+        var code = Guid.NewGuid();
+        organization.Id = inviteLink.OrganizationId;
         organization.Enabled = false;
-        inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = code.ToString();
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(code).Returns(inviteLink);
+            .GetByOrganizationIdAsync(inviteLink.OrganizationId).Returns(inviteLink);
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id).Returns(organization);
+            .GetByIdAsync(inviteLink.OrganizationId).Returns(organization);
 
-        var result = await sutProvider.Sut.GetPoliciesAsync(code);
+        var result = await sutProvider.Sut.GetPoliciesAsync(inviteLink.OrganizationId, code);
 
         Assert.True(result.IsError);
         Assert.IsType<InviteLinkNotFound>(result.AsError);
@@ -95,17 +114,18 @@ public class GetOrganizationInviteLinkPoliciesQueryTests
 
     [Theory, BitAutoData]
     public async Task GetPoliciesAsync_UseInviteLinksFalse_ReturnsNotAvailableError(
-        Guid code,
         OrganizationInviteLink inviteLink,
         Organization organization,
         SutProvider<GetOrganizationInviteLinkPoliciesQuery> sutProvider)
     {
-        inviteLink.OrganizationId = organization.Id;
+        var code = Guid.NewGuid();
+        organization.Id = inviteLink.OrganizationId;
+        inviteLink.Code = code.ToString();
 
-        SetupMocks(sutProvider, code, inviteLink, organization);
+        SetupMocks(sutProvider, inviteLink, organization);
         organization.UseInviteLinks = false;
 
-        var result = await sutProvider.Sut.GetPoliciesAsync(code);
+        var result = await sutProvider.Sut.GetPoliciesAsync(inviteLink.OrganizationId, code);
 
         Assert.True(result.IsError);
         Assert.IsType<InviteLinkNotAvailable>(result.AsError);
@@ -113,17 +133,18 @@ public class GetOrganizationInviteLinkPoliciesQueryTests
 
     [Theory, BitAutoData]
     public async Task GetPoliciesAsync_UsePoliciesFalse_ReturnsNotFoundError(
-        Guid code,
         OrganizationInviteLink inviteLink,
         Organization organization,
         SutProvider<GetOrganizationInviteLinkPoliciesQuery> sutProvider)
     {
-        inviteLink.OrganizationId = organization.Id;
+        var code = Guid.NewGuid();
+        organization.Id = inviteLink.OrganizationId;
+        inviteLink.Code = code.ToString();
 
-        SetupMocks(sutProvider, code, inviteLink, organization);
+        SetupMocks(sutProvider, inviteLink, organization);
         organization.UsePolicies = false;
 
-        var result = await sutProvider.Sut.GetPoliciesAsync(code);
+        var result = await sutProvider.Sut.GetPoliciesAsync(inviteLink.OrganizationId, code);
 
         Assert.True(result.IsError);
         Assert.IsType<InviteLinkNotFound>(result.AsError);
@@ -135,7 +156,6 @@ public class GetOrganizationInviteLinkPoliciesQueryTests
 
     private static void SetupMocks(
         SutProvider<GetOrganizationInviteLinkPoliciesQuery> sutProvider,
-        Guid code,
         OrganizationInviteLink inviteLink,
         Organization organization)
     {
@@ -143,7 +163,7 @@ public class GetOrganizationInviteLinkPoliciesQueryTests
         organization.UseInviteLinks = true;
         organization.UsePolicies = true;
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(code)
+            .GetByOrganizationIdAsync(inviteLink.OrganizationId)
             .Returns(inviteLink);
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)

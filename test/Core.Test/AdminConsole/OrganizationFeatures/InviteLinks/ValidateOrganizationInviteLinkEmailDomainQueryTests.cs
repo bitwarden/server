@@ -13,15 +13,33 @@ public class ValidateOrganizationInviteLinkEmailDomainQueryTests
 {
     [Theory, BitAutoData]
     public async Task ValidateAsync_WhenLinkNotFound_ReturnsNotFoundError(
+        Guid organizationId,
         Guid code,
         string email,
         SutProvider<ValidateOrganizationInviteLinkEmailDomainQuery> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(code)
+            .GetByOrganizationIdAsync(organizationId)
             .Returns((OrganizationInviteLink?)null);
 
-        var result = await sutProvider.Sut.ValidateAsync(code, email);
+        var result = await sutProvider.Sut.ValidateAsync(organizationId, code, email);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkNotFound>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WhenCodeMismatch_ReturnsNotFoundError(
+        OrganizationInviteLink link,
+        SutProvider<ValidateOrganizationInviteLinkEmailDomainQuery> sutProvider)
+    {
+        link.SetAllowedDomains(["acme.com"]);
+
+        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .GetByOrganizationIdAsync(link.OrganizationId)
+            .Returns(link);
+
+        var result = await sutProvider.Sut.ValidateAsync(link.OrganizationId, Guid.NewGuid(), "user@acme.com");
 
         Assert.True(result.IsError);
         Assert.IsType<InviteLinkNotFound>(result.AsError);
@@ -29,17 +47,18 @@ public class ValidateOrganizationInviteLinkEmailDomainQueryTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_WhenEmailDomainMatches_ReturnsTrue(
-        Guid code,
+        OrganizationInviteLink link,
         SutProvider<ValidateOrganizationInviteLinkEmailDomainQuery> sutProvider)
     {
-        var link = new OrganizationInviteLink();
+        var code = Guid.NewGuid();
+        link.Code = code.ToString();
         link.SetAllowedDomains(["acme.com"]);
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(code)
+            .GetByOrganizationIdAsync(link.OrganizationId)
             .Returns(link);
 
-        var result = await sutProvider.Sut.ValidateAsync(code, "user@acme.com");
+        var result = await sutProvider.Sut.ValidateAsync(link.OrganizationId, code, "user@acme.com");
 
         Assert.True(result.IsSuccess);
         Assert.True(result.AsSuccess);
@@ -47,17 +66,18 @@ public class ValidateOrganizationInviteLinkEmailDomainQueryTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_WhenEmailDomainDoesNotMatch_ReturnsFalse(
-        Guid code,
+        OrganizationInviteLink link,
         SutProvider<ValidateOrganizationInviteLinkEmailDomainQuery> sutProvider)
     {
-        var link = new OrganizationInviteLink();
+        var code = Guid.NewGuid();
+        link.Code = code.ToString();
         link.SetAllowedDomains(["acme.com"]);
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(code)
+            .GetByOrganizationIdAsync(link.OrganizationId)
             .Returns(link);
 
-        var result = await sutProvider.Sut.ValidateAsync(code, "user@other.com");
+        var result = await sutProvider.Sut.ValidateAsync(link.OrganizationId, code, "user@other.com");
 
         Assert.True(result.IsSuccess);
         Assert.False(result.AsSuccess);
