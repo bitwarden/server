@@ -34,7 +34,6 @@ public class GetOrganizationInviteLinkStatusQueryTests
 
         Assert.True(result.IsSuccess);
         var status = result.AsSuccess;
-        Assert.Equal(organization.Id, status.OrganizationId);
         Assert.Equal(organization.Name, status.OrganizationName);
         Assert.True(status.LinksEnabled);
     }
@@ -107,7 +106,6 @@ public class GetOrganizationInviteLinkStatusQueryTests
 
         Assert.True(result.IsSuccess);
         var status = result.AsSuccess;
-        Assert.Equal(organization.Id, status.OrganizationId);
         Assert.Equal(organization.Name, status.OrganizationName);
         Assert.False(status.LinksEnabled);
         Assert.False(status.SeatsAvailable);

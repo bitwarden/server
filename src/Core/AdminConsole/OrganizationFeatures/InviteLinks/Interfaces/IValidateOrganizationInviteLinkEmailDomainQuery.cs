@@ -5,8 +5,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 public interface IValidateOrganizationInviteLinkEmailDomainQuery
 {
     /// <summary>
-    /// Returns whether the email's domain is allowed by the invite link and the organization id
+    /// Returns whether the email's domain is allowed by the invite link,
     /// or an error if the invite link does not exist.
     /// </summary>
-    Task<CommandResult<OrganizationInviteLinkEmailDomainStatus>> ValidateAsync(Guid code, string email);
+    Task<CommandResult<bool>> ValidateAsync(Guid code, string email);
 }

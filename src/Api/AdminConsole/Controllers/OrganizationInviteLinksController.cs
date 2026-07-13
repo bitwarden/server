@@ -33,7 +33,6 @@ public class OrganizationInviteLinksController(
 
         return Handle(result, status =>
             TypedResults.Ok(new OrganizationInviteLinkStatusResponseModel(
-                status.OrganizationId,
                 status.OrganizationName,
                 status.LinksEnabled,
                 status.SeatsAvailable,
@@ -59,9 +58,8 @@ public class OrganizationInviteLinksController(
     {
         var result = await validateOrganizationInviteLinkEmailDomainQuery.ValidateAsync(model.Code, model.Email);
 
-        return Handle(result, status =>
-            TypedResults.Ok(new OrganizationInviteLinkValidateEmailDomainResponseModel(
-                status.OrganizationId, status.IsAllowed)));
+        return Handle(result, isAllowed =>
+            TypedResults.Ok(new OrganizationInviteLinkValidateEmailDomainResponseModel(isAllowed)));
     }
 
     [HttpGet("")]

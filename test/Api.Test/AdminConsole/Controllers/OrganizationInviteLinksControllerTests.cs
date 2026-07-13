@@ -232,8 +232,7 @@ public class OrganizationInviteLinksControllerTests
         var result = await sutProvider.Sut.GetStatus(model);
 
         var okResult = Assert.IsType<Ok<OrganizationInviteLinkStatusResponseModel>>(result);
-        Assert.Equal(status.OrganizationId, okResult.Value!.OrganizationId);
-        Assert.Equal(status.OrganizationName, okResult.Value.OrganizationName);
+        Assert.Equal(status.OrganizationName, okResult.Value!.OrganizationName);
         Assert.Equal(status.LinksEnabled, okResult.Value.LinksEnabled);
         Assert.Equal(status.SeatsAvailable, okResult.Value.SeatsAvailable);
     }

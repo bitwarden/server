@@ -28,12 +28,11 @@ public class ValidateOrganizationInviteLinkEmailDomainQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WhenEmailDomainMatches_ReturnsAllowed(
+    public async Task ValidateAsync_WhenEmailDomainMatches_ReturnsTrue(
         Guid code,
-        Guid organizationId,
         SutProvider<ValidateOrganizationInviteLinkEmailDomainQuery> sutProvider)
     {
-        var link = new OrganizationInviteLink { OrganizationId = organizationId };
+        var link = new OrganizationInviteLink();
         link.SetAllowedDomains(["acme.com"]);
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
@@ -43,17 +42,15 @@ public class ValidateOrganizationInviteLinkEmailDomainQueryTests
         var result = await sutProvider.Sut.ValidateAsync(code, "user@acme.com");
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(organizationId, result.AsSuccess.OrganizationId);
-        Assert.True(result.AsSuccess.IsAllowed);
+        Assert.True(result.AsSuccess);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WhenEmailDomainDoesNotMatch_ReturnsNotAllowed(
+    public async Task ValidateAsync_WhenEmailDomainDoesNotMatch_ReturnsFalse(
         Guid code,
-        Guid organizationId,
         SutProvider<ValidateOrganizationInviteLinkEmailDomainQuery> sutProvider)
     {
-        var link = new OrganizationInviteLink { OrganizationId = organizationId };
+        var link = new OrganizationInviteLink();
         link.SetAllowedDomains(["acme.com"]);
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
@@ -63,7 +60,6 @@ public class ValidateOrganizationInviteLinkEmailDomainQueryTests
         var result = await sutProvider.Sut.ValidateAsync(code, "user@other.com");
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(organizationId, result.AsSuccess.OrganizationId);
-        Assert.False(result.AsSuccess.IsAllowed);
+        Assert.False(result.AsSuccess);
     }
 }
