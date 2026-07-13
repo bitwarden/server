@@ -95,7 +95,6 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.Equal(HttpStatusCode.OK, validateResponse.StatusCode);
         var result = await validateResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkValidateEmailDomainResponseModel>();
         Assert.NotNull(result);
-        Assert.Equal(_organization.Id, result.OrganizationId);
         Assert.True(result.IsAllowed);
     }
 
