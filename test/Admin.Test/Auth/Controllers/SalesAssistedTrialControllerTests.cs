@@ -227,7 +227,7 @@ public class SalesAssistedTrialControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Index_Post_ZeroTrialLengthPaymentOptional_CommandThrowsBadRequest_AddsModelError(
+    public async Task Index_Post_CommandThrowsBadRequestForBusinessRuleViolation_AddsModelError(
         SutProvider<SalesAssistedTrialController> sutProvider)
     {
         var model = BuildValidModel();

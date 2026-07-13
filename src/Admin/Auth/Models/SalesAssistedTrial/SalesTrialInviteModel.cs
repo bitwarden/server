@@ -3,7 +3,7 @@ using Bit.Core.Billing.Enums;
 
 namespace Bit.Admin.Auth.Models.SalesAssistedTrial;
 
-public class SalesTrialInviteModel
+public class SalesTrialInviteModel : IValidatableObject
 {
     [Required]
     [EmailAddress]
@@ -26,4 +26,14 @@ public class SalesTrialInviteModel
 
     [Display(Name = "Payment Optional")]
     public bool PaymentOptional { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (PaymentOptional && TrialLength == 0)
+        {
+            yield return new ValidationResult(
+                "Payment cannot be optional when there is no trial period.",
+                [nameof(PaymentOptional)]);
+        }
+    }
 }
