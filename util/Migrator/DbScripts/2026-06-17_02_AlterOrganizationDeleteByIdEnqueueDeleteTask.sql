@@ -1,11 +1,21 @@
--- Add optional OrganizationDeleteTask enqueue to Organization_DeleteById so the
--- delete and the cleanup-task insert commit atomically. Params default to NULL,
--- preserving existing behavior for callers that do not enqueue a task.
+-- Add optional OrganizationDeleteTask enqueue to Organization_DeleteById so the delete
+-- and the cleanup-task inserts commit atomically. Tasks are supplied via a table-valued
+-- parameter, so any number of task types can be enqueued in the same transaction as the
+-- delete. When no tasks are supplied the existing delete behavior is preserved.
+
+-- User-defined table type carrying the tasks to enqueue.
+IF TYPE_ID('[dbo].[OrganizationDeleteTaskArray]') IS NULL
+BEGIN
+    CREATE TYPE [dbo].[OrganizationDeleteTaskArray] AS TABLE (
+        [Id]           UNIQUEIDENTIFIER NOT NULL,
+        [TaskType]     TINYINT          NOT NULL,
+        [CreationDate] DATETIME2(7)     NOT NULL);
+END
+GO
+
 CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER,
-    @OrganizationDeleteTaskId UNIQUEIDENTIFIER = NULL,
-    @OrganizationDeleteTaskType TINYINT = NULL,
-    @OrganizationDeleteTaskCreationDate DATETIME2(7) = NULL
+    @OrganizationDeleteTasks [dbo].[OrganizationDeleteTaskArray] READONLY
 WITH RECOMPILE
 AS
 BEGIN
@@ -164,12 +174,12 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
-    -- Atomically enqueue an OrganizationDeleteTask (e.g. for purging Table Storage
-    -- event logs) so downstream cleanup is durably recorded with the deletion.
-    IF @OrganizationDeleteTaskId IS NOT NULL
+    -- Atomically enqueue one or more OrganizationDeleteTasks (e.g. for purging Table
+    -- Storage event logs) so downstream cleanup is durably recorded with the deletion.
+    -- Tasks are passed via table-valued parameter, letting any number of teams enqueue
+    -- their own cleanup type in the same transaction as the delete.
+    IF EXISTS (SELECT 1 FROM @OrganizationDeleteTasks)
     BEGIN
-        DECLARE @OrganizationDeleteTaskDate DATETIME2(7) = COALESCE(@OrganizationDeleteTaskCreationDate, SYSUTCDATETIME())
-
         INSERT INTO [dbo].[OrganizationDeleteTask]
         (
             [Id],
@@ -178,14 +188,14 @@ BEGIN
             [CreationDate],
             [RevisionDate]
         )
-        VALUES
-        (
-            @OrganizationDeleteTaskId,
+        SELECT
+            [Id],
             @Id,
-            @OrganizationDeleteTaskType,
-            @OrganizationDeleteTaskDate,
-            @OrganizationDeleteTaskDate
-        )
+            [TaskType],
+            [CreationDate],
+            [CreationDate]
+        FROM
+            @OrganizationDeleteTasks
     END
 
     DELETE

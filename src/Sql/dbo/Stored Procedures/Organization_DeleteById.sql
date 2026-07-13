@@ -1,8 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER,
-    @OrganizationDeleteTaskId UNIQUEIDENTIFIER = NULL,
-    @OrganizationDeleteTaskType TINYINT = NULL,
-    @OrganizationDeleteTaskCreationDate DATETIME2(7) = NULL,
     @OrganizationDeleteTasks [dbo].[OrganizationDeleteTaskArray] READONLY
 WITH RECOMPILE
 AS
@@ -164,8 +161,8 @@ BEGIN
 
     -- Atomically enqueue one or more OrganizationDeleteTasks (e.g. for purging Table
     -- Storage event logs) so downstream cleanup is durably recorded with the deletion.
-    -- Preferred path: a set of tasks passed via table-valued parameter, letting any
-    -- number of teams enqueue their own cleanup type in the same transaction.
+    -- Tasks are passed via table-valued parameter, letting any number of teams enqueue
+    -- their own cleanup type in the same transaction as the delete.
     IF EXISTS (SELECT 1 FROM @OrganizationDeleteTasks)
     BEGIN
         INSERT INTO [dbo].[OrganizationDeleteTask]
@@ -184,29 +181,6 @@ BEGIN
             [CreationDate]
         FROM
             @OrganizationDeleteTasks
-    END
-    -- Legacy single-task path. Retained so callers still running the previous server
-    -- version keep working during a rolling deployment; safe to remove once fully rolled.
-    ELSE IF @OrganizationDeleteTaskId IS NOT NULL
-    BEGIN
-        DECLARE @OrganizationDeleteTaskDate DATETIME2(7) = COALESCE(@OrganizationDeleteTaskCreationDate, SYSUTCDATETIME())
-
-        INSERT INTO [dbo].[OrganizationDeleteTask]
-        (
-            [Id],
-            [OrganizationId],
-            [TaskType],
-            [CreationDate],
-            [RevisionDate]
-        )
-        VALUES
-        (
-            @OrganizationDeleteTaskId,
-            @Id,
-            @OrganizationDeleteTaskType,
-            @OrganizationDeleteTaskDate,
-            @OrganizationDeleteTaskDate
-        )
     END
 
     DELETE
