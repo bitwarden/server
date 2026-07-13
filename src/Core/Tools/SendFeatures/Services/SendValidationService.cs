@@ -108,6 +108,23 @@ public class SendValidationService : ISendValidationService
         {
             throw new BadRequestException($"Due to an Enterprise policy your Sends must be of the following types: {string.Join(", ", sendControlsRequirement.AllowedSendTypes.Select(st => st == SendType.Text ? "Text" : st == SendType.File ? "File" : "Unknown"))}");
         }
+
+        // We allow for up to a minute of skew in the difference between the deletion date and the creation date
+        if (sendControlsRequirement.DeletionHours != null && (send.DeletionDate.AddMinutes(-1) - send.CreationDate).TotalHours > sendControlsRequirement.DeletionHours.Value)
+        {
+            var duration = sendControlsRequirement.DeletionHours.Value;
+            var units = "hour";
+            if (duration >= 24)
+            {
+                units = "day";
+                duration /= 24;
+            }
+            if (duration > 1)
+            {
+                units += "s";
+            }
+            throw new BadRequestException($"Due to an Enterprise policy your Sends must have deletion dates no more than {duration} {units} from their creation dates");
+        }
     }
 
     public static bool SendAllEmailsHaveAllowedDomains(string? emailsString, string? domainsString)

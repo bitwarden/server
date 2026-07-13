@@ -2,6 +2,8 @@
 #nullable disable
 
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Repositories;
@@ -30,7 +32,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     private readonly IPushNotificationService _pushService;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
     private readonly IWebAuthnCredentialRepository _credentialRepository;
-    private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IMasterPasswordService _masterPasswordService;
     private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
 
     /// <summary>
@@ -44,7 +46,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     /// <param name="emergencyAccessRepository">Provides a method to update re-encrypted emergency access data</param>
     /// <param name="organizationUserRepository">Provides a method to update re-encrypted organization user data</param>
     /// <param name="deviceRepository">Provides a method to update re-encrypted device keys</param>
-    /// <param name="passwordHasher">Hashes the new master password</param>
+    /// <param name="masterPasswordService">Applies master password mutations (hash, key, hint, time markers) on the password-change rotation path</param>
     /// <param name="pushService">Logs out user from other devices after successful rotation</param>
     /// <param name="errors">Provides a password mismatch error if master password hash validation fails</param>
     /// <param name="credentialRepository">Provides a method to update re-encrypted WebAuthn keys</param>
@@ -53,7 +55,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         ICipherRepository cipherRepository, IFolderRepository folderRepository, ISendRepository sendRepository,
         IEmergencyAccessRepository emergencyAccessRepository, IOrganizationUserRepository organizationUserRepository,
         IDeviceRepository deviceRepository,
-        IPasswordHasher<User> passwordHasher,
+        IMasterPasswordService masterPasswordService,
         IPushNotificationService pushService, IdentityErrorDescriber errors, IWebAuthnCredentialRepository credentialRepository,
         IUserSignatureKeyPairRepository userSignatureKeyPairRepository)
     {
@@ -68,7 +70,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         _pushService = pushService;
         _identityErrorDescriber = errors;
         _credentialRepository = credentialRepository;
-        _passwordHasher = passwordHasher;
+        _masterPasswordService = masterPasswordService;
         _userSignatureKeyPairRepository = userSignatureKeyPairRepository;
     }
 
@@ -90,9 +92,24 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
         var shouldPersistV2UpgradeToken = await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
 
-        user.Key = model.MasterPasswordUnlockData.MasterKeyWrappedUserKey;
-        user.MasterPassword = _passwordHasher.HashPassword(user, model.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash);
-        user.MasterPasswordHint = model.MasterPasswordHint;
+        // Delegate the master password mutation (hash, wrapped user key, hint, time markers) to
+        // MasterPasswordService.
+        // - RefreshStamp = false: BaseRotateUserAccountKeysAsync already owns SecurityStamp rotation
+        //   with V2-upgrade-token-aware logic; the service must not double-handle it.
+        // - MasterPasswordHint populated from the request because a password change can update the hint.
+        var updatePasswordData = new UpdateExistingPasswordData
+        {
+            MasterPasswordAuthentication = model.MasterPasswordAuthenticationData,
+            MasterPasswordUnlock = model.MasterPasswordUnlockData,
+            ValidatePassword = true,
+            RefreshStamp = false,
+            MasterPasswordHint = model.MasterPasswordHint,
+        };
+        var preparedResult = await _masterPasswordService.PrepareUpdateExistingMasterPasswordAsync(user, updatePasswordData);
+        if (preparedResult.TryPickT1(out var errors, out _))
+        {
+            return IdentityResult.Failed(errors);
+        }
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
 

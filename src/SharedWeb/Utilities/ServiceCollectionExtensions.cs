@@ -47,7 +47,6 @@ using Bit.Core.Resources;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
-using Bit.Core.Services.Implementations;
 using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -303,7 +302,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.AddOptionality();
         services.AddTokenizers();
-        services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
 

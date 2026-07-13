@@ -12,7 +12,7 @@ The fastest way to verify a preset is to let Claude Code run the queries and com
    ```
 2. Paste the seeder output (with Org ID) into Claude Code and ask:
    > Run Q1-Q8 against Org ID {id} and compare results to the Sterling Cooper expected values in verification.md
-3. Claude Code runs each query via the `bitwarden-mssql` skill, formats results as a pass/fail table, and flags any deviations beyond tolerance.
+3. Claude Code runs each query via the `exploring-bitwarden-data` skill, formats results as a pass/fail table, and flags any deviations beyond tolerance.
 
 This is how the density algorithms were originally validated — Claude Code ran every query, computed pass/fail against the expected values below, and flagged distribution bugs that were then fixed in the same session.
 
@@ -261,138 +261,138 @@ WHERE OrganizationId = @OrgId;
 
 ### 1. Central Perk (XS)
 
-| Check                 | Expected                                                                      |
-| --------------------- | ----------------------------------------------------------------------------- |
-| Membership shape      | Uniform — 2 groups with ~3 members each.                                      |
-| CollectionGroups      | 10-20 records. Uniform fan-out of 1-2 groups per collection.                  |
-| Permissions           | ~50% Manage, ~40% ReadWrite, ~10% ReadOnly, 0% HidePasswords.                 |
-| Orphan ciphers        | 0 of 200 (0% orphan rate).                                                    |
-| Direct access ratio   | 0.8 — ~80% of access paths are direct CollectionUser.                         |
-| Collections per user  | Uniform 1-3. Min=1, Max=3, Avg=2.                                             |
-| Multi-collection rate | 20% of 200 non-orphan ciphers in 2 collections. ~40 multi-collection ciphers. |
-| Archived org ciphers  | ~8 of 200 (4% rate, under the 50 cap).                                       |
+| Check                 | Expected                                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| Membership shape      | Uniform — 2 groups with ~3 members each.                                                               |
+| CollectionGroups      | 10-20 records. Uniform fan-out of 1-2 groups per collection.                                           |
+| Permissions           | ~50% Manage, ~40% ReadWrite, ~10% ReadOnly, 0% HidePasswords.                                          |
+| Orphan ciphers        | 0 of 200 (0% orphan rate).                                                                             |
+| Direct access ratio   | 0.8 — ~80% of access paths are direct CollectionUser.                                                  |
+| Collections per user  | Uniform 1-3. Min=1, Max=3, Avg=2.                                                                      |
+| Multi-collection rate | 20% of 200 non-orphan ciphers in 2 collections. ~40 multi-collection ciphers.                          |
+| Archived org ciphers  | ~8 of 200 (4% rate, under the 50 cap).                                                                 |
 | Deleted org ciphers   | ~4 of 200 (2% rate, under the 25 cap). ~2 of those are also archived (1% overlap); ~2 are delete-only. |
 
 ### 2. Planet Express (SM)
 
-| Check                 | Expected                                                                        |
-| --------------------- | ------------------------------------------------------------------------------- |
-| Membership shape      | PowerLaw (skew 0.4) — first group largest, gentle decay across 8 groups.        |
-| CollectionGroups      | 200-400 records. Uniform fan-out of 2-4 groups per collection.                  |
-| Permissions           | ~40% ReadOnly, ~30% ReadWrite, ~25% Manage, ~5% HidePasswords.                  |
-| Orphan ciphers        | ~37 of 750 (5% orphan rate).                                                    |
-| Direct access ratio   | 0.7 — ~70% of access paths are direct CollectionUser.                           |
-| Collections per user  | PowerLaw 1-5 (skew 0.3). First users get up to 5, most get 1-2. CV > 0.3.       |
-| Multi-collection rate | 15% of ~713 non-orphan ciphers in 2 collections. ~107 multi-collection ciphers. |
-| Archived org ciphers  | ~45 of 750 (6% rate, under the 50 cap).                                         |
+| Check                 | Expected                                                                                                 |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
+| Membership shape      | PowerLaw (skew 0.4) — first group largest, gentle decay across 8 groups.                                 |
+| CollectionGroups      | 200-400 records. Uniform fan-out of 2-4 groups per collection.                                           |
+| Permissions           | ~40% ReadOnly, ~30% ReadWrite, ~25% Manage, ~5% HidePasswords.                                           |
+| Orphan ciphers        | ~37 of 750 (5% orphan rate).                                                                             |
+| Direct access ratio   | 0.7 — ~70% of access paths are direct CollectionUser.                                                    |
+| Collections per user  | PowerLaw 1-5 (skew 0.3). First users get up to 5, most get 1-2. CV > 0.3.                                |
+| Multi-collection rate | 15% of ~713 non-orphan ciphers in 2 collections. ~107 multi-collection ciphers.                          |
+| Archived org ciphers  | ~45 of 750 (6% rate, under the 50 cap).                                                                  |
 | Deleted org ciphers   | ~22 of 750 (3% rate, under the 25 cap). ~15 of those are also archived (2% overlap); ~7 are delete-only. |
 
 ### 3. Bluth Company (SM)
 
-| Check                 | Expected                                                                       |
-| --------------------- | ------------------------------------------------------------------------------ |
-| Membership shape      | PowerLaw (skew 0.7) — steep decay across 4 groups. First group dominant.       |
-| CollectionGroups      | 25-125 records. PowerLaw fan-out of 1-5 groups per collection.                 |
-| Permissions           | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                   |
-| Orphan ciphers        | ~75 of 500 (15% orphan rate).                                                  |
-| Direct access ratio   | 0.6 — ~60% of access paths are direct CollectionUser.                          |
-| Collections per user  | Uniform 1-3. Min=1, Max=3, Avg=2.                                              |
-| Multi-collection rate | 10% of ~425 non-orphan ciphers in 2 collections. ~42 multi-collection ciphers. |
-| Archived org ciphers  | ~40 of 500 (8% rate, under the 50 cap).                                        |
+| Check                 | Expected                                                                                                 |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
+| Membership shape      | PowerLaw (skew 0.7) — steep decay across 4 groups. First group dominant.                                 |
+| CollectionGroups      | 25-125 records. PowerLaw fan-out of 1-5 groups per collection.                                           |
+| Permissions           | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                                             |
+| Orphan ciphers        | ~75 of 500 (15% orphan rate).                                                                            |
+| Direct access ratio   | 0.6 — ~60% of access paths are direct CollectionUser.                                                    |
+| Collections per user  | Uniform 1-3. Min=1, Max=3, Avg=2.                                                                        |
+| Multi-collection rate | 10% of ~425 non-orphan ciphers in 2 collections. ~42 multi-collection ciphers.                           |
+| Archived org ciphers  | ~40 of 500 (8% rate, under the 50 cap).                                                                  |
 | Deleted org ciphers   | ~20 of 500 (4% rate, under the 25 cap). ~15 of those are also archived (3% overlap); ~5 are delete-only. |
 
 ### 4. Sterling Cooper (MD)
 
-| Check                 | Expected                                                                    |
-| --------------------- | --------------------------------------------------------------------------- |
-| Membership shape      | PowerLaw (skew 0.6) — moderate decay across 50 groups.                      |
-| CollectionGroups      | 500-2,500 records. PowerLaw fan-out of 1-5 active groups per collection.    |
-| Permissions           | ~55% ReadOnly, ~20% ReadWrite, ~15% Manage, ~10% HidePasswords.             |
-| Orphan ciphers        | ~400 of 5,000 (8% orphan rate).                                             |
-| Direct access ratio   | 0.5 — roughly even split between direct and group-mediated access.          |
-| Empty group rate      | ~26% — ~13 of 50 groups have 0 members due to power-law tail truncation.    |
-| Collections per user  | PowerLaw 1-10 (skew 0.5). First users get up to 10, most get 1-2. CV > 0.5. |
-| Multi-collection rate | 20% of ~4,600 non-orphan ciphers in 2-3 collections. Max 3 per cipher.      |
-| Archived org ciphers  | 50 of 5,000 (6% rate = 300, clamped to the 50 cap).                         |
-| Deleted org ciphers   | 25 of 5,000 (3% rate = 150, clamped to the 25 cap). All 25 are also archived (2% overlap = 100, clamped) — 0 are delete-only. |
-| Archived personal ciphers | 50 of ~3,638 personal ciphers (6% rate = ~218, clamped to the 50 cap).  |
-| Deleted personal ciphers  | 25 of ~3,638 (3% rate clamped to 25). All 25 are also archived (2% overlap = ~73, clamped to `min(archivedTarget, maxDeletedCiphers)` = 25) — 0 are delete-only. See `ArchiveAndDeleteRateTests.BothTarget_NeverExceedsMaxDeletedCiphers_EvenWhenArchivedCeilingIsHigher` for the exact clamp this demonstrates. Sterling Cooper seeds archived/deleted items in *both* the org pool and the personal pool, since `archivedRate`/`deletedRate`/`archivedAndDeletedOverlapRate` apply independently to each. |
+| Check                     | Expected                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Membership shape          | PowerLaw (skew 0.6) — moderate decay across 50 groups.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| CollectionGroups          | 500-2,500 records. PowerLaw fan-out of 1-5 active groups per collection.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Permissions               | ~55% ReadOnly, ~20% ReadWrite, ~15% Manage, ~10% HidePasswords.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Orphan ciphers            | ~400 of 5,000 (8% orphan rate).                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Direct access ratio       | 0.5 — roughly even split between direct and group-mediated access.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Empty group rate          | ~26% — ~13 of 50 groups have 0 members due to power-law tail truncation.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Collections per user      | PowerLaw 1-10 (skew 0.5). First users get up to 10, most get 1-2. CV > 0.5.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Multi-collection rate     | 20% of ~4,600 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Archived org ciphers      | 50 of 5,000 (6% rate = 300, clamped to the 50 cap).                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Deleted org ciphers       | 25 of 5,000 (3% rate = 150, clamped to the 25 cap). All 25 are also archived (2% overlap = 100, clamped) — 0 are delete-only.                                                                                                                                                                                                                                                                                                                                                                               |
+| Archived personal ciphers | 50 of ~3,638 personal ciphers (6% rate = ~218, clamped to the 50 cap).                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Deleted personal ciphers  | 25 of ~3,638 (3% rate clamped to 25). All 25 are also archived (2% overlap = ~73, clamped to `min(archivedTarget, maxDeletedCiphers)` = 25) — 0 are delete-only. See `ArchiveAndDeleteRateTests.BothTarget_NeverExceedsMaxDeletedCiphers_EvenWhenArchivedCeilingIsHigher` for the exact clamp this demonstrates. Sterling Cooper seeds archived/deleted items in _both_ the org pool and the personal pool, since `archivedRate`/`deletedRate`/`archivedAndDeletedOverlapRate` apply independently to each. |
 
 ### 5. Umbrella Corp (MD)
 
-| Check                 | Expected                                                                               |
-| --------------------- | -------------------------------------------------------------------------------------- |
-| Membership shape      | MegaGroup (skew 0.5) — group 1 has ~72% of members, remaining 7 split the rest evenly. |
-| CollectionGroups      | 800-2,400 records. FrontLoaded fan-out of 1-3 groups per collection.                   |
-| Permissions           | ~50% ReadWrite, ~20% Manage, ~20% ReadOnly, ~10% HidePasswords.                        |
-| Orphan ciphers        | ~600 of 3,000 (20% orphan rate).                                                       |
-| Direct access ratio   | 0.9 — ~90% of access paths are direct CollectionUser.                                  |
-| Collections per user  | PowerLaw 1-15 (skew 0.6). First users get up to 15, most get 1-2. CV > 0.5.            |
-| Multi-collection rate | 25% of ~2,400 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                 |
-| Archived org ciphers  | 50 of 3,000 (8% rate = 240, clamped to the 50 cap).                                    |
+| Check                 | Expected                                                                                                                     |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Membership shape      | MegaGroup (skew 0.5) — group 1 has ~72% of members, remaining 7 split the rest evenly.                                       |
+| CollectionGroups      | 800-2,400 records. FrontLoaded fan-out of 1-3 groups per collection.                                                         |
+| Permissions           | ~50% ReadWrite, ~20% Manage, ~20% ReadOnly, ~10% HidePasswords.                                                              |
+| Orphan ciphers        | ~600 of 3,000 (20% orphan rate).                                                                                             |
+| Direct access ratio   | 0.9 — ~90% of access paths are direct CollectionUser.                                                                        |
+| Collections per user  | PowerLaw 1-15 (skew 0.6). First users get up to 15, most get 1-2. CV > 0.5.                                                  |
+| Multi-collection rate | 25% of ~2,400 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                                                       |
+| Archived org ciphers  | 50 of 3,000 (8% rate = 240, clamped to the 50 cap).                                                                          |
 | Deleted org ciphers   | 25 of 3,000 (4% rate = 120, clamped to the 25 cap). All 25 are also archived (3% overlap = 90, clamped) — 0 are delete-only. |
 
 ### 6. Wayne Enterprises (LG)
 
-| Check                 | Expected                                                                       |
-| --------------------- | ------------------------------------------------------------------------------ |
-| Membership shape      | PowerLaw (skew 0.7) — steep decay across 100 groups. First groups much larger. |
-| CollectionGroups      | 2,000-10,000 records. PowerLaw fan-out of 1-5 active groups per collection.    |
-| Permissions           | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                   |
-| Orphan ciphers        | ~1,000 of 10,000 (10% orphan rate).                                            |
-| Direct access ratio   | 0.5 — roughly even split between direct and group-mediated access.             |
-| Empty group rate      | ~30% — ~30 of 100 groups have 0 members due to power-law tail truncation.      |
-| Collections per user  | PowerLaw 1-25 (skew 0.6). First users get up to 25, most get 1-2. CV > 0.5.    |
-| Multi-collection rate | 25% of ~9,000 non-orphan ciphers in 2-4 collections. Max 4 per cipher.         |
-| Archived org ciphers  | 50 of 10,000 (6% rate = 600, clamped to the 50 cap).                           |
-| Deleted org ciphers   | 25 of 10,000 (3% rate = 300, clamped to the 25 cap). All 25 are also archived (2% overlap = 200, clamped) — 0 are delete-only. |
-| Archived personal ciphers | 50 of ~14,525 personal ciphers (6% rate = ~872, clamped to the 50 cap).   |
-| Deleted personal ciphers  | 25 of ~14,525 (3% rate clamped to 25). All 25 are also archived (2% overlap clamped the same way as Sterling Cooper) — 0 are delete-only. Wayne Enterprises seeds archived/deleted items in *both* the org pool and the personal pool. |
+| Check                     | Expected                                                                                                                                                                                                                               |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Membership shape          | PowerLaw (skew 0.7) — steep decay across 100 groups. First groups much larger.                                                                                                                                                         |
+| CollectionGroups          | 2,000-10,000 records. PowerLaw fan-out of 1-5 active groups per collection.                                                                                                                                                            |
+| Permissions               | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                                                                                                                                                                           |
+| Orphan ciphers            | ~1,000 of 10,000 (10% orphan rate).                                                                                                                                                                                                    |
+| Direct access ratio       | 0.5 — roughly even split between direct and group-mediated access.                                                                                                                                                                     |
+| Empty group rate          | ~30% — ~30 of 100 groups have 0 members due to power-law tail truncation.                                                                                                                                                              |
+| Collections per user      | PowerLaw 1-25 (skew 0.6). First users get up to 25, most get 1-2. CV > 0.5.                                                                                                                                                            |
+| Multi-collection rate     | 25% of ~9,000 non-orphan ciphers in 2-4 collections. Max 4 per cipher.                                                                                                                                                                 |
+| Archived org ciphers      | 50 of 10,000 (6% rate = 600, clamped to the 50 cap).                                                                                                                                                                                   |
+| Deleted org ciphers       | 25 of 10,000 (3% rate = 300, clamped to the 25 cap). All 25 are also archived (2% overlap = 200, clamped) — 0 are delete-only.                                                                                                         |
+| Archived personal ciphers | 50 of ~14,525 personal ciphers (6% rate = ~872, clamped to the 50 cap).                                                                                                                                                                |
+| Deleted personal ciphers  | 25 of ~14,525 (3% rate clamped to 25). All 25 are also archived (2% overlap clamped the same way as Sterling Cooper) — 0 are delete-only. Wayne Enterprises seeds archived/deleted items in _both_ the org pool and the personal pool. |
 
 ### 7. Tyrell Corp (LG)
 
-| Check                 | Expected                                                                         |
-| --------------------- | -------------------------------------------------------------------------------- |
-| Membership shape      | PowerLaw (skew 0.8) — very steep decay across 75 groups. First group very large. |
-| CollectionGroups      | 4,600-18,400 records. PowerLaw fan-out of 2-8 active groups per collection.      |
-| Permissions           | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                     |
-| Orphan ciphers        | ~2,550 of 17,000 (15% orphan rate).                                              |
-| Direct access ratio   | 0.6 — ~60% of access paths are direct CollectionUser.                            |
-| Empty group rate      | 20% — ~15 of 75 groups have 0 members.                                           |
-| Collections per user  | PowerLaw 1-30 (skew 0.7). First users get up to 30, most get 1-2. CV > 0.5.      |
-| Multi-collection rate | 30% of ~14,450 non-orphan ciphers in 2-4 collections. Max 4 per cipher.          |
-| Archived org ciphers  | 50 of 17,000 (8% rate = 1,360, clamped to the 50 cap).                           |
+| Check                 | Expected                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Membership shape      | PowerLaw (skew 0.8) — very steep decay across 75 groups. First group very large.                                               |
+| CollectionGroups      | 4,600-18,400 records. PowerLaw fan-out of 2-8 active groups per collection.                                                    |
+| Permissions           | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                                                                   |
+| Orphan ciphers        | ~2,550 of 17,000 (15% orphan rate).                                                                                            |
+| Direct access ratio   | 0.6 — ~60% of access paths are direct CollectionUser.                                                                          |
+| Empty group rate      | 20% — ~15 of 75 groups have 0 members.                                                                                         |
+| Collections per user  | PowerLaw 1-30 (skew 0.7). First users get up to 30, most get 1-2. CV > 0.5.                                                    |
+| Multi-collection rate | 30% of ~14,450 non-orphan ciphers in 2-4 collections. Max 4 per cipher.                                                        |
+| Archived org ciphers  | 50 of 17,000 (8% rate = 1,360, clamped to the 50 cap).                                                                         |
 | Deleted org ciphers   | 25 of 17,000 (4% rate = 680, clamped to the 25 cap). All 25 are also archived (3% overlap = 510, clamped) — 0 are delete-only. |
 
 ### 8. Weyland-Yutani (XL)
 
-| Check                 | Expected                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------ |
-| Membership shape      | PowerLaw (skew 0.8) — very steep decay across 500 groups. Long tail of small groups. |
-| CollectionGroups      | 1,200-3,600 records. PowerLaw fan-out of 1-3 active groups per collection.           |
-| Permissions           | ~55% ReadWrite, ~25% ReadOnly, ~10% Manage, ~10% HidePasswords.                      |
-| Orphan ciphers        | ~1,500 of 15,000 (10% orphan rate).                                                  |
-| Direct access ratio   | 0.4 — majority of access is group-mediated.                                          |
-| Empty group rate      | ~68% — ~341 of 500 groups have 0 members due to power-law tail truncation.           |
-| Collections per user  | PowerLaw 1-50 (skew 0.8). First users get up to 50, most get 1-2. CV > 0.5.          |
-| Multi-collection rate | 30% of ~13,500 non-orphan ciphers in 2-5 collections. Max 5 per cipher.              |
-| Archived org ciphers  | 50 of 15,000 (4% rate = 600, clamped to the 50 cap).                                 |
-| Deleted org ciphers   | 25 of 15,000 (3% rate = 450, clamped to the 25 cap). All 25 are also archived (1% overlap = 150, clamped) — 0 are delete-only. |
-| Archived personal ciphers | 50 of ~11,000 personal ciphers (4% rate = 440, clamped to the 50 cap).          |
-| Deleted personal ciphers  | 25 of ~11,000 (3% rate clamped to 25). All 25 are also archived (1% overlap = 110, clamped the same way) — 0 are delete-only. Weyland-Yutani seeds archived/deleted items in *both* the org pool and the personal pool. |
+| Check                     | Expected                                                                                                                                                                                                                |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Membership shape          | PowerLaw (skew 0.8) — very steep decay across 500 groups. Long tail of small groups.                                                                                                                                    |
+| CollectionGroups          | 1,200-3,600 records. PowerLaw fan-out of 1-3 active groups per collection.                                                                                                                                              |
+| Permissions               | ~55% ReadWrite, ~25% ReadOnly, ~10% Manage, ~10% HidePasswords.                                                                                                                                                         |
+| Orphan ciphers            | ~1,500 of 15,000 (10% orphan rate).                                                                                                                                                                                     |
+| Direct access ratio       | 0.4 — majority of access is group-mediated.                                                                                                                                                                             |
+| Empty group rate          | ~68% — ~341 of 500 groups have 0 members due to power-law tail truncation.                                                                                                                                              |
+| Collections per user      | PowerLaw 1-50 (skew 0.8). First users get up to 50, most get 1-2. CV > 0.5.                                                                                                                                             |
+| Multi-collection rate     | 30% of ~13,500 non-orphan ciphers in 2-5 collections. Max 5 per cipher.                                                                                                                                                 |
+| Archived org ciphers      | 50 of 15,000 (4% rate = 600, clamped to the 50 cap).                                                                                                                                                                    |
+| Deleted org ciphers       | 25 of 15,000 (3% rate = 450, clamped to the 25 cap). All 25 are also archived (1% overlap = 150, clamped) — 0 are delete-only.                                                                                          |
+| Archived personal ciphers | 50 of ~11,000 personal ciphers (4% rate = 440, clamped to the 50 cap).                                                                                                                                                  |
+| Deleted personal ciphers  | 25 of ~11,000 (3% rate clamped to 25). All 25 are also archived (1% overlap = 110, clamped the same way) — 0 are delete-only. Weyland-Yutani seeds archived/deleted items in _both_ the org pool and the personal pool. |
 
 ### 9. Initech (XL)
 
-| Check                 | Expected                                                                                |
-| --------------------- | --------------------------------------------------------------------------------------- |
-| Membership shape      | MegaGroup (skew 0.95) — group 1 has ~93% of members, remaining 4 split the rest evenly. |
-| CollectionGroups      | 0 records. DirectAccessRatio is 1.0, so CollectionGroup creation is skipped entirely.   |
-| Permissions           | ~30% Manage, ~30% ReadWrite, ~30% ReadOnly, ~10% HidePasswords.                         |
-| Orphan ciphers        | ~12,750 of 15,000 (85% orphan rate).                                                    |
-| Direct access ratio   | 1.0 — 100% of access paths are direct CollectionUser.                                   |
-| Collections per user  | PowerLaw 1-20 (skew 0.5). First users get up to 20, most get 1. CV > 0.2.               |
-| Multi-collection rate | 15% of ~2,250 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                  |
-| Archived org ciphers  | 50 of 15,000 (8% rate = 1,200, clamped to the 50 cap).                                  |
+| Check                 | Expected                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Membership shape      | MegaGroup (skew 0.95) — group 1 has ~93% of members, remaining 4 split the rest evenly.                                        |
+| CollectionGroups      | 0 records. DirectAccessRatio is 1.0, so CollectionGroup creation is skipped entirely.                                          |
+| Permissions           | ~30% Manage, ~30% ReadWrite, ~30% ReadOnly, ~10% HidePasswords.                                                                |
+| Orphan ciphers        | ~12,750 of 15,000 (85% orphan rate).                                                                                           |
+| Direct access ratio   | 1.0 — 100% of access paths are direct CollectionUser.                                                                          |
+| Collections per user  | PowerLaw 1-20 (skew 0.5). First users get up to 20, most get 1. CV > 0.2.                                                      |
+| Multi-collection rate | 15% of ~2,250 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                                                         |
+| Archived org ciphers  | 50 of 15,000 (8% rate = 1,200, clamped to the 50 cap).                                                                         |
 | Deleted org ciphers   | 25 of 15,000 (5% rate = 750, clamped to the 25 cap). All 25 are also archived (3% overlap = 450, clamped) — 0 are delete-only. |
 
 ---

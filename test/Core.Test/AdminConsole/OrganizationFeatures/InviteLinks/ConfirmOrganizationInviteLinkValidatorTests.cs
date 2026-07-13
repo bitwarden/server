@@ -1,11 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
@@ -111,7 +110,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<InviteLinkNotAvailable>(result.AsError);
+        Assert.IsType<ConfirmInviteLinkNotAvailable>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -132,7 +131,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<EmailDomainNotAllowed>(result.AsError);
+        Assert.IsType<ConfirmEmailDomainNotAllowed>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -156,7 +155,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<ProviderUsersCannotAcceptInviteLink>(result.AsError);
+        Assert.IsType<ConfirmProviderUsersCannotAcceptInviteLink>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -181,7 +180,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<OrganizationAccessRevoked>(result.AsError);
+        Assert.IsType<ConfirmOrganizationAccessRevoked>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -208,7 +207,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<OrganizationAccessRevoked>(result.AsError);
+        Assert.IsType<ConfirmOrganizationAccessRevoked>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -234,7 +233,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<AlreadyOrganizationMember>(result.AsError);
+        Assert.IsType<ConfirmAlreadyOrganizationMember>(result.AsError);
     }
 
     [Theory]
@@ -293,7 +292,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<OrganizationHasNoAvailableSeats>(result.AsError);
+        Assert.IsType<ConfirmOrganizationHasNoAvailableSeats>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -323,7 +322,43 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<UserIsAMemberOfAnotherOrganization>(result.AsError);
+        var error = Assert.IsType<ConfirmUserIsAMemberOfAnotherOrganization>(result.AsError);
+        // Confirm errors must map to a validation problem so the endpoint returns the RFC 7807 shape.
+        Assert.IsAssignableFrom<IValidationError>(error);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WhenMemberOfAnotherOrganizationWithSingleOrgPolicy_ReturnsMappedValidationError(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        Guid otherOrganizationId,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+
+        // The target org does not enforce Single Org, but another org the user belongs to does.
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = otherOrganizationId,
+                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+                }
+            ]));
+
+        // Act
+        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        // The shared policy error is translated to the link-confirm variant, which is a validation problem.
+        var error = Assert.IsType<ConfirmUserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy>(result.AsError);
+        Assert.IsAssignableFrom<IValidationError>(error);
     }
 
     [Theory, BitAutoData]
@@ -351,7 +386,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
+        Assert.IsType<ConfirmTwoFactorRequiredForMembership>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -433,6 +468,70 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         await sutProvider.GetDependency<IPricingClient>()
             .DidNotReceiveWithAnyArgs()
             .GetPlan(Arg.Any<PlanType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithFreeAdminMembership_AdminLimitReached_ReturnsError(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        organization.PlanType = PlanType.Free;
+        existingOrganizationUser.Type = OrganizationUserType.Admin;
+        existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
+        existingOrganizationUser.RevocationReason = null;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, user.Id)
+            .Returns(existingOrganizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
+            .Returns(1);
+
+        // Act
+        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<ConfirmOnlyOneFreeOrganizationAdminAllowed>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithFreeAdminMembership_NotAtLimit_IsAllowed(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        organization.PlanType = PlanType.Free;
+        existingOrganizationUser.Type = OrganizationUserType.Admin;
+        existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
+        existingOrganizationUser.RevocationReason = null;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, user.Id)
+            .Returns(existingOrganizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
+            .Returns(0);
+
+        // Act
+        var request = new ConfirmOrganizationInviteLinkValidationRequest { Code = inviteLink.Code, User = user };
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Same(existingOrganizationUser, result.AsSuccess.ExistingOrganizationUser);
     }
 
     private static void SetupHappyPath(
