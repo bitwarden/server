@@ -45,13 +45,17 @@ public class SalesAssistedTrialControllerTests
     }
 
     [Theory, BitAutoData]
-    public void Index_Get_ReturnsViewWithEmptyModel(
+    public void Index_Get_ReturnsViewWithSensibleDefaults(
         SutProvider<SalesAssistedTrialController> sutProvider)
     {
         var result = sutProvider.Sut.Index();
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        Assert.IsType<SalesTrialInviteModel>(viewResult.Model);
+        var model = Assert.IsType<SalesTrialInviteModel>(viewResult.Model);
+        Assert.Equal(ProductTierType.Enterprise, model.ProductTier);
+        Assert.Equal(new[] { ProductType.PasswordManager }, model.Products);
+        Assert.Equal(30, model.TrialLength);
+        Assert.True(model.PaymentOptional);
     }
 
     [Theory, BitAutoData]

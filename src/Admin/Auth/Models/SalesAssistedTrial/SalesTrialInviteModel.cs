@@ -11,6 +11,7 @@ public class SalesTrialInviteModel
 
     public string? Name { get; set; }
 
+    [Display(Name = "Product Tier")]
     [Required]
     public ProductTierType ProductTier { get; set; }
 
@@ -18,9 +19,11 @@ public class SalesTrialInviteModel
     [MinLength(1)]
     public IEnumerable<ProductType> Products { get; set; } = null!;
 
+    [Display(Name = "Trial Length (Days)")]
     [Required]
     [Range(0, 30)]
     public int TrialLength { get; set; }
 
+    [Display(Name = "Payment Optional")]
     public bool PaymentOptional { get; set; }
 }

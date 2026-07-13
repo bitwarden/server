@@ -1,6 +1,7 @@
 ﻿using Bit.Admin.Auth.Models.SalesAssistedTrial;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
@@ -27,7 +28,17 @@ public class SalesAssistedTrialController(
     [RequirePermission(Permission.Org_InitiateSalesAssistedTrial)]
     public IActionResult Index()
     {
-        return View(new SalesTrialInviteModel());
+        // Defaults reflect the most common sales-assisted trial shape. They are applied only
+        // here, on the initial GET — never as property initializers on the model itself — so a
+        // POST redisplay always reflects exactly what the user submitted, never a reasserted
+        // default (see Products, which has no hidden-input fallback for an all-unchecked submit).
+        return View(new SalesTrialInviteModel
+        {
+            ProductTier = ProductTierType.Enterprise,
+            Products = new List<ProductType> { ProductType.PasswordManager },
+            TrialLength = 30,
+            PaymentOptional = true
+        });
     }
 
     [HttpPost]

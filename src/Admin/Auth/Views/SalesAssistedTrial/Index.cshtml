@@ -50,14 +50,14 @@
         </div>
 
         <div class="mb-3">
-            <label asp-for="TrialLength" class="form-label">Trial Length (days)</label>
+            <label asp-for="TrialLength" class="form-label"></label>
             <input asp-for="TrialLength" type="number" min="0" max="30" class="form-control" />
             <span asp-validation-for="TrialLength" class="text-danger"></span>
         </div>
 
         <div class="mb-3 form-check">
             <input asp-for="PaymentOptional" type="checkbox" class="form-check-input" />
-            <label asp-for="PaymentOptional" class="form-check-label">Payment optional</label>
+            <label asp-for="PaymentOptional" class="form-check-label"></label>
         </div>
 
         <div class="d-flex mt-3">
