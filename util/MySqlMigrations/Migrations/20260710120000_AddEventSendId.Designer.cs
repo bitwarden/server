@@ -4,6 +4,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260710120000_AddEventSendId")]
+    partial class AddEventSendId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -336,9 +339,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<bool>("UsePam")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("tinyint(1)");
 
@@ -396,8 +396,11 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("Invite")
+                    b.Property<string>("EncryptedInviteKey")
                         .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedOrgKey")
                         .HasColumnType("longtext");
 
                     b.Property<Guid>("OrganizationId")
@@ -405,9 +408,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("SupportsConfirmation")
-                        .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
 
@@ -1057,9 +1057,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.HasIndex("CohortId", "CreationDate", "Id")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
                     b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")
                         .HasAnnotation("SqlServer:Clustered", false);
 
@@ -1599,10 +1596,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("OrganizationId", "SendId", "Date")
-                        .HasDatabaseName("IX_Event_OrganizationIdSendIdDate")
-                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
                         .HasDatabaseName("IX_Event_DateOrganizationIdUserId")

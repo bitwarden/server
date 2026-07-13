@@ -1,4 +1,16 @@
-﻿CREATE PROCEDURE [dbo].[Event_Create]
+-- Add SendId column to Event so Send access events can record which Send was accessed.
+IF COL_LENGTH('[dbo].[Event]', 'SendId') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[Event]
+        ADD [SendId] UNIQUEIDENTIFIER NULL;
+END
+GO
+
+-- Refresh the view so SELECT * surfaces the new column.
+EXECUTE sp_refreshview N'[dbo].[EventView]';
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Event_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Type INT,
     @UserId UNIQUEIDENTIFIER,
@@ -82,3 +94,4 @@ BEGIN
         @SendId
     )
 END
+GO
