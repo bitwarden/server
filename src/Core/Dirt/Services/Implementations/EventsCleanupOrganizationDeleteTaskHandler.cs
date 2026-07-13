@@ -1,4 +1,4 @@
-using Bit.Core.Dirt.Entities;
+﻿using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Repositories;
 

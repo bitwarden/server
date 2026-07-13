@@ -1,4 +1,4 @@
-using Bit.Admin.Jobs;
+﻿using Bit.Admin.Jobs;
 using Bit.Core;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
