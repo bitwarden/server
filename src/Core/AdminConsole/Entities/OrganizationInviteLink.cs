@@ -32,20 +32,18 @@ public class OrganizationInviteLink : ITableObject<Guid>
     /// </summary>
     public string AllowedDomains { get; set; } = null!;
     /// <summary>
-    /// The invite link key encrypted with the organization's symmetric key.
+    /// An opaque cryptographic blob.
     /// </summary>
     /// <remarks>
-    /// This is decrypted client-side and used to reconstruct the invite link for display to the admin.
+    /// The server only stores and transports this value; it never inspects the contents, which are
+    /// decrypted client-side to reconstruct the invite link and, when <see cref="SupportsConfirmation"/>
+    /// is set, to confirm a user.
     /// </remarks>
-    public string EncryptedInviteKey { get; set; } = null!;
+    public string Invite { get; set; } = null!;
     /// <summary>
-    /// The organization's symmetric key, encrypted with the invite link key.
+    /// Whether this invite link can be used to confirm a user.
     /// </summary>
-    /// <remarks>
-    /// This is used to support automatic confirmation of invited users by allowing a user who clicks the link
-    /// to decrypt a copy of the organization symmetric key.
-    /// </remarks>
-    public string? EncryptedOrgKey { get; set; }
+    public bool SupportsConfirmation { get; set; }
     /// <summary>
     /// The date the invite link was created.
     /// </summary>

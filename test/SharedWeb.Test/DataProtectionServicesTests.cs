@@ -447,6 +447,51 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     }
 
     [Fact]
+    public void ThumbprintPlaceholder_InDevelopment_DoesNotThrow()
+    {
+        // In local development, developers often have a placeholder thumbprint like "____"
+        // in their config because no real cert exists on their machine. The previous
+        // implementation threw InvalidOperationException at startup whenever GetCertificate
+        // returned null, even in Development — making local development impossible with a
+        // thumbprint configured. The current implementation defers the null check to the
+        // non-development guard further down, so Development environments start up cleanly
+        // and data protection simply uses its ephemeral default storage.
+        using var services = CreateApp(
+            new Dictionary<string, string?>
+            {
+                { "GlobalSettings:Storage:ConnectionString", "UseDevelopmentStorage=true" },
+                { "GlobalSettings:DataProtection:CertificateThumbprint", "___________" },
+            },
+            environmentName: "Development"
+        );
+
+        // No exception during startup; a protector can be successfully created.
+        var protector = services.GetRequiredService<IDataProtectionProvider>().CreateProtector("Test");
+        var roundTripped = protector.Unprotect(protector.Protect("hello"));
+        Assert.Equal("hello", roundTripped);
+    }
+
+    [Fact]
+    public void ThumbprintNotFound_InProduction_ThrowsWithThumbprintHint()
+    {
+        // When a thumbprint is configured in a non-development environment but the certificate
+        // is not present in the current user's certificate store, the error message should
+        // name the missing thumbprint so operators can tell immediately what to install rather
+        // than being directed to check the blob storage connection string (which is irrelevant
+        // to the thumbprint path).
+        var exception = Assert.Throws<InvalidOperationException>(() => CreateApp(
+            new Dictionary<string, string?>
+            {
+                { "GlobalSettings:Storage:ConnectionString", "UseDevelopmentStorage=true" },
+                { "GlobalSettings:DataProtection:CertificateThumbprint", "___________" },
+            },
+            environmentName: "Production"
+        ));
+        Assert.Contains("___________", exception.Message);
+        Assert.Contains("certificate store", exception.Message);
+    }
+
+    [Fact]
     public async Task ProtectionCertificatePasswordIncorrect_Throws()
     {
         // The previous implementation swallowed the X509 load failure and returned null, which
@@ -534,14 +579,14 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         test(runContext);
     }
 
-    private static ServiceProvider CreateApp(Dictionary<string, string?> initialData)
+    private static ServiceProvider CreateApp(Dictionary<string, string?> initialData, string environmentName = "Production")
     {
         var configurationBuilder = new ConfigurationBuilder()
             .AddInMemoryCollection(initialData);
-        return CreateApp(configurationBuilder);
+        return CreateApp(configurationBuilder, environmentName);
     }
 
-    private static ServiceProvider CreateApp(IConfigurationBuilder configurationBuilder)
+    private static ServiceProvider CreateApp(IConfigurationBuilder configurationBuilder, string environmentName = "Production")
     {
         var services = new ServiceCollection();
 
@@ -551,7 +596,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         configuration.GetSection("GlobalSettings").Bind(globalSettings);
 
         var environment = Substitute.For<IWebHostEnvironment>();
-        environment.EnvironmentName.Returns("Production");
+        environment.EnvironmentName.Returns(environmentName);
 
         services.AddCustomDataProtectionServices(
             environment,
