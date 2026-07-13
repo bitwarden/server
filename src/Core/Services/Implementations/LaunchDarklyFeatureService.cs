@@ -237,6 +237,17 @@ public class LaunchDarklyFeatureService : IFeatureService
                     }
                 }
                 break;
+
+            case IdentityClientType.Send:
+                {
+                    var ldSend = LaunchDarkly.Sdk.Context.Builder(_anonymousUser);
+                    ldSend.Anonymous(true);
+                    ldSend.Kind(ContextKind.Default);
+                    SetCommonContextAttributes(ldSend);
+
+                    builder.Add(ldSend.Build());
+                }
+                break;
         }
 
         return builder.Build();
