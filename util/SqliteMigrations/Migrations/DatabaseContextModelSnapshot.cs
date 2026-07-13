@@ -391,11 +391,8 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("EncryptedInviteKey")
+                    b.Property<string>("Invite")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EncryptedOrgKey")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
@@ -403,6 +400,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("SupportsConfirmation")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1571,6 +1571,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid?>("SecretId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SendId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ServiceAccountId")
                         .HasColumnType("TEXT");
 
@@ -1585,6 +1588,10 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("OrganizationId", "SendId", "Date")
+                        .HasDatabaseName("IX_Event_OrganizationIdSendIdDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
                         .HasDatabaseName("IX_Event_DateOrganizationIdUserId")

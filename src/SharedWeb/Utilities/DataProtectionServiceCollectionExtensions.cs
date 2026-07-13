@@ -29,9 +29,7 @@ public static class DataProtectionServiceCollectionExtensions
             if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
             {
                 dataProtectionCert = CoreHelpers.GetCertificate(
-                    globalSettings.DataProtection.CertificateThumbprint)
-                    ?? throw new InvalidOperationException(
-                        $"No data protection certificate could be found with thumbprint '{globalSettings.DataProtection.CertificateThumbprint}'.");
+                    globalSettings.DataProtection.CertificateThumbprint);
             }
             else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
             {
@@ -48,7 +46,10 @@ public static class DataProtectionServiceCollectionExtensions
             {
                 if (dataProtectionCert is null)
                 {
-                    throw new InvalidOperationException("A data protection certificate could not be acquired and one is required when running in non-development cloud environments. Please make sure your configuration has a valid connection string to azure blob storage.");
+                    var message = CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint)
+                        ? $"No data protection certificate could be found with thumbprint '{globalSettings.DataProtection.CertificateThumbprint}'. Verify the certificate is installed in the current user's certificate store."
+                        : "A data protection certificate could not be acquired and one is required when running in non-development cloud environments. Please make sure your configuration has a valid connection string to azure blob storage.";
+                    throw new InvalidOperationException(message);
                 }
 
                 builder

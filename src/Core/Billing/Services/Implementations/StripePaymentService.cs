@@ -8,6 +8,8 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
@@ -673,7 +675,7 @@ public class StripePaymentService : IStripePaymentService
             subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(discount);
         }
 
-        await ApplySchedulePhase2DataAsync(subscription, subscriptionInfo);
+        await ApplySchedulePhase2DataAsync(subscription, subscriptionInfo, subscriber);
 
         var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(subscription);
 
@@ -716,7 +718,8 @@ public class StripePaymentService : IStripePaymentService
         return subscriptionInfo;
     }
 
-    private async Task ApplySchedulePhase2DataAsync(Subscription subscription, SubscriptionInfo subscriptionInfo)
+    private async Task ApplySchedulePhase2DataAsync(Subscription subscription, SubscriptionInfo subscriptionInfo,
+        ISubscriber subscriber)
     {
         if (string.IsNullOrEmpty(subscription.ScheduleId))
         {
@@ -755,6 +758,18 @@ public class StripePaymentService : IStripePaymentService
                 var items = subscriptionInfo.Subscription.Items.ToList();
                 var matchedPhase1Items = new HashSet<SubscriptionInfo.BillingSubscription.BillingSubscriptionItem>();
                 var unmatchedPhase2Items = new List<SubscriptionSchedulePhaseItem>();
+
+                // A Packaged migration source (e.g. Teams 2019) folds its base-bundle and seat-overage lines
+                // into one migrated seat line. Drop the overage line up front (keyed on the source plan's seat
+                // price) so the passes below reprice the base line instead of leaving its legacy amount.
+                if (subscriber is Organization organization && ShouldCollapseSeatOverageLine(organization))
+                {
+                    var sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+                    if (sourcePlan.PasswordManager is { StripeSeatPlanId: not null and not "" } passwordManager)
+                    {
+                        items.RemoveAll(item => item.PriceId == passwordManager.StripeSeatPlanId);
+                    }
+                }
 
                 // Pass 1: Match by product ID
                 foreach (var phase2Item in phase2.Items)
@@ -1073,4 +1088,15 @@ public class StripePaymentService : IStripePaymentService
             throw new GatewayException("Failed to retrieve current invoices", exception);
         }
     }
+
+    /// <summary>
+    /// Evaluates whether the organization's pending migration folds a legacy seat-overage line into the migrated
+    /// seat line — true only for usage-resolved Packaged sources (e.g. Teams 2019).
+    /// </summary>
+    /// <param name="organization">The organization to evaluate.</param>
+    /// <returns>True if the seat-overage line should be collapsed into the migrated seat line.</returns>
+    private static bool ShouldCollapseSeatOverageLine(Organization organization) =>
+        MigrationPaths.All.Any(path =>
+            path.FromPlan == organization.PlanType &&
+            path.SeatCountPolicy == SeatCountPolicy.ActualUsage);
 }

@@ -112,6 +112,7 @@ public class ProviderBillingService(
         organization.UsersGetPremium = plan.UsersGetPremium;
         organization.UseCustomPermissions = plan.HasCustomPermissions;
         organization.UseScim = plan.HasScim;
+        organization.UseRiskInsights = plan.HasRiskInsights;
         organization.UseKeyConnector = plan.HasKeyConnector;
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
         organization.BillingEmail = provider.BillingEmail!;

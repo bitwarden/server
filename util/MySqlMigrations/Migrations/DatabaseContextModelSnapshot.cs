@@ -396,11 +396,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("EncryptedInviteKey")
+                    b.Property<string>("Invite")
                         .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("EncryptedOrgKey")
                         .HasColumnType("longtext");
 
                     b.Property<Guid>("OrganizationId")
@@ -408,6 +405,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("SupportsConfirmation")
+                        .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
 
@@ -1582,6 +1582,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("SecretId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("SendId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("ServiceAccountId")
                         .HasColumnType("char(36)");
 
@@ -1596,6 +1599,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("OrganizationId", "SendId", "Date")
+                        .HasDatabaseName("IX_Event_OrganizationIdSendIdDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
                         .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
