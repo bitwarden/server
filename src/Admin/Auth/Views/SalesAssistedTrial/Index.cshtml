@@ -21,18 +21,19 @@
     <form method="post" asp-action="Index" asp-antiforgery="true">
         <div class="mb-3">
             <label asp-for="Email" class="form-label"></label>
-            <input asp-for="Email" type="email" class="form-control" />
             <span asp-validation-for="Email" class="text-danger"></span>
-        </div>
+            <input asp-for="Email" type="email" class="form-control" />
+                    </div>
 
         <div class="mb-3">
             <label asp-for="Name" class="form-label">Name <span class="text-muted">(optional)</span></label>
-            <input asp-for="Name" class="form-control" />
             <span asp-validation-for="Name" class="text-danger"></span>
+            <input asp-for="Name" class="form-control" />
         </div>
 
         <div class="mb-3">
             <label asp-for="ProductTier" class="form-label"></label>
+            <span asp-validation-for="ProductTier" class="text-danger"></span>
             @{
                 // Teams Starter is a deprecated tier and must not be offered for new
                 // sales-assisted trials. There is no data-driven "available tiers" signal at
@@ -51,11 +52,11 @@
                     .ToList();
             }
             <select asp-for="ProductTier" class="form-select" asp-items="productTiers"></select>
-            <span asp-validation-for="ProductTier" class="text-danger"></span>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Products</label>
+            <span asp-validation-for="Products" class="text-danger"></span>
             @foreach (var product in Enum.GetValues<ProductType>())
             {
                 <div class="form-check">
@@ -64,13 +65,12 @@
                     <label for="product-@product" class="form-check-label">@product</label>
                 </div>
             }
-            <span asp-validation-for="Products" class="text-danger"></span>
         </div>
 
         <div class="mb-3">
             <label asp-for="TrialLength" class="form-label"></label>
-            <input asp-for="TrialLength" type="number" min="0" max="30" class="form-control" />
             <span asp-validation-for="TrialLength" class="text-danger"></span>
+            <input asp-for="TrialLength" type="number" min="0" max="30" class="form-control" />
         </div>
 
         <div class="mb-3 form-check">
