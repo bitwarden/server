@@ -36,7 +36,7 @@ public class UpdateOrganizationUserCommand(
 {
     public async Task<CommandResult> UpdateUserAsync(UpdateOrganizationUserRequest request)
     {
-        request = await LoadUserForEmailChangeAsync(request);
+        request = await LoadUserToUpdateAsync(request);
 
         var validationResult = await validator.ValidateAsync(request);
 
@@ -61,9 +61,9 @@ public class UpdateOrganizationUserCommand(
             }
         }
 
-        if (isEmailChanging)
+        if (isEmailChanging || IsNameChanging(request))
         {
-            var commandError = await TryApplyEmailChangeAsync(request);
+            var commandError = await TryApplyAccountChangesAsync(request, isEmailChanging);
             if (commandError is not null)
             {
                 return commandError;
@@ -91,13 +91,23 @@ public class UpdateOrganizationUserCommand(
         return new None();
     }
 
-    private async Task<CommandError?> TryApplyEmailChangeAsync(UpdateOrganizationUserRequest request)
+    private async Task<CommandError?> TryApplyAccountChangesAsync(UpdateOrganizationUserRequest request, bool isEmailChanging)
     {
         try
         {
-            await changeEmailCommand.ChangeEmailAsync(request.UserToUpdate!, request.NewEmail!);
+            if (isEmailChanging)
+            {
+                // ChangeEmailAsync persists the account (including any name change above) and syncs Stripe.
+                await changeEmailCommand.ChangeEmailAsync(request.UserToUpdate!, request.NewEmail!);
+            }
+            else
+            {
+                userToUpdate.RevisionDate = userToUpdate.AccountRevisionDate = timeProvider.GetUtcNow().UtcDateTime;
+                await userRepository.ReplaceAsync(userToUpdate);
+            }
+
             // Notify the member's devices that their account state changed so clients re-sync.
-            await pushNotificationService.PushSyncSettingsAsync(request.UserToUpdate!.Id);
+            await pushNotificationService.PushSyncSettingsAsync(userToUpdate.Id);
             return null;
         }
         catch (BadRequestException ex)
@@ -120,6 +130,19 @@ public class UpdateOrganizationUserCommand(
         !string.IsNullOrWhiteSpace(request.NewEmail)
         && request.UserToUpdate is not null
         && !string.Equals(request.UserToUpdate.Email, request.NewEmail, StringComparison.InvariantCultureIgnoreCase);
+
+    // A null NewName means "leave unchanged"; blank clears the name. Names are compared case-sensitively so a
+    // capitalization-only edit still counts as a change.
+    private static bool IsNameChanging(UpdateOrganizationUserRequest request)
+    {
+        if (request.NewName is null || request.UserToUpdate is null)
+        {
+            return false;
+        }
+
+        var normalizedName = string.IsNullOrWhiteSpace(request.NewName) ? null : request.NewName;
+        return !string.Equals(request.UserToUpdate.Name, normalizedName, StringComparison.Ordinal);
+    }
 
     private async Task<CommandError?> TryEnablingSecretsManagerAsync(UpdateOrganizationUserRequest request)
     {
@@ -152,7 +175,8 @@ public class UpdateOrganizationUserCommand(
 
     private async Task<UpdateOrganizationUserRequest> LoadUserForEmailChangeAsync(UpdateOrganizationUserRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.NewEmail) || !request.OrganizationUserToUpdate.UserId.HasValue)
+        var wantsAccountChange = !string.IsNullOrWhiteSpace(request.NewEmail) || request.NewName is not null;
+        if (!wantsAccountChange || !request.OrganizationUserToUpdate.UserId.HasValue)
         {
             return request;
         }

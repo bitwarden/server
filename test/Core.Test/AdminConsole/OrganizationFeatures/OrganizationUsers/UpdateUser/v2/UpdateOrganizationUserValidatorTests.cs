@@ -431,6 +431,7 @@ public class UpdateOrganizationUserValidatorTests
             groups,
             newEmail,
             null,
+            null,
             actingUser,
             actingMembership,
             userToUpdate);
