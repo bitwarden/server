@@ -9,8 +9,6 @@ BEGIN
 
     WHILE @BatchSize > 0
     BEGIN
-        BEGIN TRANSACTION Event_DeleteManyByOrganizationId
-
         DELETE TOP(@BatchSize)
         FROM
             [dbo].[Event]
@@ -19,8 +17,6 @@ BEGIN
 
         SET @BatchSize = @@ROWCOUNT
         SET @Total = @Total + @BatchSize
-
-        COMMIT TRANSACTION Event_DeleteManyByOrganizationId
     END
 
     SELECT @Total

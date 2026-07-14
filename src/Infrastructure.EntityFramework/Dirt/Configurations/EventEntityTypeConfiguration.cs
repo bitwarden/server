@@ -23,6 +23,11 @@ public class EventEntityTypeConfiguration : IEntityTypeConfiguration<Event>
             index,
             e => new { e.ServiceAccountId, e.GrantedServiceAccountId });
 
+        builder
+            .HasIndex(e => e.OrganizationId)
+            .IsClustered(false)
+            .HasDatabaseName("IX_Event_OrganizationId");
+
         builder.ToTable(nameof(Event));
     }
 }

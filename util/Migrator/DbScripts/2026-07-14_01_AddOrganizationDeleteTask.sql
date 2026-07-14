@@ -57,8 +57,12 @@ BEGIN
 END
 GO
 
--- Stored Procedures: ClaimNextPending
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationDeleteTask_ClaimNextPending]
+-- Stored Procedures: UpdateClaimNextPending
+-- Drop the pre-rename proc name if a dev database already ran an earlier version of this migration.
+DROP PROCEDURE IF EXISTS [dbo].[OrganizationDeleteTask_ClaimNextPending]
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDeleteTask_UpdateClaimNextPending]
     @Now DATETIME2(7),
     @StaleLeaseThreshold DATETIME2(7),
     @MaxFailureCount INT

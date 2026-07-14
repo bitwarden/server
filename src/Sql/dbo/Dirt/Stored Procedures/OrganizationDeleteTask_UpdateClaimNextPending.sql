@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationDeleteTask_ClaimNextPending]
+CREATE PROCEDURE [dbo].[OrganizationDeleteTask_UpdateClaimNextPending]
     @Now DATETIME2(7),
     @StaleLeaseThreshold DATETIME2(7),
     @MaxFailureCount INT
