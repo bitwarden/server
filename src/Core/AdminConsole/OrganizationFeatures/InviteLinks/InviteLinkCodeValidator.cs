@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.Text;
+﻿using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
@@ -13,8 +12,6 @@ public static class InviteLinkCodeValidator
             return false;
         }
 
-        return CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(providedCode),
-            Encoding.UTF8.GetBytes(storedCode));
+        return CoreHelpers.FixedTimeEquals(providedCode, storedCode);
     }
 }
