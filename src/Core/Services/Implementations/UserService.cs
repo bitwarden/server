@@ -1096,31 +1096,19 @@ public class UserService : UserManager<User>, IUserService
             "otp:" + user.Email, token);
     }
 
-    public async Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false)
+    public async Task<bool> VerifySecretAsync(User user, string secret)
     {
-        bool isVerified;
         if (user.HasMasterPassword())
         {
             // If the user has a master password the secret is most likely going to be a hash
             // of their password, but in certain scenarios, like when the user has logged into their
             // device without a password (trusted device encryption) but the account
             // does still have a password we will allow the use of OTP.
-            isVerified = await CheckPasswordAsync(user, secret) ||
-                await VerifyOTPAsync(user, secret);
-        }
-        else if (isSettingMFA)
-        {
-            // this is temporary to allow users to view their MFA settings without invalidating email TOTP
-            // Will be removed with PM-9925
-            isVerified = true;
-        }
-        else
-        {
-            // If they don't have a password at all they can only do OTP
-            isVerified = await VerifyOTPAsync(user, secret);
+            return await CheckPasswordAsync(user, secret) || await VerifyOTPAsync(user, secret);
         }
 
-        return isVerified;
+        // If they don't have a password at all they can only do OTP
+        return await VerifyOTPAsync(user, secret);
     }
 
     public async Task<bool> ActiveNewDeviceVerificationException(Guid userId)

@@ -173,6 +173,36 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task AcceptAsync_WithUnverifiedEmail_ReturnsEmailNotVerified(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        user.EmailVerified = false;
+
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<EmailNotVerified>(result.AsError);
+
+        // Guard runs in the validation phase - no membership should be created.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
     public async Task AcceptAsync_WithRevokedMember_ReturnsOrganizationAccessRevoked(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -920,6 +950,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         link.Code = Guid.NewGuid().ToString();
         link.AllowedDomains = "[\"example.com\"]";
         user.Email = "user@example.com";
+        user.EmailVerified = true;
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .GetByOrganizationIdAsync(org.Id)

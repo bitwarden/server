@@ -271,6 +271,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var status = await statusResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkStatusResponseModel>();
         Assert.NotNull(status);
         Assert.Equal(_organization.Name, status.OrganizationName);
+        Assert.True(status.LinksEnabled);
         Assert.True(status.SeatsAvailable);
     }
 

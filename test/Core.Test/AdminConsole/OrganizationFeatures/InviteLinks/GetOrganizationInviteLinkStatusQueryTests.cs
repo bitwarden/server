@@ -36,6 +36,7 @@ public class GetOrganizationInviteLinkStatusQueryTests
         Assert.True(result.IsSuccess);
         var status = result.AsSuccess;
         Assert.Equal(organization.Name, status.OrganizationName);
+        Assert.True(status.LinksEnabled);
     }
 
     [Theory, BitAutoData]
@@ -109,7 +110,7 @@ public class GetOrganizationInviteLinkStatusQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetStatusAsync_UseInviteLinksFalse_ReturnsNotAvailableError(
+    public async Task GetStatusAsync_UseInviteLinksFalse_ReturnsLinksDisabled(
         OrganizationInviteLink inviteLink,
         Organization organization,
         SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
@@ -123,9 +124,14 @@ public class GetOrganizationInviteLinkStatusQueryTests
 
         var result = await sutProvider.Sut.GetStatusAsync(inviteLink.OrganizationId, code);
 
-        Assert.True(result.IsError);
-        Assert.IsType<InviteLinkNotAvailable>(result.AsError);
+        Assert.True(result.IsSuccess);
+        var status = result.AsSuccess;
+        Assert.Equal(organization.Name, status.OrganizationName);
+        Assert.False(status.LinksEnabled);
+        Assert.False(status.SeatsAvailable);
+        Assert.Null(status.Sso);
 
+        // When links are disabled we short-circuit without touching seats or SSO.
         await sutProvider.GetDependency<IOrganizationRepository>()
             .DidNotReceiveWithAnyArgs()
             .GetOccupiedSeatCountByOrganizationIdAsync(default);
