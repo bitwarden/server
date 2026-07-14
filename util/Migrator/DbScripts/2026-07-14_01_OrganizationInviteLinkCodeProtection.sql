@@ -8,7 +8,6 @@ BEGIN
 END
 GO
 
--- SQL Server casts UNIQUEIDENTIFIER to uppercase NVARCHAR; LOWER() normalizes for FixedTimeEquals
 IF EXISTS (
     SELECT *
     FROM INFORMATION_SCHEMA.COLUMNS
@@ -18,9 +17,6 @@ IF EXISTS (
 BEGIN
     ALTER TABLE [dbo].[OrganizationInviteLink]
         ALTER COLUMN [Code] NVARCHAR(300) NOT NULL;
-
-    UPDATE [dbo].[OrganizationInviteLink]
-        SET [Code] = LOWER([Code]);
 END
 GO
 
