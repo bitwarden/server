@@ -2,6 +2,8 @@
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -9,6 +11,9 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Billing.Subscriptions.Repositories;
@@ -258,6 +263,19 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Resolves the Secrets Manager seat plan id (Stripe price/plan id) for a plan type,
+    /// as SubscriptionUpdatedHandler does via <see cref="IPricingClient.ListPlans"/>. Used to
+    /// synthesize a subscription.updated event whose previous_attributes carry an SM seat item.
+    /// </summary>
+    public async Task<string> GetSecretsManagerSeatPlanIdAsync(PlanType planType)
+    {
+        using var scope = Api.Services.CreateScope();
+        var pricingClient = scope.ServiceProvider.GetRequiredService<IPricingClient>();
+        var plan = await pricingClient.GetPlanOrThrow(planType);
+        return plan.SecretsManager.StripeSeatPlanId;
+    }
+
+    /// <summary>
     /// Looks up the persisted Stripe customer id for a provider.
     /// </summary>
     public async Task<string> GetProviderGatewayCustomerIdAsync(Guid providerId)
@@ -266,6 +284,67 @@ public class StripeTestsFixture : IAsyncDisposable
         var provider = await scope.ServiceProvider.GetRequiredService<IProviderRepository>()
             .GetByIdAsync(providerId);
         return provider!.GatewayCustomerId!;
+    }
+
+    /// <summary>
+    /// Looks up the persisted Stripe subscription id for a provider.
+    /// </summary>
+    public async Task<string> GetProviderGatewaySubscriptionIdAsync(Guid providerId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var provider = await scope.ServiceProvider.GetRequiredService<IProviderRepository>()
+            .GetByIdAsync(providerId);
+        return provider!.GatewaySubscriptionId!;
+    }
+
+    /// <summary>
+    /// Returns the Stripe subscription's billing_mode.type (e.g. "classic"), used to verify the
+    /// BillingMode the app sets at creation actually lands on the Stripe subscription.
+    /// </summary>
+    public async Task<string?> GetSubscriptionBillingModeTypeAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId);
+        return subscription.BillingMode?.Type;
+    }
+
+    /// <summary>
+    /// Ends the subscription's trial immediately so Stripe cuts a real subscription-cycle invoice
+    /// (Parent.Type == "subscription_details") carrying any active subscription/customer discount,
+    /// and returns that invoice's id. Avoids needing a test clock for a one-shot invoice.
+    /// </summary>
+    public async Task<string> EndTrialAndGetLatestInvoiceIdAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        var options = new SubscriptionUpdateOptions { ProrationBehavior = "none" };
+        // The special value "now" ends the trial immediately; a timestamp would be rejected as "in the past".
+        options.AddExtraParam("trial_end", "now");
+        var updated = await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, options);
+        return updated.LatestInvoiceId;
+    }
+
+    /// <summary>
+    /// Reads the ProviderInvoiceItem rows ProviderEventService persists for a given invoice.
+    /// </summary>
+    public async Task<ICollection<ProviderInvoiceItem>> GetProviderInvoiceItemsAsync(Guid providerId, string invoiceId)
+    {
+        using var scope = Api.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<IProviderInvoiceItemRepository>()
+            .GetByProviderIdAndInvoiceId(providerId, invoiceId);
+    }
+
+    /// <summary>
+    /// Resolves the ProviderPortalSeatPrice for a provider's first plan, used to compute the
+    /// expected discounted line-item total.
+    /// </summary>
+    public async Task<decimal> GetProviderPortalSeatPriceAsync(Guid providerId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var providerPlans = await scope.ServiceProvider.GetRequiredService<IProviderPlanRepository>()
+            .GetByProviderId(providerId);
+        var pricingClient = scope.ServiceProvider.GetRequiredService<IPricingClient>();
+        var plan = await pricingClient.GetPlanOrThrow(providerPlans.First().PlanType);
+        return plan.PasswordManager.ProviderPortalSeatPrice;
     }
 
     /// <summary>
@@ -300,6 +379,42 @@ public class StripeTestsFixture : IAsyncDisposable
         var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
             .GetByIdAsync(userId);
         return user!.GatewaySubscriptionId!;
+    }
+
+    /// <summary>
+    /// Same as <see cref="GetUserGatewaySubscriptionIdAsync(Guid)"/> but keyed by email, for
+    /// premium prep helpers that don't hand back a user id.
+    /// </summary>
+    public async Task<string> GetUserGatewaySubscriptionIdByEmailAsync(string email)
+    {
+        using var scope = Api.Services.CreateScope();
+        var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
+            .GetByEmailAsync(email);
+        return user!.GatewaySubscriptionId!;
+    }
+
+    /// <summary>
+    /// Reads the current metadata on a Stripe subscription — used to verify update/cancel flows
+    /// don't clear keys (e.g. organizationId, userId) they don't explicitly set.
+    /// </summary>
+    public async Task<IDictionary<string, string>> GetSubscriptionMetadataAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId);
+        return subscription.Metadata ?? new Dictionary<string, string>();
+    }
+
+    /// <summary>
+    /// Returns whether the Stripe customer currently has an active discount (coupon expanded).
+    /// </summary>
+    public async Task<bool> CustomerHasDiscountAsync(string customerId)
+    {
+        var stripeClient = CreateStripeClient();
+        var customer = await stripeClient.V1.Customers.GetAsync(customerId, new CustomerGetOptions
+        {
+            Expand = ["discount.source.coupon"],
+        });
+        return customer.Discount?.Source?.Coupon != null;
     }
 
     /// <summary>
@@ -457,6 +572,38 @@ public class StripeTestsFixture : IAsyncDisposable
     /// <see cref="ISubscriberService.RemovePaymentSource"/> on the org as part of
     /// unlinking it from a provider.
     /// </summary>
+    /// <summary>
+    /// Adopts an existing (Stripe-enabled, non-Managed) organization into a newly-created reseller
+    /// provider via a direct ProviderOrganization link — the org keeps its own subscription and its
+    /// Created status. This is the topology that routes <see cref="RemoveAnyOrganizationFromProviderAsync"/>
+    /// to the `else if (organization.IsStripeEnabled())` branch (discount deletion), unlike
+    /// business-unit conversion which produces a Managed org with no own subscription.
+    /// </summary>
+    public async Task<Guid> AdoptOrganizationIntoResellerProviderAsync(Guid organizationId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var providerRepo = scope.ServiceProvider.GetRequiredService<IProviderRepository>();
+        var providerOrgRepo = scope.ServiceProvider.GetRequiredService<IProviderOrganizationRepository>();
+
+        var provider = await providerRepo.CreateAsync(new Provider
+        {
+            Name = $"reseller-{Guid.NewGuid():N}",
+            Type = ProviderType.Reseller,
+            Status = ProviderStatusType.Created,
+            Enabled = true,
+            UseEvents = false,
+            BillingEmail = "reseller@example.com",
+        });
+
+        await providerOrgRepo.CreateAsync(new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organizationId,
+        });
+
+        return provider.Id;
+    }
+
     public async Task RemoveAnyOrganizationFromProviderAsync(Guid providerId)
     {
         using var scope = Api.Services.CreateScope();

@@ -81,8 +81,21 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
     /// underlying object from Stripe with the production Expand list — that fetch is
     /// what the test exercises.
     /// </summary>
-    public async Task SendStripeWebhookAsync(string eventType, JsonObject dataObject, string eventId)
+    public async Task SendStripeWebhookAsync(
+        string eventType,
+        JsonObject dataObject,
+        string eventId,
+        JsonObject? previousAttributes = null)
     {
+        var data = new JsonObject { ["object"] = dataObject };
+        if (previousAttributes != null)
+        {
+            // Stripe includes the changed fields' prior values under data.previous_attributes.
+            // Handlers that branch on what changed (e.g. SubscriptionUpdatedHandler reading
+            // previous_attributes.items) need it present to exercise those paths.
+            data["previous_attributes"] = previousAttributes;
+        }
+
         var payload = new JsonObject
         {
             ["id"] = eventId,
@@ -92,10 +105,7 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
             ["livemode"] = false,
             ["pending_webhooks"] = 0,
             ["type"] = eventType,
-            ["data"] = new JsonObject
-            {
-                ["object"] = dataObject,
-            },
+            ["data"] = data,
             ["request"] = new JsonObject
             {
                 ["id"] = $"req_{Guid.NewGuid():N}",

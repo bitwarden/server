@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Nodes;
+using Bit.Core.Billing.Enums;
 
 namespace Bit.Billing.IntegrationTest;
 
