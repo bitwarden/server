@@ -1,17 +1,22 @@
 # Events Pipeline - App Context
 
-> Scope: `src/Events/`. Supplements the repo-wide `/.claude/CLAUDE.md`. The DIRT team file at
-> `/src/Core/Dirt/CLAUDE.md` does NOT auto-load here (different subtree), so the key team context
+> Scope: `src/Events/`. Supplements the repo-wide `.claude/CLAUDE.md`. The team-level DIRT file at
+> `src/Core/Dirt/CLAUDE.md` does NOT auto-load here (different subtree), so the key team context
 > is linked below.
 
 ## What this app does
 
 `src/Events/` is the Events collector: a lightweight ASP.NET app that ingests organization/user
 audit events (the `/collect` path via `EventsController`) and hands them to the event write pipeline.
-Its sibling `src/EventsProcessor/` (`AzureQueueHostedService`) drains the Azure queue and persists
-events (Azure Table Storage in cloud; database self-hosted). When Event Integrations are enabled, the
-`EventIntegrationEventWriteService` also broadcasts events onto the AMQP exchange (see
-`/src/Core/Dirt/EventIntegrations/README.md`).
+The write path is selected in `AddEventWriteServices` by deployment:
+- **Cloud:** the collector enqueues to Azure Queue Storage, and its sibling `src/EventsProcessor/`
+  (`AzureQueueHostedService`) drains the queue and persists events to Azure Table Storage.
+- **Self-hosted:** there is no queue and no processor - the collector writes events straight to the
+  database via `RepositoryEventWriteService` (selected when `GlobalSettings.SelfHosted` is true).
+  `src/EventsProcessor/` is a cloud-only component (it has no `appsettings.SelfHosted.json`).
+
+When Event Integrations are enabled, `EventIntegrationEventWriteService` also broadcasts events onto
+the AMQP exchange (see `src/Core/Dirt/EventIntegrations/README.md`).
 
 ## Critical rules
 
@@ -32,6 +37,6 @@ events (Azure Table Storage in cloud; database self-hosted). When Event Integrat
 
 ## References
 
-- Event write / integration pipeline: `/src/Core/Dirt/EventIntegrations/README.md`
-- DIRT team context: `/src/Core/Dirt/CLAUDE.md`
-- Repo-wide rules: `/.claude/CLAUDE.md`
+- Event write / integration pipeline: `src/Core/Dirt/EventIntegrations/README.md`
+- Team-level context: `src/Core/Dirt/CLAUDE.md`
+- Repo-wide rules: `.claude/CLAUDE.md`

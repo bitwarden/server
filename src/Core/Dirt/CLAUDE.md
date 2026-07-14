@@ -1,19 +1,21 @@
-# CLAUDE.md - DIRT Team (Server)
+# Access Intelligence, Reports & Event Integrations (Server)
 
 > Scope: `src/Core/Dirt/` and its children. Claude Code reads CLAUDE.md files hierarchically
-> (repo root + every parent dir), so this supplements the repo-wide `/.claude/CLAUDE.md` with
-> DIRT-specific server context. It does NOT auto-load in sibling subtrees such as
+> (repo root + every parent dir), so this supplements the repo-wide `.claude/CLAUDE.md` with
+> domain-specific context. It does NOT auto-load in sibling subtrees such as
 > `src/Api/Dirt/`, `src/Sql/dbo/Dirt/`, `src/Infrastructure.*/Dirt/`, `src/Events/`, or
-> `src/EventsProcessor/` - see "Where DIRT code lives" for those.
+> `src/EventsProcessor/` - see "Where this code lives" for those.
 
 ## Project Overview
 
-The DIRT team (Data, Insights, Reporting & Tooling) owns, on the server: Access Intelligence /
-Reports, Event Integrations, the Events audit pipeline, and Phishing Detection support. This is
-the .NET (C#) server; it stores and serves data. Unencrypted vault data never reaches the server
+This subtree holds the server-side domain logic for **Access Intelligence / Reports**, **Event
+Integrations**, the **Events audit pipeline**, and **Phishing Detection** support. This is the
+.NET (C#) server; it stores and serves data. Unencrypted vault data never reaches the server
 (zero-knowledge) - the server persists encrypted blobs and non-secret metadata.
 
-## Where DIRT code lives
+> Owned by `@bitwarden/team-data-insights-and-reporting-dev` (DIRT) via CODEOWNERS.
+
+## Where this code lives
 
 - `src/Core/Dirt/` - domain logic: `Entities/`, `Repositories/` (interfaces), `Reports/` (report
   command/query handlers + file storage), `EventIntegrations/` + `Services/` (Slack/Teams/webhook/
@@ -39,8 +41,9 @@ the .NET (C#) server; it stores and serves data. Unencrypted vault data never re
   Reference existing entities that already span all three: `OrganizationReport`,
   `OrganizationApplication`, `Event`.
 - **Commands / Queries.** Report operations under `Reports/ReportFeatures/` are one-class-per-operation
-  handlers (`*Command` / `*Query`) wired in `ReportingServiceCollectionExtensions`. Follow that shape;
-  keep controllers thin and put logic in Core.
+  handlers (`*Command` / `*Query`) registered in `ReportingServiceCollectionExtensions`. Follow that
+  one-class-per-operation shape; keep controllers thin and put logic in Core. (That extension predates
+  the `TryAdd*` convention and still uses `AddScoped` - new registrations should prefer `TryAdd*`.)
 - **DI:** use the `TryAdd*` pattern (ADR 0026). No code regions (root rule).
 - **Naming:** "Access Intelligence" is the current name; "Risk Insights" is the deprecated name for
   the same feature (legacy paths/classes like `RiskInsightsReportQuery` remain during migration).
@@ -88,11 +91,11 @@ default new flags off.
 
 ## References
 
-- Event Integrations design (deep dive): `/src/Core/Dirt/EventIntegrations/README.md`
-  (and the scoped `/src/Core/Dirt/EventIntegrations/CLAUDE.md`)
-- Events pipeline apps context: `/src/Events/CLAUDE.md`
-- Repo-wide rules and commands: `/.claude/CLAUDE.md`
-- Contributing Claude context to this repo: `/.claude/CONTRIBUTING.md`
+- Event Integrations design (deep dive): `src/Core/Dirt/EventIntegrations/README.md`
+  (and the scoped `src/Core/Dirt/EventIntegrations/CLAUDE.md`)
+- Events pipeline apps context: `src/Events/CLAUDE.md`
+- Repo-wide rules and commands: `.claude/CLAUDE.md`
+- Contributing Claude context to this repo: `.claude/CONTRIBUTING.md`
 - Server architecture: https://contributing.bitwarden.com/architecture/server/
 - ADRs: https://contributing.bitwarden.com/architecture/adr/
-- Caching (used by Event Integrations): `/src/Core/Utilities/CACHING.md`
+- Caching (used by Event Integrations): `src/Core/Utilities/CACHING.md`

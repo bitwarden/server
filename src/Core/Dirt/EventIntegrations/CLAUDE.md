@@ -1,9 +1,9 @@
 # Event Integrations - Subsystem Context
 
-> Scope: `src/Core/Dirt/EventIntegrations/`. Supplements the DIRT team file
-> `/src/Core/Dirt/CLAUDE.md` and the repo-wide `/.claude/CLAUDE.md`.
+> Scope: `src/Core/Dirt/EventIntegrations/`. Supplements the team-level file
+> `src/Core/Dirt/CLAUDE.md` and the repo-wide `.claude/CLAUDE.md`.
 >
-> **Read first:** `/src/Core/Dirt/EventIntegrations/README.md` - the full design doc
+> **Read first:** `src/Core/Dirt/EventIntegrations/README.md` - the full design doc
 > (two-tier exchange, listener/handler pattern, retries, caching, and a step-by-step
 > "Building a new integration" guide). This file only surfaces the rules most easily missed.
 
@@ -41,6 +41,6 @@ integrations table.
 
 ## References
 
-- Full design doc: `/src/Core/Dirt/EventIntegrations/README.md`
-- Caching internals: `/src/Core/Utilities/CACHING.md`
-- DIRT team context: `/src/Core/Dirt/CLAUDE.md`
+- Full design doc: `src/Core/Dirt/EventIntegrations/README.md`
+- Caching internals: `src/Core/Utilities/CACHING.md`
+- Team-level context: `src/Core/Dirt/CLAUDE.md`
