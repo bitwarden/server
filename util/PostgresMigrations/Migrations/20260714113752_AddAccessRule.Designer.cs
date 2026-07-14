@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260714113752_AddAccessRule")]
+    partial class AddAccessRule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1592,9 +1595,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("SecretId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("SendId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid?>("ServiceAccountId")
                         .HasColumnType("uuid");
 
@@ -1609,10 +1609,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("OrganizationId", "SendId", "Date")
-                        .HasDatabaseName("IX_Event_OrganizationIdSendIdDate")
-                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
                         .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
