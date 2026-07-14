@@ -1598,7 +1598,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.6.2, )",
+          "Core": "[2026.7.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.6.0, 10.6.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1622,6 +1622,7 @@
           "BitPay.Light": "[1.0.1907, 1.0.1907]",
           "Braintree": "[5.36.0, 5.36.0]",
           "CsvHelper": "[33.1.0, 33.1.0]",
+          "Data": "[2026.7.0, )",
           "DnsClient": "[1.8.0, 1.8.0]",
           "Duende.IdentityServer": "[7.4.6, 7.4.6]",
           "DuoUniversal": "[1.3.1, 1.3.1]",
@@ -1659,11 +1660,14 @@
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
       },
+      "data": {
+        "type": "Project"
+      },
       "icons": {
         "type": "Project",
         "dependencies": {
           "AngleSharp": "[1.4.0, 1.4.0]",
-          "Core": "[2026.6.2, )",
+          "Core": "[2026.7.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.0, )",
@@ -1671,13 +1675,13 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
-          "SharedWeb": "[2026.6.2, )"
+          "SharedWeb": "[2026.7.0, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.2, )",
+          "Core": "[2026.7.0, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1685,7 +1689,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.2, )",
+          "Core": "[2026.7.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1698,9 +1702,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.2, )",
-          "Infrastructure.Dapper": "[2026.6.2, )",
-          "Infrastructure.EntityFramework": "[2026.6.2, )",
+          "Core": "[2026.7.0, )",
+          "Infrastructure.Dapper": "[2026.7.0, )",
+          "Infrastructure.EntityFramework": "[2026.7.0, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }

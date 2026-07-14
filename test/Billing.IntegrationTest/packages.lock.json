@@ -482,8 +482,8 @@
       },
       "Markdig": {
         "type": "Transitive",
-        "resolved": "1.1.0",
-        "contentHash": "ivaowI69dGxiyaKLy6+qo9Xm4DHwXDKB3orGIFOvA8k+eUBAV5UaW8GPIMc3h5jl7gZalyecR3x2t+nuLYdmFg=="
+        "resolved": "1.3.2",
+        "contentHash": "fZgOC/3CswUrndjDTac70aQpYdtxbW5+5bRumR7vzvI2HJbkmgKisB1c9oT+GA6v0jB/JDR9BLa9FiPzQmaK6A=="
       },
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
         "type": "Transitive",
@@ -1879,7 +1879,7 @@
         "dependencies": {
           "Commercial.Core": "[2026.7.0, )",
           "Core": "[2026.7.0, )",
-          "MarkDig": "[1.1.0, 1.1.0]",
+          "MarkDig": "[1.3.2, 1.3.2]",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.0, )",
