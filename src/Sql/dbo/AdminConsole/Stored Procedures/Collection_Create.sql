@@ -6,7 +6,8 @@
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
-    @Type TINYINT = 0
+    @Type TINYINT = 0,
+    @AccessRuleId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,7 +21,8 @@ BEGIN
         [CreationDate],
         [RevisionDate],
         [DefaultUserCollectionEmail],
-        [Type]
+        [Type],
+        [AccessRuleId]
     )
     VALUES
     (
@@ -31,7 +33,8 @@ BEGIN
         @CreationDate,
         @RevisionDate,
         @DefaultUserCollectionEmail,
-     @Type
+        @Type,
+        @AccessRuleId
     )
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
