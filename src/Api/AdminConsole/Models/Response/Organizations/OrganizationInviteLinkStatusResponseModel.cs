@@ -5,15 +5,18 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 public class OrganizationInviteLinkStatusResponseModel : ResponseModel
 {
     public string OrganizationName { get; set; } = null!;
+    public bool LinksEnabled { get; set; }
     public bool SeatsAvailable { get; set; }
     public OrganizationInviteLinkSsoResponseModel? Sso { get; set; }
 
     public OrganizationInviteLinkStatusResponseModel(
         string organizationName,
+        bool linksEnabled,
         bool seatsAvailable,
         OrganizationInviteLinkSsoResponseModel? sso) : base("inviteLinkStatus")
     {
         OrganizationName = organizationName;
+        LinksEnabled = linksEnabled;
         SeatsAvailable = seatsAvailable;
         Sso = sso;
     }
