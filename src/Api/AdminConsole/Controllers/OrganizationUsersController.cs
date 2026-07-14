@@ -432,7 +432,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         {
             var (collectionsToSave, postedCollections) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess);
 
-            // The acting user's own membership; null when the caller is not an org member (e.g. a provider).
             var actingContext = _currentContext.GetOrganization(organization.Id);
             OrganizationUser savingOrganizationUser = null;
             if (actingContext != null)
