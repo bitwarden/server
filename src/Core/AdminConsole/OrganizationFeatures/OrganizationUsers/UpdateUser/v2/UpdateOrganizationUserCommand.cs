@@ -91,17 +91,26 @@ public class UpdateOrganizationUserCommand(
         return new None();
     }
 
-    private async Task<CommandError?> TryApplyAccountChangesAsync(UpdateOrganizationUserRequest request, bool isEmailChanging)
+    private async Task<CommandError?> TryApplyAccountChangesAsync(UpdateOrganizationUserRequest request,
+        bool isEmailChanging)
     {
+        if (request.UserToUpdate is null)
+        {
+            return null;
+        }
+
+        var userToUpdate = request.UserToUpdate;
+
         try
         {
             if (isEmailChanging)
             {
                 // ChangeEmailAsync persists the account (including any name change above) and syncs Stripe.
-                await changeEmailCommand.ChangeEmailAsync(request.UserToUpdate!, request.NewEmail!);
+                await changeEmailCommand.ChangeEmailAsync(request.UserToUpdate, request.NewEmail!);
             }
             else
             {
+                userToUpdate.Name = request.NewName; // update name in update method
                 userToUpdate.RevisionDate = userToUpdate.AccountRevisionDate = timeProvider.GetUtcNow().UtcDateTime;
                 await userRepository.ReplaceAsync(userToUpdate);
             }
@@ -116,8 +125,7 @@ public class UpdateOrganizationUserCommand(
         }
     }
 
-    // Map the known messages thrown by IChangeEmailCommand / IOrganizationDomainAllowEmailChangeQuery to typed
-    // errors; invalid-format and unverified-domain are already handled upstream, and unknown messages fall back.
+    // Map known errors and passthrough unknown errors.
     private static CommandError MapEmailChangeError(BadRequestException ex) => ex.Message switch
     {
         ChangeEmailCommand.EmailAlreadyInUseError => new EmailAlreadyInUseError(),
@@ -131,8 +139,6 @@ public class UpdateOrganizationUserCommand(
         && request.UserToUpdate is not null
         && !string.Equals(request.UserToUpdate.Email, request.NewEmail, StringComparison.InvariantCultureIgnoreCase);
 
-    // A null NewName means "leave unchanged"; blank clears the name. Names are compared case-sensitively so a
-    // capitalization-only edit still counts as a change.
     private static bool IsNameChanging(UpdateOrganizationUserRequest request)
     {
         if (request.NewName is null || request.UserToUpdate is null)
@@ -147,8 +153,7 @@ public class UpdateOrganizationUserCommand(
     private async Task<CommandError?> TryEnablingSecretsManagerAsync(UpdateOrganizationUserRequest request)
     {
         var organization = request.Organization;
-        var additionalSmSeatsRequired =
-            await countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, 1);
+        var additionalSmSeatsRequired = await countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, 1);
         if (additionalSmSeatsRequired > 0)
         {
             // Self-hosted instances can't autoscale their Stripe subscription.
@@ -173,7 +178,7 @@ public class UpdateOrganizationUserCommand(
         return null;
     }
 
-    private async Task<UpdateOrganizationUserRequest> LoadUserForEmailChangeAsync(UpdateOrganizationUserRequest request)
+    private async Task<UpdateOrganizationUserRequest> LoadUserToUpdateAsync(UpdateOrganizationUserRequest request)
     {
         var wantsAccountChange = !string.IsNullOrWhiteSpace(request.NewEmail) || request.NewName is not null;
         if (!wantsAccountChange || !request.OrganizationUserToUpdate.UserId.HasValue)
@@ -184,7 +189,6 @@ public class UpdateOrganizationUserCommand(
         var userToUpdate = await userRepository.GetByIdAsync(request.OrganizationUserToUpdate.UserId.Value);
         return request with { UserToUpdate = userToUpdate };
     }
-
 
     private async Task<bool> ShouldCreateDefaultCollectionAsync(UpdateOrganizationUserRequest request) =>
         request.IsDemotedFromPrivilegedRole()
