@@ -9,8 +9,8 @@ public interface IGetOrganizationInviteLinkStatusQuery
     /// </summary>
     /// <param name="code">The public invite link code (from the URL).</param>
     /// <returns>
-    /// An <see cref="OrganizationInviteLinkStatus"/> if the link is valid and the organization has the
-    /// invite links feature, or an error if the link is not found or the feature is unavailable.
+    /// An <see cref="OrganizationInviteLinkStatus"/> if the link is valid, or an error if the link is not
+    /// found or the organization is disabled. The status indicates whether the invite links feature is enabled.
     /// </returns>
     Task<CommandResult<OrganizationInviteLinkStatus>> GetStatusAsync(Guid code);
 }

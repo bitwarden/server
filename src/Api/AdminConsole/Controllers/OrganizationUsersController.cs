@@ -90,6 +90,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
     private readonly IAcceptOrganizationInviteLinkCommand _acceptOrganizationInviteLinkCommand;
+    private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -124,7 +125,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
         IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
         IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery,
-        IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand)
+        IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand,
+        IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -160,6 +162,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
         _acceptOrganizationInviteLinkCommand = acceptOrganizationInviteLinkCommand;
+        _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
     }
 
     [HttpGet("{id}")]
@@ -464,7 +467,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var existingUserType = organizationUser.Type;
 
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
-            collectionsToSave, groupsToSave);
+            collectionsToSave, groupsToSave, model.DefaultUserCollectionName);
     }
 
     [HttpPost("{id}")]
@@ -865,6 +868,28 @@ public class OrganizationUsersController : BaseAdminConsoleController
             Code = model.Code,
             User = user,
             ResetPasswordKey = model.ResetPasswordKey,
+        });
+
+        return Handle(result, _ => TypedResults.Ok());
+    }
+
+    [HttpPost("/organizations/users/invite-link/confirm")]
+    [RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
+    public async Task<IResult> ConfirmInviteLink([FromBody] ConfirmOrganizationInviteLinkRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _confirmOrganizationInviteLinkCommand.ConfirmAsync(new ConfirmOrganizationInviteLinkRequest
+        {
+            Code = model.Code,
+            User = user,
+            OrgUserKey = model.OrgUserKey,
+            ResetPasswordKey = model.ResetPasswordKey,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
         });
 
         return Handle(result, _ => TypedResults.Ok());

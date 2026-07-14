@@ -32,7 +32,8 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
@@ -52,7 +53,7 @@ public class OrganizationInviteLinksControllerTests
             .Received(1)
             .CreateAsync(Arg.Is<CreateOrganizationInviteLinkRequest>(r =>
                 r.OrganizationId == orgId &&
-                r.EncryptedInviteKey == "encrypted-key"));
+                r.Invite == "invite-blob"));
     }
 
     [Theory, BitAutoData]
@@ -63,7 +64,8 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
@@ -135,7 +137,8 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = [],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
@@ -233,6 +236,7 @@ public class OrganizationInviteLinksControllerTests
 
         var okResult = Assert.IsType<Ok<OrganizationInviteLinkStatusResponseModel>>(result);
         Assert.Equal(status.OrganizationName, okResult.Value!.OrganizationName);
+        Assert.Equal(status.LinksEnabled, okResult.Value.LinksEnabled);
         Assert.Equal(status.SeatsAvailable, okResult.Value.SeatsAvailable);
     }
 
@@ -248,20 +252,6 @@ public class OrganizationInviteLinksControllerTests
         var result = await sutProvider.Sut.GetStatus(model);
 
         Assert.IsType<NotFound<ErrorResponseModel>>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetStatus_WithNotAvailableError_ReturnsBadRequest(
-        GetOrganizationInviteLinkStatusRequestModel model,
-        SutProvider<OrganizationInviteLinksController> sutProvider)
-    {
-        sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
-            .GetStatusAsync(model.Code)
-            .Returns(new CommandResult<OrganizationInviteLinkStatus>(new InviteLinkNotAvailable()));
-
-        var result = await sutProvider.Sut.GetStatus(model);
-
-        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 
     [Theory, BitAutoData]

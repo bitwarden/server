@@ -14,6 +14,9 @@ public record InviteLinkNotAvailable()
 public record InviteLinkNotFound()
     : NotFoundError("Invite link not found.");
 
+public record EmailNotVerified()
+    : BadRequestError("You must verify your email address before joining an organization.");
+
 public record EmailDomainNotAllowed()
     : BadRequestError("Your email domain is not allowed to join this organization.");
 

@@ -127,6 +127,31 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task AcceptAsync_WithUnverifiedEmail_ReturnsEmailNotVerified(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        user.EmailVerified = false;
+
+        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<EmailNotVerified>(result.AsError);
+
+        // Guard runs in the validation phase - no membership should be created.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
     public async Task AcceptAsync_WithRevokedMember_ReturnsOrganizationAccessRevoked(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -415,6 +440,9 @@ public class AcceptOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
     }
 
     [Theory, BitAutoData]
@@ -552,6 +580,12 @@ public class AcceptOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
             .Received(1)
             .PushAsync(user.Id, organization.Id);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(
+                Arg.Is<OrganizationUser>(ou => ou.OrganizationId == organization.Id && ou.UserId == user.Id),
+                EventType.OrganizationUser_InviteLinkAccepted);
     }
 
     [Theory, BitAutoData]
@@ -761,6 +795,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         link.OrganizationId = org.Id;
         link.AllowedDomains = "[\"example.com\"]";
         user.Email = "user@example.com";
+        user.EmailVerified = true;
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .GetByCodeAsync(link.Code)

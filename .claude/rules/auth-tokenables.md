@@ -18,7 +18,16 @@ with an ad-hoc or missing expiry. Direct `new` construction is the historical pa
   a constant hardcoded at the call site, so the token's lifetime is configurable without a redeploy.
 - **The lifetime-setting constructor MUST be `internal`.** Leave only the public `[JsonConstructor]` parameterless ctor
   (for deserialization) public, so callers in other assemblies (Identity, Api, Admin) cannot bypass the factory.
+- **Binding properties MUST be `[JsonInclude] public { get; internal set; }`.** `internal set` keeps the factory the
+  only mint path; `[JsonInclude]` is required because `JsonSerializer.Deserialize` silently skips non-public setters
+  with default options, so deserialized tokens come back with `default` values and fail validation.
 - **Expose a static validator.** Provide a static validation method returning a typed `TokenableValidationError?`
   so mint-time and validate-time logic stay consistent.
 
 For broader C#/DI conventions, defer to the `writing-server-code` skill.
+
+## Known limitation
+
+`ExpiringTokenable.ExpirationDate` has a `public` setter a derived tokenable cannot tighten. External callers can
+set it via object initializer, but the token still fails validation (binding properties remain `default`). Closing
+this fully needs a base-class change.
