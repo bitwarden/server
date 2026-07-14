@@ -418,6 +418,33 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Immediately cancels the organization's Stripe subscription (Status becomes Canceled), so a
+    /// subsequent restart flow has a canceled subscription to act on.
+    /// </summary>
+    public async Task CancelOrganizationSubscriptionAsync(Guid organizationId)
+    {
+        var subscriptionId = await GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+        var stripeClient = CreateStripeClient();
+        await stripeClient.V1.Subscriptions.CancelAsync(subscriptionId);
+    }
+
+    /// <summary>
+    /// Creates a fresh, attachable card PaymentMethod from Stripe's `tok_visa` test token and returns
+    /// its id. Unlike the shared `pm_card_visa` token, this pm keeps its id when attached to an
+    /// existing customer — matching what a real client sends after tokenizing a card.
+    /// </summary>
+    public async Task<string> CreateCardPaymentMethodAsync()
+    {
+        var stripeClient = CreateStripeClient();
+        var paymentMethod = await stripeClient.V1.PaymentMethods.CreateAsync(new PaymentMethodCreateOptions
+        {
+            Type = "card",
+            Card = new PaymentMethodCardOptions { Token = "tok_visa" },
+        });
+        return paymentMethod.Id;
+    }
+
+    /// <summary>
     /// Creates a real test-mode charge against the organization's customer and
     /// returns its id, used by webhook tests that simulate <c>charge.succeeded</c>.
     /// Fresh signups are on a trial and have no charges yet, so we make one.
@@ -602,6 +629,18 @@ public class StripeTestsFixture : IAsyncDisposable
         });
 
         return provider.Id;
+    }
+
+    /// <summary>
+    /// Returns the organization id of the first organization managed by a provider. Capture this
+    /// before <see cref="RemoveAnyOrganizationFromProviderAsync"/>, which deletes the link.
+    /// </summary>
+    public async Task<Guid> GetFirstProviderOrganizationIdAsync(Guid providerId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var providerOrgRepo = scope.ServiceProvider.GetRequiredService<IProviderOrganizationRepository>();
+        var details = (await providerOrgRepo.GetManyDetailsByProviderAsync(providerId)).First();
+        return details.OrganizationId;
     }
 
     public async Task RemoveAnyOrganizationFromProviderAsync(Guid providerId)
