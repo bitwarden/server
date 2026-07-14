@@ -486,8 +486,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private async Task<(List<CollectionAccessSelection> CollectionsToSave, ICollection<Collection> Collections)> GetAuthorizedCollectionsToSaveAsync(OrganizationUserUpdateRequestModel model, ICollection<CollectionAccessSelection> currentAccess)
     {
         // Authorization check:
-        // You must have authorization to ModifyUserAccess for all collections being saved. The bulk handler
-        // authorizes the whole set in a single call (it succeeds only if every collection is authorized).
+        // You must have authorization to ModifyUserAccess for all collections being saved.
         var postedCollections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
         if (postedCollections.Count != 0 &&
             !(await _authorizationService.AuthorizeAsync(User, postedCollections, BulkCollectionOperations.ModifyUserAccess)).Succeeded)
@@ -525,7 +524,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
             .Concat(readonlyCollectionAccess)
             .ToList();
 
-        // Posted plus preserved collections, deduplicated, for the validator's existence and default checks.
         var collections = postedCollections
             .Concat(currentCollections)
             .DistinctBy(c => c.Id)
