@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Services\Pam\Pam.csproj" />
+    <ProjectReference Include="..\..\..\..\test\Core.Test\Core.Test.csproj" />
   </ItemGroup>
 
 </Project>
