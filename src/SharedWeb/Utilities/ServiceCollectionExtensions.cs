@@ -47,7 +47,6 @@ using Bit.Core.Resources;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
-using Bit.Core.Services.Implementations;
 using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -258,6 +257,13 @@ public static class ServiceCollectionExtensions
                 TwoFactorAuthenticatorUserVerificationTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
+        services.AddSingleton<ITwoFactorUserVerificationTokenableFactory, TwoFactorUserVerificationTokenableFactory>();
+        services.AddSingleton<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<TwoFactorUserVerificationTokenable>(
+                TwoFactorUserVerificationTokenable.ClearTextPrefix,
+                TwoFactorUserVerificationTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>>()));
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -296,19 +302,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.AddOptionality();
         services.AddTokenizers();
-        services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
-
-        if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
-            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
-        {
-            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
-        }
-        else
-        {
-            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
-        }
 
         var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
         if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))

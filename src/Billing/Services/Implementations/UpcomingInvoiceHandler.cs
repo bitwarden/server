@@ -493,7 +493,9 @@ public class UpcomingInvoiceHandler(
                 PerUserMonthlyPrice = FormatCurrency(perUserMonthly, culture),
                 IsAnnual = targetPlan.IsAnnual,
                 TotalPrice = FormatCurrency(total, culture),
-                DiscountLines = [.. discounts.Select(discount => discount.Display)]
+                DiscountLines = [.. discounts.Select(discount => discount.Display)],
+                ProactiveDiscountMonths = discounts
+                    .FirstOrDefault(discount => discount.CouponId == cohort.ProactiveDiscountCouponCode)?.Months ?? 0
             }
         });
     }
@@ -540,7 +542,7 @@ public class UpcomingInvoiceHandler(
         return (int)(seats ?? 0);
     }
 
-    private sealed record Discount(bool IsPercentage, decimal Value, string Display);
+    private sealed record Discount(bool IsPercentage, decimal Value, string Display, string CouponId, long Months);
 
     private async Task<List<Discount>> ResolveDiscountsAsync(
         OrganizationPlanMigrationCohort cohort,
@@ -553,15 +555,19 @@ public class UpcomingInvoiceHandler(
 
         Discount? MapCoupon(Coupon? coupon, string couponId)
         {
+            var months = coupon?.DurationInMonths ?? 0;
+
             if (coupon?.PercentOff is { } percentOff)
             {
-                return new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%");
+                return new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%",
+                    CouponId: couponId, Months: months);
             }
 
             if (coupon?.AmountOff is { } amountOffMinorUnits)
             {
                 var amountOff = amountOffMinorUnits / 100M;
-                return new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture));
+                return new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture),
+                    CouponId: couponId, Months: months);
             }
 
             logger.LogError(

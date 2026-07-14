@@ -1018,9 +1018,9 @@ public class StripePaymentServiceTests
                 [
                     new SubscriptionItem
                     {
+                        Price = new Price { Metadata = new Dictionary<string, string> { { "isAddOn", "true" } } },
                         Plan = new Plan { ProductId = "prod_premium_access", Nickname = "Premium Access", Amount = 0, Interval = "year" },
-                        Quantity = 1,
-                        Metadata = new Dictionary<string, string> { { "isAddOn", "true" } }
+                        Quantity = 1
                     },
                     new SubscriptionItem
                     {
@@ -1101,9 +1101,9 @@ public class StripePaymentServiceTests
                 [
                     new SubscriptionItem
                     {
+                        Price = new Price { Metadata = new Dictionary<string, string> { { "isAddOn", "true" } } },
                         Plan = new Plan { ProductId = "prod_premium_access", Nickname = "Premium Access", Amount = 0, Interval = "year" },
-                        Quantity = 1,
-                        Metadata = new Dictionary<string, string> { { "isAddOn", "true" } }
+                        Quantity = 1
                     }
                 ]
             }
@@ -1635,5 +1635,262 @@ public class StripePaymentServiceTests
 
         // Assert
         Assert.Equal(0, result.Subscription!.ServiceAccountGrace);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_Teams2019BaseAndOverage_CollapsesToSingleSeatLine(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber)
+    {
+        // Arrange — a Teams 2019 org billed as a base bundle line + a seat-overage add-on line, with a
+        // pending migration schedule whose Phase 2 collapses both into one current-Teams seat line (x7).
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+        subscriber.PlanType = PlanType.TeamsMonthly2019;
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "teams-org-seat-monthly" },
+                        Plan = new Plan { Id = "teams-org-seat-monthly", ProductId = "prod_2019_teams_seat", Nickname = "2019 Teams Seat (Monthly)", Amount = 250, Interval = "month" },
+                        Quantity = 2
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "teams-org-monthly" },
+                        Plan = new Plan { Id = "teams-org-monthly", ProductId = "prod_2019_teams_org", Nickname = "2019 Teams Org. (Monthly)", Amount = 800, Interval = "month" },
+                        Quantity = 1
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { Id = "teams-current-seat", UnitAmount = 400, ProductId = "prod_current_teams", Nickname = "Teams Organization Seat" },
+                            Quantity = 7
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.TeamsMonthly2019)
+            .Returns(new Teams2019Plan(false));
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — a single migrated seat line at the Phase 2 price/quantity; no surviving legacy amount.
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal("prod_current_teams", item.ProductId);
+        Assert.Equal("Teams Organization Seat", item.Name);
+        Assert.Equal(4.00m, item.Amount);
+        Assert.Equal(7, item.Quantity);
+        Assert.DoesNotContain(result.Subscription.Items, i => i.PriceId == "teams-org-seat-monthly");
+        Assert.DoesNotContain(result.Subscription.Items, i => i.Amount == 8.00m);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_Teams2019WithStorageAddon_DropsOverageButKeepsStorage(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber)
+    {
+        // Arrange — same collapse, plus a storage add-on whose product changes across the migration
+        // (cross-product). Only the seat-overage line collapses; the storage line must survive the preview.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+        subscriber.PlanType = PlanType.TeamsMonthly2019;
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "teams-org-monthly" },
+                        Plan = new Plan { Id = "teams-org-monthly", ProductId = "prod_2019_teams_org", Nickname = "2019 Teams Org. (Monthly)", Amount = 800, Interval = "month" },
+                        Quantity = 1
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "teams-org-seat-monthly" },
+                        Plan = new Plan { Id = "teams-org-seat-monthly", ProductId = "prod_2019_teams_seat", Nickname = "2019 Teams Seat (Monthly)", Amount = 250, Interval = "month" },
+                        Quantity = 2
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "storage-gb-monthly", Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" } },
+                        Plan = new Plan { Id = "storage-gb-monthly", ProductId = "prod_storage_old", Nickname = "Additional Storage GB (Monthly)", Amount = 50, Interval = "month" },
+                        Quantity = 3
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { Id = "teams-current-seat", UnitAmount = 400, ProductId = "prod_current_teams", Nickname = "Teams Organization Seat" },
+                            Quantity = 7
+                        },
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { Id = "storage-new", UnitAmount = 100, ProductId = "prod_storage_new", Nickname = "Additional Storage GB" },
+                            Quantity = 3
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.TeamsMonthly2019)
+            .Returns(new Teams2019Plan(false));
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — overage collapsed away, storage line preserved.
+        Assert.Equal(2, result.Subscription!.Items.Count());
+        Assert.DoesNotContain(result.Subscription.Items, i => i.PriceId == "teams-org-seat-monthly");
+        Assert.Contains(result.Subscription.Items, i => i.ProductId == "prod_current_teams" && i.Quantity == 7);
+        var storage = Assert.Single(result.Subscription.Items, i => i.PriceId == "storage-gb-monthly");
+        Assert.Equal(3, storage.Quantity);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_NonPackagedMigrationSource_PreservesAllLineItems(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber)
+    {
+        // Arrange — a Preserve-policy migration source (Teams 2020) is not a Packaged source, so the
+        // overage collapse must not apply and every line item is preserved.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+        subscriber.PlanType = PlanType.TeamsMonthly2020;
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "2020-teams-org-seat-monthly" },
+                        Plan = new Plan { Id = "2020-teams-org-seat-monthly", ProductId = "prod_teams_2020", Nickname = "Teams Organization Seat (Monthly)", Amount = 400, Interval = "month" },
+                        Quantity = 10
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { Id = "teams-current-seat", UnitAmount = 500, ProductId = "prod_teams_2020", Nickname = "Teams Organization Seat (Monthly)" },
+                            Quantity = 10
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act — a Preserve migration never triggers a plan fetch (ShouldCollapseSeatOverageLine is false).
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — the single seat line is repriced by Phase 2 but not removed.
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal("prod_teams_2020", item.ProductId);
+        Assert.Equal(5.00m, item.Amount);
+        Assert.Equal(10, item.Quantity);
     }
 }

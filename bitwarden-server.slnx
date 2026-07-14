@@ -19,6 +19,7 @@
     <Project Path="src/Api/Api.csproj" />
     <Project Path="src/Billing/Billing.csproj" />
     <Project Path="src/Core/Core.csproj" />
+    <Project Path="src/Libraries/Data/Data.csproj" />
     <Project Path="src/Events/Events.csproj" />
     <Project Path="src/EventsProcessor/EventsProcessor.csproj" />
     <Project Path="src/HttpExtensions/HttpExtensions.csproj" />
@@ -38,11 +39,13 @@
       <BuildDependency Project="src/Core/Core.csproj" />
     </Project>
     <Project Path="bitwarden_license/src/Commercial.Infrastructure.EntityFramework/Commercial.Infrastructure.EntityFramework.csproj" />
+    <Project Path="bitwarden_license/src/Services/Pam/Pam.csproj" />
     <Project Path="bitwarden_license/src/Scim/Scim.csproj" />
     <Project Path="bitwarden_license/src/Sso/Sso.csproj" />
   </Folder>
   <Folder Name="/test - Bitwarden License/">
     <Project Path="bitwarden_license/test/Commercial.Core.Test/Commercial.Core.Test.csproj" />
+    <Project Path="bitwarden_license/test/Services/Pam.Test/Pam.Test.csproj" />
     <Project Path="bitwarden_license/test/Scim.IntegrationTest/Scim.IntegrationTest.csproj" />
     <Project Path="bitwarden_license/test/Scim.Test/Scim.Test.csproj" />
     <Project Path="bitwarden_license/test/Sso.IntegrationTest/Sso.IntegrationTest.csproj" />
@@ -57,6 +60,7 @@
     <Project Path="test/Common/Common.csproj" />
     <Project Path="test/Core.IntegrationTest/Core.IntegrationTest.csproj" />
     <Project Path="test/Core.Test/Core.Test.csproj" />
+    <Project Path="test/Libraries/Data.Test/Data.Test.csproj" />
     <Project Path="test/Events.IntegrationTest/Events.IntegrationTest.csproj" />
     <Project Path="test/Events.Test/Events.Test.csproj" />
     <Project Path="test/EventsProcessor.Test/EventsProcessor.Test.csproj" />

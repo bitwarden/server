@@ -17,8 +17,10 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfir
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
@@ -37,6 +39,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 
 namespace Bit.Admin.AdminConsole.Controllers;
 
@@ -231,8 +234,35 @@ public class OrganizationsController : Controller
             policies = await _policyRepository.GetManyByOrganizationIdAsync(id);
         }
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
-        var billingInfo = await _paymentService.GetBillingAsync(organization);
-        var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(organization);
+        BillingInfo billingInfo = null;
+        BillingHistoryInfo billingHistoryInfo = null;
+        try
+        {
+            billingInfo = await _paymentService.GetBillingAsync(organization);
+            billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(organization);
+        }
+        catch (StripeException ex) when (ex.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)
+        {
+            billingInfo = null;
+            billingHistoryInfo = null;
+            _logger.LogError(ex,
+                "Billing information for organization {OrganizationId} could not be loaded because the Stripe customer was not found. It may have been deleted.",
+                id);
+            TempData["Warning"] =
+                "Billing information could not be loaded. The Stripe customer may have been deleted. " +
+                "You can still edit the organization and set a valid Gateway Customer ID.";
+        }
+        catch (Exception ex)
+        {
+            billingInfo = null;
+            billingHistoryInfo = null;
+            _logger.LogError(ex,
+                "Failed to load billing information for organization {OrganizationId}.",
+                id);
+            TempData["Error"] =
+                "Billing information could not be loaded. You can still edit the organization or try reloading the page. " +
+                "Contact support if the problem persists.";
+        }
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
         var secrets = organization.UseSecretsManager ? await _secretRepository.GetSecretsCountByOrganizationIdAsync(id) : -1;
         var projects = organization.UseSecretsManager ? await _projectRepository.GetProjectCountByOrganizationIdAsync(id) : -1;
