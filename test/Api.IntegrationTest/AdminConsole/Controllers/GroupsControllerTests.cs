@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
@@ -175,6 +176,56 @@ public class GroupsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         var response = await _client.GetAsync($"/organizations/{_organization.Id}/groups");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetOrganizationGroups_AsUserWithLimitCollectionCreationEnabledAndNoCollectionAccess_ReturnsForbidden()
+    {
+        var (email, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        await EnableLimitCollectionCreationAsync();
+
+        await _loginHelper.LoginAsync(email);
+
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/groups");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetOrganizationGroups_AsUserWithLimitCollectionCreationEnabledButManagesACollection_ReturnsSuccess()
+    {
+        var (email, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        await OrganizationTestHelpers.CreateCollectionAsync(
+            _factory,
+            _organization.Id,
+            "Managed Collection",
+            users: [new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = false, HidePasswords = false, Manage = true }]);
+
+        await EnableLimitCollectionCreationAsync();
+
+        await _loginHelper.LoginAsync(email);
+
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/groups");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Enables the "Limit collection creation" collection management setting for the test organization via the
+    /// public API, ensuring the OrganizationAbility cache is updated as it would be in production.
+    /// </summary>
+    private async Task EnableLimitCollectionCreationAsync()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.PutAsJsonAsync($"/organizations/{_organization.Id}/collection-management",
+            new OrganizationCollectionManagementUpdateRequestModel { LimitCollectionCreation = true });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
