@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -11,6 +12,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using OneOf.Types;
+using CommandError = Bit.Core.AdminConsole.Utilities.v2.Error;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
@@ -29,8 +31,6 @@ public class UpdateOrganizationUserCommand(
 {
     public async Task<CommandResult> UpdateUserAsync(UpdateOrganizationUserRequest request)
     {
-        var (organizationUser, organization) = (request.OrganizationUserToUpdate, request.Organization);
-
         var validationResult = await validator.ValidateAsync(request);
 
         if (validationResult.IsError)
@@ -38,44 +38,31 @@ public class UpdateOrganizationUserCommand(
             return validationResult.AsError;
         }
 
-        var collectionsToSave = request.NewCollections?.ToList() ?? [];
-        var groupsToSave = request.NewGroups;
+        var wasDemotedFromPrivilegedRole = IsDemotingFromPrivilegedRole(request);
+        var enablingSecretsManager = IsEnablingSecretsManager(request);
 
-        var shouldCreateDefaultCollection = await ShouldCreateDefaultCollectionOnDemotionAsync(request);
-
-        var enablingSecretsManager = !organizationUser.AccessSecretsManager && request.NewAccessSecretsManager;
-
+        var organizationUser = request.OrganizationUserToUpdate;
         organizationUser.Type = request.NewType;
         organizationUser.Permissions = CoreHelpers.ClassToJsonData(request.NewPermissions);
         organizationUser.AccessSecretsManager = request.NewAccessSecretsManager;
 
-        // Only autoscale after validation passes, so we never touch Stripe for an invalid request.
         if (enablingSecretsManager)
         {
-            var additionalSmSeatsRequired = await countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organizationUser.OrganizationId, 1);
-            if (additionalSmSeatsRequired > 0)
+            var commandError = await TryEnablingSecretsManagerAsync(request);
+            if (commandError is not null)
             {
-                // Self-hosted instances can't autoscale their Stripe subscription; reject rather than attempt a purchase.
-                if (globalSettings.SelfHosted)
-                {
-                    return new CannotAutoscaleSecretsManagerSeatsOnSelfHost();
-                }
-
-                var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
-                var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
-                    .AdjustSeats(additionalSmSeatsRequired);
-                await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
+                return commandError;
             }
         }
 
-        await organizationUserRepository.ReplaceAsync(organizationUser, collectionsToSave);
+        await organizationUserRepository.ReplaceAsync(organizationUser, request.NewCollections?.ToList() ?? []);
 
-        if (groupsToSave != null)
+        if (request.NewGroups != null)
         {
-            await organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupsToSave, timeProvider.GetUtcNow().UtcDateTime);
+            await organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, request.NewGroups, timeProvider.GetUtcNow().UtcDateTime);
         }
 
-        if (shouldCreateDefaultCollection)
+        if (await ShouldCreateDefaultCollectionAsync(request, wasDemotedFromPrivilegedRole))
         {
             await collectionRepository.CreateDefaultCollectionsAsync(
                 organizationUser.OrganizationId,
@@ -88,23 +75,48 @@ public class UpdateOrganizationUserCommand(
         return new None();
     }
 
-    private async Task<bool> ShouldCreateDefaultCollectionOnDemotionAsync(UpdateOrganizationUserRequest request)
+    private static bool IsEnablingSecretsManager(UpdateOrganizationUserRequest request) =>
+        !request.OrganizationUserToUpdate.AccessSecretsManager && request.NewAccessSecretsManager;
+
+    private static bool IsDemotingFromPrivilegedRole(UpdateOrganizationUserRequest request) =>
+        request.OrganizationUserToUpdate.Type is OrganizationUserType.Admin or OrganizationUserType.Owner
+        && request.NewType is not (OrganizationUserType.Admin or OrganizationUserType.Owner);
+
+    private async Task<CommandError?> TryEnablingSecretsManagerAsync(UpdateOrganizationUserRequest request)
     {
-        var organizationUser = request.OrganizationUserToUpdate;
-
-        var isDemotedFromPrivilegedRole =
-            organizationUser.Type is OrganizationUserType.Admin or OrganizationUserType.Owner
-            && request.NewType is not (OrganizationUserType.Admin or OrganizationUserType.Owner);
-
-        if (!isDemotedFromPrivilegedRole
-            || !organizationUser.UserId.HasValue
-            || !request.Organization.UseMyItems
-            || string.IsNullOrWhiteSpace(request.DefaultUserCollectionName))
+        var organization = request.Organization;
+        var additionalSmSeatsRequired = await countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, 1);
+        if (additionalSmSeatsRequired > 0)
         {
-            return false;
+            // Self-hosted instances can't autoscale their Stripe subscription; reject rather than attempt a purchase.
+            if (globalSettings.SelfHosted)
+            {
+                return new CannotAutoscaleSecretsManagerSeatsOnSelfHost();
+            }
+
+            try
+            {
+                var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+                var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
+                    .AdjustSeats(additionalSmSeatsRequired);
+                await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
+            }
+            catch (BadRequestException ex)
+            {
+                return new CouldNotIncreaseSeatsOfSecretManager(ex.Message);
+            }
         }
 
-        var policy = await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId.Value);
-        return policy.State == OrganizationDataOwnershipState.Enabled;
+        return null;
     }
+
+    private async Task<bool> ShouldCreateDefaultCollectionAsync(UpdateOrganizationUserRequest request,
+        bool wasDemotedFromPrivilegedRole) =>
+        wasDemotedFromPrivilegedRole
+        && request.OrganizationUserToUpdate.UserId.HasValue
+        && request.Organization.UseMyItems
+        && !string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
+        && (await policyRequirementQuery.GetAsyncVNext<OrganizationDataOwnershipPolicyRequirement>(
+            request.OrganizationUserToUpdate.UserId!.Value))
+        .State == OrganizationDataOwnershipState.Enabled;
 }

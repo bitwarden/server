@@ -343,7 +343,7 @@ public class UpdateOrganizationUserCommandTests
         Guid userId, OrganizationDataOwnershipState state)
     {
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
+            .GetAsyncVNext<OrganizationDataOwnershipPolicyRequirement>(userId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(state, []));
     }
 }
