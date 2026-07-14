@@ -19,6 +19,24 @@ public class CancellingAndReinstatingSubscriptionTests(StripeTestsFixture fixtur
     }
 
     [BillingFact]
+    public async Task CancelPremium_PreservesSubscriptionMetadata()
+    {
+        // The SDK-bump audit verified cancellation doesn't clear metadata it doesn't set. The premium
+        // subscription carries a `userId` metadata key from creation; cancelling must not wipe it.
+        const string email = "cancel-metadata-preserve@example.com";
+        var client = await fixture.PreparePremiumUserAsync(email);
+
+        var response = await client.PostAsJsonAsync(
+            "/accounts/cancel",
+            new { Reason = "user_test", Feedback = "integration test cancellation" });
+        await Assert.SuccessResponseAsync(response);
+
+        var subscriptionId = await fixture.GetUserGatewaySubscriptionIdByEmailAsync(email);
+        var metadata = await fixture.GetSubscriptionMetadataAsync(subscriptionId);
+        Assert.Contains("userId", metadata.Keys);
+    }
+
+    [BillingFact]
     public async Task Reinstate_FetchesCanceledSubscriptionAndCreatesReplacement()
     {
         var client = await fixture.PreparePremiumUserAsync("reinstate-premium@example.com");

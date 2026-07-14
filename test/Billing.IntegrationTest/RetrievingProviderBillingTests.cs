@@ -71,4 +71,17 @@ public class RetrievingProviderBillingTests(StripeTestsFixture fixture) : IClass
         var subscription = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
         Assert.Equal(30m, subscription["discountPercentage"]!.GetValue<decimal>());
     }
+
+    [BillingFact]
+    public async Task Subscription_IsCreatedWithClassicBillingMode()
+    {
+        // The SDK bump sets BillingMode = { Type = "classic" } on the provider subscription
+        // (ProviderBillingService.SetupSubscription). Verifies the mode lands on Stripe.
+        var (_, providerId) = await fixture.PrepareProviderAdminAsync("provider-billing-mode@example.com");
+
+        var subscriptionId = await fixture.GetProviderGatewaySubscriptionIdAsync(providerId);
+        var billingModeType = await fixture.GetSubscriptionBillingModeTypeAsync(subscriptionId);
+
+        Assert.Equal("classic", billingModeType);
+    }
 }

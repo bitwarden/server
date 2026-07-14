@@ -27,6 +27,20 @@ public class RetrievingPremiumSubscriptionTests(StripeTestsFixture fixture) : IC
     }
 
     [BillingFact]
+    public async Task Subscription_IsCreatedWithClassicBillingMode()
+    {
+        // Premium creation (CreatePremiumCloudHostedSubscriptionCommand) sets
+        // BillingMode = { Type = "classic" }. Verifies the mode lands on the Stripe subscription.
+        const string email = "premium-billing-mode@example.com";
+        await fixture.PreparePremiumUserAsync(email);
+
+        var subscriptionId = await fixture.GetUserGatewaySubscriptionIdByEmailAsync(email);
+        var billingModeType = await fixture.GetSubscriptionBillingModeTypeAsync(subscriptionId);
+
+        Assert.Equal("classic", billingModeType);
+    }
+
+    [BillingFact]
     public async Task PaymentMethod_ForPremiumUser_ReturnsTheStripeVisaTestCard()
     {
         var client = await fixture.PreparePremiumUserAsync("premium-payment-method@example.com");
@@ -125,5 +139,30 @@ public class RetrievingPremiumSubscriptionTests(StripeTestsFixture fixture) : IC
         Assert.Equal(10m, seatsDiscount["value"]!.GetValue<decimal>());
 
         Assert.Null(cart["discount"]);
+    }
+
+    [BillingFact]
+    public async Task Subscription_WithPlainPercentOffSubscriptionCoupon_AttributesDiscountToCartLevel()
+    {
+        // Complement of the product-scoped tests: a subscription-level coupon with NO applies_to
+        // must land on cart-level `cart.discount`, not on a line item. Exercises the cart-level
+        // branch of GetBitwardenSubscriptionQuery.PartitionCouponsByScope.
+        const string email = "premium-plain-coupon@example.com";
+        var client = await fixture.PreparePremiumUserAsync(email);
+        var subscriptionId = await fixture.GetUserGatewaySubscriptionIdByEmailAsync(email);
+        await fixture.SeedAndAttachSubscriptionCouponAsync(subscriptionId, $"plain_pct_{Guid.NewGuid():N}", percentOff: 15);
+
+        var response = await client.GetAsync("/account/billing/vnext/subscription");
+        await Assert.SuccessResponseAsync(response);
+
+        var subscription = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
+        var cart = subscription["cart"]!;
+
+        var cartDiscount = cart["discount"];
+        Assert.NotNull(cartDiscount);
+        Assert.Equal("percent-off", cartDiscount["type"]!.GetValue<string>());
+        Assert.Equal(15m, cartDiscount["value"]!.GetValue<decimal>());
+
+        Assert.Null(cart["passwordManager"]!["seats"]!["discount"]);
     }
 }

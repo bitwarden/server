@@ -79,6 +79,45 @@ public class RetrievingOrganizationBillingTests(StripeTestsFixture fixture) : IC
     }
 
     [BillingFact]
+    public async Task Subscription_WithCustomerLevelPercentOffCoupon_ReturnsDiscountPercentage()
+    {
+        // Drives OrganizationsController.GetSubscription + StripePaymentService.GetSubscriptionAsync.
+        // The response's CustomerDiscount.PercentOff reads `discount.PercentOff` where `discount`
+        // is `subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault()` — i.e.
+        // `Customer.Discount.Source.Coupon.PercentOff` for the customer-level branch. Requires
+        // `customer.discount.source.coupon` in the expand; without it the coupon comes back as an
+        // unexpanded stub and PercentOff is null (the 2025-09-30.clover Discount refactor moved
+        // Coupon under Discount.Source). This is the value assertion that catches that regression.
+        var (client, _, organizationId, _) =
+            await fixture.PrepareOrganizationOwnerAsync("org-customer-coupon@example.com");
+
+        var customerId = await fixture.GetOrganizationGatewayCustomerIdAsync(organizationId);
+        var couponId = $"org_cust_{Guid.NewGuid():N}";
+        await fixture.SeedAndAttachCustomerCouponAsync(customerId, couponId, percentOff: 30);
+
+        var response = await client.GetAsync($"/organizations/{organizationId}/subscription");
+        await Assert.SuccessResponseAsync(response);
+
+        var subscription = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
+        Assert.Equal(30m, subscription["customerDiscount"]!["percentOff"]!.GetValue<decimal>());
+    }
+
+    [BillingFact]
+    public async Task Subscription_IsCreatedWithClassicBillingMode()
+    {
+        // The SDK bump sets BillingMode = { Type = "classic" } on subscription creation
+        // (OrganizationBillingService). This verifies that mode actually lands on the Stripe
+        // subscription rather than defaulting to Stripe's newer "flexible" billing mode.
+        var (_, _, organizationId, _) =
+            await fixture.PrepareOrganizationOwnerAsync("org-billing-mode@example.com");
+
+        var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+        var billingModeType = await fixture.GetSubscriptionBillingModeTypeAsync(subscriptionId);
+
+        Assert.Equal("classic", billingModeType);
+    }
+
+    [BillingFact]
     public async Task Warnings_ReturnsAWarningsObject()
     {
         var (client, _, organizationId, _) =
