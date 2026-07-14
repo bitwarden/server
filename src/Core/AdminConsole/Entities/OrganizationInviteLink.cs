@@ -86,4 +86,18 @@ public class OrganizationInviteLink : ITableObject<Guid>
             Code = Guid.NewGuid().ToString();
         }
     }
+
+    /// <summary>
+    /// Constant-time comparison of <paramref name="providedCode"/> against <see cref="Code"/>;
+    /// returns false for null or empty input.
+    /// </summary>
+    public bool CodeMatches(string? providedCode)
+    {
+        if (string.IsNullOrEmpty(providedCode) || string.IsNullOrEmpty(Code))
+        {
+            return false;
+        }
+
+        return CoreHelpers.FixedTimeEquals(providedCode, Code);
+    }
 }

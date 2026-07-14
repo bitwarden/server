@@ -15,7 +15,7 @@ public class GetOrganizationInviteLinkPoliciesQuery(
     public async Task<CommandResult<ICollection<Policy>>> GetPoliciesAsync(Guid organizationId, Guid code)
     {
         var inviteLink = await organizationInviteLinkRepository.GetByOrganizationIdAsync(organizationId);
-        if (inviteLink is null || !InviteLinkCodeValidator.CodesMatch(code.ToString(), inviteLink.Code))
+        if (inviteLink is null || !inviteLink.CodeMatches(code.ToString()))
         {
             return new InviteLinkNotFound();
         }

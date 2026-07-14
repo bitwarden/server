@@ -12,7 +12,7 @@ public class ValidateOrganizationInviteLinkEmailDomainQuery(
     public async Task<CommandResult<bool>> ValidateAsync(Guid organizationId, Guid code, string email)
     {
         var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(organizationId);
-        if (link is null || !InviteLinkCodeValidator.CodesMatch(code.ToString(), link.Code))
+        if (link is null || !link.CodeMatches(code.ToString()))
         {
             return new InviteLinkNotFound();
         }

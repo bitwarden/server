@@ -934,7 +934,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     /// <summary>
     /// Configures the default "happy path" mocks. Sets <see cref="OrganizationInviteLink.Code"/> to
     /// a fresh Guid string so tests can derive <c>request.Code = Guid.Parse(inviteLink.Code)</c> and
-    /// have <see cref="InviteLinkCodeValidator.CodesMatch"/> succeed.
+    /// have <see cref="OrganizationInviteLink.CodeMatches"/> succeed.
     /// </summary>
     private static void SetupHappyPath(
         Organization org,

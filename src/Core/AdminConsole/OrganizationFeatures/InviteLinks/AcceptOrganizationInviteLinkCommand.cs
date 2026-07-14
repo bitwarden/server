@@ -43,7 +43,7 @@ public class AcceptOrganizationInviteLinkCommand(
         var user = request.User;
 
         var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
-        if (link is null || !InviteLinkCodeValidator.CodesMatch(request.Code.ToString(), link.Code))
+        if (link is null || !link.CodeMatches(request.Code.ToString()))
         {
             return new InviteLinkNotFound();
         }
