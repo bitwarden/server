@@ -59,7 +59,8 @@ public class UpdateOrganizationUserCommand(
 
         if (request.NewGroups != null)
         {
-            await organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, request.NewGroups, timeProvider.GetUtcNow().UtcDateTime);
+            await organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, request.NewGroups,
+                timeProvider.GetUtcNow().UtcDateTime);
         }
 
         if (await ShouldCreateDefaultCollectionAsync(request, wasDemotedFromPrivilegedRole))
@@ -85,10 +86,11 @@ public class UpdateOrganizationUserCommand(
     private async Task<CommandError?> TryEnablingSecretsManagerAsync(UpdateOrganizationUserRequest request)
     {
         var organization = request.Organization;
-        var additionalSmSeatsRequired = await countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, 1);
+        var additionalSmSeatsRequired =
+            await countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, 1);
         if (additionalSmSeatsRequired > 0)
         {
-            // Self-hosted instances can't autoscale their Stripe subscription; reject rather than attempt a purchase.
+            // Self-hosted instances can't autoscale their Stripe subscription.
             if (globalSettings.SelfHosted)
             {
                 return new CannotAutoscaleSecretsManagerSeatsOnSelfHost();
