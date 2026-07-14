@@ -1,6 +1,5 @@
-FROM --platform=$BUILDPLATFORM nginx:1.31-alpine3.23
+FROM nginx:1.31-alpine3.23
 
-ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
