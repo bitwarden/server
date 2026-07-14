@@ -759,8 +759,8 @@ public class CiphersController : Controller
         return await PutShare(id, model);
     }
 
-    [HttpPut("{id}/collections")]
-    public async Task<CipherDetailsResponseModel> PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    [HttpPut("{id}/shared-folders")]
+    public async Task<CipherDetailsResponseModel> PutSharedFolders(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var cipher = await GetByIdAsync(id, user.Id);
@@ -779,15 +779,29 @@ public class CiphersController : Controller
         return new CipherDetailsResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings, collectionCiphers);
     }
 
-    [HttpPost("{id}/collections")]
+    [HttpPost("{id}/shared-folders")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherDetailsResponseModel> PostCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task<CipherDetailsResponseModel> PostSharedFolders(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
-        return await PutCollections(id, model);
+        return await PutSharedFolders(id, model);
     }
 
-    [HttpPut("{id}/collections_v2")]
-    public async Task<OptionalCipherDetailsResponseModel> PutCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    [HttpPut("{id}/collections")]
+    [Obsolete("Replaced by /shared-folders route; retained for backwards compatibility")]
+    public async Task<CipherDetailsResponseModel> PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        return await PutSharedFolders(id, model);
+    }
+
+    [HttpPost("{id}/collections")]
+    [Obsolete("Replaced by /shared-folders route; retained for backwards compatibility")]
+    public async Task<CipherDetailsResponseModel> PostCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        return await PutSharedFolders(id, model);
+    }
+
+    [HttpPut("{id}/shared-folders_v2")]
+    public async Task<OptionalCipherDetailsResponseModel> PutSharedFolders_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var cipher = await GetByIdAsync(id, user.Id);
@@ -814,15 +828,29 @@ public class CiphersController : Controller
         return response;
     }
 
-    [HttpPost("{id}/collections_v2")]
+    [HttpPost("{id}/shared-folders_v2")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<OptionalCipherDetailsResponseModel> PostCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task<OptionalCipherDetailsResponseModel> PostSharedFolders_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
-        return await PutCollections_vNext(id, model);
+        return await PutSharedFolders_vNext(id, model);
     }
 
-    [HttpPut("{id}/collections-admin")]
-    public async Task<CipherMiniDetailsResponseModel> PutCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
+    [HttpPut("{id}/collections_v2")]
+    [Obsolete("Replaced by /shared-folders_v2 route; retained for backwards compatibility")]
+    public async Task<OptionalCipherDetailsResponseModel> PutCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        return await PutSharedFolders_vNext(id, model);
+    }
+
+    [HttpPost("{id}/collections_v2")]
+    [Obsolete("Replaced by /shared-folders_v2 route; retained for backwards compatibility")]
+    public async Task<OptionalCipherDetailsResponseModel> PostCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        return await PutSharedFolders_vNext(id, model);
+    }
+
+    [HttpPut("{id}/shared-folders-admin")]
+    public async Task<CipherMiniDetailsResponseModel> PutSharedFoldersAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
@@ -850,15 +878,29 @@ public class CiphersController : Controller
         return new CipherMiniDetailsResponseModel(cipher, _globalSettings, collectionCiphersGroupDict, cipher.OrganizationUseTotp);
     }
 
-    [HttpPost("{id}/collections-admin")]
+    [HttpPost("{id}/shared-folders-admin")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherMiniDetailsResponseModel> PostCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task<CipherMiniDetailsResponseModel> PostSharedFoldersAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
     {
-        return await PutCollectionsAdmin(id, model);
+        return await PutSharedFoldersAdmin(id, model);
     }
 
-    [HttpPost("bulk-collections")]
-    public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
+    [HttpPut("{id}/collections-admin")]
+    [Obsolete("Replaced by /shared-folders-admin route; retained for backwards compatibility")]
+    public async Task<CipherMiniDetailsResponseModel> PutCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        return await PutSharedFoldersAdmin(id, model);
+    }
+
+    [HttpPost("{id}/collections-admin")]
+    [Obsolete("Replaced by /shared-folders-admin route; retained for backwards compatibility")]
+    public async Task<CipherMiniDetailsResponseModel> PostCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        return await PutSharedFoldersAdmin(id, model);
+    }
+
+    [HttpPost("bulk-shared-folders")]
+    public async Task PostBulkSharedFolders([FromBody] CipherBulkUpdateCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
         await _cipherService.ValidateBulkCollectionAssignmentAsync(model.CollectionIds, model.CipherIds, userId);
@@ -877,6 +919,13 @@ public class CiphersController : Controller
         {
             await _collectionCipherRepository.AddCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
         }
+    }
+
+    [HttpPost("bulk-collections")]
+    [Obsolete("Replaced by /bulk-shared-folders route; retained for backwards compatibility")]
+    public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
+    {
+        await PostBulkSharedFolders(model);
     }
 
     [HttpPut("{id}/archive")]
