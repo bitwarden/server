@@ -48,6 +48,12 @@ public class Collection : ITableObject<Guid>
     public string? DefaultUserCollectionEmail { get; set; }
 
     /// <summary>
+    /// Reference to a <see cref="Bit.Pam.Entities.AccessRule"/> that gates
+    /// PAM credential leasing for this collection. Null means leasing is disabled for the collection.
+    /// </summary>
+    public Guid? AccessRuleId { get; set; }
+
+    /// <summary>
     /// Initializes <see cref="Id"/> to a new COMB GUID.
     /// </summary>
     public void SetNewId()

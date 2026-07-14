@@ -8,6 +8,7 @@ using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Dirt.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
+using Bit.Infrastructure.EntityFramework.Pam.Models;
 using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
@@ -43,6 +44,7 @@ public class DatabaseContext : DbContext
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
     public DbSet<CollectionGroup> CollectionGroups { get; set; }
     public DbSet<CollectionUser> CollectionUsers { get; set; }
+    public DbSet<AccessRule> AccessRules { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -107,6 +109,7 @@ public class DatabaseContext : DbContext
         var eCollectionCipher = builder.Entity<CollectionCipher>();
         var eCollectionUser = builder.Entity<CollectionUser>();
         var eCollectionGroup = builder.Entity<CollectionGroup>();
+        var eAccessRule = builder.Entity<AccessRule>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
@@ -145,6 +148,14 @@ public class DatabaseContext : DbContext
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
+        eAccessRule.Property(p => p.Id).ValueGeneratedNever();
+        eAccessRule.HasIndex(p => new { p.OrganizationId, p.Name }).IsUnique();
+        eCollection
+            .HasOne<AccessRule>()
+            .WithMany()
+            .HasForeignKey(c => c.AccessRuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         eOrganizationMemberBaseDetail.HasNoKey();
 
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
@@ -167,6 +178,7 @@ public class DatabaseContext : DbContext
         eCipher.ToTable(nameof(Cipher));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
+        eAccessRule.ToTable(nameof(AccessRule));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));
