@@ -1156,7 +1156,7 @@ public class RegisterUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
-        Assert.Equal("Invalid or expired sales-assisted registration token.", exception.Message);
+        Assert.Equal("Invalid token.", exception.Message);
 
         await sutProvider.GetDependency<IUserService>()
             .DidNotReceive()
@@ -1194,7 +1194,7 @@ public class RegisterUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
-        Assert.Equal("Invalid or expired sales-assisted registration token.", exception.Message);
+        Assert.Equal("Expired token.", exception.Message);
 
         await sutProvider.GetDependency<IUserService>()
             .DidNotReceive()
@@ -1226,7 +1226,7 @@ public class RegisterUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
-        Assert.Equal("Invalid or expired sales-assisted registration token.", exception.Message);
+        Assert.Equal("Invalid token.", exception.Message);
 
         await sutProvider.GetDependency<IUserService>()
             .DidNotReceive()

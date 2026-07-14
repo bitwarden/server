@@ -420,10 +420,18 @@ public class RegisterUserCommand : IRegisterUserCommand
     private SalesAssistedRegistrationTokenable ValidateSalesAssistedRegistrationTokenable(
         string salesAssistedToken, string email)
     {
-        _salesAssistedRegistrationTokenDataFactory.TryUnprotect(salesAssistedToken, out var tokenable);
-        if (tokenable == null || !tokenable.Valid || !tokenable.TokenIsValid(email))
+        var tokenValidationError = SalesAssistedRegistrationTokenable.ValidateSalesAssistedRegistrationToken(
+            _salesAssistedRegistrationTokenDataFactory, salesAssistedToken, email);
+
+        if (tokenValidationError != null)
         {
-            throw new BadRequestException("Invalid or expired sales-assisted registration token.");
+            throw new BadRequestException(tokenValidationError.ErrorMessage);
+        }
+
+        _salesAssistedRegistrationTokenDataFactory.TryUnprotect(salesAssistedToken, out var tokenable);
+        if (tokenable == null)
+        {
+            throw new BadRequestException(TokenableValidationError.InvalidToken.ErrorMessage);
         }
 
         return tokenable;
