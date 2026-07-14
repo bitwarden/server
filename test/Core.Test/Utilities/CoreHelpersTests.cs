@@ -22,18 +22,6 @@ public class CoreHelpersTests
         new object[] {new DateTime(2020, 12, 30, 11, 49, 12, DateTimeKind.Utc), 1609328952000L},
     };
 
-    [Fact]
-    public void GenerateComb_Success()
-    {
-        // Arrange & Act
-        var comb = CoreHelpers.GenerateComb();
-
-        // Assert
-        Assert.NotEqual(Guid.Empty, comb);
-        // TODO: Add more asserts to make sure important aspects of
-        // the comb are working properly
-    }
-
     public static IEnumerable<object[]> GuidSeedCases = [
         [
             Guid.Parse("a58db474-43d8-42f1-b4ee-0c17647cd0c0"), // Input Guid
@@ -59,20 +47,13 @@ public class CoreHelpersTests
         Guid.Parse("bfb8f353-3b32-4a9e-bef6-b20f00195780"),
     ]).Select((zip) => new object[] { zip.Item1[0], zip.Item1[1], zip.Item2 });
 
-    [Theory]
-    [MemberData(nameof(GenerateCombCases))]
-    public void GenerateComb_WithInputs_Success(Guid inputGuid, DateTime inputTime, Guid expectedComb)
-    {
-        var comb = CoreHelpers.GenerateComb(inputGuid, inputTime);
-
-        Assert.Equal(expectedComb, comb);
-    }
+    public static IEnumerable<object[]> DateFromCombCases =>
+        GenerateCombCases.Select(c => new object[] { c[1], c[2] });
 
     [Theory]
-    [MemberData(nameof(GuidSeedCases))]
-    public void DateFromComb_WithComb_Success(Guid inputGuid, DateTime inputTime)
+    [MemberData(nameof(DateFromCombCases))]
+    public void DateFromComb_WithComb_Success(DateTime inputTime, Guid comb)
     {
-        var comb = CoreHelpers.GenerateComb(inputGuid, inputTime);
         var inverseComb = CoreHelpers.DateFromComb(comb);
 
         Assert.Equal(inputTime, inverseComb, TimeSpan.FromMilliseconds(4));

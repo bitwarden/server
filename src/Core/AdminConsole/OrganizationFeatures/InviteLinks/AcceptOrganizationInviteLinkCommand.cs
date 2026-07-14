@@ -59,6 +59,11 @@ public class AcceptOrganizationInviteLinkCommand(
             return new InviteLinkNotAvailable();
         }
 
+        if (!user.EmailVerified)
+        {
+            return new EmailNotVerified();
+        }
+
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
         {
             return new EmailDomainNotAllowed();

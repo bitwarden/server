@@ -294,7 +294,6 @@ public static class FeatureFlagKeys
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string EventManagementForSplunk = "event-management-for-splunk";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
-    public const string AccessIntelligenceTrendChart = "pm-26961-access-intelligence-trend-chart";
     public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
 
@@ -304,6 +303,9 @@ public static class FeatureFlagKeys
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
+
+    /* VFO */
+    public const string VFO1Foundation = "vfo1-foundation";
 
     public static List<string> GetAllKeys()
     {
