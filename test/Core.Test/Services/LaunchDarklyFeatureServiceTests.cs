@@ -1,4 +1,5 @@
 ﻿using AutoFixture;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -94,5 +95,26 @@ public class LaunchDarklyFeatureServiceTests
 
         Assert.NotNull(results);
         Assert.NotEmpty(results);
+    }
+
+    [Fact]
+    public void IsEnabled_SendClient_EvaluatesAgainstValidContext()
+    {
+        // A send-access token carries no user/org identity (and CurrentContext is short-circuited for it),
+        // so BuildContext must still produce a valid, flag-resolving context. Without a default-kind
+        // context the evaluation context is invalid and every IsEnabled check silently returns its default.
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.IdentityClientType.Returns(IdentityClientType.Send);
+
+        var captured = default(LaunchDarkly.Sdk.Context);
+        var client = Substitute.For<ILdClient>();
+        client.BoolVariation(_fakeFeatureKey, Arg.Do<LaunchDarkly.Sdk.Context>(c => captured = c), Arg.Any<bool>())
+            .Returns(true);
+
+        var sut = new LaunchDarklyFeatureService(client, currentContext);
+
+        Assert.True(sut.IsEnabled(_fakeFeatureKey));
+        Assert.True(captured.Valid);
+        Assert.True(captured.TryGetContextByKind(LaunchDarkly.Sdk.ContextKind.Default, out _));
     }
 }

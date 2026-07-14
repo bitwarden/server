@@ -42,6 +42,17 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             }, startDate, endDate, pageOptions);
     }
 
+    public async Task<PagedResult<IEvent>> GetManyBySendAsync(Guid organizationId, Guid sendId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"[{Schema}].[Event_ReadPageBySendId]",
+            new Dictionary<string, object?>
+            {
+                ["@OrganizationId"] = organizationId,
+                ["@SendId"] = sendId
+            }, startDate, endDate, pageOptions);
+    }
+
     public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Secret secret,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
@@ -232,6 +243,10 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         eventsTable.Columns.Add(projectIdColumn);
         var grantedServiceAccountIdColumn = new DataColumn(nameof(e.GrantedServiceAccountId), typeof(Guid));
         eventsTable.Columns.Add(grantedServiceAccountIdColumn);
+        var domainNameColumn = new DataColumn(nameof(e.DomainName), typeof(string));
+        eventsTable.Columns.Add(domainNameColumn);
+        var sendIdColumn = new DataColumn(nameof(e.SendId), typeof(Guid));
+        eventsTable.Columns.Add(sendIdColumn);
 
         foreach (DataColumn col in eventsTable.Columns)
         {
@@ -266,6 +281,8 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             row[serviceAccountIdColumn] = ev.ServiceAccountId.HasValue ? ev.ServiceAccountId.Value : DBNull.Value;
             row[projectIdColumn] = ev.ProjectId.HasValue ? ev.ProjectId.Value : DBNull.Value;
             row[grantedServiceAccountIdColumn] = ev.GrantedServiceAccountId.HasValue ? ev.GrantedServiceAccountId.Value : DBNull.Value;
+            row[domainNameColumn] = ev.DomainName != null ? (object)ev.DomainName : DBNull.Value;
+            row[sendIdColumn] = ev.SendId.HasValue ? ev.SendId.Value : DBNull.Value;
             eventsTable.Rows.Add(row);
         }
 
