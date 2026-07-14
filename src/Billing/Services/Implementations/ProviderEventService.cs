@@ -28,7 +28,7 @@ public class ProviderEventService(
             return;
         }
 
-        var invoice = await stripeEventService.GetInvoice(parsedEvent, true, ["discounts"]);
+        var invoice = await stripeEventService.GetInvoice(parsedEvent, true, ["discounts.source.coupon"]);
 
         if (invoice.Parent is not { Type: "subscription_details" })
         {

@@ -151,7 +151,11 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         {
             var subscription = await _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
             {
-                Expand = ["customer"]
+                // `customer.discount.source.coupon` (4 levels — Stripe's cap) is required to read the
+                // customer's coupon below; the 2025-09-30.clover refactor wrapped Coupon under
+                // Discount.Source, so expanding only `customer` leaves Coupon a null stub and the
+                // discount deletion silently no-ops.
+                Expand = ["customer.discount.source.coupon"]
             });
             if (subscription.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired)
             {
