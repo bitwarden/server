@@ -1,9 +1,9 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -24,7 +24,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -39,9 +38,8 @@ public class OrganizationService : IOrganizationService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly IEventService _eventService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IGlobalSettings _globalSettings;
@@ -64,9 +62,8 @@ public class OrganizationService : IOrganizationService
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
-        IPushNotificationService pushNotificationService,
         IEventService eventService,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IStripePaymentService paymentService,
         ISsoUserRepository ssoUserRepository,
         IGlobalSettings globalSettings,
@@ -88,9 +85,8 @@ public class OrganizationService : IOrganizationService
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
-        _pushNotificationService = pushNotificationService;
         _eventService = eventService;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _paymentService = paymentService;
         _ssoUserRepository = ssoUserRepository;
         _globalSettings = globalSettings;
@@ -387,35 +383,6 @@ public class OrganizationService : IOrganizationService
                     },
                 });
         }
-    }
-
-    public async Task<Organization> UpdateCollectionManagementSettingsAsync(Guid organizationId, OrganizationCollectionManagementSettings settings)
-    {
-        var existingOrganization = await _organizationRepository.GetByIdAsync(organizationId);
-        if (existingOrganization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        // Create logging actions based on what will change
-        var loggingActions = CreateCollectionManagementLoggingActions(existingOrganization, settings);
-
-        existingOrganization.LimitCollectionCreation = settings.LimitCollectionCreation;
-        existingOrganization.LimitCollectionDeletion = settings.LimitCollectionDeletion;
-        existingOrganization.LimitItemDeletion = settings.LimitItemDeletion;
-        existingOrganization.AllowAdminAccessToAllCollectionItems = settings.AllowAdminAccessToAllCollectionItems;
-        existingOrganization.RevisionDate = DateTime.UtcNow;
-
-        await ReplaceAndUpdateCacheAsync(existingOrganization);
-
-        if (loggingActions.Any())
-        {
-            await Task.WhenAll(loggingActions.Select(action => action()));
-        }
-
-        await _pushNotificationService.PushSyncOrganizationCollectionManagementSettingsAsync(existingOrganization);
-
-        return existingOrganization;
     }
 
     public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)
@@ -850,7 +817,7 @@ public class OrganizationService : IOrganizationService
         try
         {
             await _organizationRepository.ReplaceAsync(org);
-            await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
+            await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(org);
 
             if (orgEvent.HasValue)
             {
@@ -1102,63 +1069,5 @@ public class OrganizationService : IOrganizationService
         }
 
         return true;
-    }
-
-    public static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
-    {
-        // Determine status to revert back to
-        var status = OrganizationUserStatusType.Invited;
-        if (organizationUser.UserId.HasValue && string.IsNullOrWhiteSpace(organizationUser.Email))
-        {
-            // Has UserId & Email is null, then Accepted
-            status = OrganizationUserStatusType.Accepted;
-            if (!string.IsNullOrWhiteSpace(organizationUser.Key))
-            {
-                // We have an org key for this user, user was confirmed
-                status = OrganizationUserStatusType.Confirmed;
-            }
-        }
-
-        return status;
-    }
-
-    private List<Func<Task>> CreateCollectionManagementLoggingActions(
-        Organization existingOrganization, OrganizationCollectionManagementSettings settings)
-    {
-        var loggingActions = new List<Func<Task>>();
-
-        if (existingOrganization.LimitCollectionCreation != settings.LimitCollectionCreation)
-        {
-            var eventType = settings.LimitCollectionCreation
-                ? EventType.Organization_CollectionManagement_LimitCollectionCreationEnabled
-                : EventType.Organization_CollectionManagement_LimitCollectionCreationDisabled;
-            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
-        }
-
-        if (existingOrganization.LimitCollectionDeletion != settings.LimitCollectionDeletion)
-        {
-            var eventType = settings.LimitCollectionDeletion
-                ? EventType.Organization_CollectionManagement_LimitCollectionDeletionEnabled
-                : EventType.Organization_CollectionManagement_LimitCollectionDeletionDisabled;
-            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
-        }
-
-        if (existingOrganization.LimitItemDeletion != settings.LimitItemDeletion)
-        {
-            var eventType = settings.LimitItemDeletion
-                ? EventType.Organization_CollectionManagement_LimitItemDeletionEnabled
-                : EventType.Organization_CollectionManagement_LimitItemDeletionDisabled;
-            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
-        }
-
-        if (existingOrganization.AllowAdminAccessToAllCollectionItems != settings.AllowAdminAccessToAllCollectionItems)
-        {
-            var eventType = settings.AllowAdminAccessToAllCollectionItems
-                ? EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled
-                : EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsDisabled;
-            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
-        }
-
-        return loggingActions;
     }
 }

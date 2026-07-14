@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
@@ -24,7 +25,7 @@ public class TwoFactorAuthenticationValidator(
     IUserService userService,
     UserManager<User> userManager,
     IOrganizationDuoUniversalTokenProvider organizationDuoWebTokenProvider,
-    IApplicationCacheService applicationCacheService,
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
     IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmail2faSessionTokeFactory,
@@ -34,7 +35,7 @@ public class TwoFactorAuthenticationValidator(
     private readonly IUserService _userService = userService;
     private readonly UserManager<User> _userManager = userManager;
     private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider = organizationDuoWebTokenProvider;
-    private readonly IApplicationCacheService _applicationCacheService = applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService = organizationAbilityCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository = organizationRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokeFactory = ssoEmail2faSessionTokeFactory;
@@ -76,7 +77,7 @@ public class TwoFactorAuthenticationValidator(
     private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(List<CurrentContextOrganization> orgs)
     {
         var organizationIds = orgs.Select(organization => organization.Id).ToList();
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(organizationIds);
+        var orgAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(organizationIds);
         return orgAbilities;
     }
 

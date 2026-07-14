@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System.Diagnostics;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -20,7 +21,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IFeatureService _featureService;
     private Guid _targetOrganizationId;
     private HashSet<Guid>? _managedCollectionsIds;
@@ -30,12 +31,12 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     public BulkCollectionAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IFeatureService featureService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _featureService = featureService;
     }
 
@@ -325,7 +326,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return null;
         }
 
-        return await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
+        return await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organization.Id);
     }
 
     private async Task<bool> AllowAdminAccessToAllCollectionItems(CurrentContextOrganization? org)

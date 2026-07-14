@@ -87,6 +87,7 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
         ClaimedByOrganization = claimedByOrganization;
         SsoExternalId = organizationUser.SsoExternalId;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
+        CreationDate = organizationUser.CreationDate;
     }
 
     [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
@@ -102,6 +103,11 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IEnumerable<Guid> Groups { get; set; }
+
+    /// <summary>
+    /// The date the organization user was created, i.e. when the user was first invited to the organization.
+    /// </summary>
+    public DateTime CreationDate { get; set; }
 }
 
 #nullable enable
@@ -148,6 +154,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         ResetPasswordEnrolled = ResetPasswordEnrolled && !data.OrgUser.UsesKeyConnector;
         ClaimedByOrganization = data.ClaimedByOrganization;
         RevocationReason = data.OrgUser.RevocationReason;
+        CreationDate = data.OrgUser.CreationDate;
     }
 
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
@@ -170,6 +177,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
         ClaimedByOrganization = claimedByOrganization;
         RevocationReason = organizationUser.RevocationReason;
+        CreationDate = organizationUser.CreationDate;
     }
 
     public string Name { get; set; }
@@ -195,6 +203,10 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     /// revocation reasons were tracked.
     /// </summary>
     public RevocationReason? RevocationReason { get; set; }
+    /// <summary>
+    /// The date the organization user was created, i.e. when the user was first invited to the organization.
+    /// </summary>
+    public DateTime CreationDate { get; set; }
 }
 
 public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
@@ -254,3 +266,4 @@ public class OrganizationUserBulkResponseModel : ResponseModel
     public Guid Id { get; set; }
     public string Error { get; set; }
 }
+

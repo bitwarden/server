@@ -43,6 +43,12 @@ public enum EventType : int
     Cipher_ClientToggledLicenseNumberVisible = 1124,
     Cipher_ClientCopiedPassportNumber = 1125,
     Cipher_ClientToggledPassportNumberVisible = 1126,
+    Cipher_ClientCopiedSwiftCode = 1127,
+    Cipher_ClientToggledSwiftCodeVisible = 1128,
+    Cipher_ClientCopiedIban = 1129,
+    Cipher_ClientToggledIbanVisible = 1130,
+    Cipher_ClientCopiedNationalIdentificationNumber = 1131,
+    Cipher_ClientToggledNationalIdentificationNumberVisible = 1132,
 
     Collection_Created = 1300,
     Collection_Updated = 1301,
@@ -74,6 +80,9 @@ public enum EventType : int
     OrganizationUser_AdminResetTwoFactor = 1519,
     OrganizationUser_Revoked_TwoFactorNonCompliance = 1520,
     OrganizationUser_Revoked_SingleOrganizationNonCompliance = 1521,
+    OrganizationUser_NotificationBannerActionClicked = 1522,
+    OrganizationUser_Staged = 1523, // Member provisioned without an invitation (e.g. via SCIM / Directory Connector)
+    OrganizationUser_InviteLinkAccepted = 1524, // User accepted an organization invite via invite link
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
@@ -100,6 +109,11 @@ public enum EventType : int
     Organization_AutoConfirmDisabled_Admin = 1621,
     Organization_AutoConfirmEnabled_Portal = 1622,
     Organization_AutoConfirmDisabled_Portal = 1623,
+    Organization_InviteLinkCreated = 1624, // Admin generated an organization invite link
+    Organization_InviteLinkDomainsEdited = 1625, // Admin edited the domains of an organization invite link
+    Organization_InviteLinkDeleted = 1626, // Admin deleted an organization invite link
+    Organization_InviteLinkClientCopied = 1627, // Admin copied an organization invite link (client-side event)
+    Organization_InviteLinkRefreshed = 1628, // Admin refreshed an organization invite link
 
     Policy_Updated = 1700,
 
@@ -147,4 +161,10 @@ public enum EventType : int
     Send_Created_File = 2503,
     Send_Created_File_WithEmailVerification = 2504,
     Send_Created_File_WithPasswordProtection = 2505,
+    Send_Edited_Text = 2506,
+    Send_Edited_File = 2507,
+    Send_Deleted_Text = 2508,
+    Send_Deleted_File = 2509,
+    Send_Accessed_Text = 2510,
+    Send_Accessed_File = 2511,
 }

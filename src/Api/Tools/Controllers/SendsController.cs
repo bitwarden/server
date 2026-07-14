@@ -8,6 +8,7 @@ using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.SendAccess;
 using Bit.Core.Billing.Premium.Queries;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
@@ -17,6 +18,7 @@ using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
+using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -38,6 +40,8 @@ public class SendsController : Controller
     private readonly IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
+    private readonly IEventService _eventService;
+    private readonly ISendEventClassifier _sendEventClassifier;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -50,7 +54,9 @@ public class SendsController : Controller
         ILogger<SendsController> logger,
         IFeatureService featureService,
         IPushNotificationService pushNotificationService,
-        IHasPremiumAccessQuery hasPremiumAccessQuery
+        IHasPremiumAccessQuery hasPremiumAccessQuery,
+        IEventService eventService,
+        ISendEventClassifier sendEventClassifier
     )
     {
         _sendRepository = sendRepository;
@@ -64,13 +70,19 @@ public class SendsController : Controller
         _featureService = featureService;
         _pushNotificationService = pushNotificationService;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
+        _eventService = eventService;
+        _sendEventClassifier = sendEventClassifier;
     }
 
     #region Anonymous endpoints
 
     [AllowAnonymous]
     [HttpPost("access/{id}")]
-    public async Task<IActionResult> Access(string id, [FromBody] SendAccessRequestModel model)
+    [ProducesResponseType<SendAccessResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<SendAccessResponseModel> Access(string id, [FromBody] SendAccessRequestModel model)
     {
         // Uncomment whenever we want to require the `send-id` header
         //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Send-Id") ||
@@ -96,7 +108,7 @@ public class SendsController : Controller
             await _sendAuthorizationService.AccessAsync(send, model.Password);
         if (sendAuthResult.Equals(SendAccessResult.PasswordRequired))
         {
-            return new UnauthorizedResult();
+            throw new UnauthorizedAccessException();
         }
 
         if (sendAuthResult.Equals(SendAccessResult.PasswordInvalid))
@@ -117,12 +129,30 @@ public class SendsController : Controller
             sendResponse.CreatorIdentifier = creator.Email;
         }
 
-        return new ObjectResult(sendResponse);
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
+            && send.UserId.HasValue
+            && send.Type == SendType.Text)
+        {
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
+                send.UserId.Value, accessorEmail: null);
+
+            await _eventService.LogSendEventAsync(
+                send.UserId.Value,
+                send.Id,
+                EventType.Send_Accessed_Text,
+                orgContext);
+        }
+
+        return sendResponse;
     }
 
     [AllowAnonymous]
     [HttpPost("{encodedSendId}/access/file/{fileId}")]
-    public async Task<IActionResult> GetSendFileDownloadData(string encodedSendId,
+    [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<SendFileDownloadDataResponseModel> GetSendFileDownloadData(string encodedSendId,
         string fileId, [FromBody] SendAccessRequestModel model)
     {
         // Uncomment whenever we want to require the `send-id` header
@@ -150,7 +180,7 @@ public class SendsController : Controller
 
         if (result.Equals(SendAccessResult.PasswordRequired))
         {
-            return new UnauthorizedResult();
+            throw new UnauthorizedAccessException();
         }
 
         if (result.Equals(SendAccessResult.PasswordInvalid))
@@ -164,7 +194,19 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url, });
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
+        {
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
+                send.UserId.Value, accessorEmail: null);
+
+            await _eventService.LogSendEventAsync(
+                send.UserId.Value,
+                send.Id,
+                EventType.Send_Accessed_File,
+                orgContext);
+        }
+
+        return new SendFileDownloadDataResponseModel { Id = fileId, Url = url };
     }
 
     [AllowAnonymous]
@@ -231,6 +273,9 @@ public class SendsController : Controller
 
     [Authorize(Policy = Policies.Send)]
     [HttpPost("access/")]
+    [ProducesResponseType<SendAccessResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AccessUsingAuth()
     {
         var guid = User.GetSendId();
@@ -266,11 +311,29 @@ public class SendsController : Controller
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
+            && send.UserId.HasValue
+            && send.Type == SendType.Text)
+        {
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
+                send.UserId.Value,
+                User.GetSendAccessEmail());
+
+            await _eventService.LogSendEventAsync(
+                send.UserId.Value,
+                send.Id,
+                EventType.Send_Accessed_Text,
+                orgContext);
+        }
+
         return new ObjectResult(sendResponse);
     }
 
     [Authorize(Policy = Policies.Send)]
     [HttpPost("access/file/{fileId}")]
+    [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
     {
         var sendId = User.GetSendId();
@@ -286,6 +349,19 @@ public class SendsController : Controller
         if (result.Equals(SendAccessResult.Denied))
         {
             throw new NotFoundException();
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
+        {
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
+                send.UserId.Value,
+                User.GetSendAccessEmail());
+
+            await _eventService.LogSendEventAsync(
+                send.UserId.Value,
+                send.Id,
+                EventType.Send_Accessed_File,
+                orgContext);
         }
 
         return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });

@@ -29,15 +29,24 @@ public interface IUserService
     Task InitiateEmailChangeAsync(User user, string newEmail);
     Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
         string token, string key);
+    [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
     Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
     // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
     [Obsolete("Use ISetKeyConnectorKeyCommand instead. This method will be removed in a future version.")]
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
-    Task<IdentityResult> ConvertToKeyConnectorAsync(User user, string keyConnectorKeyWrappedUserKey);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
+    [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
+    /// <summary>
+    /// Removes the entry for <paramref name="type"/> from the user's <c>TwoFactorProviders</c> JSON column.
+    /// The provider's <c>MetaData</c> (TOTP shared secret, Duo client secret, YubiKey IDs, WebAuthn credentials, etc.)
+    /// is destroyed in the process; the name is historical — this is a hard delete of the provider configuration,
+    /// not a reversible disable. No-op if <paramref name="type"/> is not currently configured. Emits
+    /// <see cref="Bit.Core.Enums.EventType.User_Disabled2fa"/> and re-evaluates 2FA-removal policies if no
+    /// providers remain.
+    /// </summary>
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);
@@ -79,7 +88,7 @@ public interface IUserService
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
-    Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);
+    Task<bool> VerifySecretAsync(User user, string secret);
     /// <summary>
     /// We use this method to check if the user has an active new device verification bypass
     /// </summary>

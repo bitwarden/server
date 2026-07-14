@@ -542,6 +542,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         AccessSecretsManager = ou.AccessSecretsManager,
                         HasMasterPassword = ou.User != null && !string.IsNullOrWhiteSpace(ou.User.MasterPassword),
                         RevocationReason = ou.RevocationReason,
+                        CreationDate = ou.CreationDate,
 
                         // Project directly from navigation properties with conditional loading
                         Groups = includeGroups
@@ -821,40 +822,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         await RestoreManyAsync([id], status);
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-
-            var providerOrganizations = from pu in dbContext.ProviderUsers
-                                        where pu.UserId == userId
-                                        join po in dbContext.ProviderOrganizations
-                                            on pu.ProviderId equals po.ProviderId
-                                        select po;
-
-            var query = from p in dbContext.Policies
-                        join ou in dbContext.OrganizationUsers
-                            on p.OrganizationId equals ou.OrganizationId
-                        let email = dbContext.Users.Find(userId).Email  // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
-                        where p.Type == policyType &&
-                            (ou.UserId == userId || ou.Email == email)
-                        select new OrganizationUserPolicyDetails
-                        {
-                            OrganizationUserId = ou.Id,
-                            OrganizationId = p.OrganizationId,
-                            PolicyType = p.Type,
-                            PolicyEnabled = p.Enabled,
-                            PolicyData = p.Data,
-                            OrganizationUserType = ou.Type,
-                            OrganizationUserStatus = ou.Status,
-                            OrganizationUserPermissionsData = ou.Permissions,
-                            IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
-                        };
-            return await query.ToListAsync();
-        }
-    }
-
     public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
     {
         var query = new OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery(organizationId);
@@ -929,10 +896,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         var dbContext = GetDatabaseContext(scope);
 
-        await dbContext.OrganizationUsers.Where(x => organizationUserIds.Contains(x.Id))
+        // Ordering of property updates here is important, see: https://github.com/dotnet/efcore/issues/35361
+        // Potentially fixed in EF 10, and covered by integration tests
+        await dbContext.OrganizationUsers
+            .Where(x => organizationUserIds.Contains(x.Id) && x.Status != OrganizationUserStatusType.Revoked)
             .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.RevocationReason, reason)
                 .SetProperty(x => x.Status, OrganizationUserStatusType.Revoked)
-                .SetProperty(x => x.RevocationReason, reason));
+                .SetProperty(x => x.StatusNew, x => (OrganizationUserStatusTypeNew?)(short)x.Status));
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
     }
@@ -947,6 +918,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             .Where(x => organizationUserIds.Contains(x.Id) && x.Status == OrganizationUserStatusType.Revoked)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(x => x.Status, status)
+                .SetProperty(x => x.StatusNew, (OrganizationUserStatusTypeNew?)null)
                 .SetProperty(x => x.RevocationReason, (RevocationReason?)null));
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
@@ -1045,6 +1017,41 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     }
 
+    public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IReadOnlyCollection<AcceptedOrganizationUserToConfirm> usersToConfirm)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        using var dbContext = GetDatabaseContext(scope);
+
+        var orgUserIds = usersToConfirm.Select(u => u.OrganizationUserId).ToList();
+        var keyByOrgUserId = usersToConfirm.ToDictionary(u => u.OrganizationUserId, u => u.Key);
+
+        var rowsToUpdate = await dbContext.OrganizationUsers
+            .Where(ou => orgUserIds.Contains(ou.Id) && ou.Status == OrganizationUserStatusType.Accepted)
+            .ToListAsync();
+
+        if (rowsToUpdate.Count == 0)
+        {
+            return [];
+        }
+
+        var revisionDate = DateTime.UtcNow;
+        foreach (var ou in rowsToUpdate)
+        {
+            ou.Status = OrganizationUserStatusType.Confirmed;
+            ou.Key = keyByOrgUserId[ou.Id];
+            ou.RevisionDate = revisionDate;
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var confirmedIds = rowsToUpdate.Select(o => o.Id).ToList();
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(confirmedIds);
+        await dbContext.SaveChangesAsync();
+
+        return confirmedIds;
+    }
+
 #nullable enable
 
     public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
@@ -1080,6 +1087,21 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
             await dbContext.SaveChangesAsync();
         };
+    }
+
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from ou in dbContext.OrganizationUsers
+                        where ou.OrganizationId == organizationId &&
+                            ou.Status == OrganizationUserStatusType.Accepted &&
+                            ou.Type == OrganizationUserType.User &&
+                            ou.UserId != null
+                        select ou;
+            return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
+        }
     }
 #nullable disable
 

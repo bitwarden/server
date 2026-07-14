@@ -19,13 +19,13 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
-using Fido2NetLib;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
 
+// TODO: PM-39393 - Clean up Obsolete endpoints in this controller 
 [Route("two-factor")]
 [Authorize(Policies.Web)]
 public class TwoFactorController : Controller
@@ -38,6 +38,8 @@ public class TwoFactorController : Controller
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IDuoUniversalTokenService _duoUniversalTokenService;
     private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _twoFactorAuthenticatorDataProtector;
+    private readonly IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable> _twoFactorUserVerificationDataProtector;
+    private readonly ITwoFactorUserVerificationTokenableFactory _twoFactorUserVerificationTokenableFactory;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IStartTwoFactorWebAuthnRegistrationCommand _startTwoFactorWebAuthnRegistrationCommand;
@@ -53,6 +55,8 @@ public class TwoFactorController : Controller
         IAuthRequestRepository authRequestRepository,
         IDuoUniversalTokenService duoUniversalConfigService,
         IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> twoFactorAuthenticatorDataProtector,
+        IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable> twoFactorUserVerificationDataProtector,
+        ITwoFactorUserVerificationTokenableFactory twoFactorUserVerificationTokenableFactory,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector,
         ITwoFactorEmailService twoFactorEmailService,
         IStartTwoFactorWebAuthnRegistrationCommand startTwoFactorWebAuthnRegistrationCommand,
@@ -67,6 +71,8 @@ public class TwoFactorController : Controller
         _authRequestRepository = authRequestRepository;
         _duoUniversalTokenService = duoUniversalConfigService;
         _twoFactorAuthenticatorDataProtector = twoFactorAuthenticatorDataProtector;
+        _twoFactorUserVerificationDataProtector = twoFactorUserVerificationDataProtector;
+        _twoFactorUserVerificationTokenableFactory = twoFactorUserVerificationTokenableFactory;
         _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
         _twoFactorEmailService = twoFactorEmailService;
         _startTwoFactorWebAuthnRegistrationCommand = startTwoFactorWebAuthnRegistrationCommand;
@@ -112,20 +118,27 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator(
         [FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
-        var response = new TwoFactorAuthenticatorResponseModel(user);
-        var tokenable = new TwoFactorAuthenticatorUserVerificationTokenable(user, response.Key);
-        response.UserVerificationToken = _twoFactorAuthenticatorDataProtector.Protect(tokenable);
-        return response;
+        var user = await ValidateUserBySecretAsync(model);
+        var data = new TwoFactorAuthenticatorDetails(user);
+        // The tokenable is bound to the data's Key — must be the same instance the response carries
+        // since TwoFactorAuthenticatorDetails mints a random key for non-enrolled users.
+        var tokenable = new TwoFactorAuthenticatorUserVerificationTokenable(user, data.Key);
+        var userVerificationToken = _twoFactorAuthenticatorDataProtector.Protect(tokenable);
+        return new TwoFactorAuthenticatorResponseModel(data, userVerificationToken);
     }
 
     [HttpPut("authenticator")]
-    public async Task<TwoFactorAuthenticatorResponseModel> PutAuthenticator(
-        [FromBody] UpdateTwoFactorAuthenticatorRequestModel model)
+    public async Task<TwoFactorAuthenticatorUpdateResponseModel> PutAuthenticator(
+        [FromBody] TwoFactorAuthenticatorUpdateRequestModel model)
     {
         var user = model.ToUser(await _userService.GetUserByPrincipalAsync(User));
-        _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
-        if (!decryptedToken.TokenIsValid(user, model.Key))
+
+        var tokenIsValid =
+            _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken)
+            && decryptedToken.Valid
+            && decryptedToken.TokenIsValid(user, model.Key);
+
+        if (!tokenIsValid)
         {
             throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }
@@ -133,50 +146,64 @@ public class TwoFactorController : Controller
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
         {
-            await Task.Delay(2000);
             throw new BadRequestException("Token", "Invalid token.");
         }
 
         await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
-        var response = new TwoFactorAuthenticatorResponseModel(user);
-        return response;
+        return new TwoFactorAuthenticatorUpdateResponseModel(user);
     }
 
     [HttpPost("authenticator")]
     [Obsolete("This endpoint is deprecated. Use PUT /authenticator instead.")]
-    public async Task<TwoFactorAuthenticatorResponseModel> PostAuthenticator(
-        [FromBody] UpdateTwoFactorAuthenticatorRequestModel model)
+    public async Task<TwoFactorAuthenticatorUpdateResponseModel> PostAuthenticator(
+        [FromBody] TwoFactorAuthenticatorUpdateRequestModel model)
     {
         return await PutAuthenticator(model);
     }
 
     [HttpDelete("authenticator")]
-    public async Task<TwoFactorProviderResponseModel> DisableAuthenticator(
-    [FromBody] TwoFactorAuthenticatorDisableRequestModel model)
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteAuthenticator(
+        [FromBody] TwoFactorAuthenticatorDeleteRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
-        if (!decryptedToken.TokenIsValid(user, model.Key))
+
+        var tokenIsValid =
+            _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken)
+            && decryptedToken.Valid
+            && decryptedToken.TokenIsValid(user, model.Key);
+
+        if (!tokenIsValid)
         {
             throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }
 
-        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
-        return new TwoFactorProviderResponseModel(model.Type.Value, user);
+        await _userService.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
+        return NoContent();
     }
 
     [HttpPost("get-yubikey")]
     public async Task<TwoFactorYubiKeyResponseModel> GetYubiKey([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, true, true);
-        var response = new TwoFactorYubiKeyResponseModel(user);
-        return response;
+        var user = await ValidateUserBySecretAsync(model);
+        var userVerificationToken = MintProtectedUserVerificationToken(user, TwoFactorProviderType.YubiKey);
+        return new TwoFactorYubiKeyResponseModel(user, userVerificationToken);
+    }
+
+    [HttpDelete("yubikey")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteYubiKey([FromBody] TwoFactorYubiKeyDeleteRequestModel model)
+    {
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.YubiKey);
+        await _userService.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
+        return NoContent();
     }
 
     [HttpPut("yubikey")]
-    public async Task<TwoFactorYubiKeyResponseModel> PutYubiKey([FromBody] UpdateTwoFactorYubicoOtpRequestModel model)
+    public async Task<TwoFactorYubiKeyUpdateResponseModel> PutYubiKey([FromBody] TwoFactorYubiKeyUpdateRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.YubiKey);
+        await ValidateUserHasPremiumAsync(user);
         model.ToUser(user);
 
         await ValidateYubiKeyAsync(user, nameof(model.Key1), model.Key1);
@@ -186,13 +213,12 @@ public class TwoFactorController : Controller
         await ValidateYubiKeyAsync(user, nameof(model.Key5), model.Key5);
 
         await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
-        var response = new TwoFactorYubiKeyResponseModel(user);
-        return response;
+        return new TwoFactorYubiKeyUpdateResponseModel(user);
     }
 
     [HttpPost("yubikey")]
     [Obsolete("This endpoint is deprecated. Use PUT /yubikey instead.")]
-    public async Task<TwoFactorYubiKeyResponseModel> PostYubiKey([FromBody] UpdateTwoFactorYubicoOtpRequestModel model)
+    public async Task<TwoFactorYubiKeyUpdateResponseModel> PostYubiKey([FromBody] TwoFactorYubiKeyUpdateRequestModel model)
     {
         return await PutYubiKey(model);
     }
@@ -200,15 +226,25 @@ public class TwoFactorController : Controller
     [HttpPost("get-duo")]
     public async Task<TwoFactorDuoResponseModel> GetDuo([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, true, true);
-        var response = new TwoFactorDuoResponseModel(user);
-        return response;
+        var user = await ValidateUserBySecretAsync(model);
+        var userVerificationToken = MintProtectedUserVerificationToken(user, TwoFactorProviderType.Duo);
+        return new TwoFactorDuoResponseModel(user, userVerificationToken);
+    }
+
+    [HttpDelete("duo")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteDuo([FromBody] TwoFactorDuoDeleteRequestModel model)
+    {
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Duo);
+        await _userService.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
+        return NoContent();
     }
 
     [HttpPut("duo")]
-    public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody] UpdateTwoFactorDuoRequestModel model)
+    public async Task<TwoFactorDuoUpdateResponseModel> PutDuo([FromBody] TwoFactorDuoUpdateRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Duo);
+        await ValidateUserHasPremiumAsync(user);
         if (!await _duoUniversalTokenService.ValidateDuoConfiguration(model.ClientSecret, model.ClientId, model.Host))
         {
             throw new BadRequestException(
@@ -217,22 +253,21 @@ public class TwoFactorController : Controller
 
         model.ToUser(user);
         await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
-        var response = new TwoFactorDuoResponseModel(user);
-        return response;
+        return new TwoFactorDuoUpdateResponseModel(user);
     }
 
     [HttpPost("duo")]
     [Obsolete("This endpoint is deprecated. Use PUT /duo instead.")]
-    public async Task<TwoFactorDuoResponseModel> PostDuo([FromBody] UpdateTwoFactorDuoRequestModel model)
+    public async Task<TwoFactorDuoUpdateResponseModel> PostDuo([FromBody] TwoFactorDuoUpdateRequestModel model)
     {
         return await PutDuo(model);
     }
 
     [HttpPost("~/organizations/{id}/two-factor/get-duo")]
-    public async Task<TwoFactorDuoResponseModel> GetOrganizationDuo(string id,
+    public async Task<TwoFactorOrganizationDuoResponseModel> GetOrganizationDuo(string id,
         [FromBody] SecretVerificationRequestModel model)
     {
-        await CheckAsync(model, false, true);
+        var user = await ValidateUserBySecretAsync(model);
 
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -241,15 +276,33 @@ public class TwoFactorController : Controller
         }
 
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid) ?? throw new NotFoundException();
-        var response = new TwoFactorDuoResponseModel(organization);
-        return response;
+        var userVerificationToken = MintProtectedUserVerificationToken(user, TwoFactorProviderType.OrganizationDuo);
+        return new TwoFactorOrganizationDuoResponseModel(organization, userVerificationToken);
+    }
+
+    [HttpDelete("~/organizations/{id}/two-factor/duo")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteOrganizationDuo(string id,
+        [FromBody] TwoFactorOrganizationDuoDeleteRequestModel model)
+    {
+        await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.OrganizationDuo);
+
+        var orgIdGuid = new Guid(id);
+        if (!await _currentContext.ManagePolicies(orgIdGuid))
+        {
+            throw new NotFoundException();
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid) ?? throw new NotFoundException();
+        await _organizationService.DisableTwoFactorProviderAsync(organization, TwoFactorProviderType.OrganizationDuo);
+        return NoContent();
     }
 
     [HttpPut("~/organizations/{id}/two-factor/duo")]
-    public async Task<TwoFactorDuoResponseModel> PutOrganizationDuo(string id,
-        [FromBody] UpdateTwoFactorDuoRequestModel model)
+    public async Task<TwoFactorOrganizationDuoUpdateResponseModel> PutOrganizationDuo(string id,
+        [FromBody] TwoFactorDuoUpdateRequestModel model)
     {
-        await CheckAsync(model, false);
+        await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.OrganizationDuo);
 
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -267,14 +320,13 @@ public class TwoFactorController : Controller
         model.ToOrganization(organization);
         await _organizationService.UpdateTwoFactorProviderAsync(organization,
             TwoFactorProviderType.OrganizationDuo);
-        var response = new TwoFactorDuoResponseModel(organization);
-        return response;
+        return new TwoFactorOrganizationDuoUpdateResponseModel(organization);
     }
 
     [HttpPost("~/organizations/{id}/two-factor/duo")]
     [Obsolete("This endpoint is deprecated. Use PUT /organizations/{id}/two-factor/duo instead.")]
-    public async Task<TwoFactorDuoResponseModel> PostOrganizationDuo(string id,
-        [FromBody] UpdateTwoFactorDuoRequestModel model)
+    public async Task<TwoFactorOrganizationDuoUpdateResponseModel> PostOrganizationDuo(string id,
+        [FromBody] TwoFactorDuoUpdateRequestModel model)
     {
         return await PutOrganizationDuo(id, model);
     }
@@ -282,24 +334,25 @@ public class TwoFactorController : Controller
     [HttpPost("get-webauthn")]
     public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false, true);
-        var response = new TwoFactorWebAuthnResponseModel(user);
-        return response;
+        var user = await ValidateUserBySecretAsync(model);
+        var userVerificationToken = MintProtectedUserVerificationToken(user, TwoFactorProviderType.WebAuthn);
+        return new TwoFactorWebAuthnResponseModel(user, userVerificationToken);
     }
 
     [HttpPost("get-webauthn-challenge")]
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
-    public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] SecretVerificationRequestModel model)
+    public async Task<TwoFactorWebAuthnChallengeResponseModel> GetWebAuthnChallenge(
+        [FromBody] TwoFactorWebAuthnChallengeRequestModel model)
     {
-        var user = await CheckAsync(model, false, true);
-        var reg = await _startTwoFactorWebAuthnRegistrationCommand.StartTwoFactorWebAuthnRegistrationAsync(user);
-        return reg;
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.WebAuthn);
+        var options = await _startTwoFactorWebAuthnRegistrationCommand.StartTwoFactorWebAuthnRegistrationAsync(user);
+        return new TwoFactorWebAuthnChallengeResponseModel { Options = options };
     }
 
     [HttpPut("webauthn")]
-    public async Task<TwoFactorWebAuthnResponseModel> PutWebAuthn([FromBody] TwoFactorWebAuthnRequestModel model)
+    public async Task<TwoFactorWebAuthnUpdateResponseModel> PutWebAuthn([FromBody] TwoFactorWebAuthnUpdateRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.WebAuthn);
 
         var success = await _completeTwoFactorWebAuthnRegistrationCommand.CompleteTwoFactorWebAuthnRegistrationAsync(
             user, model.Id.Value, model.Name, model.DeviceResponse);
@@ -308,22 +361,21 @@ public class TwoFactorController : Controller
             throw new BadRequestException("Unable to complete WebAuthn registration.");
         }
 
-        var response = new TwoFactorWebAuthnResponseModel(user);
-        return response;
+        return new TwoFactorWebAuthnUpdateResponseModel(user);
     }
 
     [HttpPost("webauthn")]
     [Obsolete("This endpoint is deprecated. Use PUT /webauthn instead.")]
-    public async Task<TwoFactorWebAuthnResponseModel> PostWebAuthn([FromBody] TwoFactorWebAuthnRequestModel model)
+    public async Task<TwoFactorWebAuthnUpdateResponseModel> PostWebAuthn([FromBody] TwoFactorWebAuthnUpdateRequestModel model)
     {
         return await PutWebAuthn(model);
     }
 
     [HttpDelete("webauthn")]
-    public async Task<TwoFactorWebAuthnResponseModel> DeleteWebAuthn(
+    public async Task<TwoFactorWebAuthnDeleteResponseModel> DeleteWebAuthn(
         [FromBody] TwoFactorWebAuthnDeleteRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.WebAuthn);
 
         if (!model.Id.HasValue)
         {
@@ -336,27 +388,44 @@ public class TwoFactorController : Controller
             throw new BadRequestException("Unable to delete WebAuthn credential.");
         }
 
-        var response = new TwoFactorWebAuthnResponseModel(user);
-        return response;
+        return new TwoFactorWebAuthnDeleteResponseModel(user);
+    }
+
+    [HttpDelete("webauthn/all")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteWebAuthnAll(
+        [FromBody] TwoFactorWebAuthnDeleteAllRequestModel model)
+    {
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.WebAuthn);
+        await _userService.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+        return NoContent();
     }
 
     [HttpPost("get-email")]
     public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false, true);
-        var response = new TwoFactorEmailResponseModel(user);
-        return response;
+        var user = await ValidateUserBySecretAsync(model);
+        var userVerificationToken = MintProtectedUserVerificationToken(user, TwoFactorProviderType.Email);
+        return new TwoFactorEmailResponseModel(user, userVerificationToken);
+    }
+
+    [HttpDelete("email")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteEmail([FromBody] TwoFactorEmailDeleteRequestModel model)
+    {
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
+        await _userService.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+        return NoContent();
     }
 
     /// <summary>
-    /// This endpoint is only used to set-up email two factor authentication.
+    /// This endpoint is only used to set-up email two factor authentication. The client must first
+    /// call <c>get-email</c> to obtain a user-verification token, then replay that token here.
     /// </summary>
-    /// <param name="model">secret verification model</param>
-    /// <returns>void</returns>
     [HttpPost("send-email")]
-    public async Task SendEmail([FromBody] TwoFactorEmailRequestModel model)
+    public async Task SendEmailSetup([FromBody] TwoFactorEmailSetupRequestModel model)
     {
-        var user = await CheckAsync(model, false, true);
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
         // Add email to the user's 2FA providers, with the email address they've provided.
         model.ToUser(user);
         await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user);
@@ -364,7 +433,7 @@ public class TwoFactorController : Controller
 
     [AllowAnonymous]
     [HttpPost("send-email-login")]
-    public async Task SendEmailLoginAsync([FromBody] TwoFactorEmailRequestModel requestModel)
+    public async Task SendEmailLoginAsync([FromBody] TwoFactorEmailLoginRequestModel requestModel)
     {
         var user = await _userManager.FindByEmailAsync(requestModel.Email.ToLowerInvariant());
 
@@ -403,81 +472,32 @@ public class TwoFactorController : Controller
     }
 
     [HttpPut("email")]
-    public async Task<TwoFactorEmailResponseModel> PutEmail([FromBody] UpdateTwoFactorEmailRequestModel model)
+    public async Task<TwoFactorEmailUpdateResponseModel> PutEmail([FromBody] TwoFactorEmailUpdateRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
         model.ToUser(user);
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), model.Token))
         {
-            await Task.Delay(2000);
             throw new BadRequestException("Token", "Invalid token.");
         }
 
         await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
-        var response = new TwoFactorEmailResponseModel(user);
-        return response;
+        return new TwoFactorEmailUpdateResponseModel(user);
     }
 
     [HttpPost("email")]
     [Obsolete("This endpoint is deprecated. Use PUT /email instead.")]
-    public async Task<TwoFactorEmailResponseModel> PostEmail([FromBody] UpdateTwoFactorEmailRequestModel model)
+    public async Task<TwoFactorEmailUpdateResponseModel> PostEmail([FromBody] TwoFactorEmailUpdateRequestModel model)
     {
         return await PutEmail(model);
-    }
-
-    [HttpPut("disable")]
-    public async Task<TwoFactorProviderResponseModel> PutDisable([FromBody] TwoFactorProviderRequestModel model)
-    {
-        var user = await CheckAsync(model, false);
-        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
-        var response = new TwoFactorProviderResponseModel(model.Type.Value, user);
-        return response;
-    }
-
-    [HttpPost("disable")]
-    [Obsolete("This endpoint is deprecated. Use PUT /disable instead.")]
-    public async Task<TwoFactorProviderResponseModel> PostDisable([FromBody] TwoFactorProviderRequestModel model)
-    {
-        return await PutDisable(model);
-    }
-
-    [HttpPut("~/organizations/{id}/two-factor/disable")]
-    public async Task<TwoFactorProviderResponseModel> PutOrganizationDisable(string id,
-        [FromBody] TwoFactorProviderRequestModel model)
-    {
-        await CheckAsync(model, false);
-
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        await _organizationService.DisableTwoFactorProviderAsync(organization, model.Type.Value);
-        var response = new TwoFactorProviderResponseModel(model.Type.Value, organization);
-        return response;
-    }
-
-    [HttpPost("~/organizations/{id}/two-factor/disable")]
-    [Obsolete("This endpoint is deprecated. Use PUT /organizations/{id}/two-factor/disable instead.")]
-    public async Task<TwoFactorProviderResponseModel> PostOrganizationDisable(string id,
-        [FromBody] TwoFactorProviderRequestModel model)
-    {
-        return await PutOrganizationDisable(id, model);
     }
 
     [HttpPost("get-recover")]
     public async Task<TwoFactorRecoverResponseModel> GetRecover([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await ValidateUserBySecretAsync(model);
         var response = new TwoFactorRecoverResponseModel(user);
         return response;
     }
@@ -497,8 +517,10 @@ public class TwoFactorController : Controller
         return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
-    private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium,
-        bool skipVerification = false)
+    /// <summary>Verifies the principal user's secret (master password or OTP) and returns the user.</summary>
+    /// <exception cref="UnauthorizedAccessException">No authenticated user.</exception>
+    /// <exception cref="BadRequestException">Secret does not verify.</exception>
+    private async Task<User> ValidateUserBySecretAsync(SecretVerificationRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -506,18 +528,47 @@ public class TwoFactorController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (!await _userService.VerifySecretAsync(user, model.Secret, skipVerification))
+        if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
-            await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
+        return user;
+    }
 
-        if (premium && !await _userService.CanAccessPremium(user))
+    /// <summary>Verifies a user-verification token is bound to the principal user and the given provider, and returns the user.</summary>
+    /// <exception cref="UnauthorizedAccessException">No authenticated user.</exception>
+    /// <exception cref="BadRequestException">Token cannot be unprotected, has expired, or is not bound to this user and provider.</exception>
+    private async Task<User> ValidateUserVerificationTokenAsync(string userVerificationToken, TwoFactorProviderType providerType)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (!TwoFactorUserVerificationTokenable.Validate(
+                _twoFactorUserVerificationDataProtector, userVerificationToken, user, providerType))
+        {
+            throw new BadRequestException("UserVerificationToken", "User verification failed.");
+        }
+        return user;
+    }
+
+    /// <summary>Verifies the user has premium access.</summary>
+    /// <exception cref="BadRequestException">User cannot access premium.</exception>
+    private async Task ValidateUserHasPremiumAsync(User user)
+    {
+        if (!await _userService.CanAccessPremium(user))
         {
             throw new BadRequestException("Premium status is required.");
         }
+    }
 
-        return user;
+    /// <summary>Mints a protected user-verification token bound to <paramref name="user"/> and <paramref name="providerType"/>.</summary>
+    private string MintProtectedUserVerificationToken(User user, TwoFactorProviderType providerType)
+    {
+        var token = _twoFactorUserVerificationTokenableFactory.CreateToken(user, providerType);
+        return _twoFactorUserVerificationDataProtector.Protect(token);
     }
 
     private async Task ValidateYubiKeyAsync(User user, string name, string value)

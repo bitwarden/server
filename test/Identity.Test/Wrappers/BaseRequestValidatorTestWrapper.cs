@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
@@ -56,12 +55,10 @@ IBaseRequestValidatorTestWrapper
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         ISsoRequestValidator ssoRequestValidator,
-        IOrganizationUserRepository organizationUserRepository,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
@@ -78,12 +75,10 @@ IBaseRequestValidatorTestWrapper
             deviceValidator,
             twoFactorAuthenticationValidator,
             ssoRequestValidator,
-            organizationUserRepository,
             logger,
             currentContext,
             globalSettings,
             userRepository,
-            policyService,
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,

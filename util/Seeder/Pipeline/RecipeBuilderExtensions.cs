@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
@@ -6,6 +7,7 @@ using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Bit.Seeder.Steps;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
 
@@ -77,6 +79,39 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Seed one or more claimed (verified) organization domains.
+    /// Domain names are trimmed; empty entries are dropped and duplicates removed case-insensitively.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="domainNames">Domain names to seed. Empty (or all-empty/whitespace) is a no-op.</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no organization exists.</exception>
+    public static RecipeBuilder WithOrganizationDomain(
+        this RecipeBuilder builder,
+        IReadOnlyList<string> domainNames)
+    {
+        if (!builder.HasOrg)
+        {
+            throw new InvalidOperationException(
+                "Organization domains require an organization. Call UseOrganization() or CreateOrganization() first.");
+        }
+
+        var unique = domainNames
+            .Select(d => d.Trim())
+            .Where(d => !string.IsNullOrWhiteSpace(d))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (unique.Count == 0)
+        {
+            return builder;
+        }
+
+        builder.AddStep(_ => new CreateOrganizationDomainsStep(unique));
+        return builder;
+    }
+
+    /// <summary>
     /// Add an organization owner user with admin privileges.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
@@ -95,13 +130,18 @@ public static class RecipeBuilderExtensions
     /// <param name="email">User email address (domain is extracted for context)</param>
     /// <param name="premium">Whether the account has premium status</param>
     /// <param name="maxStorageGb">Optional max storage override in GB</param>
+    /// <param name="selfHosted">When true, writes a license file after user creation (required for self-hosted premium validation)</param>
     /// <returns>The builder for fluent chaining</returns>
     public static RecipeBuilder CreateIndividualUser(
-        this RecipeBuilder builder, string email, bool premium, short maxStorageGb)
+        this RecipeBuilder builder, string email, bool premium, short maxStorageGb, bool selfHosted = false)
     {
         builder.HasIndividualUser = true;
         builder.HasOwner = true;
-        builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb));
+        builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb, true));
+        if (selfHosted)
+        {
+            builder.AddStep(sp => new GenerateSelfHostUserLicenseStep(sp.GetRequiredService<ILicensingService>()));
+        }
         return builder;
     }
 

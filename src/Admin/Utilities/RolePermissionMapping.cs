@@ -104,7 +104,8 @@ public static class RolePermissionMapping
                 Permission.Tools_PromoteProviderServiceUser,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
-                Permission.Tools_CreateEditTransaction
+                Permission.Tools_CreateEditTransaction,
+                Permission.Tools_ManagePlanMigrationCohorts
             }
         },
         { "cs", new List<Permission>

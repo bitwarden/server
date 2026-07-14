@@ -7,10 +7,10 @@ using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -27,11 +27,10 @@ public class GroupsController : Controller
     private readonly IGroupService _groupService;
     private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly ICurrentContext _currentContext;
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
@@ -40,12 +39,11 @@ public class GroupsController : Controller
         IGroupRepository groupRepository,
         IGroupService groupService,
         IOrganizationRepository organizationRepository,
-        ICurrentContext currentContext,
         ICreateGroupCommand createGroupCommand,
         IUpdateGroupCommand updateGroupCommand,
         IDeleteGroupCommand deleteGroupCommand,
         IAuthorizationService authorizationService,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
@@ -53,12 +51,11 @@ public class GroupsController : Controller
         _groupRepository = groupRepository;
         _groupService = groupService;
         _organizationRepository = organizationRepository;
-        _currentContext = currentContext;
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
         _deleteGroupCommand = deleteGroupCommand;
         _authorizationService = authorizationService;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _userService = userService;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
@@ -159,7 +156,7 @@ public class GroupsController : Controller
         // Authorization check:
         // If admins are not allowed access to all collections, you cannot add yourself to a group.
         // No error is thrown for this, we just don't update groups.
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId);
         if (!orgAbility.AllowAdminAccessToAllCollectionItems)
         {
             var userId = _userService.GetProperUserId(User).Value;

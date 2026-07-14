@@ -49,31 +49,89 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
     public async Task SaveSendAsync(Send send)
     {
+        // Normalize the email list before persisting so every downstream consumer is correct on
+        // every DB engine. Runs before Data Protection encrypts the emails.
+        send.Emails = NormalizeEmails(send.Emails);
+
         // Make sure user can save Sends
         await _sendValidationService.ValidateUserCanSaveAsync(send.UserId, send);
 
+        // New Send
         if (send.Id == default(Guid))
         {
             await _sendRepository.CreateAsync(send);
             await _pushNotificationService.PushSyncSendCreateAsync(send);
             await LogSendCreatedEventAsync(send);
         }
+        // Edit existing Send
         else
         {
             send.RevisionDate = DateTime.UtcNow;
             await _sendRepository.UpsertAsync(send);
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
+            await LogSendUpdatedEventAsync(send);
         }
     }
 
     private async Task LogSendCreatedEventAsync(Send send)
     {
-        if (!send.UserId.HasValue || !_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
         {
             return;
         }
 
-        await _eventService.LogUserEventAsync(send.UserId.Value, ResolveSendCreatedEventType(send));
+        await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, ResolveSendCreatedEventType(send));
+    }
+
+    private async Task LogSendUpdatedEventAsync(Send send)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_Text);
+        }
+        else
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_File);
+        }
+    }
+
+    private async Task LogSendDeletedEventAsync(Send send)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_Text);
+        }
+        else
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_File);
+        }
+    }
+
+    // Returns the comma-separated email list with each entry trimmed and lowercased, or the
+    // original value when there are no emails (password / no-auth Sends). Idempotent, so re-saving an
+    // already-normalized Send is a no-op.
+    private static string NormalizeEmails(string emails)
+    {
+        if (string.IsNullOrWhiteSpace(emails))
+        {
+            return emails;
+        }
+
+        var normalized = emails
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(email => email.ToLowerInvariant());
+
+        return string.Join(",", normalized);
     }
 
     private static EventType ResolveSendCreatedEventType(Send send)
@@ -189,6 +247,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         }
         await _sendRepository.DeleteAsync(send);
         await _pushNotificationService.PushSyncSendDeleteAsync(send);
+        await LogSendDeletedEventAsync(send);
     }
 
     public async Task<bool> ConfirmFileSize(Send send)

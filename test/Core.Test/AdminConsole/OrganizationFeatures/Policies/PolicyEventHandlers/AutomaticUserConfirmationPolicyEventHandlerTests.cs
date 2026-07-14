@@ -35,10 +35,10 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
         SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(policyUpdate.OrganizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(policyUpdate.OrganizationId);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>())
+        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>())
             .Returns(Invalid(request, new UserNotCompliantWithSingleOrganization()));
 
         // Act
@@ -54,10 +54,10 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
         SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(policyUpdate.OrganizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(policyUpdate.OrganizationId);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>())
+        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>())
             .Returns(Invalid(request, new ProviderExistsInOrganization()));
 
         // Act
@@ -73,10 +73,10 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
         SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(policyUpdate.OrganizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(policyUpdate.OrganizationId);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>())
+        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>())
             .Returns(Valid(request));
 
         // Act
@@ -101,9 +101,9 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
         // Assert
         Assert.True(string.IsNullOrEmpty(result));
 
-        await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
+        await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
             .DidNotReceive()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>());
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>());
     }
 
     [Theory, BitAutoData]
@@ -120,9 +120,9 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
 
         // Assert
         Assert.True(string.IsNullOrEmpty(result));
-        await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
+        await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
             .DidNotReceive()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>());
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>());
     }
 
     [Theory, BitAutoData]
@@ -131,19 +131,19 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
         SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(policyUpdate.OrganizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(policyUpdate.OrganizationId);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>())
+        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>())
             .Returns(Valid(request));
 
         // Act
         await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), null);
 
         // Assert
-        await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
+        await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
             .Received(1)
-            .IsOrganizationCompliantAsync(Arg.Is<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>(
+            .IsOrganizationCompliantAsync(Arg.Is<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>(
                 r => r.OrganizationId == policyUpdate.OrganizationId));
     }
 
@@ -154,10 +154,10 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
     {
         // Arrange
         var savePolicyModel = new SavePolicyModel(policyUpdate);
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(policyUpdate.OrganizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(policyUpdate.OrganizationId);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>())
+        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>())
             .Returns(Valid(request));
 
         // Act

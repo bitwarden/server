@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -39,9 +40,11 @@ using static StripeConstants;
 public class ProviderBillingService(
     IBraintreeGateway braintreeGateway,
     IEventService eventService,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
@@ -56,6 +59,11 @@ public class ProviderBillingService(
         Organization organization,
         string key)
     {
+        await priceIncreaseScheduler.Release(
+            organization.GatewayCustomerId,
+            organization.GatewaySubscriptionId,
+            organization.Id);
+
         await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
 
@@ -104,6 +112,7 @@ public class ProviderBillingService(
         organization.UsersGetPremium = plan.UsersGetPremium;
         organization.UseCustomPermissions = plan.HasCustomPermissions;
         organization.UseScim = plan.HasScim;
+        organization.UseRiskInsights = plan.HasRiskInsights;
         organization.UseKeyConnector = plan.HasKeyConnector;
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
         organization.BillingEmail = provider.BillingEmail!;
@@ -266,13 +275,16 @@ public class ProviderBillingService(
                 ]
         };
 
-        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(providerCustomer.Address?.Country, providerCustomer.TaxExempt);
-        customerCreateOptions.TaxExempt = providerCustomer switch
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus } when
-                determinedTaxExemptStatus != customerTaxExemptStatus => determinedTaxExemptStatus,
-            _ => providerCustomer.TaxExempt
-        };
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(providerCustomer.Address?.Country, providerCustomer.TaxExempt);
+            customerCreateOptions.TaxExempt = providerCustomer switch
+            {
+                { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus } when
+                    determinedTaxExemptStatus != customerTaxExemptStatus => determinedTaxExemptStatus,
+                _ => providerCustomer.TaxExempt
+            };
+        }
 
         var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
 
@@ -282,11 +294,12 @@ public class ProviderBillingService(
     }
 
     public async Task<byte[]> GenerateClientInvoiceReport(
+        Guid providerId,
         string invoiceId)
     {
         ArgumentException.ThrowIfNullOrEmpty(invoiceId);
 
-        var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoiceId);
+        var invoiceItems = await providerInvoiceItemRepository.GetByProviderIdAndInvoiceId(providerId, invoiceId);
 
         if (invoiceItems.Count == 0)
         {
@@ -469,7 +482,6 @@ public class ProviderBillingService(
         TokenizedPaymentMethod paymentMethod,
         BillingAddress billingAddress)
     {
-        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
         var options = new CustomerCreateOptions
         {
             Address = new AddressOptions
@@ -496,9 +508,13 @@ public class ProviderBillingService(
                     }
                 ]
             },
-            Metadata = new Dictionary<string, string> { { "region", globalSettings.BaseServiceUri.CloudRegion } },
-            TaxExempt = determinedTaxExemptStatus
+            Metadata = new Dictionary<string, string> { { "region", globalSettings.BaseServiceUri.CloudRegion } }
         };
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            options.TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
+        }
 
         if (billingAddress.TaxId != null)
         {

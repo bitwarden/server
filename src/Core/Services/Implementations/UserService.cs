@@ -497,6 +497,7 @@ public class UserService : UserManager<User>, IUserService
         });
     }
 
+    [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {
@@ -547,29 +548,6 @@ public class UserService : UserManager<User>, IUserService
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
         await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(orgIdentifier, user, this);
-
-        return IdentityResult.Success;
-    }
-
-    public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user, string keyConnectorKeyWrappedUserKey = null)
-    {
-        var identityResult = CheckCanUseKeyConnector(user);
-        if (identityResult != null)
-        {
-            return identityResult;
-        }
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.MasterPassword = null;
-        user.UsesKeyConnector = true;
-
-        if (!string.IsNullOrWhiteSpace(keyConnectorKeyWrappedUserKey))
-        {
-            user.Key = keyConnectorKeyWrappedUserKey;
-        }
-
-        await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
         return IdentityResult.Success;
     }
@@ -673,6 +651,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
+    [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
     {
         if (!user.ForcePasswordReset)
@@ -1010,6 +989,7 @@ public class UserService : UserManager<User>, IUserService
         return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
     }
 
+    [Obsolete("Use MasterPasswordService.PrepareSetInitialMasterPasswordAsync or PrepareUpdateExistingMasterPasswordAsync instead. To be removed in PM-33141.")]
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();
@@ -1116,31 +1096,19 @@ public class UserService : UserManager<User>, IUserService
             "otp:" + user.Email, token);
     }
 
-    public async Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false)
+    public async Task<bool> VerifySecretAsync(User user, string secret)
     {
-        bool isVerified;
         if (user.HasMasterPassword())
         {
             // If the user has a master password the secret is most likely going to be a hash
             // of their password, but in certain scenarios, like when the user has logged into their
             // device without a password (trusted device encryption) but the account
             // does still have a password we will allow the use of OTP.
-            isVerified = await CheckPasswordAsync(user, secret) ||
-                await VerifyOTPAsync(user, secret);
-        }
-        else if (isSettingMFA)
-        {
-            // this is temporary to allow users to view their MFA settings without invalidating email TOTP
-            // Will be removed with PM-9925
-            isVerified = true;
-        }
-        else
-        {
-            // If they don't have a password at all they can only do OTP
-            isVerified = await VerifyOTPAsync(user, secret);
+            return await CheckPasswordAsync(user, secret) || await VerifyOTPAsync(user, secret);
         }
 
-        return isVerified;
+        // If they don't have a password at all they can only do OTP
+        return await VerifyOTPAsync(user, secret);
     }
 
     public async Task<bool> ActiveNewDeviceVerificationException(Guid userId)

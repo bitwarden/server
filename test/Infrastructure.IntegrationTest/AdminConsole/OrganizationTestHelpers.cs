@@ -98,6 +98,7 @@ public static class OrganizationTestHelpers
             UseDisableSmAdsForUsers = true,
             UseMyItems = true,
             UseInviteLinks = true,
+            UsePam = true,
         });
     }
 
@@ -164,6 +165,22 @@ public static class OrganizationTestHelpers
             Type = OrganizationUserType.Owner
         });
 
+    /// <summary>
+    /// Creates a Staged member (provisioned but not invited) for the specified organization and user.
+    /// Staged members do not consume a seat and are not subject to organization policies.
+    /// </summary>
+    public static Task<OrganizationUser> CreateStagedTestOrganizationUserAsync(
+        this IOrganizationUserRepository organizationUserRepository,
+        Organization organization,
+        User user)
+        => organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Staged,
+            Type = OrganizationUserType.User
+        });
+
     public static Task<Group> CreateTestGroupAsync(
         this IGroupRepository groupRepository,
         Organization organization,
@@ -191,8 +208,8 @@ public static class OrganizationTestHelpers
             Code = Guid.NewGuid(),
             OrganizationId = organization.Id,
             AllowedDomains = "[\"example.com\"]",
-            EncryptedInviteKey = $"encrypted-key-{identifier}",
-            EncryptedOrgKey = $"encrypted-org-key-{identifier}",
+            Invite = $"invite-blob-{identifier}",
+            SupportsConfirmation = true,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         });

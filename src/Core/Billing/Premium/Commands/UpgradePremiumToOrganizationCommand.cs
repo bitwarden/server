@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
@@ -64,8 +65,9 @@ public class UpgradePremiumToOrganizationCommand(
     ICollectionRepository collectionRepository,
     IBraintreeService braintreeService,
     IGetPaymentMethodQuery getPaymentMethodQuery,
-    IApplicationCacheService applicationCacheService,
-    IPushNotificationService pushNotificationService)
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
+    IPushNotificationService pushNotificationService,
+    IFeatureService featureService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
@@ -128,16 +130,21 @@ public class UpgradePremiumToOrganizationCommand(
             organizationId, user, organizationName, publicKey, encryptedPrivateKey, targetPlan, currentSubscription.Id);
 
         // Update customer billing address for tax calculation
-        var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId,
-            new CustomerUpdateOptions
+        var addressUpdateOptions = new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
             {
-                Address = new AddressOptions
-                {
-                    Country = billingAddress.Country,
-                    PostalCode = billingAddress.PostalCode
-                },
-                TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country),
-            });
+                Country = billingAddress.Country,
+                PostalCode = billingAddress.PostalCode
+            }
+        };
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            addressUpdateOptions.TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
+        }
+
+        var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId, addressUpdateOptions);
 
         // Add tax ID to the customer for accurate tax calculation if provided
         if (billingAddress.TaxId != null)
@@ -257,6 +264,7 @@ public class UpgradePremiumToOrganizationCommand(
             UsersGetPremium = targetPlan.UsersGetPremium,
             UseCustomPermissions = targetPlan.HasCustomPermissions,
             UseScim = targetPlan.HasScim,
+            UseRiskInsights = targetPlan.HasRiskInsights,
             Plan = targetPlan.Name,
             Gateway = GatewayType.Stripe,
             Enabled = true,
@@ -326,7 +334,7 @@ public class UpgradePremiumToOrganizationCommand(
         });
 
         // Update cache
-        await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        await organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
         // Create OrganizationUser for the upgrading user as owner
         var organizationUser = new OrganizationUser

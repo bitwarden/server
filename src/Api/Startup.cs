@@ -40,6 +40,8 @@ using Bit.Core.Enums;
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
+using Bit.Services.Pam.Api.Endpoints;
+using Bit.Services.Pam.Utilities;
 #endif
 
 namespace Bit.Api;
@@ -205,6 +207,7 @@ public class Startup
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
         services.AddSecretsManagerEfRepositories();
+        services.AddPamServices();
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
@@ -215,6 +218,8 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
+        // Required for ApiExplorer to enumerate Minimal API endpoints (e.g. PAM) so they appear in the OpenAPI spec.
+        services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
@@ -278,6 +283,11 @@ public class Startup
         {
             endpoints.MapDefaultControllerRoute();
 
+#if !OSS
+            // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.
+            endpoints.MapPamEndpoints();
+#endif
+
             if (!globalSettings.SelfHosted)
             {
                 endpoints.MapHealthChecks("/healthz");
@@ -327,6 +337,20 @@ public class Startup
                                     { ApiScopes.ApiOrganization, "Organization APIs" }
                                 }
                                     }
+                                }
+                            }
+                        },
+                        {
+                            "send-access-bearer",
+                            new OpenApiSecurityScheme
+                            {
+                                Type = SecuritySchemeType.Http,
+                                Scheme = "bearer",
+                                BearerFormat = "JWT",
+                                Description = "Send access token obtained from /connect/token using the send_access grant.",
+                                Extensions = new Dictionary<string, IOpenApiExtension>
+                                {
+                                    { "x-explicit-bearer-token", new JsonNodeExtension(true) }
                                 }
                             }
                         }

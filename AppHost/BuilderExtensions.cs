@@ -1,4 +1,5 @@
 ﻿using Aspire.Hosting.Azure;
+using Aspire.Hosting.JavaScript;
 using Azure.Provisioning;
 using Azure.Provisioning.Storage;
 
@@ -28,7 +29,7 @@ public static class BuilderExtensions
     {
         var migrationArgs = new List<string> { "-File", builder.Required("Scripts:DbMigration") };
         if (builder.IsSelfHosted())
-            migrationArgs.Add("-self-hosted");
+            migrationArgs.Add("-selfhost");
 
         return builder
             .AddExecutable("run-db-migrations", "pwsh", builder.Required("WorkingDirectory"), migrationArgs.ToArray());
@@ -66,11 +67,14 @@ public static class BuilderExtensions
                     MaxAgeInSeconds = new BicepValue<int>("30")
                 }));
             })
-            .RunAsEmulator(c =>
+            .RunAsEmulator(emulator =>
             {
-                c.WithBlobPort(10000)
+                emulator
+                    .WithBlobPort(10000)
                     .WithQueuePort(10001)
-                    .WithTablePort(10002);
+                    .WithTablePort(10002)
+                    .WithDataVolume()
+                    .WithLifetime(ContainerLifetime.Persistent);
             });
 
         builder
@@ -83,10 +87,7 @@ public static class BuilderExtensions
 
     public static IResourceBuilder<ContainerResource> ConfigureMailCatcher(this IDistributedApplicationBuilder builder)
     {
-        var image = builder.Required("MailCatcher:Image");
-        var imageParts = image.Split(':');
-        var imageName = imageParts[0];
-        var imageTag = imageParts.Length > 1 ? imageParts[1] : "latest";
+        var (imageName, imageTag) = builder.GetImageParts("MailCatcher:Image");
 
         if (!int.TryParse(builder.Required("MailCatcher:SmtpPort"), out var smtpPort))
             throw new InvalidOperationException("Invalid value for MailCatcher:SmtpPort.");
@@ -100,45 +101,76 @@ public static class BuilderExtensions
             .WithHttpEndpoint(port: webPort, name: "web", targetPort: webPort);
     }
 
+    public static IResourceBuilder<ContainerResource> ConfigureRedis(this IDistributedApplicationBuilder builder)
+    {
+        var (imageName, imageTag) = builder.GetImageParts("Redis:Image");
+
+        if (!int.TryParse(builder.Required("Redis:Port"), out var port))
+            throw new InvalidOperationException("Invalid value for Redis:Port.");
+
+        return builder
+            .AddContainer("redis", imageName, imageTag)
+            .WithLifetime(ContainerLifetime.Persistent)
+            .WithEndpoint(port: port, name: "tcp", targetPort: 6379)
+            .WithVolume("redis_data", "/data")
+            .WithArgs("redis-server", "--appendonly", "yes");
+    }
+
+    public static IResourceBuilder<ContainerResource> ConfigureIdp(this IDistributedApplicationBuilder builder)
+    {
+        var (imageName, imageTag) = builder.GetImageParts("Idp:Image");
+
+        if (!int.TryParse(builder.Required("Idp:Port"), out var port))
+            throw new InvalidOperationException("Invalid value for Idp:Port.");
+
+        return builder
+            .AddContainer("idp", imageName, imageTag)
+            .WithHttpEndpoint(port: port, name: "http", targetPort: 8080)
+            .WithEnvironment("SIMPLESAMLPHP_SP_ENTITY_ID", builder.Required("Idp:SpEntityId"))
+            .WithEnvironment("SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE", builder.Required("Idp:SpAcsUrl"))
+            .WithBindMount($"{builder.Required("WorkingDirectory")}/authsources.php",
+                "/var/www/simplesamlphp/config/authsources.php")
+            .WithExplicitStart();
+    }
+
     /// <summary>
-    /// Configures and initializes the essential services required for the distributed application,
-    /// including project-specific services such as admin, API, billing, identity, and notifications.
+    /// Configures and initializes the Bitwarden project services required for the distributed
+    /// application, keyed by service name.
     /// </summary>
     /// <param name="builder">The distributed application builder used to configure resources and services.</param>
     /// <param name="db">The SQL Server database resource builder.</param>
     /// <param name="secretsSetup">The executable resource builder for configuring secrets.</param>
     /// <param name="mail">The container resource builder for setting up the mail service.</param>
     /// <param name="azurite">The Azure Storage resource builder used to configure Azurite storage services.</param>
-    /// <returns>A tuple containing the configured resource builders for each project service.</returns>
-    public static (
-        IResourceBuilder<ProjectResource> Admin,
-        IResourceBuilder<ProjectResource> Api,
-        IResourceBuilder<ProjectResource> Billing,
-        IResourceBuilder<ProjectResource> Identity,
-        IResourceBuilder<ProjectResource> Notifications
-        ) ConfigureServices(
-            this IDistributedApplicationBuilder builder,
-            IResourceBuilder<SqlServerDatabaseResource> db,
-            IResourceBuilder<ExecutableResource> secretsSetup,
-            IResourceBuilder<ContainerResource> mail,
-            IResourceBuilder<AzureStorageResource> azurite)
+    /// <returns>A dictionary of configured project resource builders keyed by service name.</returns>
+    public static IReadOnlyDictionary<string, IResourceBuilder<ProjectResource>> ConfigureServices(
+        this IDistributedApplicationBuilder builder,
+        IResourceBuilder<SqlServerDatabaseResource> db,
+        IResourceBuilder<ExecutableResource> secretsSetup,
+        IResourceBuilder<ContainerResource> mail,
+        IResourceBuilder<AzureStorageResource> azurite)
     {
-        var admin = builder.AddBitwardenService<Projects.Admin>(db, secretsSetup, mail, "admin");
-        var api = builder.AddBitwardenService<Projects.Api>(db, secretsSetup, mail, "api")
-            .WaitFor(azurite);
-        var billing = builder.AddBitwardenService<Projects.Billing>(db, secretsSetup, mail, "billing");
-        var identity = builder.AddBitwardenService<Projects.Identity>(db, secretsSetup, mail, "identity");
-        var notifications = builder.AddBitwardenService<Projects.Notifications>(db, secretsSetup, mail, "notifications")
-            .WaitFor(azurite);
-        builder.ConfigureAdditionalProjects(new Dictionary<string, IResourceBuilder<ProjectResource>>
+        var services = new Dictionary<string, IResourceBuilder<ProjectResource>>
         {
-            ["admin"] = admin,
-            ["api"] = api,
-            ["billing"] = billing,
-            ["identity"] = identity,
-            ["notifications"] = notifications
-        });
-        return (admin, api, billing, identity, notifications);
+            ["admin"] = builder.AddBitwardenService<Projects.Admin>(db, secretsSetup, mail, "admin"),
+            ["api"] = builder.AddBitwardenService<Projects.Api>(db, secretsSetup, mail, "api")
+                .WaitFor(azurite),
+            ["billing"] = builder.AddBitwardenService<Projects.Billing>(db, secretsSetup, mail, "billing"),
+            ["events"] = builder.AddBitwardenService<Projects.Events>(db, secretsSetup, mail, "events")
+                .WaitFor(azurite),
+            ["eventsProcessor"] = builder
+                .AddBitwardenService<Projects.EventsProcessor>(db, secretsSetup, mail, "eventsProcessor")
+                .WaitFor(azurite),
+            ["icons"] = builder.AddBitwardenService<Projects.Icons>(db, secretsSetup, mail, "icons"),
+            ["identity"] = builder.AddBitwardenService<Projects.Identity>(db, secretsSetup, mail, "identity"),
+            ["notifications"] = builder
+                .AddBitwardenService<Projects.Notifications>(db, secretsSetup, mail, "notifications")
+                .WaitFor(azurite),
+            ["scim"] = builder.AddBitwardenService<Projects.Scim>(db, secretsSetup, mail, "scim"),
+            ["sso"] = builder.AddBitwardenService<Projects.Sso>(db, secretsSetup, mail, "sso")
+        };
+        builder.ConfigureAdditionalProjects(services);
+        return services;
     }
 
     /// <summary>
@@ -187,7 +219,12 @@ public static class BuilderExtensions
             .WaitFor(db)
             .WaitForCompletion(secretsSetup);
 
-        if (name is "admin" or "identity" or "billing")
+        if (builder.IsSelfHosted())
+        {
+            service.WithEnvironment("developSelfHosted", "true");
+        }
+
+        if (name is "admin" or "identity" or "billing" or "sso")
             service.WithReference(mail.GetEndpoint("smtp"));
 
         return service;
@@ -211,6 +248,16 @@ public static class BuilderExtensions
         builder.Configuration[key] ?? throw new InvalidOperationException($"Missing required configuration: {key}");
 
     /// <summary>
+    /// Reads an image reference from configuration in <c>name[:tag]</c> form and returns its components,
+    /// defaulting the tag to <c>latest</c> when not specified.
+    /// </summary>
+    private static (string Name, string Tag) GetImageParts(this IDistributedApplicationBuilder builder, string key)
+    {
+        var parts = builder.Required(key).Split(':');
+        return (parts[0], parts.Length > 1 ? parts[1] : "latest");
+    }
+
+    /// <summary>
     /// Determines if the application is running in self-hosted mode.
     /// </summary>
     /// <param name="builder"> An instance of <see cref="IDistributedApplicationBuilder"/>.</param>
@@ -218,30 +265,31 @@ public static class BuilderExtensions
     private static bool IsSelfHosted(this IDistributedApplicationBuilder builder) =>
         builder.Configuration["SelfHost"]?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
-#if ENABLE_NODEJS_COMMUNITY_PLUGIN
     public static void ConfigureWebFrontend(this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> api)
     {
-        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var port))
+        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var basePort))
             throw new InvalidOperationException("Invalid value for WebFrontend:Port.");
-
+        var port = builder.IsSelfHosted() ? basePort + 1 : basePort;
+        var scriptName = builder.IsSelfHosted() ? "build:bit:selfhost:watch" : "build:bit:watch";
+        var url = builder.Required("WebFrontend:Url") + $":{port}";
         builder
-            .AddBitwardenNpmApp("web-frontend", "web", api)
-            .WithHttpsEndpoint(port, port, "angular-http", isProxied: false)
-            .WithUrl(builder.Required("WebFrontend:Url"))
+            .AddBitwardenNpmApp("web-frontend", "web", api, port: port, scriptName: scriptName)
+            .WithUrl(url)
             .WithExternalHttpEndpoints();
     }
 
-    private static IResourceBuilder<NodeAppResource> AddBitwardenNpmApp(this IDistributedApplicationBuilder builder,
-        string name, string path, IResourceBuilder<ProjectResource> api, string scriptName = "build:bit:watch")
+    private static IResourceBuilder<JavaScriptAppResource> AddBitwardenNpmApp(this IDistributedApplicationBuilder builder,
+        string name, string path, IResourceBuilder<ProjectResource> api, int port, string scriptName = "build:bit:watch")
     {
         return builder
-            .AddNpmApp(name, $"{builder.Required("ClientsPath")}/{path}", scriptName)
+            .AddJavaScriptApp(name, $"{builder.Required("ClientsPath")}/{path}", scriptName)
+            .WithHttpsEndpoint(port, port, "angular-http", isProxied: false)
+            .WithNpm(install: false)
             .WithReference(api)
             .WaitFor(api)
             .WithExplicitStart();
     }
-#endif
 
 #if ENABLE_NGROK_COMMUNITY_PLUGIN
     public static void ConfigureNgrok(this IDistributedApplicationBuilder builder,

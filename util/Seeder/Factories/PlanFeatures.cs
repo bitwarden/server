@@ -90,6 +90,27 @@ public static class PlanFeatures
         org.LimitCollectionDeletion = overrides.LimitCollectionDeletion ?? org.LimitCollectionDeletion;
     }
 
+    /// <summary>
+    /// Enables Secrets Manager on an organization by populating its subscription fields.
+    /// Seat defaults mirror the plan's SecretsManager base values in test/Core.Test/Billing/Mocks/Plans/.
+    /// </summary>
+    internal static void EnableSecretsManager(Organization org, int? smSeats, int? smServiceAccounts)
+    {
+        var baseServiceAccounts = org.PlanType switch
+        {
+            PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually
+                or PlanType.TeamsAnnually => 50,
+            PlanType.TeamsMonthly or PlanType.TeamsStarter => 20,
+            _ => throw new ArgumentException(
+                $"PlanType '{org.PlanType}' does not support Secrets Manager. " +
+                "Supported: TeamsMonthly, TeamsAnnually, TeamsStarter, EnterpriseMonthly, EnterpriseAnnually.")
+        };
+
+        org.UseSecretsManager = true;
+        org.SmSeats = smSeats ?? org.Seats;
+        org.SmServiceAccounts = smServiceAccounts ?? baseServiceAccounts;
+    }
+
     public static PlanType Parse(string? planTypeString)
     {
         if (string.IsNullOrEmpty(planTypeString))
@@ -229,6 +250,7 @@ public static class PlanFeatures
         org.UsePasswordManager = true;
         org.UseSecretsManager = true;
         org.UseRiskInsights = true;
+        org.UseMyItems = true;
         org.UseAdminSponsoredFamilies = true;
         org.SyncSeats = true;
         org.UseInviteLinks = true;

@@ -24,7 +24,7 @@ BEGIN
             P.Enabled = 1
           AND O.Enabled = 1
           AND O.UsePolicies = 1
-          AND OU.[Status] != 0 -- Accepted users
+          AND OU.[Status] IN (-1, 1, 2) -- Non-invited users
           AND P.[Type] = @PolicyType
     ),
          InvitedUsers AS (
