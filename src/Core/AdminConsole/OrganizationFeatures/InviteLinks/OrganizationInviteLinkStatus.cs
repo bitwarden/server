@@ -2,6 +2,7 @@
 
 public record OrganizationInviteLinkStatus(
     string OrganizationName,
+    bool LinksEnabled,
     bool SeatsAvailable,
     bool SupportsConfirmation,
     OrganizationInviteLinkSsoStatus? Sso);
