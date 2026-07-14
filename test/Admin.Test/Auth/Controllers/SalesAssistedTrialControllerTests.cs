@@ -59,7 +59,7 @@ public class SalesAssistedTrialControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Index_Post_ValidModel_SendsInvitationLogsAndRedirects(
+    public async Task Index_Post_ValidModel_SendsInvitationAndRedirects(
         SutProvider<SalesAssistedTrialController> sutProvider)
     {
         var model = BuildValidModel();
@@ -81,17 +81,6 @@ public class SalesAssistedTrialControllerTests
                 model.Products,
                 model.TrialLength,
                 model.PaymentOptional);
-
-        sutProvider.GetDependency<ILogger<SalesAssistedTrialController>>()
-            .Received(1)
-            .Log(
-                LogLevel.Information,
-                Arg.Any<EventId>(),
-                Arg.Is<object>(state =>
-                    state.ToString()!.Contains(SenderEmail) &&
-                    state.ToString()!.Contains(model.Email)),
-                null,
-                Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Theory, BitAutoData]
@@ -173,7 +162,7 @@ public class SalesAssistedTrialControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Index_Post_UnexpectedException_LogsErrorAddsGenericErrorReturnsView(
+    public async Task Index_Post_UnexpectedException_LogsExceptionTypeAddsExceptionMessageReturnsView(
         SutProvider<SalesAssistedTrialController> sutProvider)
     {
         var model = BuildValidModel();
@@ -189,7 +178,7 @@ public class SalesAssistedTrialControllerTests
 
         Assert.IsType<ViewResult>(result);
         Assert.False(sutProvider.Sut.ModelState.IsValid);
-        Assert.Contains("error occurred",
+        Assert.Contains("Unexpected failure",
             sutProvider.Sut.ModelState[string.Empty]!.Errors[0].ErrorMessage);
 
         sutProvider.GetDependency<ILogger<SalesAssistedTrialController>>()
@@ -197,8 +186,10 @@ public class SalesAssistedTrialControllerTests
             .Log(
                 LogLevel.Error,
                 Arg.Any<EventId>(),
-                Arg.Any<object>(),
-                Arg.Any<Exception>(),
+                Arg.Is<object>(state =>
+                    state.ToString()!.Contains(nameof(Exception)) &&
+                    !state.ToString()!.Contains("Unexpected failure")),
+                Arg.Any<Exception?>(),
                 Arg.Any<Func<object, Exception?, string>>());
     }
 

@@ -71,16 +71,10 @@ public class SalesAssistedTrialController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error sending sales-assisted trial invitation.");
-            ModelState.AddModelError(string.Empty, "An error occurred while sending the invitation.");
+            logger.LogError("Error sending sales-assisted trial invitation. Exception Type: {ExceptionType}", ex.GetType().Name);
+            ModelState.AddModelError(string.Empty, ex.Message);
             return View(model);
         }
-
-        logger.LogInformation(
-            "Sales-assisted trial invitation sent by {SenderEmail} to {ProspectEmail}.",
-            senderEmail,
-            model.Email);
-
         TempData["Success"] = "Invitation sent.";
         return RedirectToAction(nameof(Index));
     }
