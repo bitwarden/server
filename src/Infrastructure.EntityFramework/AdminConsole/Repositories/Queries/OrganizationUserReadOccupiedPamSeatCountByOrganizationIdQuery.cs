@@ -19,7 +19,7 @@ public class OrganizationUserReadOccupiedPamSeatCountByOrganizationIdQuery : IQu
                           && (ou.Status == OrganizationUserStatusType.Invited ||
                               ou.Status == OrganizationUserStatusType.Accepted ||
                               ou.Status == OrganizationUserStatusType.Confirmed)
-                          && ou.AccessPam == true
+                          && ou.AccessPam
                     select ou;
         return query;
     }
