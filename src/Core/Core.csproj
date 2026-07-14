@@ -78,7 +78,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Data\Data.csproj" />
+    <ProjectReference Include="..\Libraries\Data\Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

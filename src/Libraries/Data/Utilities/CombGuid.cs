@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-namespace Bit.Core.Utilities;
+﻿namespace Bit.Core.Utilities;
 
 /// <summary>
 /// Generates sequential ("comb") <see cref="Guid"/> values for SQL Server. Embedding timestamp information makes
@@ -10,7 +8,8 @@ namespace Bit.Core.Utilities;
 /// <remarks>
 /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
 /// </remarks>
-public static class CombGuid
+public static class
+    CombGuid
 {
     private static readonly long _baseDateTicks = new DateTime(1900, 1, 1).Ticks;
 
@@ -28,7 +27,7 @@ public static class CombGuid
     /// <remarks>
     /// You probably don't want to use this method and instead want to use <see cref="Generate()" /> with no parameters
     /// </remarks>
-    public static Guid Generate(Guid startingGuid, DateTime time)
+    internal static Guid Generate(Guid startingGuid, DateTime time)
     {
         var guidArray = startingGuid.ToByteArray();
 

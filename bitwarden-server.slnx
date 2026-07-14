@@ -19,7 +19,7 @@
     <Project Path="src/Api/Api.csproj" />
     <Project Path="src/Billing/Billing.csproj" />
     <Project Path="src/Core/Core.csproj" />
-    <Project Path="src/Data/Data.csproj" />
+    <Project Path="src/Libraries/Data/Data.csproj" />
     <Project Path="src/Events/Events.csproj" />
     <Project Path="src/EventsProcessor/EventsProcessor.csproj" />
     <Project Path="src/HttpExtensions/HttpExtensions.csproj" />
@@ -60,6 +60,7 @@
     <Project Path="test/Common/Common.csproj" />
     <Project Path="test/Core.IntegrationTest/Core.IntegrationTest.csproj" />
     <Project Path="test/Core.Test/Core.Test.csproj" />
+    <Project Path="test/Libraries/Data.Test/Data.Test.csproj" />
     <Project Path="test/Events.IntegrationTest/Events.IntegrationTest.csproj" />
     <Project Path="test/Events.Test/Events.Test.csproj" />
     <Project Path="test/EventsProcessor.Test/EventsProcessor.Test.csproj" />
