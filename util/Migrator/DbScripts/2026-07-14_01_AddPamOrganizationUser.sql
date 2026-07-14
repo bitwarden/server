@@ -34,6 +34,7 @@ SELECT
     U.[UsesKeyConnector],
     CASE WHEN U.[MasterPassword] IS NOT NULL THEN 1 ELSE 0 END AS HasMasterPassword,
     OU.[RevocationReason],
+    OU.[CreationDate],
     OU.[AccessPam]
 FROM
     [dbo].[OrganizationUser] OU
@@ -724,5 +725,61 @@ BEGIN
         OrganizationId = @OrganizationId
         AND Status IN (0, 1, 2) -- Invited, Accepted, Confirmed
         AND AccessPam = 1
+END
+GO
+
+-- Refresh the stored procedures that SELECT * off the OrganizationUser detail
+-- views so their cached result-set metadata reflects the new [AccessPam] column.
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadById]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserUserDetails_ReadById]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadByOrganizationId_V2]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserUserDetails_ReadByOrganizationId_V2]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadByOrganizationIdUserId]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserUserDetails_ReadByOrganizationIdUserId]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUser_ReadByMinimumRole]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByMinimumRole]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUser_ReadManyDetailsByRole]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadManyDetailsByRole]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadAcceptedConfirmedByUserId]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadAcceptedConfirmedByUserId]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]';
 END
 GO

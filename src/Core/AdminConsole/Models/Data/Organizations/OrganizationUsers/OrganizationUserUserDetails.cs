@@ -42,6 +42,10 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
     /// revocation reasons were tracked.
     /// </summary>
     public RevocationReason? RevocationReason { get; set; }
+    /// <summary>
+    /// The date the OrganizationUser was created, i.e. when the User was first invited to the Organization.
+    /// </summary>
+    public DateTime CreationDate { get; set; }
 
     public ICollection<Guid> Groups { get; set; } = new List<Guid>();
     public ICollection<CollectionAccessSelection> Collections { get; set; } = new List<CollectionAccessSelection>();

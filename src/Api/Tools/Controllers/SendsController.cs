@@ -18,6 +18,7 @@ using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
+using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -40,6 +41,7 @@ public class SendsController : Controller
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IEventService _eventService;
+    private readonly ISendEventClassifier _sendEventClassifier;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -53,7 +55,8 @@ public class SendsController : Controller
         IFeatureService featureService,
         IPushNotificationService pushNotificationService,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
-        IEventService eventService
+        IEventService eventService,
+        ISendEventClassifier sendEventClassifier
     )
     {
         _sendRepository = sendRepository;
@@ -68,6 +71,7 @@ public class SendsController : Controller
         _pushNotificationService = pushNotificationService;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _eventService = eventService;
+        _sendEventClassifier = sendEventClassifier;
     }
 
     #region Anonymous endpoints
@@ -129,7 +133,14 @@ public class SendsController : Controller
             && send.UserId.HasValue
             && send.Type == SendType.Text)
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_Text);
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
+                send.UserId.Value, accessorEmail: null);
+
+            await _eventService.LogSendEventAsync(
+                send.UserId.Value,
+                send.Id,
+                EventType.Send_Accessed_Text,
+                orgContext);
         }
 
         return sendResponse;
@@ -185,7 +196,14 @@ public class SendsController : Controller
 
         if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_File);
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
+                send.UserId.Value, accessorEmail: null);
+
+            await _eventService.LogSendEventAsync(
+                send.UserId.Value,
+                send.Id,
+                EventType.Send_Accessed_File,
+                orgContext);
         }
 
         return new SendFileDownloadDataResponseModel { Id = fileId, Url = url };
@@ -297,7 +315,15 @@ public class SendsController : Controller
             && send.UserId.HasValue
             && send.Type == SendType.Text)
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_Text);
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
+                send.UserId.Value,
+                User.GetSendAccessEmail());
+
+            await _eventService.LogSendEventAsync(
+                send.UserId.Value,
+                send.Id,
+                EventType.Send_Accessed_Text,
+                orgContext);
         }
 
         return new ObjectResult(sendResponse);
@@ -327,7 +353,15 @@ public class SendsController : Controller
 
         if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_File);
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
+                send.UserId.Value,
+                User.GetSendAccessEmail());
+
+            await _eventService.LogSendEventAsync(
+                send.UserId.Value,
+                send.Id,
+                EventType.Send_Accessed_File,
+                orgContext);
         }
 
         return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });

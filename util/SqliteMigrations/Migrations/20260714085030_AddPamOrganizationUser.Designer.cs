@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260710092343_AddPamOrganizationUser")]
+    [Migration("20260714085030_AddPamOrganizationUser")]
     partial class AddPamOrganizationUser
     {
         /// <inheritdoc />
@@ -1574,6 +1574,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid?>("SecretId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SendId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ServiceAccountId")
                         .HasColumnType("TEXT");
 
@@ -1588,6 +1591,10 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("OrganizationId", "SendId", "Date")
+                        .HasDatabaseName("IX_Event_OrganizationIdSendIdDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
                         .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
