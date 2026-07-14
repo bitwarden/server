@@ -40,6 +40,23 @@ public class PreExistingStateTests(StripeTestsFixture fixture) : IClassFixture<S
     }
 
     [BillingFact]
+    public async Task RemoveOrganizationFromProvider_CreatesStandaloneSubscriptionWithClassicBillingMode()
+    {
+        // Removing a Managed org from a billable (business-unit) provider takes the create-standalone
+        // branch of RemoveOrganizationFromProviderCommand, which creates a fresh subscription for the
+        // org with BillingMode = classic. Verifies that mode lands on the created Stripe subscription.
+        var (_, providerId) = await fixture.PrepareProviderAdminAsync("remove-org-billing-mode@example.com");
+        var organizationId = await fixture.GetFirstProviderOrganizationIdAsync(providerId);
+
+        await fixture.RemoveAnyOrganizationFromProviderAsync(providerId);
+
+        // After removal the org has a fresh standalone subscription.
+        var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+        var billingModeType = await fixture.GetSubscriptionBillingModeTypeAsync(subscriptionId);
+        Assert.Equal("classic", billingModeType);
+    }
+
+    [BillingFact]
     public async Task ProviderPaymentSource_WhenCustomerHasNoDefaultPM_ListsSetupIntentsWithPaymentMethodExpand()
     {
         var (client, providerId) = await fixture.PrepareProviderAdminAsync(
