@@ -45,6 +45,7 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
                 {
                     ["BillingSettings:StripeWebhookKey"] = WebhookKey,
                     ["BillingSettings:StripeWebhookSecret20250827Basil"] = WebhookSecret,
+                    ["BillingSettings:StripeWebhookSecret20260422Dahlia"] = WebhookSecret,
                     // Force the EF branch of AddDatabaseRepositories so it doesn't fall through to
                     // Dapper (which would talk to the user-secret's real SqlServer instead of the
                     // SQLite-backed DbContext the ITestDatabase registers).
