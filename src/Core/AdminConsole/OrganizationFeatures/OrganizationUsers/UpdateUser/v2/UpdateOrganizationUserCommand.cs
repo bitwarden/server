@@ -100,6 +100,7 @@ public class UpdateOrganizationUserCommand(
         }
 
         var userToUpdate = request.UserToUpdate;
+        userToUpdate.Name = string.IsNullOrWhiteSpace(request.NewName) ? null : request.NewName; // update name in update method
 
         try
         {
@@ -110,7 +111,6 @@ public class UpdateOrganizationUserCommand(
             }
             else
             {
-                userToUpdate.Name = request.NewName; // update name in update method
                 userToUpdate.RevisionDate = userToUpdate.AccountRevisionDate = timeProvider.GetUtcNow().UtcDateTime;
                 await userRepository.ReplaceAsync(userToUpdate);
             }
