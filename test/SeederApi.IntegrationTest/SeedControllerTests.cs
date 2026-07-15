@@ -1,6 +1,8 @@
 ﻿using System.Net;
+using System.Text.Json;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Seeder.Options;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
@@ -266,6 +268,18 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         var orgResult = await orgResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
         Assert.NotNull(orgResult);
         Assert.NotNull(orgResult!.Result);
+
+        var organizationId = ((JsonElement)orgResult.Result!).GetProperty("organizationId").GetGuid();
+
+        using var scope = _factory.Services.CreateScope();
+        var organizationRepository = scope.ServiceProvider.GetRequiredService<IOrganizationRepository>();
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        Assert.NotNull(organization);
+        Assert.True(organization!.UseSso);
+        Assert.Equal(GatewayType.Stripe, organization.Gateway);
+        Assert.Equal("cus_seed_test", organization.GatewayCustomerId);
+        Assert.Equal("sub_seed_test", organization.GatewaySubscriptionId);
     }
 
     private class BatchDeleteResponse

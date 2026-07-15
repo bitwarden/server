@@ -40,15 +40,22 @@ public class PlanFeaturesOverridesTests
     }
 
     [Fact]
-    public void ApplyOrganizationOverrides_NullFlag_LeavesThatPlanDefaultUnchanged()
+    public void ApplyOrganizationOverrides_PartiallyPopulated_OnlySetFieldsChange()
     {
         var org = FreeOrg();
 
-        // Only override UseSso; UseGroups should keep the Free plan default (false).
-        PlanFeatures.ApplyOrganizationOverrides(org, new OrganizationOverrides { UseSso = true });
+        // UseSso and UseScim set; UseGroups, UsePolicies, UseKeyConnector left null.
+        PlanFeatures.ApplyOrganizationOverrides(org, new OrganizationOverrides
+        {
+            UseSso = true,
+            UseScim = true
+        });
 
         Assert.True(org.UseSso);
+        Assert.True(org.UseScim);
         Assert.False(org.UseGroups);
+        Assert.False(org.UsePolicies);
+        Assert.False(org.UseKeyConnector);
     }
 
     [Fact]

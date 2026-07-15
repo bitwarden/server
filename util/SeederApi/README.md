@@ -81,7 +81,10 @@ Beyond `planType` and `seats`, the request accepts:
   unset keeps the plan default. Set Secrets Manager via `enableSecretsManager` (with optional `smSeats` /
   `smServiceAccounts`), not via `overrides`.
 - `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded org resembles a
-  real billed org. `gateway` accepts the `GatewayType` name (e.g. `Stripe`) or its numeric value.
+  real billed org.
+
+Enum fields (`planType`, `gateway`) must be sent as their **numeric value**. In the example
+below, `planType: 0` is `Free` and `gateway: 0` is `Stripe`.
 
 ```bash
 curl -X POST http://localhost:5000/seed \
@@ -91,7 +94,7 @@ curl -X POST http://localhost:5000/seed \
     "template": "SingleOrganizationScene",
     "arguments": {
       "ownerUserId": "42bcf05d-7ad0-4e27-8b53-b3b700acc664",
-      "planType": "Free",
+      "planType": 0,
       "name": "Acme",
       "domain": "acme.example",
       "seats": 5,
@@ -99,7 +102,7 @@ curl -X POST http://localhost:5000/seed \
         "useSso": true,
         "useGroups": true
       },
-      "gateway": "Stripe",
+      "gateway": 0,
       "gatewayCustomerId": "cus_123",
       "gatewaySubscriptionId": "sub_456"
     }
