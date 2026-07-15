@@ -703,6 +703,83 @@ public class EventService : IEventService
         }
     }
 
+    // Logs a Send event, recording the Send on every row. For access events, organizationContext
+    // attributes the access per organization: a confirmed member via ActingUserId, an accessor on a
+    // claimed domain via DomainName, anyone else External (no attribution). Create/edit/delete events
+    // pass no context, so every row keeps the Send owner as the acting user.
+    public async Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
+        IReadOnlyDictionary<Guid, SendAccessEventOrgContext> organizationContext = null)
+    {
+        var events = new List<IEvent>
+        {
+            new EventMessage(_currentContext)
+            {
+                UserId = sendOwnerUserId,
+                ActingUserId = sendOwnerUserId,
+                Type = type,
+                SendId = sendId,
+                Date = DateTime.UtcNow
+            }
+        };
+
+        var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, sendOwnerUserId);
+        var orgAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgs.Select(o => o.Id));
+        events.AddRange(orgs.Where(o => CanUseEvents(orgAbilities, o.Id))
+            .Select(o =>
+            {
+
+                // Per-org attribution of this row (ActingUserId / DomainName):
+                //   create/edit/delete (no context)      -> Owner:    ActingUserId = sendOwnerUserId, DomainName = null
+                //   access (context has this org)         -> Accessor: ActingUserId / DomainName per the context entry
+                //   access (context lacks this org)       -> External: ActingUserId = null,           DomainName = null
+                Guid? actingUserId = sendOwnerUserId;
+                string domainName = null;
+                if (organizationContext != null)
+                {
+                    organizationContext.TryGetValue(o.Id, out var context);
+                    actingUserId = context?.AccessorUserId;
+                    domainName = context?.ClaimedDomain;
+                }
+
+                return new EventMessage(_currentContext)
+                {
+                    OrganizationId = o.Id,
+                    UserId = sendOwnerUserId,
+                    ActingUserId = actingUserId,
+                    DomainName = domainName,
+                    Type = type,
+                    SendId = sendId,
+                    Date = DateTime.UtcNow
+                };
+            }));
+
+        var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, sendOwnerUserId);
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(providers.Select(p => p.Id));
+        events.AddRange(providers.Where(p => CanUseProviderEvents(providerAbilities, p.Id))
+            .Select(p => new EventMessage(_currentContext)
+            {
+                ProviderId = p.Id,
+                UserId = sendOwnerUserId,
+                // Access events (context present) get the same External attribution as a non-context
+                // org: don't credit the owner, who did not access the Send. Providers have no claimed
+                // domains, so there is nothing further to attribute. Create/edit/delete (no context)
+                // keep the owner, who did perform the action.
+                ActingUserId = organizationContext == null ? sendOwnerUserId : null,
+                Type = type,
+                SendId = sendId,
+                Date = DateTime.UtcNow
+            }));
+
+        if (events.Count > 1)
+        {
+            await _eventWriteService.CreateManyAsync(events);
+        }
+        else
+        {
+            await _eventWriteService.CreateAsync(events.First());
+        }
+    }
+
     private (Guid? actingUserId, Guid? serviceAccountId) MapIdentityClientType(
            Guid userId, IdentityClientType identityClientType)
     {

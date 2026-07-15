@@ -279,14 +279,14 @@ public class CipherResponseModelTests
     [InlineData(CipherType.BankAccount)]
     [InlineData(CipherType.DriversLicense)]
     [InlineData(CipherType.Passport)]
-    public void Constructor_OpaqueData_DoesNotThrowAndSkipsLegacyFields(CipherType type)
+    public void Constructor_BlobEncryptedData_DoesNotThrowAndSkipsLegacyFields(CipherType type)
     {
-        const string opaque = "2.iv|ct|mac";
+        const string blob = "{\"format_version\":1,\"wrapped_cek\":\"abc\",\"envelope\":\"def\"}";
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),
             Type = type,
-            Data = opaque,
+            Data = blob,
             RevisionDate = DateTime.UtcNow,
             CreationDate = DateTime.UtcNow,
         };
@@ -294,7 +294,7 @@ public class CipherResponseModelTests
         var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
 
         Assert.Equal(type, response.Type);
-        Assert.Equal(opaque, response.Data);
+        Assert.Equal(blob, response.Data);
         Assert.Null(response.Name);
         Assert.Null(response.Notes);
         Assert.Null(response.Login);
