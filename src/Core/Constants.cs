@@ -166,6 +166,7 @@ public static class FeatureFlagKeys
     public const string PM37165_RotateUserApiKeyCommand = "pm-37165-rotate-user-api-key-command";
     public const string PM30806_SelfServiceChangeEmailCommand = "pm-30806-self-service-change-email-command";
     public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
+    public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -303,6 +304,9 @@ public static class FeatureFlagKeys
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
+
+    /* VFO */
+    public const string VFO1Foundation = "vfo1-foundation";
 
     public static List<string> GetAllKeys()
     {

@@ -195,6 +195,14 @@
             });
         </script>
     }
+    @if (TempData["Warning"] != null)
+    {
+        <script>
+            $(document).ready(function () {
+                toastr.warning("@TempData["Warning"]")
+            });
+        </script>
+    }
 
     @RenderSection("Scripts", required: false)
 </body>
