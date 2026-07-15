@@ -46,7 +46,7 @@ public class SingleOrganizationScene(
         public int? SmServiceAccounts { get; set; }
 
         /// <summary>
-        /// Optional capability/collection-management flag overrides applied on top of the plan defaults.
+        /// Optional capability flag overrides applied on top of the plan defaults.
         /// </summary>
         public OrganizationOverrides? Overrides { get; set; }
 
