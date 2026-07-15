@@ -423,7 +423,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     organization.Seats > 0 &&
                     organization.Status == OrganizationStatusType.Created &&
                     !organization.UseSecretsManager &&
-                    planTypes.Contains(organization.PlanType)
+                    planTypes.Contains(organization.PlanType) &&
+                    !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == organization.Id)
                 select organization;
 
             return await query.ToArrayAsync();

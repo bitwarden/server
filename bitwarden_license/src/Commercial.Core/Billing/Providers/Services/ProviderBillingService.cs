@@ -59,6 +59,14 @@ public class ProviderBillingService(
         Organization organization,
         string key)
     {
+        var existingProviderOrganization =
+            await providerOrganizationRepository.GetByOrganizationId(organization.Id);
+
+        if (existingProviderOrganization != null)
+        {
+            throw new ConflictException("Organization already belongs to a provider.");
+        }
+
         await priceIncreaseScheduler.Release(
             organization.GatewayCustomerId,
             organization.GatewaySubscriptionId,

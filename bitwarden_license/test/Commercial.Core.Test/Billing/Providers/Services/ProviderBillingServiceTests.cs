@@ -2680,6 +2680,47 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AddExistingOrganization_OrgAlreadyBelongsToProvider_ThrowsAndShortCircuits(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — the organization already has a ProviderOrganization row (PM-39894).
+        // The guard must fire before any billing side effects (Release/Stripe) or repo writes.
+        provider.Type = ProviderType.Msp;
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        providerOrganizationRepository
+            .GetByOrganizationId(organization.Id)
+            .Returns(new ProviderOrganization { OrganizationId = organization.Id });
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<ConflictException>(() =>
+            sutProvider.Sut.AddExistingOrganization(provider, organization, key));
+
+        // Assert — exact message and nothing downstream of the guard fired (representative calls asserted).
+        Assert.Equal("Organization already belongs to a provider.", exception.Message);
+        await providerOrganizationRepository.Received(1)
+            .GetByOrganizationId(organization.Id);
+        await priceIncreaseScheduler.Received(0)
+            .Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+        await stripeAdapter.Received(0)
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await stripeAdapter.Received(0)
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+        await organizationRepository.Received(0).ReplaceAsync(Arg.Any<Organization>());
+        await providerOrganizationRepository.Received(0).CreateAsync(Arg.Any<ProviderOrganization>());
+        await eventService.Received(0).LogProviderOrganizationEventAsync(
+            Arg.Any<ProviderOrganization>(), Arg.Any<EventType>());
+    }
+
+    [Theory, BitAutoData]
     public async Task AddExistingOrganization_StripeCancelSucceeds_OnlyWhenReleasePrecedesIt(
         Provider provider,
         Organization organization,
