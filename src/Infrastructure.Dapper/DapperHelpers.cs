@@ -3,7 +3,6 @@ using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
-using Bit.Core.Dirt.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Dapper;
@@ -156,24 +155,9 @@ public static class DapperHelpers
         ]
     );
 
-    private static readonly DataTableBuilder<OrganizationDeleteTask> _organizationDeleteTaskTableBuilder = new(
-        [
-            t => t.Id,
-            t => t.TaskType,
-            t => t.CreationDate,
-        ]
-    );
-
     public static DataTable ToGuidIdArrayTVP(this IEnumerable<Guid> ids)
     {
         return ids.ToArrayTVP("GuidId");
-    }
-
-    public static DataTable ToTvp(this IEnumerable<OrganizationDeleteTask> tasks)
-    {
-        var table = _organizationDeleteTaskTableBuilder.Build(tasks ?? []);
-        table.SetTypeName("[dbo].[OrganizationDeleteTaskArray]");
-        return table;
     }
 
     public static DataTable ToTwoGuidIdArrayTVP(this IEnumerable<(Guid id1, Guid id2)> values)

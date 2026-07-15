@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Data.Common;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
@@ -62,7 +63,9 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             new
             {
                 organization.Id,
-                OrganizationDeleteTasks = deleteTasks.ToTvp(),
+                OrganizationDeleteTasks = deleteTasks.Count == 0
+                    ? null
+                    : JsonSerializer.Serialize(deleteTasks.Select(t => new { t.Id, t.TaskType, t.CreationDate })),
             },
             commandType: CommandType.StoredProcedure);
     }

@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER,
-    @OrganizationDeleteTasks [dbo].[OrganizationDeleteTaskArray] READONLY
+    @OrganizationDeleteTasks NVARCHAR(MAX) = NULL
 WITH RECOMPILE
 AS
 BEGIN
@@ -161,9 +161,9 @@ BEGIN
 
     -- Atomically enqueue one or more OrganizationDeleteTasks (e.g. for purging Table
     -- Storage event logs) so downstream cleanup is durably recorded with the deletion.
-    -- Tasks are passed via table-valued parameter, letting any number of teams enqueue
-    -- their own cleanup type in the same transaction as the delete.
-    IF EXISTS (SELECT 1 FROM @OrganizationDeleteTasks)
+    -- Tasks are passed as a JSON array of { Id, TaskType, CreationDate } objects, letting
+    -- any number of teams enqueue their own cleanup type in the same transaction as the delete.
+    IF @OrganizationDeleteTasks IS NOT NULL
     BEGIN
         INSERT INTO [dbo].[OrganizationDeleteTask]
         (
@@ -180,7 +180,12 @@ BEGIN
             [CreationDate],
             [CreationDate]
         FROM
-            @OrganizationDeleteTasks
+            OPENJSON(@OrganizationDeleteTasks)
+            WITH (
+                [Id]           UNIQUEIDENTIFIER '$.Id',
+                [TaskType]     TINYINT          '$.TaskType',
+                [CreationDate] DATETIME2(7)     '$.CreationDate'
+            )
     END
 
     DELETE

@@ -34,8 +34,9 @@ public interface IEventRepository
         DateTime startDate, DateTime endDate, PageOptions pageOptions);
 
     /// <summary>
-    /// Deletes all events for the given organization and returns the number deleted.
-    /// Used to purge orphaned event logs when an organization is deleted (GDPR).
+    /// Deletes a bounded batch of events for the given organization and returns the number deleted;
+    /// 0 means nothing is left. Callers invoke repeatedly (persisting progress between calls) until
+    /// 0 is returned. Used to purge orphaned event logs when an organization is deleted (GDPR).
     /// </summary>
     Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default);
 }
