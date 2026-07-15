@@ -28,6 +28,26 @@ public class OrganizationKeys
 }
 
 /// <summary>
+/// The result of encrypting an attachment: the encrypted metadata plus the EncArrayBuffer blob to store.
+/// </summary>
+public class EncryptedAttachment
+{
+    /// <summary>
+    /// The wrapped attachment key (EncString), or <c>null</c> for legacy attachments that have no attachment key.
+    /// </summary>
+    public string? Key { get; set; }
+
+    /// <summary>Encrypted filename (EncString).</summary>
+    public required string FileName { get; set; }
+
+    /// <summary>The encrypted file bytes in EncArrayBuffer binary layout, to be written to attachment storage.</summary>
+    public required byte[] Data { get; set; }
+
+    /// <summary>The encrypted blob byte length (equals <see cref="Data"/>.Length).</summary>
+    public long Size { get; set; }
+}
+
+/// <summary>
 /// Service implementation that provides a C# friendly interface to the Rust SDK
 /// </summary>
 public class RustSdkService
@@ -36,6 +56,17 @@ public class RustSdkService
     {
         PropertyNameCaseInsensitive = true
     };
+
+    private sealed class AttachmentResult
+    {
+        public string? Key { get; init; }
+
+        public string FileName { get; init; } = string.Empty;
+
+        public string Blob { get; init; } = string.Empty;
+
+        public long Size { get; init; }
+    }
 
     public static unsafe UserKeys GenerateUserKeys(string email, string password, int kdfIterations = 5_000, uint poolIndex = 0)
     {
@@ -129,6 +160,71 @@ public class RustSdkService
         fixed (byte* keyPtr = keyBytes)
         {
             var resultPtr = NativeMethods.encrypt_fields(jsonPtr, pathsPtr, keyPtr);
+
+            return ParseResponse(resultPtr);
+        }
+    }
+
+    /// <summary>
+    /// Encrypts an attachment's file bytes and filename in one of Bitwarden's attachment scheme versions
+    /// (v0/v1/v2). Returns the encrypted metadata plus the EncArrayBuffer blob.
+    /// </summary>
+    /// <param name="fileBytes">The plaintext file bytes.</param>
+    /// <param name="vaultKeyBase64">Base64-encoded vault key (the user or organization symmetric key).</param>
+    /// <param name="wrappedCipherKey">The cipher's wrapped <c>Key</c> EncString; required for v2, ignored otherwise.</param>
+    /// <param name="fileName">The plaintext filename.</param>
+    /// <param name="version">0 = v0 (no attachment key); 1 = v1 (attachment key wrapped by the vault key); 2 = v2 (attachment key wrapped by the cipher key).</param>
+    public static unsafe EncryptedAttachment EncryptAttachment(
+        byte[] fileBytes,
+        string vaultKeyBase64,
+        string? wrappedCipherKey,
+        string fileName,
+        uint version)
+    {
+        var fileBytesInput = StringToRustString(Convert.ToBase64String(fileBytes));
+        var vaultKeyBytes = StringToRustString(vaultKeyBase64);
+        var wrappedCipherKeyBytes = StringToRustString(wrappedCipherKey ?? string.Empty);
+        var fileNameBytes = StringToRustString(fileName);
+
+        fixed (byte* fileBytesPtr = fileBytesInput)
+        fixed (byte* vaultKeyPtr = vaultKeyBytes)
+        fixed (byte* wrappedCipherKeyPtr = wrappedCipherKeyBytes)
+        fixed (byte* fileNamePtr = fileNameBytes)
+        {
+            var resultPtr = NativeMethods.encrypt_attachment(
+                fileBytesPtr, vaultKeyPtr, wrappedCipherKeyPtr, fileNamePtr, version);
+
+            var result = ParseResponse(resultPtr);
+
+            var dto = JsonSerializer.Deserialize<AttachmentResult>(result, CaseInsensitiveOptions)
+                ?? throw new RustSdkException("Failed to parse attachment encryption result");
+
+            return new EncryptedAttachment
+            {
+                Key = dto.Key,
+                FileName = dto.FileName,
+                Data = Convert.FromBase64String(dto.Blob),
+                Size = dto.Size
+            };
+        }
+    }
+
+    /// <summary>
+    /// Encrypts specified JSON fields under a freshly generated per-cipher key and returns the modified
+    /// JSON with the cipher key (wrapped by the vault key) injected as the top-level <c>key</c> field.
+    /// Use this to produce a "cipher key" cipher; use <see cref="EncryptFields"/> for a user-key cipher.
+    /// </summary>
+    public static unsafe string EncryptFieldsWithCipherKey(string json, string fieldPathsJson, string symmetricKeyBase64)
+    {
+        var jsonBytes = StringToRustString(json);
+        var pathsBytes = StringToRustString(fieldPathsJson);
+        var keyBytes = StringToRustString(symmetricKeyBase64);
+
+        fixed (byte* jsonPtr = jsonBytes)
+        fixed (byte* pathsPtr = pathsBytes)
+        fixed (byte* keyPtr = keyBytes)
+        {
+            var resultPtr = NativeMethods.encrypt_fields_with_cipher_key(jsonPtr, pathsPtr, keyPtr);
 
             return ParseResponse(resultPtr);
         }

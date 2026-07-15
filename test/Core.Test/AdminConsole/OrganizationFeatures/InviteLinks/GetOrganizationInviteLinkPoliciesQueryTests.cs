@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
@@ -14,10 +15,9 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 public class GetOrganizationInviteLinkPoliciesQueryTests
 {
     [Theory, BitAutoData]
-    public async Task GetPoliciesAsync_WithValidInput_ReturnsOnlyEnabledPolicies(
+    public async Task GetPoliciesAsync_WithValidInput_ReturnsMasterPasswordAndResetPasswordOnly(
         OrganizationInviteLink inviteLink,
         Organization organization,
-        List<Policy> policies,
         SutProvider<GetOrganizationInviteLinkPoliciesQuery> sutProvider)
     {
         var code = Guid.NewGuid();
@@ -25,9 +25,13 @@ public class GetOrganizationInviteLinkPoliciesQueryTests
         organization.UsePolicies = true;
         inviteLink.Code = code.ToString();
 
-        policies[0].Enabled = true;
-        policies[1].Enabled = false;
-        policies[2].Enabled = true;
+        List<Policy> policies =
+        [
+            new Policy { Type = PolicyType.MasterPassword, Enabled = true },
+            new Policy { Type = PolicyType.ResetPassword, Enabled = true },
+            new Policy { Type = PolicyType.RequireSso, Enabled = false },
+            new Policy { Type = PolicyType.SingleOrg, Enabled = true },
+        ];
 
         SetupMocks(sutProvider, inviteLink, organization);
         sutProvider.GetDependency<IPolicyRepository>()
@@ -39,7 +43,8 @@ public class GetOrganizationInviteLinkPoliciesQueryTests
         Assert.True(result.IsSuccess);
         var returned = result.AsSuccess.ToList();
         Assert.Equal(2, returned.Count);
-        Assert.All(returned, p => Assert.True(p.Enabled));
+        Assert.Contains(returned, p => p.Type == PolicyType.MasterPassword);
+        Assert.Contains(returned, p => p.Type == PolicyType.ResetPassword);
     }
 
     [Theory, BitAutoData]
