@@ -10,7 +10,7 @@
       <!-- TODO(PM-36011): replace img-src with the final "account updated" spot asset from design -->
       <mj-bw-ac-hero
         title="Your Bitwarden account email was updated by an admin"
-        img-src="https://assets.bitwarden.com/email/v1/ac-spot-enterprise.png"
+        img-src="https://assets.bitwarden.com/email/v1/spot-enterprise-gear.svg"
       />
     </mj-wrapper>
 
