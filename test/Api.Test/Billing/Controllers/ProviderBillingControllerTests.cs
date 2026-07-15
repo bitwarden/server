@@ -297,7 +297,7 @@ public class ProviderBillingControllerTests
         stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
-                options.Expand.Contains("discounts") &&
+                options.Expand.Contains("discounts.source.coupon") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
         var daysInLastMonth = DateTime.DaysInMonth(oneMonthAgo.Year, oneMonthAgo.Month);
@@ -455,7 +455,7 @@ public class ProviderBillingControllerTests
         stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
-                options.Expand.Contains("discounts") &&
+                options.Expand.Contains("discounts.source.coupon") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
         stripeAdapter.SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(
