@@ -5,6 +5,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
 using Stripe;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
@@ -12,6 +13,7 @@ namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using static StripeConstants;
 
 public class GetAnnualUpgradeOfferQuery(
+    ILogger<GetAnnualUpgradeOfferQuery> logger,
     IFeatureService featureService,
     IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
     IPricingClient pricingClient,
@@ -50,7 +52,7 @@ public class GetAnnualUpgradeOfferQuery(
         var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
         var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
 
-        var subscription = await TryGetSubscriptionAsync(organization.GatewaySubscriptionId);
+        var subscription = await TryGetSubscriptionAsync(organization);
         if (subscription is null)
         {
             return null;
@@ -93,14 +95,17 @@ public class GetAnnualUpgradeOfferQuery(
         return new AnnualUpgradeOfferResult(currentAnnualCost, newAnnualCost, savings);
     }
 
-    private async Task<Subscription?> TryGetSubscriptionAsync(string subscriptionId)
+    private async Task<Subscription?> TryGetSubscriptionAsync(Organization organization)
     {
         try
         {
-            return await stripeAdapter.GetSubscriptionAsync(subscriptionId);
+            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId);
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
         {
+            logger.LogError(
+                "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
+                nameof(GetAnnualUpgradeOfferQuery), organization.GatewaySubscriptionId, organization.Id);
             return null;
         }
     }

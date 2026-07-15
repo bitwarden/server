@@ -9,6 +9,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -24,6 +25,8 @@ public class GetAnnualUpgradeOfferQueryTests
         Substitute.For<IGetChurnOfferCohortMembershipQuery>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly ILogger<GetAnnualUpgradeOfferQuery> _logger =
+        Substitute.For<ILogger<GetAnnualUpgradeOfferQuery>>();
     private readonly GetAnnualUpgradeOfferQuery _query;
 
     public GetAnnualUpgradeOfferQueryTests()
@@ -32,7 +35,7 @@ public class GetAnnualUpgradeOfferQueryTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
         _query = new GetAnnualUpgradeOfferQuery(
-            _featureService, _getChurnOfferCohortMembershipQuery, _pricingClient, _stripeAdapter);
+            _logger, _featureService, _getChurnOfferCohortMembershipQuery, _pricingClient, _stripeAdapter);
     }
 
     private static Organization CreateOrganization(PlanType planType) => new()
@@ -181,6 +184,7 @@ public class GetAnnualUpgradeOfferQueryTests
         var result = await _query.Run(organization);
 
         Assert.Null(result);
+        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Error, default, default!, default, default!);
     }
 
     [Fact]
