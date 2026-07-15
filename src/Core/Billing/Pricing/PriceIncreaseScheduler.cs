@@ -38,8 +38,10 @@ public interface IPriceIncreaseScheduler
     /// behind the <c>PM35215_BusinessPlanPriceMigration</c> feature flag.
     /// </summary>
     /// <remarks>
-    /// Caller contract: <paramref name="subscription"/> must be loaded with <c>discounts</c>,
-    /// <c>customer</c>, and <c>customer.discount</c> expanded, and <see cref="Subscription.Metadata"/>
+    /// Caller contract: <paramref name="subscription"/> must be loaded with <c>discounts.source.coupon</c>,
+    /// <c>customer</c>, and <c>customer.discount.source.coupon</c> expanded (the 2025-09-30.clover refactor
+    /// moved Coupon under Discount.Source, so stopping at <c>discounts</c>/<c>customer.discount</c> leaves
+    /// <c>Source.Coupon.Id</c> unexpanded), and <see cref="Subscription.Metadata"/>
     /// must contain an <c>organizationId</c> key (the scheduler throws if missing). The caller is
     /// responsible for confirming the organization belongs to <paramref name="cohort"/>.
     /// </remarks>
