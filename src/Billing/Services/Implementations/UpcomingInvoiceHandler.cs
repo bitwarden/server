@@ -63,20 +63,24 @@ public class UpcomingInvoiceHandler(
                     Expand =
                     [
                         "subscriptions",
-                        "subscriptions.data.customer",
-                        "subscriptions.data.discounts.coupon",
-                        "subscriptions.data.test_clock",
                         "tax",
                         "tax_ids"
                     ]
                 });
 
-        var subscription = customer.Subscriptions.FirstOrDefault();
+        var subscriptionId = customer.Subscriptions?.FirstOrDefault()?.Id;
 
-        if (subscription == null)
+        if (subscriptionId == null)
         {
             return;
         }
+
+        var subscription =
+            await stripeAdapter.GetSubscriptionAsync(subscriptionId,
+                new SubscriptionGetOptions
+                {
+                    Expand = ["customer.discount.source.coupon", "discounts.source.coupon", "test_clock"]
+                });
 
         var (organizationId, userId, providerId) = stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
 
@@ -624,7 +628,7 @@ public class UpcomingInvoiceHandler(
             if (discount is null)
             {
                 logger.LogError(
-                    "Subscription ({SubscriptionId}) for Organization ({OrganizationId}) returned a null discount entry; 'discounts.coupon' is likely no longer expanded and the renewal email may omit a discount",
+                    "Subscription ({SubscriptionId}) for Organization ({OrganizationId}) returned a null discount entry; 'discounts.source.coupon' is likely no longer expanded and the renewal email may omit a discount",
                     subscription.Id, organization.Id);
                 continue;
             }
@@ -632,7 +636,7 @@ public class UpcomingInvoiceHandler(
             if (discount.Source?.Coupon is not { } coupon)
             {
                 logger.LogError(
-                    "Subscription ({SubscriptionId}) discount ({DiscountId}) for Organization ({OrganizationId}) has no expanded Coupon; 'discounts.coupon' is likely no longer expanded and the renewal email may omit a discount",
+                    "Subscription ({SubscriptionId}) discount ({DiscountId}) for Organization ({OrganizationId}) has no expanded Coupon; 'discounts.source.coupon' is likely no longer expanded and the renewal email may omit a discount",
                     subscription.Id, discount.Id, organization.Id);
                 continue;
             }
