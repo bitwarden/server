@@ -108,7 +108,7 @@ bitwarden_license/src/Services/Pam @bitwarden/team-pam-dev
 bitwarden_license/test/Services/Pam.Test @bitwarden/team-pam-dev
 
 # SDK
-util/RustSdk @bitwarden/team-sdk-sme
+util/RustSdk @bitwarden/team-sdk-sme @bitwarden/dept-architecture # joint ownership
 
 ## Docker-related files
 **/Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot

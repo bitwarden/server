@@ -253,7 +253,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         {
             AllowedDomains = ["acme.com"],
             Invite = _invite,
-            SupportsConfirmation = false,
+            SupportsConfirmation = true,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -270,7 +270,9 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var status = await statusResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkStatusResponseModel>();
         Assert.NotNull(status);
         Assert.Equal(_organization.Name, status.OrganizationName);
+        Assert.True(status.LinksEnabled);
         Assert.True(status.SeatsAvailable);
+        Assert.True(status.SupportsConfirmation);
     }
 
     [Fact]

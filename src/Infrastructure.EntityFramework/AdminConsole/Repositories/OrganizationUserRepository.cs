@@ -542,6 +542,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         AccessSecretsManager = ou.AccessSecretsManager,
                         HasMasterPassword = ou.User != null && !string.IsNullOrWhiteSpace(ou.User.MasterPassword),
                         RevocationReason = ou.RevocationReason,
+                        CreationDate = ou.CreationDate,
 
                         // Project directly from navigation properties with conditional loading
                         Groups = includeGroups
