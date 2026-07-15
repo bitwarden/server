@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +20,9 @@ internal static class SeederContextExtensions
 
     internal static ISeedReader GetSeedReader(this SeederContext context) =>
         context.Services.GetRequiredService<ISeedReader>();
+
+    internal static IAttachmentStorageService GetAttachmentStorageService(this SeederContext context) =>
+        context.Services.GetRequiredService<IAttachmentStorageService>();
 
     internal static SeederSettings GetSettings(this SeederContext context) =>
         context.Services.GetRequiredService<SeederSettings>();

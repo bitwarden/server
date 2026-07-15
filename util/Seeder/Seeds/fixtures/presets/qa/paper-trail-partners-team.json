@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "paper-trail-partners",
+    "planType": "teams-annually",
+    "seats": 5
+  },
+  "roster": {
+    "fixture": "paper-trail-partners"
+  },
+  "ciphers": {
+    "fixture": "encryption-modes"
+  }
+}
