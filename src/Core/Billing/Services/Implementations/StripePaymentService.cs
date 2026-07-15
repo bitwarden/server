@@ -93,7 +93,7 @@ public class StripePaymentService : IStripePaymentService
         SubscriptionUpdate subscriptionUpdate, bool invoiceNow = false)
     {
         // remember, when in doubt, throw
-        var subGetOptions = new SubscriptionGetOptions { Expand = ["customer.tax", "customer.tax_ids"] };
+        var subGetOptions = new SubscriptionGetOptions { Expand = ["customer.tax", "customer.tax_ids", "customer.discount.source.coupon"] };
         var sub = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId, subGetOptions);
         if (sub == null)
         {
@@ -217,7 +217,8 @@ public class StripePaymentService : IStripePaymentService
                     });
             }
 
-            var customer = await _stripeAdapter.GetCustomerAsync(sub.CustomerId);
+            var customer = await _stripeAdapter.GetCustomerAsync(sub.CustomerId,
+                new CustomerGetOptions { Expand = ["discount.source.coupon"] });
 
             var newCoupon = customer.Discount?.Source?.Coupon?.Id;
 
@@ -900,7 +901,8 @@ public class StripePaymentService : IStripePaymentService
             return false;
         }
 
-        var customer = await _stripeAdapter.GetCustomerAsync(gatewayCustomerId);
+        var customer = await _stripeAdapter.GetCustomerAsync(gatewayCustomerId,
+            new CustomerGetOptions { Expand = ["discount.source.coupon"] });
 
         return customer?.Discount?.Source?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
     }

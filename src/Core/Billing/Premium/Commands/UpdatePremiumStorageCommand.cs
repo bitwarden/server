@@ -59,7 +59,7 @@ public class UpdatePremiumStorageCommand(
         var premiumPlans = await pricingClient.ListPremiumPlans();
         var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
         {
-            Expand = ["customer", "test_clock"]
+            Expand = ["customer", "customer.discount.source.coupon", "test_clock"]
         });
 
         // Find the password manager subscription item (seat, not storage) and match it to a plan

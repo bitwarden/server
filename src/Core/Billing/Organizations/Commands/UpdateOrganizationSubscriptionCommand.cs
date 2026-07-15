@@ -225,7 +225,7 @@ public class UpdateOrganizationSubscriptionCommand(
         {
             return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
             {
-                Expand = ["customer", "test_clock"]
+                Expand = ["customer", "customer.discount.source.coupon", "test_clock"]
             });
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
