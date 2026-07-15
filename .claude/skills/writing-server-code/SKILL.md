@@ -29,13 +29,7 @@ Always use `CoreHelpers.GenerateComb()` for entity IDs — never `Guid.NewGuid()
 
 ### Library shape
 
-When creating or modifying code under `src/Libraries/`, follow the canonical shape described in [src/Libraries/LIBRARY.md](../../../src/Libraries/LIBRARY.md). Key rules:
-
-- Types are `internal` by default; go `public` only when a consumer outside the library legitimately needs them.
-- Expose the library through two extension methods: `AddFoo(this IServiceCollection)` and `MapFooEndpoints(this IEndpointRouteBuilder)`.
-- Declare a strongly-typed `FooSettings` class rather than extending `GlobalSettings`; the host binds it, the library consumes `IOptions<FooSettings>`.
-- The library owns its data access end-to-end (interface + Dapper + EF Core implementations) and `AddFoo` chooses the implementation based on the configured database provider.
-- Cross-library interaction happens only through public surface — never reach into another library's `internal` types.
+When creating or modifying code under `src/Libraries/`, read [src/Libraries/LIBRARY.md](../../../src/Libraries/LIBRARY.md) — it is the canonical shape and covers public surface, settings, endpoints, repositories, and cross-library dependencies.
 
 ## Critical Rules
 
