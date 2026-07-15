@@ -41,6 +41,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var services = new ServiceCollection();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
+        services.AddSingleton(deps.AttachmentStorageService);
         services.AddSingleton<ISeedReader>(reader);
         services.AddSingleton(new SeederSettings(password, effectiveKdf, orgNameOverride, ownerEmailOverride));
         services.AddSingleton(deps.Db);
@@ -67,6 +68,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var services = new ServiceCollection();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
+        services.AddSingleton(deps.AttachmentStorageService);
         services.AddSingleton(new SeederSettings(
             options.Password,
             options.KdfIterations,
@@ -136,6 +138,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var services = new ServiceCollection();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
+        services.AddSingleton(deps.AttachmentStorageService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
         services.AddSingleton(deps.LicensingService);
         if (deps.Progress is not null)

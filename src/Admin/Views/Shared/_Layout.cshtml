@@ -20,9 +20,11 @@
     var canManageCohorts =
         AccessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts)
         && FeatureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
+    var canSendSalesAssistedTrial = AccessControlService.UserHasPermission(Permission.Org_InitiateSalesAssistedTrial)
+        && FeatureService.IsEnabled(FeatureFlagKeys.PM35092AuthSalesAssistedTrials);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
-                        canGenerateLicense || canManageCohorts;
+                        canGenerateLicense || canManageCohorts || canSendSalesAssistedTrial;
 }
 
 <!DOCTYPE html>
@@ -133,6 +135,12 @@
                                                 Bulk Assign Cohorts
                                             </a>
                                         }
+                                        @if (canSendSalesAssistedTrial)
+                                        {
+                                            <a class="dropdown-item" asp-controller="SalesAssistedTrial" asp-action="Index">
+                                                Send Trial Invitation
+                                            </a>
+                                        }
                                     </ul>
                                 </li>
                             }
@@ -184,6 +192,14 @@
         <script>
             $(document).ready(function () {
                 toastr.success("@TempData["Success"]")
+            });
+        </script>
+    }
+    @if (TempData["Warning"] != null)
+    {
+        <script>
+            $(document).ready(function () {
+                toastr.warning("@TempData["Warning"]")
             });
         </script>
     }
