@@ -1,11 +1,12 @@
--- Add optional OrganizationDeleteTask enqueue to Organization_DeleteById so the
--- delete and the cleanup-task insert commit atomically. Params default to NULL,
--- preserving existing behavior for callers that do not enqueue a task.
+-- Add optional OrganizationDeleteTask enqueue to Organization_DeleteById so the delete
+-- and the cleanup-task inserts commit atomically. Tasks are supplied as a JSON array of
+-- { Id, TaskType, CreationDate } objects, so any number of task types can be enqueued in
+-- the same transaction as the delete. When no tasks are supplied the existing delete
+-- behavior is preserved.
+
 CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER,
-    @OrganizationDeleteTaskId UNIQUEIDENTIFIER = NULL,
-    @OrganizationDeleteTaskType TINYINT = NULL,
-    @OrganizationDeleteTaskCreationDate DATETIME2(7) = NULL
+    @OrganizationDeleteTasks NVARCHAR(MAX) = NULL
 WITH RECOMPILE
 AS
 BEGIN
@@ -164,12 +165,12 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
-    -- Atomically enqueue an OrganizationDeleteTask (e.g. for purging Table Storage
-    -- event logs) so downstream cleanup is durably recorded with the deletion.
-    IF @OrganizationDeleteTaskId IS NOT NULL
+    -- Atomically enqueue one or more OrganizationDeleteTasks (e.g. for purging Table
+    -- Storage event logs) so downstream cleanup is durably recorded with the deletion.
+    -- Tasks are passed as a JSON array of { Id, TaskType, CreationDate } objects, letting
+    -- any number of teams enqueue their own cleanup type in the same transaction as the delete.
+    IF @OrganizationDeleteTasks IS NOT NULL
     BEGIN
-        DECLARE @OrganizationDeleteTaskDate DATETIME2(7) = COALESCE(@OrganizationDeleteTaskCreationDate, SYSUTCDATETIME())
-
         INSERT INTO [dbo].[OrganizationDeleteTask]
         (
             [Id],
@@ -178,14 +179,19 @@ BEGIN
             [CreationDate],
             [RevisionDate]
         )
-        VALUES
-        (
-            @OrganizationDeleteTaskId,
+        SELECT
+            [Id],
             @Id,
-            @OrganizationDeleteTaskType,
-            @OrganizationDeleteTaskDate,
-            @OrganizationDeleteTaskDate
-        )
+            [TaskType],
+            [CreationDate],
+            [CreationDate]
+        FROM
+            OPENJSON(@OrganizationDeleteTasks)
+            WITH (
+                [Id]           UNIQUEIDENTIFIER '$.Id',
+                [TaskType]     TINYINT          '$.TaskType',
+                [CreationDate] DATETIME2(7)     '$.CreationDate'
+            )
     END
 
     DELETE
@@ -196,4 +202,10 @@ BEGIN
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+GO
+
+-- Clean up the user-defined table type from an earlier revision of this script, now that
+-- the procedure no longer references it. New user-defined types are not permitted; JSON
+-- is the preferred way to pass structured data.
+DROP TYPE IF EXISTS [dbo].[OrganizationDeleteTaskArray]
 GO

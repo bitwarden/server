@@ -238,14 +238,14 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
     }
 
     public override Task DeleteAsync(Core.AdminConsole.Entities.Organization organization)
-        => DeleteInternalAsync(organization, null);
+        => DeleteInternalAsync(organization, []);
 
-    public Task DeleteAndCreateDeleteTaskAsync(Core.AdminConsole.Entities.Organization organization,
-        OrganizationDeleteTaskType taskType)
-        => DeleteInternalAsync(organization, taskType);
+    public Task DeleteAndCreateDeleteTasksAsync(Core.AdminConsole.Entities.Organization organization,
+        IEnumerable<OrganizationDeleteTaskType> taskTypes)
+        => DeleteInternalAsync(organization, taskTypes);
 
     private async Task DeleteInternalAsync(Core.AdminConsole.Entities.Organization organization,
-        OrganizationDeleteTaskType? deleteTaskType)
+        IEnumerable<OrganizationDeleteTaskType> deleteTaskTypes)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -314,18 +314,25 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
             dbContext.Remove(orgEntity);
 
-            // Atomically enqueue the cleanup task within the same transaction as the
+            // Atomically enqueue the cleanup tasks within the same transaction as the
             // deletion, so durable downstream cleanup is never lost if the delete commits.
-            if (deleteTaskType.HasValue)
-            {
-                var deleteTask = new Dirt.Models.OrganizationDeleteTask
+            // One row is created per supplied task type.
+            var creationDate = DateTime.UtcNow;
+            var deleteTasks = deleteTaskTypes
+                .Select(taskType =>
                 {
-                    OrganizationId = organization.Id,
-                    TaskType = deleteTaskType.Value,
-                };
-                deleteTask.SetNewId();
-                await dbContext.OrganizationDeleteTasks.AddAsync(deleteTask);
-            }
+                    var deleteTask = new Dirt.Models.OrganizationDeleteTask
+                    {
+                        OrganizationId = organization.Id,
+                        TaskType = taskType,
+                        CreationDate = creationDate,
+                        RevisionDate = creationDate,
+                    };
+                    deleteTask.SetNewId();
+                    return deleteTask;
+                })
+                .ToList();
+            await dbContext.OrganizationDeleteTasks.AddRangeAsync(deleteTasks);
 
             await dbContext.SaveChangesAsync();
             await organizationDeleteTransaction.CommitAsync();

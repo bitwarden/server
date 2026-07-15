@@ -32,7 +32,7 @@ public class OrganizationDeleteTaskRepository : BaseRepository, IOrganizationDel
         var now = DateTime.UtcNow;
         using var connection = new SqlConnection(ConnectionString);
         return await connection.QuerySingleOrDefaultAsync<OrganizationDeleteTask>(
-            "[dbo].[OrganizationDeleteTask_ClaimNextPending]",
+            "[dbo].[OrganizationDeleteTask_UpdateClaimNextPending]",
             new { Now = now, StaleLeaseThreshold = now.AddMinutes(-LeaseDurationMinutes), MaxFailureCount },
             commandType: CommandType.StoredProcedure);
     }

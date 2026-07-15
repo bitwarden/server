@@ -1,8 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER,
-    @OrganizationDeleteTaskId UNIQUEIDENTIFIER = NULL,
-    @OrganizationDeleteTaskType TINYINT = NULL,
-    @OrganizationDeleteTaskCreationDate DATETIME2(7) = NULL
+    @OrganizationDeleteTasks NVARCHAR(MAX) = NULL
 WITH RECOMPILE
 AS
 BEGIN
@@ -161,12 +159,12 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
-    -- Atomically enqueue an OrganizationDeleteTask (e.g. for purging Table Storage
-    -- event logs) so downstream cleanup is durably recorded with the deletion.
-    IF @OrganizationDeleteTaskId IS NOT NULL
+    -- Atomically enqueue one or more OrganizationDeleteTasks (e.g. for purging Table
+    -- Storage event logs) so downstream cleanup is durably recorded with the deletion.
+    -- Tasks are passed as a JSON array of { Id, TaskType, CreationDate } objects, letting
+    -- any number of teams enqueue their own cleanup type in the same transaction as the delete.
+    IF @OrganizationDeleteTasks IS NOT NULL
     BEGIN
-        DECLARE @OrganizationDeleteTaskDate DATETIME2(7) = COALESCE(@OrganizationDeleteTaskCreationDate, SYSUTCDATETIME())
-
         INSERT INTO [dbo].[OrganizationDeleteTask]
         (
             [Id],
@@ -175,14 +173,19 @@ BEGIN
             [CreationDate],
             [RevisionDate]
         )
-        VALUES
-        (
-            @OrganizationDeleteTaskId,
+        SELECT
+            [Id],
             @Id,
-            @OrganizationDeleteTaskType,
-            @OrganizationDeleteTaskDate,
-            @OrganizationDeleteTaskDate
-        )
+            [TaskType],
+            [CreationDate],
+            [CreationDate]
+        FROM
+            OPENJSON(@OrganizationDeleteTasks)
+            WITH (
+                [Id]           UNIQUEIDENTIFIER '$.Id',
+                [TaskType]     TINYINT          '$.TaskType',
+                [CreationDate] DATETIME2(7)     '$.CreationDate'
+            )
     END
 
     DELETE

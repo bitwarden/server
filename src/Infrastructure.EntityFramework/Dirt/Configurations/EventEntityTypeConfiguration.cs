@@ -23,6 +23,14 @@ public class EventEntityTypeConfiguration : IEntityTypeConfiguration<Event>
             index,
             e => new { e.ServiceAccountId, e.GrantedServiceAccountId });
 
+        // Supports bulk deletion of an organization's events (Event_DeleteManyByOrganizationId).
+        // Not filtered here because MySQL does not support filtered indexes; MSSQL filters on
+        // OrganizationId IS NOT NULL to keep the index small since many events are user-scoped.
+        builder
+            .HasIndex(e => e.OrganizationId)
+            .IsClustered(false)
+            .HasDatabaseName("IX_Event_OrganizationId");
+
         builder.ToTable(nameof(Event));
     }
 }

@@ -52,13 +52,30 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         }
     }
 
-    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default)
     {
+        // Bounded per call so the calling job can refresh its claim lease and persist progress
+        // between calls; the caller loops until 0 is returned. The ids are selected first because
+        // ExecuteDelete with a row limit does not translate on every EF provider we support.
+        const int maxRows = 1000;
+
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        return await dbContext.Events
+
+        var ids = await dbContext.Events
             .Where(e => e.OrganizationId == organizationId)
-            .ExecuteDeleteAsync();
+            .Select(e => e.Id)
+            .Take(maxRows)
+            .ToListAsync(cancellationToken);
+
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        return await dbContext.Events
+            .Where(e => ids.Contains(e.Id))
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,

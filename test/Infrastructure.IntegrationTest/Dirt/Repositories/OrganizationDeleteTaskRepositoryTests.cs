@@ -113,7 +113,7 @@ public class OrganizationDeleteTaskRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task DeleteAndCreateDeleteTaskAsync_DeletesOrganizationAndEnqueuesTask(
+    public async Task DeleteAndCreateDeleteTasksAsync_DeletesOrganizationAndEnqueuesTask(
         IOrganizationRepository organizationRepository, Database database, IServiceProvider services)
     {
         var organization = await organizationRepository.CreateAsync(new Organization
@@ -124,8 +124,8 @@ public class OrganizationDeleteTaskRepositoryTests
             PrivateKey = "privatekey",
         });
 
-        await organizationRepository.DeleteAndCreateDeleteTaskAsync(
-            organization, OrganizationDeleteTaskType.EventsCleanup);
+        await organizationRepository.DeleteAndCreateDeleteTasksAsync(
+            organization, [OrganizationDeleteTaskType.EventsCleanup]);
 
         // The organization is gone and the cleanup task was enqueued in the same transaction.
         Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
@@ -133,6 +133,34 @@ public class OrganizationDeleteTaskRepositoryTests
         Assert.NotNull(task);
         Assert.Equal(OrganizationDeleteTaskType.EventsCleanup, task.TaskType);
         Assert.Null(task.CompletedDate);
+    }
+
+    [Theory, DatabaseData]
+    public async Task DeleteAndCreateDeleteTasksAsync_MultipleTaskTypes_EnqueuesOneRowPerType(
+        IOrganizationRepository organizationRepository, Database database, IServiceProvider services)
+    {
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        // Only one task type exists today, so we exercise the multi-row paths (the TVP
+        // INSERT...SELECT on SqlServer and the foreach on EF) by enqueuing two elements:
+        // both must produce one distinct row per element, never collapsing or dropping rows.
+        await organizationRepository.DeleteAndCreateDeleteTasksAsync(
+            organization,
+            [OrganizationDeleteTaskType.EventsCleanup, OrganizationDeleteTaskType.EventsCleanup]);
+
+        Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
+        var tasks = await ListTasksByOrganizationIdAsync(services, database, organization.Id);
+        Assert.Equal(2, tasks.Count);
+        Assert.All(tasks, task => Assert.Equal(OrganizationDeleteTaskType.EventsCleanup, task.TaskType));
+        Assert.All(tasks, task => Assert.Null(task.CompletedDate));
+        // Each enqueued task must receive a unique primary key.
+        Assert.Equal(2, tasks.Select(task => task.Id).Distinct().Count());
     }
 
     [Theory, DatabaseData]
@@ -172,6 +200,28 @@ public class OrganizationDeleteTaskRepositoryTests
         return await dbContext.OrganizationDeleteTasks
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.OrganizationId == organizationId);
+    }
+
+    /// <summary>
+    /// Reads all cleanup-task rows for an organization across providers, mirroring
+    /// <see cref="GetTaskByOrganizationIdAsync"/> but returning every row so the
+    /// multi-row enqueue path can be asserted.
+    /// </summary>
+    private static async Task<List<OrganizationDeleteTask>> ListTasksByOrganizationIdAsync(
+        IServiceProvider services, Database database, Guid organizationId)
+    {
+        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+        {
+            return await QueryRowsByOrganizationIdAsync(database.ConnectionString, organizationId);
+        }
+
+        using var scope = services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        var rows = await dbContext.OrganizationDeleteTasks
+            .AsNoTracking()
+            .Where(t => t.OrganizationId == organizationId)
+            .ToListAsync();
+        return rows.Cast<OrganizationDeleteTask>().ToList();
     }
 
     private static async Task<OrganizationDeleteTask> QueryRowAsync(string connectionString, Guid id)
@@ -233,6 +283,39 @@ public class OrganizationDeleteTaskRepositoryTests
             FailureCount = reader.GetInt32(8),
             LastError = reader.IsDBNull(9) ? null : reader.GetString(9),
         };
+    }
+
+    private static async Task<List<OrganizationDeleteTask>> QueryRowsByOrganizationIdAsync(string connectionString, Guid organizationId)
+    {
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            SELECT [Id], [OrganizationId], [TaskType], [CreationDate], [RevisionDate], [StartDate],
+                   [CompletedDate], [ItemsDeletedCount], [FailureCount], [LastError]
+            FROM [dbo].[OrganizationDeleteTask]
+            WHERE [OrganizationId] = @OrganizationId
+            """;
+        cmd.Parameters.AddWithValue("@OrganizationId", organizationId);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        var tasks = new List<OrganizationDeleteTask>();
+        while (await reader.ReadAsync())
+        {
+            tasks.Add(new OrganizationDeleteTask
+            {
+                Id = reader.GetGuid(0),
+                OrganizationId = reader.GetGuid(1),
+                TaskType = (OrganizationDeleteTaskType)reader.GetByte(2),
+                CreationDate = reader.GetDateTime(3),
+                RevisionDate = reader.GetDateTime(4),
+                StartDate = reader.IsDBNull(5) ? null : reader.GetDateTime(5),
+                CompletedDate = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                ItemsDeletedCount = reader.GetInt64(7),
+                FailureCount = reader.GetInt32(8),
+                LastError = reader.IsDBNull(9) ? null : reader.GetString(9),
+            });
+        }
+        return tasks;
     }
 
     private static async Task BackdateRevisionDateAsync(string connectionString, Guid id, int minutes)

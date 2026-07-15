@@ -102,7 +102,7 @@ public class EventRepository : IEventRepository
         await CreateEventAsync(entity);
     }
 
-    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default)
     {
         // Azure Table Storage caps a single transaction at 100 ops; the outer cap
         // bounds work per call so the background job can interleave other orgs.
@@ -127,7 +127,7 @@ public class EventRepository : IEventRepository
         {
             try
             {
-                await _tableClient.SubmitTransactionAsync(batch);
+                await _tableClient.SubmitTransactionAsync(batch, cancellationToken);
                 Interlocked.Add(ref totalDeleted, batch.Count);
             }
             finally
@@ -139,13 +139,14 @@ public class EventRepository : IEventRepository
         var pending = new List<TableTransactionAction>(batchSize);
         try
         {
-            await foreach (var entity in _tableClient.QueryAsync<TableEntity>(filter, select: select))
+            await foreach (var entity in _tableClient.QueryAsync<TableEntity>(filter, select: select,
+                cancellationToken: cancellationToken))
             {
                 pending.Add(new TableTransactionAction(TableTransactionActionType.Delete, entity, ETag.All));
 
                 if (pending.Count == batchSize)
                 {
-                    await throttle.WaitAsync();
+                    await throttle.WaitAsync(cancellationToken);
                     batchTasks.Add(SubmitBatchAsync(pending));
                     pending = new List<TableTransactionAction>(batchSize);
 
@@ -158,7 +159,7 @@ public class EventRepository : IEventRepository
 
             if (pending.Count > 0)
             {
-                await throttle.WaitAsync();
+                await throttle.WaitAsync(cancellationToken);
                 batchTasks.Add(SubmitBatchAsync(pending));
             }
 

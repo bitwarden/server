@@ -77,7 +77,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 
         await _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
         await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
-        await _organizationRepository.DeleteAndCreateDeleteTaskAsync(organization, OrganizationDeleteTaskType.EventsCleanup);
+        await _organizationRepository.DeleteAndCreateDeleteTasksAsync(organization, [OrganizationDeleteTaskType.EventsCleanup]);
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
 
