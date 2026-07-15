@@ -1115,6 +1115,126 @@ public class StripeTestsFixture : IAsyncDisposable
         return session.Id;
     }
 
+    /// <summary>
+    /// Moves a premium subscription's seat item onto the legacy (unavailable) premium price pulled
+    /// from the pricing service. <see cref="IPriceIncreaseScheduler"/> only defers a price migration
+    /// when the subscription still carries the <c>!Available</c> seat price
+    /// (see <c>ResolvePhase2ForPremiumAsync</c>); fixtures create subscribers on the current price,
+    /// so this puts them into the migration-eligible state the deferred-schedule tests require.
+    /// </summary>
+    public async Task MovePremiumSubscriptionToLegacyPriceAsync(string subscriptionId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var pricingClient = scope.ServiceProvider.GetRequiredService<IPricingClient>();
+        var premiumPlans = await pricingClient.ListPremiumPlans();
+        var legacyPlan = premiumPlans.FirstOrDefault(plan => !plan.Available)
+            ?? throw new InvalidOperationException(
+                "No legacy (unavailable) premium plan found in the pricing service; cannot make the " +
+                "subscription price-migration-eligible.");
+        var currentPlan = premiumPlans.FirstOrDefault(plan => plan.Available)
+            ?? throw new InvalidOperationException("No current (available) premium plan found in the pricing service.");
+
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId);
+        var seatItem = subscription.Items.Data.FirstOrDefault(item => item.Price.Id == currentPlan.Seat.StripePriceId)
+            ?? subscription.Items.Data.First();
+
+        await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, new SubscriptionUpdateOptions
+        {
+            Items = [new SubscriptionItemOptions { Id = seatItem.Id, Price = legacyPlan.Seat.StripePriceId }],
+            ProrationBehavior = "none",
+        });
+    }
+
+    /// <summary>
+    /// Moves a Families organization subscription's password-manager item onto the legacy
+    /// <see cref="PlanType.FamiliesAnnually2019"/> price pulled from the pricing service.
+    /// <c>ResolvePhase2ForFamiliesAsync</c> only builds a Phase 2 when the subscription carries a
+    /// legacy families price, so this puts the families subscriber into the migration-eligible state
+    /// the deferred-schedule tests require (the personal/families branch of the scheduler).
+    /// </summary>
+    public async Task MoveFamiliesSubscriptionToLegacyPriceAsync(string subscriptionId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var pricingClient = scope.ServiceProvider.GetRequiredService<IPricingClient>();
+        var currentPlan = await pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
+        var legacyPlan = await pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019);
+
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId);
+        var seatItem = subscription.Items.Data.FirstOrDefault(item =>
+            item.Price.Id == currentPlan.PasswordManager.StripePlanId)
+            ?? subscription.Items.Data.First();
+
+        await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, new SubscriptionUpdateOptions
+        {
+            Items = [new SubscriptionItemOptions { Id = seatItem.Id, Price = legacyPlan.PasswordManager.StripePlanId }],
+            ProrationBehavior = "none",
+        });
+    }
+
+    /// <summary>
+    /// Drives the real <see cref="IPriceIncreaseScheduler"/> to create the active 2-phase
+    /// deferred-migration schedule that the coupon-carry branches in
+    /// <c>UpdatePremiumStorageCommand</c>, <c>UpdateBillingAddressCommand</c>, and
+    /// <c>UpdateOrganizationSubscriptionCommand</c> require. Throws if the scheduler declines so the
+    /// precondition fails loudly rather than leaving a test silently exercising the no-schedule path.
+    /// Requires <c>PM32645_DeferPriceMigrationToRenewal</c> enabled and (for premium) the subscriber
+    /// on the legacy price via <see cref="MovePremiumSubscriptionToLegacyPriceAsync"/>.
+    /// </summary>
+    public async Task CreateDeferredPriceIncreaseScheduleAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId, new SubscriptionGetOptions
+        {
+            Expand = ["customer", "test_clock", "discounts", "items.data.price"],
+        });
+
+        using var scope = Api.Services.CreateScope();
+        var scheduler = scope.ServiceProvider.GetRequiredService<IPriceIncreaseScheduler>();
+        var scheduled = await scheduler.ScheduleForSubscription(subscription);
+
+        if (!scheduled)
+        {
+            throw new InvalidOperationException(
+                $"IPriceIncreaseScheduler declined to create a schedule for subscription {subscriptionId}. " +
+                "Confirm the subscriber is on the legacy price (MovePremiumSubscriptionToLegacyPriceAsync), " +
+                "PM32645_DeferPriceMigrationToRenewal is enabled, and no active schedule already exists.");
+        }
+    }
+
+    /// <summary>
+    /// Reads the coupon ids on the given 0-based phase of the subscription's active schedule.
+    /// Schedule phase discounts expose <c>Coupon</c> directly (not wrapped under <c>Source</c> like
+    /// the 2025-09-30.clover subscription/customer discount), so <c>phases.discounts.coupon</c> is the
+    /// correct expand. Returns an empty list if the phase index is out of range.
+    /// </summary>
+    public async Task<List<string>> GetSchedulePhaseCouponIdsAsync(string subscriptionId, int phaseIndex)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId);
+        var schedules = await stripeClient.V1.SubscriptionSchedules.ListAsync(new SubscriptionScheduleListOptions
+        {
+            Customer = subscription.CustomerId,
+        });
+        var activeSchedule = schedules.Data.FirstOrDefault(schedule =>
+            schedule.SubscriptionId == subscriptionId && schedule.Status == "active")
+            ?? throw new InvalidOperationException($"No active schedule found for subscription {subscriptionId}.");
+
+        var schedule = await stripeClient.V1.SubscriptionSchedules.GetAsync(activeSchedule.Id,
+            new SubscriptionScheduleGetOptions { Expand = ["phases.discounts.coupon"] });
+
+        if (phaseIndex >= schedule.Phases.Count)
+        {
+            return [];
+        }
+
+        return schedule.Phases[phaseIndex].Discounts?
+            .Where(discount => discount?.Coupon?.Id is not null)
+            .Select(discount => discount.Coupon.Id)
+            .ToList() ?? [];
+    }
+
     public virtual async ValueTask DisposeAsync()
     {
         await Admin.DisposeAsync();
