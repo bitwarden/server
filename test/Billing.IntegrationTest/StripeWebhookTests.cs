@@ -29,10 +29,13 @@ public class StripeWebhookTests(StripeWebhookTestsFixture fixture) : IClassFixtu
             await fixture.PrepareOrganizationOwnerAsync("webhook-subscription-updated@example.com");
         var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
 
+        // A real *.updated event always carries the prior values of the changed fields under
+        // previous_attributes; SubscriptionWentUnpaid deserializes it, so an empty one throws.
         await fixture.Billing.SendStripeWebhookAsync(
             "customer.subscription.updated",
             new JsonObject { ["id"] = subscriptionId, ["object"] = "subscription" },
-            $"evt_{Guid.NewGuid():N}");
+            $"evt_{Guid.NewGuid():N}",
+            previousAttributes: new JsonObject { ["description"] = "previous description" });
     }
 
     [BillingFact]
@@ -170,8 +173,9 @@ public class StripeWebhookTests(StripeWebhookTestsFixture fixture) : IClassFixtu
         var customerId = await fixture.GetOrganizationGatewayCustomerIdAsync(organizationId);
         var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
 
-        // Stripe will create a real upcoming-invoice preview for this subscription on demand;
-        // we synthesize the event payload with the IDs and let the handler re-fetch via the API.
+        // The handler reads the invoice from the event payload (upcoming invoices have no persisted
+        // id to refetch), so include the `lines` a real invoice.upcoming carries — otherwise
+        // invoice.Lines is null and SendUpcomingInvoiceEmailsAsync throws on .Select(...).
         await fixture.Billing.SendStripeWebhookAsync(
             "invoice.upcoming",
             new JsonObject
@@ -180,6 +184,23 @@ public class StripeWebhookTests(StripeWebhookTestsFixture fixture) : IClassFixtu
                 ["object"] = "invoice",
                 ["customer"] = customerId,
                 ["subscription"] = subscriptionId,
+                ["lines"] = new JsonObject
+                {
+                    ["object"] = "list",
+                    ["has_more"] = false,
+                    ["url"] = $"/v1/invoices/upcoming/lines?customer={customerId}",
+                    ["data"] = new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["id"] = $"il_{Guid.NewGuid():N}",
+                            ["object"] = "line_item",
+                            ["amount"] = 1000,
+                            ["currency"] = "usd",
+                            ["description"] = "1 × Enterprise (at $10.00 / month)",
+                        },
+                    },
+                },
             },
             $"evt_{Guid.NewGuid():N}");
     }
