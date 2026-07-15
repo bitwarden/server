@@ -3,6 +3,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.DataProtection;
@@ -34,6 +35,8 @@ public static class ServiceCollectionExtension
         services.TryAddSingleton<ISeedReader, SeedReader>();
 
         services.AddDataProtection().SetApplicationName("Bitwarden");
+
+        services.AddAttachmentStorageService(globalSettings);
 
         services.AddDatabaseRepositories(globalSettings);
 
