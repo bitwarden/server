@@ -1765,6 +1765,14 @@ public class SubscriberServiceTests
                 options.Metadata != null &&
                 options.Metadata.ContainsKey(StripeConstants.MetadataKeys.CancellationOrigin) &&
                 options.Metadata[StripeConstants.MetadataKeys.CancellationOrigin] == string.Empty));
+
+        // The subscription feeds ScheduleForSubscription, which reads Source.Coupon (moved under
+        // Source by the 2025-09-30.clover refactor); expand through source.coupon or it's unexpanded.
+        await stripeAdapter.Received(1).GetSubscriptionAsync(
+            organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.Contains("discounts.source.coupon") &&
+                options.Expand.Contains("customer.discount.source.coupon")));
     }
 
     [Theory, BitAutoData]

@@ -88,6 +88,9 @@ public class UpdateBillingAddressCommandTests
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
+
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options => options.HasExpansions("discount.source.coupon")));
     }
 
     [Fact]
@@ -211,6 +214,53 @@ public class UpdateBillingAddressCommandTests
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
+    }
+
+    [Fact]
+    public async Task Run_BusinessOrganization_FetchesCustomerWithDiscountSourceCouponExpanded()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.None });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        await _command.Run(organization, input);
+
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options => options.HasExpansions("discount.source.coupon")));
     }
 
     [Fact]

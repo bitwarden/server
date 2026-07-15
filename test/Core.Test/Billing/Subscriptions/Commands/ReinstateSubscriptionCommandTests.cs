@@ -166,11 +166,13 @@ public class ReinstateSubscriptionCommandTests
 
         await _command.Run(user);
 
+        // ScheduleForSubscription reads Source.Coupon (moved under Source by the 2025-09-30.clover
+        // refactor), so the fetch must expand through source.coupon or the coupon comes back unexpanded.
         await _stripeAdapter.Received(1).GetSubscriptionAsync(
             "sub_1",
             Arg.Is<SubscriptionGetOptions>(o =>
                 o.Expand != null &&
-                o.Expand.Contains("discounts") &&
-                o.Expand.Contains("customer.discount")));
+                o.Expand.Contains("discounts.source.coupon") &&
+                o.Expand.Contains("customer.discount.source.coupon")));
     }
 }

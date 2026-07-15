@@ -120,6 +120,27 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_FetchesSubscriptionWithCustomerDiscountSourceCouponExpanded()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        await _command.Run(organization, changeSet);
+
+        await _stripeAdapter.Received().GetSubscriptionAsync(
+            organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer.discount.source.coupon")));
+    }
+
+    [Fact]
     public async Task Run_EmptyChangeSet_ReturnsConflict()
     {
         var organization = CreateOrganization();
