@@ -120,6 +120,8 @@ public static IServiceCollection AddFoo(this IServiceCollection services)
 
         return sp.GetRequiredService<EntityFrameworkFooRepository>();
     });
+
+    return services;
 }
 ```
 
