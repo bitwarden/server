@@ -238,6 +238,7 @@ public class OrganizationInviteLinksControllerTests
         Assert.Equal(status.OrganizationName, okResult.Value!.OrganizationName);
         Assert.Equal(status.LinksEnabled, okResult.Value.LinksEnabled);
         Assert.Equal(status.SeatsAvailable, okResult.Value.SeatsAvailable);
+        Assert.Equal(status.SupportsConfirmation, okResult.Value.SupportsConfirmation);
     }
 
     [Theory, BitAutoData]
