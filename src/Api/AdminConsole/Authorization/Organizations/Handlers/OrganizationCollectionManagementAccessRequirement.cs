@@ -3,6 +3,7 @@
 using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -10,11 +11,13 @@ using Microsoft.AspNetCore.Authorization;
 namespace Bit.Api.AdminConsole.Authorization;
 
 /// <summary>
-/// Requires that the user is allowed to create collections, or has Can Manage permissions for at least one
-/// collection in the organization. This is used for endpoints that expose basic organization member/group
-/// information that is only needed to manage collections - it is not privileged information, but if an
-/// organization has restricted collection management to a subset of users, there's no reason to expose it more
-/// broadly than that.
+/// Requires that the user is allowed to create collections, has Can Manage permissions for at least one
+/// collection in the organization, or has a custom permission (ManageUsers, ManageGroups, or AccessReports) that
+/// depends on this same basic organization member/group information for an unrelated reason (e.g. the Members
+/// page, Groups page, and Member Access Report). This data is not privileged - it contains as little information
+/// as possible and no cryptographic keys or other sensitive data - but if an organization has restricted
+/// collection management to a subset of users, there's no reason to expose it more broadly than the users who
+/// actually have some legitimate need for it.
 /// </summary>
 /// <remarks>
 /// This intentionally does not implement <see cref="IOrganizationRequirement"/> because it needs more than JWT
@@ -51,6 +54,17 @@ public class OrganizationCollectionManagementAccessHandler(
         var organizationAbility = await organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId);
 
         if (CollectionPermissions.CanCreate(organizationClaims, organizationAbility))
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
+        // Custom users who manage org members/groups or view reports have their own legitimate need for this
+        // basic directory data, independent of their collection permissions.
+        if (organizationClaims is { Type: OrganizationUserType.Custom } &&
+            (organizationClaims.Permissions.ManageUsers ||
+             organizationClaims.Permissions.ManageGroups ||
+             organizationClaims.Permissions.AccessReports))
         {
             context.Succeed(requirement);
             return;

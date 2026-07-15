@@ -214,6 +214,47 @@ public class GroupsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, true)]
+    public async Task GetOrganizationGroups_AsCustomWithManageUsersOrGroupsOrAccessReports_ReturnsSuccess(
+        bool manageUsers, bool manageGroups, bool accessReports)
+    {
+        var (email, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.Custom,
+            permissions: new Permissions
+            {
+                ManageUsers = manageUsers,
+                ManageGroups = manageGroups,
+                AccessReports = accessReports,
+            });
+
+        await EnableLimitCollectionCreationAsync();
+
+        await _loginHelper.LoginAsync(email);
+
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/groups");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetOrganizationGroups_AsCustomWithUnrelatedPermissionAndNoCollectionAccess_ReturnsForbidden()
+    {
+        var (email, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.Custom,
+            permissions: new Permissions { AccessEventLogs = true, ManagePolicies = true });
+
+        await EnableLimitCollectionCreationAsync();
+
+        await _loginHelper.LoginAsync(email);
+
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/groups");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     /// <summary>
     /// Enables the "Limit collection creation" collection management setting for the test organization via the
     /// public API, ensuring the OrganizationAbility cache is updated as it would be in production.

@@ -190,14 +190,16 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Returns a set of basic information about all members of the organization. This is available to members of the
-    /// organization who can create collections or manage at least one collection. For this reason, it contains as
-    /// little information as possible and no cryptographic keys or other sensitive data.
+    /// Returns a set of basic information about all members of the organization. This is available to all members
+    /// of the organization, since a broad range of features across the app depend on basic member lookups
+    /// (collection management, group management, event logs, sponsorship, etc.) that are not specific to any one
+    /// permission. For this reason, it contains as little information as possible and no cryptographic keys or
+    /// other sensitive data.
     /// </summary>
     /// <param name="orgId">Organization identifier</param>
     /// <returns>List of users for the organization.</returns>
     [HttpGet("mini-details")]
-    [Authorize<OrganizationCollectionManagementAccessRequirement>]
+    [Authorize<MemberOrProviderRequirement>]
     public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
     {
         var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId);

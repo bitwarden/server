@@ -56,6 +56,60 @@ public class OrganizationCollectionManagementAccessHandlerTests
             .GetManySharedByOrganizationIdWithPermissionsAsync(default, default, default);
     }
 
+    [Theory]
+    [BitAutoData(true, false, false)]
+    [BitAutoData(false, true, false)]
+    [BitAutoData(false, false, true)]
+    public async Task HandleRequirementAsync_WhenCustomUserManagesUsersOrGroupsOrAccessesReports_Authorized_WithoutQueryingCollections(
+        bool manageUsers, bool manageGroups, bool accessReports, Guid orgId, Guid userId, User user,
+        SutProvider<OrganizationCollectionManagementAccessHandler> sutProvider)
+    {
+        ArrangeRoute(sutProvider, orgId, userId);
+        ArrangeOrganizationAbility(sutProvider, orgId, limitCollectionCreation: true);
+        var claimsPrincipal = BuildClaimsPrincipal(user, new CurrentContextOrganization
+        {
+            Id = orgId,
+            Type = OrganizationUserType.Custom,
+            Permissions = new Permissions
+            {
+                ManageUsers = manageUsers,
+                ManageGroups = manageGroups,
+                AccessReports = accessReports,
+            }
+        });
+
+        var context = Authorize(sutProvider, claimsPrincipal);
+
+        Assert.True(context.HasSucceeded);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
+            .GetManySharedByOrganizationIdWithPermissionsAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleRequirementAsync_WhenCustomUserHasUnrelatedPermissionAndDoesNotManageAnyCollection_NotAuthorized(
+        Guid orgId, Guid userId, User user, List<CollectionAdminDetails> collections,
+        SutProvider<OrganizationCollectionManagementAccessHandler> sutProvider)
+    {
+        ArrangeRoute(sutProvider, orgId, userId);
+        ArrangeOrganizationAbility(sutProvider, orgId, limitCollectionCreation: true);
+        var claimsPrincipal = BuildClaimsPrincipal(user, new CurrentContextOrganization
+        {
+            Id = orgId,
+            Type = OrganizationUserType.Custom,
+            Permissions = new Permissions { AccessEventLogs = true, ManagePolicies = true },
+        });
+
+        collections.ForEach(c => c.Manage = false);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManySharedByOrganizationIdWithPermissionsAsync(orgId, userId, false)
+            .Returns(collections);
+        ArrangeProvider(sutProvider, userId, orgId, isProvider: false);
+
+        var context = Authorize(sutProvider, claimsPrincipal);
+
+        Assert.False(context.HasSucceeded);
+    }
+
     [Theory, BitAutoData]
     public async Task HandleRequirementAsync_WhenMemberCannotCreateButManagesACollection_Authorized(
         Guid orgId, Guid userId, User user, List<CollectionAdminDetails> collections,
