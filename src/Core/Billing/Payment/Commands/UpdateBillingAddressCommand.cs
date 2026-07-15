@@ -3,7 +3,6 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -86,11 +85,6 @@ public class UpdateBillingAddressCommand(
             Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids"]
         };
 
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            updateOptions.TaxExempt = await GetDeterminedTaxExemptStatusAsync(subscriber.GatewayCustomerId!, billingAddress.Country);
-        }
-
         var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId, updateOptions);
 
         await EnableAutomaticTaxAsync(subscriber, customer);
@@ -121,13 +115,6 @@ public class UpdateBillingAddressCommand(
         await Task.WhenAll(deleteExistingTaxIds);
 
         return BillingAddress.From(customer.Address, updatedTaxId);
-    }
-
-
-    private async Task<string> GetDeterminedTaxExemptStatusAsync(string customerId, string? billingCountry)
-    {
-        var existingCustomer = await stripeAdapter.GetCustomerAsync(customerId);
-        return TaxHelpers.DetermineTaxExemptStatus(billingCountry, existingCustomer.TaxExempt);
     }
 
     private async Task EnableAutomaticTaxAsync(
