@@ -46,7 +46,8 @@ public class GetPendingAnnualUpgradeQuery(
             return null;
         }
 
-        var subscription = await TryGetSubscriptionAsync(organization);
+        var subscription = await AnnualUpgradeOfferSubscriptionLoader.TryGetAsync(
+            stripeAdapter, logger, organization, nameof(GetPendingAnnualUpgradeQuery), ["test_clock"]);
         if (subscription is null || subscription.Status != SubscriptionStatus.Active)
         {
             return null;
@@ -54,72 +55,69 @@ public class GetPendingAnnualUpgradeQuery(
 
         var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
 
-        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
-
-        // Redeemed marker: an active schedule for this subscription whose phases contain the
-        // annual-latest seat price (mirrors GetAnnualUpgradeOfferQuery's alreadyRedeemed check).
-        var activeSchedule = schedules.Data.FirstOrDefault(schedule =>
-            schedule.SubscriptionId == subscription.Id &&
-            schedule.Status == SubscriptionScheduleStatus.Active &&
-            schedule.Phases.Any(phase =>
-                phase.Items.Any(item => item.PriceId == annualLatestPlan.PasswordManager.StripeSeatPlanId)));
-
-        if (activeSchedule is not { Phases.Count: > 0 })
-        {
-            return null;
-        }
-
-        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
-
-        // Earliest future phase (the post-renewal annual phase); StartDate is the renewal date.
-        var upcomingPhase = activeSchedule.Phases
-            .Where(phase => phase.StartDate > now)
-            .MinBy(phase => phase.StartDate);
-
-        if (upcomingPhase is null)
-        {
-            return null;
-        }
-
-        var lineItems = new List<PendingAnnualUpgradeLineItem>();
-        foreach (var item in upcomingPhase.Items)
-        {
-            var price = await stripeAdapter.GetPriceAsync(item.PriceId,
-                new PriceGetOptions { Expand = ["product"] });
-
-            lineItems.Add(new PendingAnnualUpgradeLineItem
-            {
-                Name = price.Nickname,
-                Amount = (price.UnitAmountDecimal ?? 0) / 100M,
-                Quantity = (int)item.Quantity,
-                Interval = price.Recurring?.Interval,
-                ProductId = price.ProductId,
-                AddonSubscriptionItem = price.Metadata != null &&
-                    price.Metadata.TryGetValue("isAddOn", out var value) && bool.Parse(value)
-            });
-        }
-
-        return new PendingAnnualUpgrade
-        {
-            Plan = annualLatestPlan,
-            LineItems = lineItems,
-            EffectiveDate = upcomingPhase.StartDate
-        };
-    }
-
-    private async Task<Subscription?> TryGetSubscriptionAsync(Organization organization)
-    {
+        // Fail-closed on any Stripe error from here on: this query runs inline on page load
+        // (see GetPendingAnnualUpgradeQuery consumers), so a schedule/price lookup failure must
+        // degrade to "no pending upgrade" rather than 500 the page.
         try
         {
-            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions { Expand = ["test_clock"] });
+            var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+                new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+            // Redeemed marker: an active schedule for this subscription whose phases contain the
+            // annual-latest seat price (mirrors GetAnnualUpgradeOfferQuery's alreadyRedeemed check).
+            var activeSchedule = schedules.Data.FirstOrDefault(schedule =>
+                schedule.SubscriptionId == subscription.Id &&
+                schedule.Status == SubscriptionScheduleStatus.Active &&
+                schedule.Phases.Any(phase =>
+                    phase.Items.Any(item => item.PriceId == annualLatestPlan.PasswordManager.StripeSeatPlanId)));
+
+            if (activeSchedule is not { Phases.Count: > 0 })
+            {
+                return null;
+            }
+
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            // Earliest future phase (the post-renewal annual phase); StartDate is the renewal date.
+            var upcomingPhase = activeSchedule.Phases
+                .Where(phase => phase.StartDate > now)
+                .MinBy(phase => phase.StartDate);
+
+            if (upcomingPhase is null)
+            {
+                return null;
+            }
+
+            var lineItems = new List<PendingAnnualUpgradeLineItem>();
+            foreach (var item in upcomingPhase.Items)
+            {
+                var price = await stripeAdapter.GetPriceAsync(item.PriceId, null);
+
+                lineItems.Add(new PendingAnnualUpgradeLineItem
+                {
+                    Name = price.Nickname,
+                    Amount = (price.UnitAmountDecimal ?? 0) / 100M,
+                    Quantity = (int)item.Quantity,
+                    Interval = price.Recurring?.Interval,
+                    ProductId = price.ProductId,
+                    AddonSubscriptionItem = price.Metadata != null &&
+                        price.Metadata.TryGetValue("isAddOn", out var value) &&
+                        bool.TryParse(value, out var isAddOn) && isAddOn
+                });
+            }
+
+            return new PendingAnnualUpgrade
+            {
+                Plan = annualLatestPlan,
+                LineItems = lineItems,
+                EffectiveDate = upcomingPhase.StartDate
+            };
         }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
+        catch (StripeException stripeException)
         {
-            logger.LogError(
-                "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
-                nameof(GetPendingAnnualUpgradeQuery), organization.GatewaySubscriptionId, organization.Id);
+            logger.LogWarning(
+                "{Query}: Could not resolve pending annual upgrade for Organization ({OrganizationId}) | Code = {Code}",
+                nameof(GetPendingAnnualUpgradeQuery), organization.Id, stripeException.StripeError?.Code);
             return null;
         }
     }

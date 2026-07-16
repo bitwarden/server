@@ -95,6 +95,20 @@ public class GetPendingAnnualUpgradeQueryTests
     }
 
     [Fact]
+    public async Task Run_SubscriptionNotActive_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var subscription = SetupSubscription(organization);
+        subscription.Status = SubscriptionStatus.PastDue;
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
+
+        var result = await _query.Run(organization);
+
+        Assert.Null(result);
+        await _stripeAdapter.DidNotReceive().ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
+    }
+
+    [Fact]
     public async Task Run_NoRedeemedSchedule_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
@@ -105,6 +119,64 @@ public class GetPendingAnnualUpgradeQueryTests
         var result = await _query.Run(organization);
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task Run_ActiveScheduleHasNoUpcomingPhase_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var subscription = SetupSubscription(organization);
+
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var annualSeatPriceId = annualPlan.PasswordManager.StripeSeatPlanId;
+
+        // Only a past-dated phase is present -- the schedule is "active" and already targets the
+        // annual-latest seat price, but there is no future phase left to report as pending.
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        SubscriptionId = subscription.Id,
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases =
+                        [
+                            new SubscriptionSchedulePhase
+                            {
+                                StartDate = DateTime.UtcNow.AddDays(-30),
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = annualSeatPriceId, Quantity = 5 }]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+        var result = await _query.Run(organization);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task Run_ListSubscriptionSchedulesThrows_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        SetupSubscription(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
+
+        // A Stripe outage while listing schedules must degrade to "no pending upgrade," not
+        // bubble up and 500 the page that calls this query inline.
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns<StripeList<SubscriptionSchedule>>(_ =>
+                throw new StripeException { StripeError = new StripeError { Code = "api_error" } });
+
+        var result = await _query.Run(organization);
+
+        Assert.Null(result);
+        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Warning, default, default!, default, default!);
     }
 
     [Fact]
