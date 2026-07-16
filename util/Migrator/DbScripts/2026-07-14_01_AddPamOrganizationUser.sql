@@ -274,7 +274,7 @@ BEGIN
         OUI.[AccessSecretsManager],
         OUI.[RevocationReason],
         OUI.[StatusNew],
-        OUI.[AccessPam]
+        ISNULL(OUI.[AccessPam], 0)
     FROM
         OPENJSON(@jsonData)
         WITH (
@@ -382,7 +382,7 @@ BEGIN
         [AccessSecretsManager] = OUI.[AccessSecretsManager],
         [RevocationReason] = OUI.[RevocationReason],
         [StatusNew] = OUI.[StatusNew],
-        [AccessPam] = OUI.[AccessPam]
+        [AccessPam] = ISNULL(OUI.[AccessPam], 0)
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
@@ -626,7 +626,7 @@ BEGIN
         OUI.[AccessSecretsManager],
         OUI.[RevocationReason],
         OUI.[StatusNew],
-        OUI.[AccessPam]
+        ISNULL(OUI.[AccessPam], 0)
     FROM
         OPENJSON(@organizationUserData)
                  WITH (
@@ -781,5 +781,19 @@ GO
 IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]') IS NOT NULL
 BEGIN
     EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]';
+END
+GO
+
+-- Refresh the remaining views that reference [dbo].[OrganizationUser] so their
+-- cached metadata reflects the new [AccessPam] column.
+IF OBJECT_ID('[dbo].[ProviderOrganizationOrganizationDetailsView]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[UserPremiumAccessView]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[UserPremiumAccessView]';
 END
 GO

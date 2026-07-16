@@ -82,7 +82,7 @@ BEGIN
         [AccessSecretsManager] = OUI.[AccessSecretsManager],
         [RevocationReason] = OUI.[RevocationReason],
         [StatusNew] = OUI.[StatusNew],
-        [AccessPam] = OUI.[AccessPam]
+        [AccessPam] = ISNULL(OUI.[AccessPam], 0)
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN

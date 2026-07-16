@@ -540,6 +540,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         ResetPasswordKey = ou.ResetPasswordKey,
                         UsesKeyConnector = ou.User != null && ou.User.UsesKeyConnector,
                         AccessSecretsManager = ou.AccessSecretsManager,
+                        AccessPam = ou.AccessPam,
                         HasMasterPassword = ou.User != null && !string.IsNullOrWhiteSpace(ou.User.MasterPassword),
                         RevocationReason = ou.RevocationReason,
                         CreationDate = ou.CreationDate,

@@ -42,7 +42,7 @@ BEGIN
         OUI.[AccessSecretsManager],
         OUI.[RevocationReason],
         OUI.[StatusNew],
-        OUI.[AccessPam]
+        ISNULL(OUI.[AccessPam], 0)
     FROM
         OPENJSON(@organizationUserData)
                  WITH (
