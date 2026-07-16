@@ -332,9 +332,6 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
         }
 
-        services.AddPush(globalSettings);
-        services.AddPushRegistration();
-
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
         {
             services.AddSingleton<IMailEnqueuingService, AzureQueueMailService>();
