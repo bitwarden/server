@@ -2,6 +2,7 @@
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -212,6 +213,8 @@ public class ServiceAccountsControllerTests
             sutProvider.Sut.CreateAccessTokenAsync(serviceAccount.Id, data));
         await sutProvider.GetDependency<ICreateAccessTokenCommand>().DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<ApiKey>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogServiceAccountEventAsync(default, default, default, default);
     }
 
     [Theory]
@@ -227,10 +230,15 @@ public class ServiceAccountsControllerTests
 
         sutProvider.GetDependency<ICreateAccessTokenCommand>().CreateAsync(default)
             .ReturnsForAnyArgs(new ApiKeyClientSecretDetails { ApiKey = resultAccessToken, ClientSecret = mockClientSecret });
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
 
         await sutProvider.Sut.CreateAccessTokenAsync(serviceAccount.Id, data);
         await sutProvider.GetDependency<ICreateAccessTokenCommand>().Received(1)
             .CreateAsync(Arg.Any<ApiKey>());
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogServiceAccountEventAsync(Arg.Any<Guid>(),
+                Arg.Is<List<ServiceAccount>>(l => l.Contains(serviceAccount)),
+                EventType.AccessToken_Created, Arg.Any<IdentityClientType>());
     }
 
     [Theory]
@@ -295,6 +303,8 @@ public class ServiceAccountsControllerTests
             sutProvider.Sut.RevokeAccessTokensAsync(serviceAccount.Id, data));
         await sutProvider.GetDependency<IRevokeAccessTokensCommand>().DidNotReceiveWithAnyArgs()
             .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogServiceAccountEventAsync(default, default, default, default);
     }
 
     [Theory]
@@ -306,10 +316,47 @@ public class ServiceAccountsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), serviceAccount,
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        var revokedTokens = Enumerable.Range(0, 3).Select(_ => new ApiKey
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Name",
+            Scope = "Test Scope",
+            EncryptedPayload = "Test EncryptedPayload",
+            Key = "Test Key",
+        }).ToList();
+        sutProvider.GetDependency<IRevokeAccessTokensCommand>()
+            .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>())
+            .Returns(revokedTokens);
 
         await sutProvider.Sut.RevokeAccessTokensAsync(serviceAccount.Id, data);
         await sutProvider.GetDependency<IRevokeAccessTokensCommand>().Received(1)
             .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>());
+        // One AccessToken_Revoked event should be logged per revoked token.
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogServiceAccountEventAsync(Arg.Any<Guid>(),
+                Arg.Is<List<ServiceAccount>>(l => l.Count == revokedTokens.Count && l.All(sa => sa == serviceAccount)),
+                EventType.AccessToken_Revoked, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RevokeAccessTokens_NothingRevoked_DoesNotLogEvent(SutProvider<ServiceAccountsController> sutProvider,
+        RevokeAccessTokensRequest data, ServiceAccount serviceAccount)
+    {
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), serviceAccount,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IRevokeAccessTokensCommand>()
+            .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>())
+            .Returns(new List<ApiKey>());
+
+        await sutProvider.Sut.RevokeAccessTokensAsync(serviceAccount.Id, data);
+        await sutProvider.GetDependency<IRevokeAccessTokensCommand>().Received(1)
+            .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogServiceAccountEventAsync(default, default, default, default);
     }
 
     [Theory]
