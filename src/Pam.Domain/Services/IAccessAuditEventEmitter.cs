@@ -3,9 +3,9 @@
 namespace Bit.Pam.Services;
 
 /// <summary>
-/// Records a PAM audit event at the moment a state-changing action happens (a request submitted or decided; a lease
-/// activated, extended, or revoked; a rule created, updated, or deleted). This is the write side of the
-/// access-audit trail; the governance trail is read back from the store these events are written to.
+/// Records a PAM audit event at the moment a state-changing action happens (currently a rule created, updated, or
+/// deleted; more actions emit as they land). This is the write side of the access-audit trail; the governance trail is
+/// read back from the store these events are written to.
 ///
 /// The default implementation (<see cref="NoopAccessAuditEventEmitter"/>) records nothing; the commercial
 /// implementation persists each event to the dedicated PAM audit store (fanning out to the organization's normal
