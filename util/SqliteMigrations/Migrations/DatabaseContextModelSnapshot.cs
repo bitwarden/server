@@ -2347,6 +2347,150 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("NotificationStatus", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AccessRequestId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ApproverId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte?>("ConditionKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte>("DeciderKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("EvaluationContext")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte>("Verdict")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccessRequestId");
+
+                    b.ToTable("AccessDecision", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AccessRequestId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CipherId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CollectionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NotAfter")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NotBefore")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RequesterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RevokedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RevokedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccessRequestId")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("CollectionId", "Status");
+
+                    b.HasIndex("NotAfter", "Status");
+
+                    b.HasIndex("RequesterId", "CipherId", "Status");
+
+                    b.ToTable("AccessLease", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CipherId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CollectionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ExtensionOfLeaseId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NotAfter")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NotBefore")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RequesterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ResolvedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RuleId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExtensionOfLeaseId");
+
+                    b.HasIndex("RuleId");
+
+                    b.HasIndex("OrganizationId", "Status");
+
+                    b.HasIndex("RequesterId", "CipherId", "Status");
+
+                    b.ToTable("AccessRequest", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3473,6 +3617,53 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Notification");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRequest", null)
+                        .WithMany()
+                        .HasForeignKey("AccessRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRequest", null)
+                        .WithMany()
+                        .HasForeignKey("AccessRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRequest", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease", null)
+                        .WithMany()
+                        .HasForeignKey("ExtensionOfLeaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", null)
+                        .WithMany()
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>

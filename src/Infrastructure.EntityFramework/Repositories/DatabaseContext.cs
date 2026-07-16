@@ -45,6 +45,9 @@ public class DatabaseContext : DbContext
     public DbSet<CollectionGroup> CollectionGroups { get; set; }
     public DbSet<CollectionUser> CollectionUsers { get; set; }
     public DbSet<AccessRule> AccessRules { get; set; }
+    public DbSet<AccessRequest> AccessRequests { get; set; }
+    public DbSet<AccessLease> AccessLeases { get; set; }
+    public DbSet<AccessDecision> AccessDecisions { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -110,6 +113,9 @@ public class DatabaseContext : DbContext
         var eCollectionUser = builder.Entity<CollectionUser>();
         var eCollectionGroup = builder.Entity<CollectionGroup>();
         var eAccessRule = builder.Entity<AccessRule>();
+        var eAccessRequest = builder.Entity<AccessRequest>();
+        var eAccessLease = builder.Entity<AccessLease>();
+        var eAccessDecision = builder.Entity<AccessDecision>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
@@ -156,6 +162,43 @@ public class DatabaseContext : DbContext
             .HasForeignKey(c => c.AccessRuleId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // AccessRequest and AccessLease have a circular FK relationship (AccessRequest.ExtensionOfLeaseId ->
+        // AccessLease.Id, AccessLease.AccessRequestId -> AccessRequest.Id). Neither side cascades: Organization
+        // already cascades directly to both tables, and a second cascading path through the other table would create
+        // multiple cascade paths, which SQL Server rejects.
+        eAccessRequest.Property(p => p.Id).ValueGeneratedNever();
+        eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Status });
+        eAccessRequest.HasIndex(p => new { p.OrganizationId, p.Status });
+        eAccessRequest
+            .HasOne<AccessRule>()
+            .WithMany()
+            .HasForeignKey(r => r.RuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+        eAccessRequest
+            .HasOne<AccessLease>()
+            .WithMany()
+            .HasForeignKey(r => r.ExtensionOfLeaseId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        eAccessLease.Property(p => p.Id).ValueGeneratedNever();
+        eAccessLease.HasIndex(p => new { p.RequesterId, p.CipherId, p.Status });
+        eAccessLease.HasIndex(p => new { p.NotAfter, p.Status });
+        eAccessLease.HasIndex(p => new { p.CollectionId, p.Status });
+        eAccessLease.HasIndex(p => p.AccessRequestId).IsUnique();
+        eAccessLease
+            .HasOne<AccessRequest>()
+            .WithMany()
+            .HasForeignKey(l => l.AccessRequestId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        eAccessDecision.Property(p => p.Id).ValueGeneratedNever();
+        eAccessDecision.HasIndex(p => p.AccessRequestId);
+        eAccessDecision
+            .HasOne<AccessRequest>()
+            .WithMany()
+            .HasForeignKey(d => d.AccessRequestId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         eOrganizationMemberBaseDetail.HasNoKey();
 
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
@@ -179,6 +222,9 @@ public class DatabaseContext : DbContext
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
         eAccessRule.ToTable(nameof(AccessRule));
+        eAccessRequest.ToTable(nameof(AccessRequest));
+        eAccessLease.ToTable(nameof(AccessLease));
+        eAccessDecision.ToTable(nameof(AccessDecision));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));
