@@ -83,6 +83,8 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
         // Clear the collection links first (the FK Collection.AccessRuleId -> AccessRule is ON DELETE NO ACTION), then
         // remove the rule. A cleared collection is simply ungoverned; the RuleDeleted audit event already carries the
         // rule's name, so the row need not survive.
@@ -98,6 +100,7 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(accessRule.OrganizationId);
         await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     public async Task SetCollectionAssociationsAsync(Guid organizationId, Guid accessRuleId,
