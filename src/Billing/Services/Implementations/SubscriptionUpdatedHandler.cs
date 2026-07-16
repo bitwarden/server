@@ -801,9 +801,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             // The monthly-to-annual price transition appears on exactly one
             // subscription.updated event, so a swallowed failure here would leave the
             // organization's PlanType monthly forever while Stripe bills annually. The
-            // flip is idempotent on retry: ResolveAnnualLatestPlanType returns null once
-            // PlanType is annual, and the previous-vs-current monthly-price guard no
-            // longer matches.
+            // flip is idempotent on retry: once PlanType is annual, ResolveAnnualLatestPlanType
+            // returns null and the handler returns early before re-applying the change.
             _logger.LogError(
                 exception,
                 "Failed to handle schedule-triggered annual upgrade for organization ({OrganizationId})",
