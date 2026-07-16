@@ -1,7 +1,8 @@
-﻿using AutoFixture.Xunit2;
+﻿using System.Text.Json.Nodes;
+using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
-using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Xunit;
 
@@ -17,7 +18,7 @@ public class ConfigControllerTests : IDisposable
     {
         _globalSettings = new GlobalSettings();
         _featureService = Substitute.For<IFeatureService>();
-        _featureService.GetAll().Returns(new Dictionary<string, object>());
+        _featureService.GetAll().Returns(new Dictionary<string, JsonValue>());
 
         _sut = new ConfigController(
             _globalSettings,
@@ -31,15 +32,16 @@ public class ConfigControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public void GetConfigs_WithFeatureStates(Dictionary<string, object> featureStates)
+    public void GetConfigs_WithFeatureStates(Dictionary<string, string> featureStates)
     {
-        _featureService.GetAll().Returns(featureStates);
+        var actualFeatureStates = featureStates.ToDictionary(kvp => kvp.Key, kvp => JsonValue.Create(kvp.Value));
+        _featureService.GetAll().Returns(actualFeatureStates);
 
         var response = _sut.GetConfigs();
 
         Assert.NotNull(response);
         Assert.NotNull(response.FeatureStates);
-        Assert.Equal(featureStates, response.FeatureStates);
+        Assert.Equal(actualFeatureStates, response.FeatureStates);
     }
 
     [Fact]
