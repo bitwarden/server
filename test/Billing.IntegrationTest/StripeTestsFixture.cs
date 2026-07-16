@@ -1174,6 +1174,22 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Turns off the subscription's automatic tax. <c>UpdateBillingAddressCommand.EnableAutomaticTaxAsync</c>
+    /// only rebuilds the schedule (and carries the customer coupon into the future phase) when automatic
+    /// tax is currently off; freshly-created orgs have it on. Call this before creating the schedule so the
+    /// off state is captured into the schedule's phases, reproducing the real "org with auto-tax off + active
+    /// migration schedule" state.
+    /// </summary>
+    public async Task DisableSubscriptionAutomaticTaxAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, new SubscriptionUpdateOptions
+        {
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = false },
+        });
+    }
+
+    /// <summary>
     /// Drives the real <see cref="IPriceIncreaseScheduler"/> to create the active 2-phase
     /// deferred-migration schedule that the coupon-carry branches in
     /// <c>UpdatePremiumStorageCommand</c>, <c>UpdateBillingAddressCommand</c>, and
