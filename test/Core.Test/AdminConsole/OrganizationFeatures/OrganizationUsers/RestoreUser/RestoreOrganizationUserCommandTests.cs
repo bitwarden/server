@@ -640,6 +640,43 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task RestoreUser_StagedUserInFreeOrganization_Success(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // A staged user has no linked account (UserId == null) and its pre-revoke status is snapshotted
+        // onto StatusNew by the revoke flow. It must skip the account-level policy checks in
+        // CheckPoliciesBeforeRestoreAsync (which would otherwise dereference the null UserId).
+        organization.PlanType = PlanType.Free;
+        organizationUser.UserId = null;
+        organizationUser.Key = null;
+        organizationUser.Status = OrganizationUserStatusType.Revoked;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Staged;
+
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, "");
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Staged);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
     public async Task RestoreUser_WithAutoConfirmPolicyEnabled_DeletesEmergencyAccess(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
