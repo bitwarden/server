@@ -42,7 +42,8 @@ public class RedeemAnnualUpgradeOfferCommand(
             return DefaultConflict;
         }
 
-        var subscription = await TryGetSubscriptionAsync(organization);
+        var subscription = await AnnualUpgradeOfferSubscriptionLoader.TryGetAsync(
+            stripeAdapter, _logger, organization, CommandName, ["customer", "discounts.coupon"]);
         if (subscription is null)
         {
             return DefaultConflict;
@@ -169,20 +170,4 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         return new None();
     });
-
-    private async Task<Subscription?> TryGetSubscriptionAsync(Organization organization)
-    {
-        try
-        {
-            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions { Expand = ["customer", "discounts.coupon"] });
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
-        {
-            _logger.LogError(
-                "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
-                CommandName, organization.GatewaySubscriptionId, organization.Id);
-            return null;
-        }
-    }
 }

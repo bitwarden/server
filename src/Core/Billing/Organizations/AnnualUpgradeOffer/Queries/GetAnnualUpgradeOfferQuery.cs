@@ -52,7 +52,8 @@ public class GetAnnualUpgradeOfferQuery(
         var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
         var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
 
-        var subscription = await TryGetSubscriptionAsync(organization);
+        var subscription = await AnnualUpgradeOfferSubscriptionLoader.TryGetAsync(
+            stripeAdapter, logger, organization, nameof(GetAnnualUpgradeOfferQuery));
         if (subscription is null)
         {
             return null;
@@ -93,20 +94,5 @@ public class GetAnnualUpgradeOfferQuery(
         }
 
         return new AnnualUpgradeOfferResult(currentAnnualCost, newAnnualCost, savings);
-    }
-
-    private async Task<Subscription?> TryGetSubscriptionAsync(Organization organization)
-    {
-        try
-        {
-            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId);
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
-        {
-            logger.LogError(
-                "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
-                nameof(GetAnnualUpgradeOfferQuery), organization.GatewaySubscriptionId, organization.Id);
-            return null;
-        }
     }
 }
