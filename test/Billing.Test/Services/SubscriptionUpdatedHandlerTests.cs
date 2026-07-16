@@ -5111,6 +5111,12 @@ public class SubscriptionUpdatedHandlerTests
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(teams2020Monthly);
+        // The annual-upgrade handler also runs on this event; TeamsMonthly2020 resolves to
+        // TeamsAnnually as its upgrade target. Provide the mock so GetPlanOrThrow returns a
+        // real plan (production throws NotFoundException rather than returning null). The
+        // handler then hits its target-price guard, sees the subscription is still on the
+        // monthly seat price, and returns early -- so no ChangePlan/ReplaceAsync runs.
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
         _pricingClient.ListPlans().Returns(MockPlans.Plans);
 
         // Act
@@ -6429,6 +6435,64 @@ public class SubscriptionUpdatedHandlerTests
         Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
         await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_ReplaceAsyncThrows_RethrowsForStripeRetry()
+    {
+        // A transient DB failure while persisting the plan flip must propagate so the
+        // webhook returns non-200 and Stripe retries. Swallowing it would leave the org
+        // on monthly PlanType while Stripe bills annually -- permanent divergence.
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_persist_fails",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_persist_fails",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _organizationRepository.ReplaceAsync(Arg.Any<Organization>())
+            .Returns<Task>(_ => throw new InvalidOperationException("transient DB failure"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.HandleAsync(parsedEvent));
     }
 
     [Fact]
