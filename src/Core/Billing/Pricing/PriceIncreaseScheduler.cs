@@ -109,8 +109,7 @@ public class PriceIncreaseScheduler(
         {
             return false;
         }
-
-
+        
         await CreateAndConfigureScheduleAsync(subscription, phase2);
         return true;
     }
