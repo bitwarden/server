@@ -249,42 +249,54 @@ public class PreviewOrganizationTaxCommand(
                     Quantity = quantity
                 });
 
-                var hasStorage =
-                    subscriptionItemsByPriceId.TryGetValue(newPlan.PasswordManager.StripeStoragePlanId,
-                        out var storage);
-
-                if (hasStorage && storage != null)
+                // Match existing storage by the CURRENT plan's id (as PM seats/SM do), then re-price at the
+                // new plan — storage ids can differ across the change (e.g. Families' personal-storage vs an
+                // org plan's shared storage). Guard: some plans have no storage add-on, so the id can be null.
+                if (!string.IsNullOrEmpty(currentPlan.PasswordManager.StripeStoragePlanId) &&
+                    !string.IsNullOrEmpty(newPlan.PasswordManager.StripeStoragePlanId))
                 {
-                    items.Add(new InvoiceSubscriptionDetailsItemOptions
-                    {
-                        Price = newPlan.PasswordManager.StripeStoragePlanId,
-                        Quantity = storage.Quantity
-                    });
-                }
+                    var hasStorage =
+                        subscriptionItemsByPriceId.TryGetValue(currentPlan.PasswordManager.StripeStoragePlanId,
+                            out var storage);
 
-                var hasSecretsManagerSeats = subscriptionItemsByPriceId.TryGetValue(
-                    newPlan.SecretsManager.StripeSeatPlanId,
-                    out var secretsManagerSeats);
-
-                if (hasSecretsManagerSeats && secretsManagerSeats != null)
-                {
-                    items.Add(new InvoiceSubscriptionDetailsItemOptions
-                    {
-                        Price = newPlan.SecretsManager.StripeSeatPlanId,
-                        Quantity = secretsManagerSeats.Quantity
-                    });
-
-                    var hasServiceAccounts =
-                        subscriptionItemsByPriceId.TryGetValue(newPlan.SecretsManager.StripeServiceAccountPlanId,
-                            out var serviceAccounts);
-
-                    if (hasServiceAccounts && serviceAccounts != null)
+                    if (hasStorage && storage != null)
                     {
                         items.Add(new InvoiceSubscriptionDetailsItemOptions
                         {
-                            Price = newPlan.SecretsManager.StripeServiceAccountPlanId,
-                            Quantity = serviceAccounts.Quantity
+                            Price = newPlan.PasswordManager.StripeStoragePlanId,
+                            Quantity = storage.Quantity
                         });
+                    }
+                }
+
+                // Match existing SM items by the CURRENT plan's ids (as PM seats/storage do above), then re-price
+                // at the new plan. Guard: SecretsManager is null for Families/Free (PlanAdapter maps it to null).
+                if (currentPlan.SecretsManager != null && newPlan.SecretsManager != null)
+                {
+                    var hasSecretsManagerSeats = subscriptionItemsByPriceId.TryGetValue(
+                        currentPlan.SecretsManager.StripeSeatPlanId,
+                        out var secretsManagerSeats);
+
+                    if (hasSecretsManagerSeats && secretsManagerSeats != null)
+                    {
+                        items.Add(new InvoiceSubscriptionDetailsItemOptions
+                        {
+                            Price = newPlan.SecretsManager.StripeSeatPlanId,
+                            Quantity = secretsManagerSeats.Quantity
+                        });
+
+                        var hasServiceAccounts =
+                            subscriptionItemsByPriceId.TryGetValue(currentPlan.SecretsManager.StripeServiceAccountPlanId,
+                                out var serviceAccounts);
+
+                        if (hasServiceAccounts && serviceAccounts != null)
+                        {
+                            items.Add(new InvoiceSubscriptionDetailsItemOptions
+                            {
+                                Price = newPlan.SecretsManager.StripeServiceAccountPlanId,
+                                Quantity = serviceAccounts.Quantity
+                            });
+                        }
                     }
                 }
 
