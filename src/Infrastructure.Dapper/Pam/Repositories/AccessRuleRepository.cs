@@ -40,7 +40,7 @@ public class AccessRuleRepository : Repository<AccessRule, Guid>, IAccessRuleRep
             new { Id = id },
             commandType: CommandType.StoredProcedure);
 
-        var rule = (await results.ReadAsync<AccessRuleDetails>()).SingleOrDefault();
+        var rule = await results.ReadFirstOrDefaultAsync<AccessRuleDetails>();
         if (rule is null)
         {
             return null;
@@ -92,7 +92,7 @@ public class AccessRuleRepository : Repository<AccessRule, Guid>, IAccessRuleRep
 
     private sealed class CollectionAccessRuleMapping
     {
-        public Guid AccessRuleId { get; init; }
-        public Guid CollectionId { get; init; }
+        public Guid AccessRuleId { get; set; }
+        public Guid CollectionId { get; set; }
     }
 }
