@@ -46,7 +46,7 @@ public class GetPendingAnnualUpgradeQuery(
             return null;
         }
 
-        var subscription = await AnnualUpgradeOfferSubscriptionLoader.TryGetAsync(
+        var subscription = await AnnualUpgradeOfferSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, logger, organization, nameof(GetPendingAnnualUpgradeQuery), ["test_clock"]);
         if (subscription is null || subscription.Status != SubscriptionStatus.Active)
         {

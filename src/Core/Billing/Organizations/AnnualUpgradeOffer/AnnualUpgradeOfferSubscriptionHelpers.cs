@@ -8,14 +8,14 @@ namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 
 using static StripeConstants;
 
-public static class AnnualUpgradeOfferSubscriptionLoader
+public static class AnnualUpgradeOfferSubscriptionHelpers
 {
     /// <summary>
     /// Loads the organization's Stripe subscription, optionally expanding the given paths.
     /// Returns null (and logs an error tagged with <paramref name="caller"/>) when Stripe
     /// reports the subscription is missing.
     /// </summary>
-    public static async Task<Subscription?> TryGetAsync(
+    public static async Task<Subscription?> TryGetSubscriptionAsync(
         IStripeAdapter stripeAdapter,
         ILogger logger,
         Organization organization,

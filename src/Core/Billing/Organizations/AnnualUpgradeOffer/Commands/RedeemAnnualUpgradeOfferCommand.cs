@@ -42,7 +42,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             return DefaultConflict;
         }
 
-        var subscription = await AnnualUpgradeOfferSubscriptionLoader.TryGetAsync(
+        var subscription = await AnnualUpgradeOfferSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, _logger, organization, CommandName, ["customer", "discounts.coupon"]);
         if (subscription is null)
         {
