@@ -214,5 +214,63 @@ public class AccessRuleEngineTests
         Assert.Equal(DenyReason.UnsupportedCondition, evaluation.Reason);
     }
 
+    [Fact]
+    public void Evaluate_IpAllowlist_MalformedCidr_DeniesClosed()
+    {
+        // A present-but-unparseable CIDR matches no address, so a caller with a known IP still fails closed.
+        var conditions = Set(new IpAllowlistCondition { Cidrs = ["not-a-cidr"] });
+
+        var evaluation = _sut.Evaluate(conditions, Signals(IPAddress.Parse("10.1.2.3")));
+
+        Assert.Equal(AccessEvaluationOutcome.Deny, evaluation.Outcome);
+        Assert.Equal(DenyReason.NotWithinIpRange, evaluation.Reason);
+    }
+
+    [Fact]
+    public void Evaluate_IpAllowlist_LaterCidrMatches_Allows()
+    {
+        // The caller matches the second entry, so evaluation must not stop at the first non-matching CIDR.
+        var conditions = Set(new IpAllowlistCondition { Cidrs = ["192.168.0.0/16", "10.0.0.0/8"] });
+
+        var evaluation = _sut.Evaluate(conditions, Signals(IPAddress.Parse("10.1.2.3")));
+
+        Assert.Equal(AccessEvaluationOutcome.Allow, evaluation.Outcome);
+    }
+
+    [Fact]
+    public void Evaluate_TimeOfDay_MalformedWindowTime_DeniesClosed()
+    {
+        // The day matches but the window's bounds are unparseable, so the window cannot admit the caller.
+        var conditions = Set(new TimeOfDayCondition
+        {
+            Tz = "UTC",
+            Windows = [new TimeWindow { Days = [AccessWeekday.Thu], From = "25:99", To = "30:00" }],
+        });
+
+        var evaluation = _sut.Evaluate(conditions, Signals());
+
+        Assert.Equal(AccessEvaluationOutcome.Deny, evaluation.Outcome);
+        Assert.Equal(DenyReason.NotWithinTimeWindow, evaluation.Reason);
+    }
+
+    [Fact]
+    public void Evaluate_TimeOfDay_LaterWindowMatches_Allows()
+    {
+        // The first window is the wrong day; the second admits the caller, so windows past the first must be checked.
+        var conditions = Set(new TimeOfDayCondition
+        {
+            Tz = "UTC",
+            Windows =
+            [
+                new TimeWindow { Days = [AccessWeekday.Fri], From = "09:00", To = "17:00" },
+                new TimeWindow { Days = [AccessWeekday.Thu], From = "09:00", To = "17:00" },
+            ],
+        });
+
+        var evaluation = _sut.Evaluate(conditions, Signals());
+
+        Assert.Equal(AccessEvaluationOutcome.Allow, evaluation.Outcome);
+    }
+
     private sealed class UnknownCondition : AccessCondition;
 }

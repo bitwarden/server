@@ -4,6 +4,7 @@ using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.Enums;
 using Bit.Services.Pam.Models.Conditions;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
@@ -239,6 +240,62 @@ public class GoverningRuleResolverTests
         Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
     }
 
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_GovernedRuleDeleted_ReturnsNull(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // The collection still points at a rule id, but the rule no longer loads (deleted after the collection was
+        // read). It is dropped from the candidates, leaving nothing to govern — GetByIdAsync is left unstubbed so it
+        // returns null.
+        collection.AccessRuleId = rule.Id;
+        SetupReachableCollections(sutProvider, userId, cipherId, collection);
+
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_OldestGovernedRuleDeleted_NextRuleGoverns(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
+    {
+        // The oldest governing rule was deleted after the collection was read, so it is skipped and the surviving
+        // newer rule governs — a deleted rule stops governing even when it would otherwise have won on age.
+        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.Conditions = """[{"kind":"human_approval"}]""";
+        olderCollection.AccessRuleId = olderRule.Id;
+        newerCollection.AccessRuleId = newerRule.Id;
+        SetupReachableCollections(sutProvider, userId, cipherId, olderCollection, newerCollection);
+        // Only the newer rule loads; GetByIdAsync(olderRule.Id) is left unstubbed so the deleted oldest returns null.
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(newerRule.Id).Returns(newerRule);
+        DriveRealEngine(sutProvider);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.Equal(newerCollection.Id, result!.CollectionId);
+        Assert.Equal(newerRule.Id, result.RuleId);
+        Assert.True(result.RequiresHumanApproval);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_TimeOfDayCondition_ParsedAndEvaluatedThroughResolver(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // _signals' timestamp (2026-01-01 12:00 UTC) is a Thursday inside this window, so the rule auto-approves. This
+        // exercises the resolver's own camelCase parse of a time_of_day condition, including the weekday-token converter.
+        rule.Conditions = """[{"kind":"time_of_day","tz":"UTC","windows":[{"days":["thu"],"from":"09:00","to":"17:00"}]}]""";
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.False(result!.RequiresHumanApproval);
+        var time = Assert.IsType<TimeOfDayCondition>(Assert.Single(result.Conditions));
+        Assert.Equal("UTC", time.Tz);
+        Assert.Equal(AccessWeekday.Thu, Assert.Single(Assert.Single(time.Windows).Days));
+    }
+
     private static void SetupReachableCollections(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, params Collection[] collections)
     {
@@ -270,6 +327,11 @@ public class GoverningRuleResolverTests
             sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
         }
 
+        DriveRealEngine(sutProvider);
+    }
+
+    private static void DriveRealEngine(SutProvider<GoverningRuleResolver> sutProvider)
+    {
         // Drive the real engine through the substitute so resolution exercises true IP/time evaluation.
         sutProvider.GetDependency<IAccessRuleEngine>()
             .Evaluate(Arg.Any<IReadOnlyList<AccessCondition>>(), Arg.Any<AccessSignals>())
