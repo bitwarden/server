@@ -57,6 +57,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
         services.AddTransient<IGetChurnOfferCohortMembershipQuery, GetChurnOfferCohortMembershipQuery>();
         services.AddTransient<IGetAnnualUpgradeOfferQuery, GetAnnualUpgradeOfferQuery>();
+        services.AddTransient<IGetPendingAnnualUpgradeQuery, GetPendingAnnualUpgradeQuery>();
         services.AddTransient<IRedeemAnnualUpgradeOfferCommand, RedeemAnnualUpgradeOfferCommand>();
         services.AddTransient<IGetChurnMitigationOfferQuery, GetChurnMitigationOfferQuery>();
         services.AddTransient<IRedeemChurnMitigationOfferCommand, RedeemChurnMitigationOfferCommand>();
