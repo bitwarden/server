@@ -214,11 +214,16 @@ public class StripeWebhookTests(StripeWebhookTestsFixture fixture) : IClassFixtu
             await fixture.PrepareOrganizationOwnerAsync("webhook-pm-attached@example.com");
         var customerId = await fixture.GetOrganizationGatewayCustomerIdAsync(organizationId);
 
+        // Attach a real payment method: the region check re-fetches the pm fresh and reads its
+        // Customer, so the shared `pm_card_visa` token (which comes back with no Customer) would be
+        // dropped as out-of-region before the handler ever runs.
+        var paymentMethodId = await fixture.AttachCardPaymentMethodAsync(customerId);
+
         await fixture.Billing.SendStripeWebhookAsync(
             "payment_method.attached",
             new JsonObject
             {
-                ["id"] = "pm_card_visa",
+                ["id"] = paymentMethodId,
                 ["object"] = "payment_method",
                 ["customer"] = customerId,
             },

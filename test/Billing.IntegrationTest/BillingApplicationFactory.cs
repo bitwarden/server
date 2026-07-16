@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bit.IntegrationTestCommon;
 using Bit.Test.Common.Helpers;
@@ -45,7 +46,7 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
                 {
                     ["BillingSettings:StripeWebhookKey"] = WebhookKey,
                     ["BillingSettings:StripeWebhookSecret20250827Basil"] = WebhookSecret,
-                    ["BillingSettings:StripeWebhookSecret20260422Dahlia"] = WebhookSecret,
+                    ["BillingSettings:StripeWebhookSecret20260624Dahlia"] = WebhookSecret,
                     // Force the EF branch of AddDatabaseRepositories so it doesn't fall through to
                     // Dapper (which would talk to the user-secret's real SqlServer instead of the
                     // SQLite-backed DbContext the ITestDatabase registers).
@@ -126,6 +127,17 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
 
         var response = await client.SendAsync(request);
         await Assert.SuccessResponseAsync(response);
+
+        // A 2xx alone doesn't prove the event was handled: the controller returns
+        // 200 { Processed = false } when it drops an event (unrecognized API version /
+        // missing webhook secret, SDK-version mismatch, wrong cloud region, unparseable
+        // body). Assert the event was actually processed so a silent drop fails the test
+        // instead of masquerading as success.
+        var responseBody = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(responseBody);
+        var processed = document.RootElement.TryGetProperty("processed", out var processedElement)
+            && processedElement.GetBoolean();
+        Assert.True(processed, $"Stripe webhook was not processed. Response body: {responseBody}");
     }
 
     public ValueTask DisposeAsync() => _factory.DisposeAsync();

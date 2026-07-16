@@ -445,6 +445,26 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Creates a fresh card PaymentMethod and attaches it to the given customer, returning its id.
+    /// The <c>payment_method.attached</c> webhook path re-fetches the payment method fresh and reads
+    /// its <c>Customer</c> for the cloud-region check, so the pm must actually be attached — the shared
+    /// <c>pm_card_visa</c> token comes back with a null Customer and the event is dropped as out-of-region.
+    /// </summary>
+    public async Task<string> AttachCardPaymentMethodAsync(string customerId)
+    {
+        var stripeClient = CreateStripeClient();
+        var paymentMethod = await stripeClient.V1.PaymentMethods.CreateAsync(new PaymentMethodCreateOptions
+        {
+            Type = "card",
+            Card = new PaymentMethodCardOptions { Token = "tok_visa" },
+        });
+        await stripeClient.V1.PaymentMethods.AttachAsync(
+            paymentMethod.Id,
+            new PaymentMethodAttachOptions { Customer = customerId });
+        return paymentMethod.Id;
+    }
+
+    /// <summary>
     /// Creates a real test-mode charge against the organization's customer and
     /// returns its id, used by webhook tests that simulate <c>charge.succeeded</c>.
     /// Fresh signups are on a trial and have no charges yet, so we make one.
