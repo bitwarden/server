@@ -212,6 +212,7 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkCommand, ConfirmOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IGetOrganizationInviteBlobCommand, GetOrganizationInviteBlobCommand>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
