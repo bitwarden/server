@@ -136,5 +136,28 @@ public class AccessRuleEngineTests
         Assert.Equal(DenyReason.UnsupportedCondition, evaluation.Reason);
     }
 
+    [Fact]
+    public void Evaluate_IpAllowlist_MalformedCidr_DeniesClosed()
+    {
+        // A present-but-unparseable CIDR matches no address, so a caller with a known IP still fails closed.
+        var conditions = Set(new IpAllowlistCondition { Cidrs = ["not-a-cidr"] });
+
+        var evaluation = _sut.Evaluate(conditions, Signals(IPAddress.Parse("10.1.2.3")));
+
+        Assert.Equal(AccessEvaluationOutcome.Deny, evaluation.Outcome);
+        Assert.Equal(DenyReason.NotWithinIpRange, evaluation.Reason);
+    }
+
+    [Fact]
+    public void Evaluate_IpAllowlist_LaterCidrMatches_Allows()
+    {
+        // The caller matches the second entry, so evaluation must not stop at the first non-matching CIDR.
+        var conditions = Set(new IpAllowlistCondition { Cidrs = ["192.168.0.0/16", "10.0.0.0/8"] });
+
+        var evaluation = _sut.Evaluate(conditions, Signals(IPAddress.Parse("10.1.2.3")));
+
+        Assert.Equal(AccessEvaluationOutcome.Allow, evaluation.Outcome);
+    }
+
     private sealed class UnknownCondition : AccessCondition;
 }
