@@ -28,4 +28,8 @@
     <ProjectReference Include="..\..\..\..\src\HttpExtensions\HttpExtensions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pam.Test" />
+  </ItemGroup>
+
 </Project>
