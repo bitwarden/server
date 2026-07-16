@@ -12,9 +12,11 @@ namespace Bit.Billing.IntegrationTest;
 /// customer coupon reads <c>null</c> and is silently dropped from the rebuilt Phase 2 — a failure a
 /// mocked unit test cannot see (mocks return the coupon regardless of the expand).
 ///
-/// Template for gap 5 (<c>UpdatePremiumStorageCommand</c>). Once validated against Stripe, the same
-/// pattern replicates to gap 4 (<c>UpdateOrganizationSubscriptionCommand</c>) and gap 6
-/// (<c>UpdateBillingAddressCommand</c>, personal + business).
+/// Covers the personal-tier commands whose deferred-migration schedule can be exercised end-to-end:
+/// <c>UpdatePremiumStorageCommand</c> (premium) and <c>UpdateBillingAddressCommand</c> personal path
+/// (Families). The business-tier equivalents (<c>UpdateOrganizationSubscriptionCommand</c> and the
+/// <c>UpdateBillingAddressCommand</c> business path) share the same expand contract but require a
+/// migration cohort + <c>PM35215</c> + a legacy source plan to schedule, so they're left to unit tests.
 /// </summary>
 public class PreservingDiscountsThroughScheduleTests(DeferredPriceMigrationFixture fixture)
     : IClassFixture<DeferredPriceMigrationFixture>
