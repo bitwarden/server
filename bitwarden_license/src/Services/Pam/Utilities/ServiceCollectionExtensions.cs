@@ -21,6 +21,9 @@ public static class ServiceCollectionExtensions
         // Rule evaluation engine. Pure and stateless, so a singleton is safe.
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
 
+        // Resolves the access rule governing a cipher for a caller, then evaluates it via the engine.
+        services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
+
         // AccessRule write path.
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
