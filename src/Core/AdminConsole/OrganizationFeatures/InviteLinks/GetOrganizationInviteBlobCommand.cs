@@ -8,6 +8,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 /// <summary>
 /// Retrieves the opaque invite blob for an invite link. See
+/// <see cref="IGetOrganizationInviteBlobCommand"/> for the behavior.
 /// </summary>
 public class GetOrganizationInviteBlobCommand(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
