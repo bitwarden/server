@@ -223,6 +223,91 @@ public class OrganizationInviteLinksControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task UpdateInviteSupportConfirm_WithValidInput_ReturnsOk(
+        Guid orgId,
+        OrganizationInviteLink inviteLink,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        // Arrange
+        inviteLink.OrganizationId = orgId;
+        inviteLink.AllowedDomains = "[\"acme.com\"]";
+
+        var model = new UpdateInviteSupportConfirmRequestModel
+        {
+            Invite = "new-invite-blob",
+            SupportsConfirmation = true,
+        };
+
+        sutProvider.GetDependency<IUpdateInviteSupportConfirmCommand>()
+            .UpdateAsync(Arg.Any<UpdateInviteSupportConfirmRequest>())
+            .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
+
+        // Act
+        var result = await sutProvider.Sut.UpdateInviteSupportConfirm(orgId, model);
+
+        // Assert
+        var okResult = Assert.IsType<Ok<OrganizationInviteLinkResponseModel>>(result);
+        Assert.NotNull(okResult.Value);
+        Assert.Equal(inviteLink.Id, okResult.Value.Id);
+        Assert.Equal(orgId, okResult.Value.OrganizationId);
+
+        await sutProvider.GetDependency<IUpdateInviteSupportConfirmCommand>()
+            .Received(1)
+            .UpdateAsync(Arg.Is<UpdateInviteSupportConfirmRequest>(r =>
+                r.OrganizationId == orgId &&
+                r.Invite == "new-invite-blob" &&
+                r.SupportsConfirmation == true));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateInviteSupportConfirm_WhenNoLinkExists_ReturnsNotFound(
+        Guid orgId,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        // Arrange
+        var model = new UpdateInviteSupportConfirmRequestModel
+        {
+            Invite = "new-invite-blob",
+            SupportsConfirmation = true,
+        };
+
+        sutProvider.GetDependency<IUpdateInviteSupportConfirmCommand>()
+            .UpdateAsync(Arg.Any<UpdateInviteSupportConfirmRequest>())
+            .Returns(new CommandResult<OrganizationInviteLink>(new InviteLinkNotFound()));
+
+        // Act
+        var result = await sutProvider.Sut.UpdateInviteSupportConfirm(orgId, model);
+
+        // Assert
+        var notFoundResult = Assert.IsType<NotFound<ErrorResponseModel>>(result);
+        Assert.NotNull(notFoundResult.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateInviteSupportConfirm_WhenInviteLinkNotAvailable_Returns400(
+        Guid orgId,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        // Arrange
+        var model = new UpdateInviteSupportConfirmRequestModel
+        {
+            Invite = "new-invite-blob",
+            SupportsConfirmation = true,
+        };
+
+        sutProvider.GetDependency<IUpdateInviteSupportConfirmCommand>()
+            .UpdateAsync(Arg.Any<UpdateInviteSupportConfirmRequest>())
+            .Returns(new CommandResult<OrganizationInviteLink>(new InviteLinkNotAvailable()));
+
+        // Act
+        var result = await sutProvider.Sut.UpdateInviteSupportConfirm(orgId, model);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+        Assert.NotNull(badRequestResult.Value);
+    }
+
+    [Theory, BitAutoData]
     public async Task GetStatus_WithValidQuery_Success(
         GetOrganizationInviteLinkStatusRequestModel model,
         OrganizationInviteLinkStatus status,
