@@ -64,8 +64,11 @@ public class PreservingDiscountsThroughScheduleTests(DeferredPriceMigrationFixtu
         var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
 
         // Families is a personal-tier product; move it onto the legacy families price so the scheduler's
-        // families branch defers a migration, then create the real 2-phase schedule.
+        // families branch defers a migration. Turn off automatic tax first so EnableAutomaticTaxAsync's
+        // rebuild-and-carry branch actually runs on the address change (a real state: org with auto-tax
+        // off + an active migration schedule), then create the real 2-phase schedule.
         await fixture.MoveFamiliesSubscriptionToLegacyPriceAsync(subscriptionId);
+        await fixture.DisableSubscriptionAutomaticTaxAsync(subscriptionId);
         await fixture.CreateDeferredPriceIncreaseScheduleAsync(subscriptionId);
 
         // Attach the customer coupon after the schedule exists (see storage test) so the only way it
