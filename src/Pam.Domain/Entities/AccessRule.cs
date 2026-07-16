@@ -66,8 +66,7 @@ public class AccessRule : ITableObject<Guid>
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// The user who created or last updated the rule (the latest editor). Null for rules created before this was
-    /// tracked. Supplies the actor on the rule_created / rule_updated audit events, matching the latest-edit model.
+    /// The user who created or last updated the rule (the latest editor).
     /// </summary>
     public Guid? LastEditedBy { get; set; }
 

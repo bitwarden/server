@@ -85,9 +85,8 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // Clear the collection links first (the FK Collection.AccessRuleId -> AccessRule is ON DELETE NO ACTION), then
-        // remove the rule. A cleared collection is simply ungoverned; the RuleDeleted audit event already carries the
-        // rule's name, so the row need not survive.
+        // Clear the collection links before deleting the rule: the FK Collection.AccessRuleId -> AccessRule is
+        // ON DELETE NO ACTION, so the delete fails while any collection still points at it.
         await dbContext.Collections
             .Where(c => c.AccessRuleId == accessRule.Id)
             .ExecuteUpdateAsync(s => s
