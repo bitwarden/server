@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -46,7 +47,7 @@ public class GetPendingAnnualUpgradeQuery(
             return null;
         }
 
-        var subscription = await AnnualUpgradeOfferSubscriptionHelpers.TryGetSubscriptionAsync(
+        var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, logger, organization, nameof(GetPendingAnnualUpgradeQuery), ["test_clock"]);
         if (subscription is null || subscription.Status != SubscriptionStatus.Active)
         {

@@ -4,11 +4,11 @@ using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
-namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
+namespace Bit.Core.Billing.Organizations.Helpers;
 
 using static StripeConstants;
 
-public static class AnnualUpgradeOfferSubscriptionHelpers
+public static class OrganizationSubscriptionHelpers
 {
     /// <summary>
     /// Loads the organization's Stripe subscription, optionally expanding the given paths.

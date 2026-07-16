@@ -3,6 +3,7 @@ using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -42,7 +43,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             return DefaultConflict;
         }
 
-        var subscription = await AnnualUpgradeOfferSubscriptionHelpers.TryGetSubscriptionAsync(
+        var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, _logger, organization, CommandName, ["customer", "discounts.coupon"]);
         if (subscription is null)
         {
