@@ -23,7 +23,7 @@ public class CreateOrganizationInviteLinkRequestModel
     public required string Invite { get; set; }
 
     /// <summary>
-    /// Indicates if the link supports user auto confirmation (not supported yet).
+    /// Whether this invite link can be used to confirm a user.
     /// </summary>
     [Required]
     public required bool SupportsConfirmation { get; set; }

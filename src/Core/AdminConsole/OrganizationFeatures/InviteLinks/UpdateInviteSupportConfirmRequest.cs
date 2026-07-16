@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
-public record RefreshOrganizationInviteLinkRequest
+public record UpdateInviteSupportConfirmRequest
 {
     public required Guid OrganizationId { get; init; }
 

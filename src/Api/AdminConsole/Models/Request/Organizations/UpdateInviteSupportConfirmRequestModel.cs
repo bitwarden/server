@@ -4,7 +4,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
-public class RefreshOrganizationInviteLinkRequestModel
+public class UpdateInviteSupportConfirmRequestModel
 {
     /// <summary>
     /// An opaque cryptographic blob. The server only stores and transports it, so its format is not
@@ -20,7 +20,7 @@ public class RefreshOrganizationInviteLinkRequestModel
     [Required]
     public required bool SupportsConfirmation { get; set; }
 
-    public RefreshOrganizationInviteLinkRequest ToCommandRequest(Guid organizationId) => new()
+    public UpdateInviteSupportConfirmRequest ToCommandRequest(Guid organizationId) => new()
     {
         OrganizationId = organizationId,
         Invite = Invite,
