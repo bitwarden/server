@@ -104,8 +104,9 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 src/Core/Platform/Push/PushType.cs
 
 # PAM
-bitwarden_license/src/Services/Pam @bitwarden/team-pam-dev
-bitwarden_license/test/Services/Pam.Test @bitwarden/team-pam-dev
+**/Pam* @bitwarden/team-pam-dev
+# PAM DB schema stays with DBOps, consistent with src/Sql/** above
+src/Sql/dbo/Pam @bitwarden/dept-dbops
 
 # SDK
 util/RustSdk @bitwarden/team-sdk-sme @bitwarden/dept-architecture # joint ownership
