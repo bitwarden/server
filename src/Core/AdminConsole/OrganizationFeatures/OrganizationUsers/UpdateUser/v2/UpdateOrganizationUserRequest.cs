@@ -31,4 +31,14 @@ public record UpdateOrganizationUserRequest(
     IEnumerable<Guid>? NewGroups,
     IActingUser PerformedBy,
     OrganizationUser? PerformedByOrganizationUser,
-    string? DefaultUserCollectionName);
+    string? DefaultUserCollectionName)
+{
+    public bool IsDemotedFromPrivilegedRole() =>
+        _existingOrganizationUserType is OrganizationUserType.Admin or OrganizationUserType.Owner
+        && NewType is not (OrganizationUserType.Admin or OrganizationUserType.Owner);
+
+    public bool IsEnablingSecretsManager() => !_existingAccessSecretsManager && NewAccessSecretsManager;
+
+    private readonly OrganizationUserType _existingOrganizationUserType = OrganizationUserToUpdate.Type;
+    private readonly bool _existingAccessSecretsManager = OrganizationUserToUpdate.AccessSecretsManager;
+};
