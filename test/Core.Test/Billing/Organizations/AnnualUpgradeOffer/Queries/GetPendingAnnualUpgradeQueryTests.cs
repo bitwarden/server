@@ -171,7 +171,7 @@ public class GetPendingAnnualUpgradeQueryTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
         var annualSeatPriceId = annualPlan.PasswordManager.StripeSeatPlanId;
-        var renewalDate = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
+        var renewalDate = DateTime.UtcNow.AddMonths(1);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
@@ -186,7 +186,7 @@ public class GetPendingAnnualUpgradeQueryTests
                         [
                             new SubscriptionSchedulePhase
                             {
-                                StartDate = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+                                StartDate = DateTime.UtcNow.AddMonths(-1),
                                 Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_monthly", Quantity = 5 }]
                             },
                             new SubscriptionSchedulePhase
@@ -249,7 +249,7 @@ public class GetPendingAnnualUpgradeQueryTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
         var annualSeatPriceId = annualPlan.PasswordManager.StripeSeatPlanId;
-        var renewalDate = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
+        var renewalDate = DateTime.UtcNow.AddMonths(1);
 
         // Schedule is "active" and DOES contain the annual seat price somewhere (so it is
         // selected as the redeemed schedule), but the earliest FUTURE phase is a different
@@ -267,7 +267,7 @@ public class GetPendingAnnualUpgradeQueryTests
                         [
                             new SubscriptionSchedulePhase
                             {
-                                StartDate = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+                                StartDate = DateTime.UtcNow.AddMonths(-1),
                                 Items = [new SubscriptionSchedulePhaseItem { PriceId = annualSeatPriceId, Quantity = 5 }]
                             },
                             new SubscriptionSchedulePhase
