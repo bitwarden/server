@@ -253,11 +253,8 @@ public class UpdateOrganizationUserValidatorTests
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
-        // The role-validation service owns (and independently tests) which actors may manage which roles. The
-        // validator's only responsibility is to fail when the service denies management; the happy path is
-        // already covered by the other tests, whose default (unstubbed) CanManage returns "allowed".
-        // Neither the current (User) nor requested (Admin) role is Owner, so the denial maps to the
-        // custom-user error rather than the owner-specific one.
+        // With CanManage stubbed to deny, neither the current (User) nor requested (Admin) role is Owner,
+        // so the denial maps to the custom-user error rather than the owner-specific one.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin,
             performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom));
 

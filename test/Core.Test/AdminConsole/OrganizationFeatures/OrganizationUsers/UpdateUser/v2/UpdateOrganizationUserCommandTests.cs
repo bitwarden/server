@@ -179,7 +179,6 @@ public class UpdateOrganizationUserCommandTests
         Assert.True(result.IsError);
         Assert.IsType<CannotAutoscaleSecretsManagerSeatsOnSelfHost>(result.AsError);
 
-        // A self-hosted instance must never attempt a subscription update, and nothing should be persisted.
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .DidNotReceiveWithAnyArgs()
             .UpdateSubscriptionAsync(default);
