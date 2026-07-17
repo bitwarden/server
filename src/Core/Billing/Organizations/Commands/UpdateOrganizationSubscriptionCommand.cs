@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -159,7 +160,9 @@ public class UpdateOrganizationSubscriptionCommand(
                 "{Command}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating {PhaseCount} active phase(s)",
                 CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
 
-            var (sourcePlan, targetPlan) = await ResolveCohortMigrationPhasePlansAsync(organization);
+            var annualUpgradePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, activeSchedule);
+            var (sourcePlan, targetPlan) = annualUpgradePlans
+                ?? await ResolveCohortMigrationPhasePlansAsync(organization);
             var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes, sourcePlan, targetPlan,
                 subscription.Customer?.Discount);
 
@@ -234,6 +237,34 @@ public class UpdateOrganizationSubscriptionCommand(
                 CommandName, organization.GatewaySubscriptionId, organization.Id);
             return null;
         }
+    }
+
+    // An annual-upgrade schedule (PM-38333) has no cohort assignment because redemption deletes it,
+    // so it is detected by its contents: a phase carrying the annual-latest seat price, the same
+    // marker GetPendingAnnualUpgradeQuery uses. When detected, source is the current monthly plan and
+    // target is the annual-latest plan, so phase 1 stays monthly (identity) and phase 2 maps to
+    // annual-latest. Returns null when this is not an annual-upgrade schedule, letting the caller fall
+    // back to cohort-migration resolution.
+    private async Task<(Plan source, Plan target)?> ResolveAnnualUpgradePhasePlansAsync(
+        Organization organization, SubscriptionSchedule activeSchedule)
+    {
+        var annualLatestPlanType = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(organization.PlanType);
+        if (annualLatestPlanType is null)
+        {
+            return null;
+        }
+
+        var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
+
+        var isAnnualUpgradeSchedule = activeSchedule.Phases.Any(phase =>
+            phase.Items.Any(item => item.PriceId == annualLatestPlan.PasswordManager.StripeSeatPlanId));
+        if (!isAnnualUpgradeSchedule)
+        {
+            return null;
+        }
+
+        var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+        return (currentPlan, annualLatestPlan);
     }
 
     private async Task<(Plan source, Plan target)> ResolveCohortMigrationPhasePlansAsync(Organization organization)
