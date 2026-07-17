@@ -77,4 +77,33 @@ public class IpAllowlistConditionTests
 
         Assert.Equal(AccessEvaluationOutcome.Allow, evaluation.Outcome);
     }
+
+    [Fact]
+    public void Validate_NoCidrs_IsInvalid()
+    {
+        var result = new IpAllowlistCondition().Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("at least one CIDR", result.Error);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-cidr")]
+    [InlineData("10.0.0.0/99")]
+    public void Validate_InvalidCidr_IsInvalid(string cidr)
+    {
+        var result = new IpAllowlistCondition { Cidrs = [cidr] }.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("Invalid CIDR", result.Error);
+    }
+
+    [Fact]
+    public void Validate_ValidCidrs_IsValid()
+    {
+        var result = new IpAllowlistCondition { Cidrs = ["10.0.0.0/8", "2001:db8::/32"] }.Validate();
+
+        Assert.True(result.IsValid);
+    }
 }

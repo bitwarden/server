@@ -120,9 +120,46 @@ public class TimeOfDayConditionTests
 
         Assert.Equal(AccessEvaluationOutcome.Allow, condition.Evaluate(Signals()).Outcome);
     }
+
+    [Fact]
+    public void Validate_MissingTz_IsInvalid()
+    {
+        var result = new TimeOfDayCondition { Windows = [ValidWindow()] }.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("tz", result.Error);
+    }
+
+    [Fact]
+    public void Validate_UnknownTz_IsInvalid()
+    {
+        var result = new TimeOfDayCondition { Tz = "Invalid/Zone", Windows = [ValidWindow()] }.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("timezone", result.Error);
+    }
+
+    [Fact]
+    public void Validate_NoWindows_IsInvalid()
+    {
+        var result = new TimeOfDayCondition { Tz = "UTC", Windows = [] }.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("at least one window", result.Error);
+    }
+
+    [Fact]
+    public void Validate_Valid_IsValid()
+    {
+        var result = new TimeOfDayCondition { Tz = "UTC", Windows = [ValidWindow()] }.Validate();
+
+        Assert.True(result.IsValid);
+    }
+
+    private static TimeWindow ValidWindow() => new() { Days = [AccessWeekday.Mon], From = "09:00", To = "17:00" };
 }
 
-public class TimeWindowContainsTests
+public class TimeWindowTests
 {
     private static TimeWindow BusinessHours() => new()
     {
@@ -176,5 +213,42 @@ public class TimeWindowContainsTests
         var window = new TimeWindow { Days = [AccessWeekday.Thu], From = "9am", To = "5pm" };
 
         Assert.False(window.Contains(DayOfWeek.Thursday, new TimeOnly(12, 0)));
+    }
+
+    [Fact]
+    public void Validate_NoDays_IsInvalid()
+    {
+        var result = new TimeWindow { Days = [], From = "09:00", To = "17:00" }.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("at least one day", result.Error);
+    }
+
+    [Theory]
+    [InlineData("9am", "17:00")]
+    [InlineData("25:00", "17:00")]
+    public void Validate_InvalidFrom_IsInvalid(string from, string to)
+    {
+        var result = new TimeWindow { Days = [AccessWeekday.Mon], From = from, To = to }.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("Expected HH:mm", result.Error);
+    }
+
+    [Fact]
+    public void Validate_InvalidTo_IsInvalid()
+    {
+        var result = new TimeWindow { Days = [AccessWeekday.Mon], From = "09:00", To = "5pm" }.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("Expected HH:mm", result.Error);
+    }
+
+    [Fact]
+    public void Validate_ValidWindow_IsValid()
+    {
+        var result = new TimeWindow { Days = [AccessWeekday.Mon], From = "09:00", To = "17:00" }.Validate();
+
+        Assert.True(result.IsValid);
     }
 }
