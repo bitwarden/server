@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -40,14 +41,14 @@ public class UpdateOrganizationUserCommandTests
         Assert.IsType<MustHaveConfirmedOwner>(result.AsError);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(default, default(IEnumerable<CollectionAccessSelection>));
+            .DidNotReceive()
+            .ReplaceAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>());
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateGroupsAsync(default, default, default);
+            .DidNotReceive()
+            .UpdateGroupsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
         await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogOrganizationUserEventAsync(default(OrganizationUser), default);
+            .DidNotReceive()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
     }
 
     [Theory]
@@ -92,8 +93,8 @@ public class UpdateOrganizationUserCommandTests
             .Received(1)
             .ReplaceAsync(organizationUser, Arg.Any<IEnumerable<CollectionAccessSelection>>());
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateGroupsAsync(default, default, default);
+            .DidNotReceive()
+            .UpdateGroupsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
     }
 
     [Theory]
@@ -136,8 +137,8 @@ public class UpdateOrganizationUserCommandTests
             .Received(1)
             .CountNewSmSeatsRequiredAsync(organization.Id, 1);
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateSubscriptionAsync(default);
+            .DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
     }
 
     [Theory]
@@ -155,8 +156,8 @@ public class UpdateOrganizationUserCommandTests
         Assert.True(result.IsSuccess);
 
         await sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .CountNewSmSeatsRequiredAsync(default, default);
+            .DidNotReceive()
+            .CountNewSmSeatsRequiredAsync(Arg.Any<Guid>(), Arg.Any<int>());
     }
 
     [Theory]
@@ -180,14 +181,14 @@ public class UpdateOrganizationUserCommandTests
         Assert.IsType<CannotAutoscaleSecretsManagerSeatsOnSelfHost>(result.AsError);
 
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateSubscriptionAsync(default);
+            .DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(default, default(IEnumerable<CollectionAccessSelection>));
+            .DidNotReceive()
+            .ReplaceAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>());
         await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogOrganizationUserEventAsync(default(OrganizationUser), default);
+            .DidNotReceive()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
     }
 
     [Theory]
@@ -233,8 +234,8 @@ public class UpdateOrganizationUserCommandTests
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
         Assert.True(result.IsSuccess);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
-            .CreateDefaultCollectionsAsync(default, default, default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive()
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -256,8 +257,8 @@ public class UpdateOrganizationUserCommandTests
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
         Assert.True(result.IsSuccess);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
-            .CreateDefaultCollectionsAsync(default, default, default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive()
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -278,8 +279,8 @@ public class UpdateOrganizationUserCommandTests
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
         Assert.True(result.IsSuccess);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
-            .CreateDefaultCollectionsAsync(default, default, default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive()
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -298,8 +299,8 @@ public class UpdateOrganizationUserCommandTests
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
         Assert.True(result.IsSuccess);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
-            .CreateDefaultCollectionsAsync(default, default, default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive()
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     private static UpdateOrganizationUserRequest Setup(
