@@ -39,5 +39,21 @@ public sealed class IpAllowlistCondition : AccessCondition
         return AccessEvaluation.Deny(DenyReason.NotWithinIpRange);
     }
 
-    public override T Accept<T>(IAccessConditionVisitor<T> visitor) => visitor.VisitIpAllowlist(this);
+    public override AccessRuleValidationResult Validate()
+    {
+        if (Cidrs.Count == 0)
+        {
+            return AccessRuleValidationResult.Invalid("ip_allowlist requires at least one CIDR.");
+        }
+
+        foreach (var cidr in Cidrs)
+        {
+            if (string.IsNullOrWhiteSpace(cidr) || !IPNetwork.TryParse(cidr, out _))
+            {
+                return AccessRuleValidationResult.Invalid($"Invalid CIDR: '{cidr}'.");
+            }
+        }
+
+        return AccessRuleValidationResult.Valid;
+    }
 }

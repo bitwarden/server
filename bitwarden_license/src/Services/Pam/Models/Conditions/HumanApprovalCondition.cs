@@ -10,5 +10,5 @@ public sealed class HumanApprovalCondition : AccessCondition
 {
     public override AccessEvaluation Evaluate(AccessSignals signals) => AccessEvaluation.RequiresApproval;
 
-    public override T Accept<T>(IAccessConditionVisitor<T> visitor) => visitor.VisitHumanApproval(this);
+    public override AccessRuleValidationResult Validate() => AccessRuleValidationResult.Valid;
 }

@@ -21,9 +21,8 @@ public abstract class AccessCondition
     public abstract AccessEvaluation Evaluate(AccessSignals signals);
 
     /// <summary>
-    /// Double-dispatches to the <paramref name="visitor"/>'s method for this condition's concrete kind, used by the
-    /// validator to check each kind is well-formed. The compiler requires the visitor to handle every kind, so a
-    /// newly added condition can't be silently skipped by validation.
+    /// Checks this condition is well-formed at write time, before it is persisted, returning an actionable error
+    /// when it is not. The loud, reject-on-save counterpart to <see cref="Evaluate"/>'s fail-closed runtime behavior.
     /// </summary>
-    public abstract T Accept<T>(IAccessConditionVisitor<T> visitor);
+    public abstract AccessRuleValidationResult Validate();
 }

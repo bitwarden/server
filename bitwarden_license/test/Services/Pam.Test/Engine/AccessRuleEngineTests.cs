@@ -81,6 +81,6 @@ public class AccessRuleEngineTests
             return result;
         }
 
-        public override T Accept<T>(IAccessConditionVisitor<T> visitor) => throw new NotSupportedException();
+        public override AccessRuleValidationResult Validate() => AccessRuleValidationResult.Valid;
     }
 }

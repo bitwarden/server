@@ -41,7 +41,34 @@ public sealed class TimeOfDayCondition : AccessCondition
         return Windows.Any(window => window.Contains(day, time)) ? AccessEvaluation.Allow : AccessEvaluation.Deny(DenyReason.NotWithinTimeWindow);
     }
 
-    public override T Accept<T>(IAccessConditionVisitor<T> visitor) => visitor.VisitTimeOfDay(this);
+    public override AccessRuleValidationResult Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Tz))
+        {
+            return AccessRuleValidationResult.Invalid("time_of_day requires a tz.");
+        }
+
+        try
+        {
+            TimeZoneInfo.FindSystemTimeZoneById(Tz);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return AccessRuleValidationResult.Invalid($"Unknown timezone: '{Tz}'.");
+        }
+        catch (InvalidTimeZoneException)
+        {
+            return AccessRuleValidationResult.Invalid($"Invalid timezone: '{Tz}'.");
+        }
+
+        if (Windows.Count == 0)
+        {
+            return AccessRuleValidationResult.Invalid("time_of_day requires at least one window.");
+        }
+
+        return Windows.Select(window => window.Validate()).FirstOrDefault(result => !result.IsValid)
+            ?? AccessRuleValidationResult.Valid;
+    }
 }
 
 /// <summary>
@@ -71,8 +98,36 @@ public sealed class TimeWindow
             return false;
         }
 
-        return TimeOnly.TryParseExact(From, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var from)
-            && TimeOnly.TryParseExact(To, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var to)
+        return TryParseTime(From, out var from)
+            && TryParseTime(To, out var to)
             && time >= from && time <= to;
     }
+
+    /// <summary>
+    /// Checks the window is well-formed: at least one day, and start/end times in 24-hour <c>HH:mm</c>. Uses the
+    /// same time parse as <see cref="Contains"/>, so validation and evaluation cannot disagree on the format.
+    /// </summary>
+    public AccessRuleValidationResult Validate()
+    {
+        if (Days.Count == 0)
+        {
+            return AccessRuleValidationResult.Invalid("time_of_day window requires at least one day.");
+        }
+
+        // Day tokens were validated during deserialization by AccessWeekdayJsonConverter; only the times remain.
+        if (!TryParseTime(From, out _))
+        {
+            return AccessRuleValidationResult.Invalid($"Invalid 'from' time: '{From}'. Expected HH:mm.");
+        }
+
+        if (!TryParseTime(To, out _))
+        {
+            return AccessRuleValidationResult.Invalid($"Invalid 'to' time: '{To}'. Expected HH:mm.");
+        }
+
+        return AccessRuleValidationResult.Valid;
+    }
+
+    private static bool TryParseTime(string value, out TimeOnly time) =>
+        TimeOnly.TryParseExact(value, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out time);
 }
