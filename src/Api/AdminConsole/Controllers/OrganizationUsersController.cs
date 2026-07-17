@@ -408,9 +408,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     {
         var (organizationUser, currentAccess) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
 
-        var organizationAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organization.Id);
-
-        if (organizationUser == null || organizationUser.OrganizationId != organization.Id || organizationAbility == null)
+        if (organizationUser == null || organizationUser.OrganizationId != organization.Id)
         {
             throw new NotFoundException();
         }
@@ -421,7 +419,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         // Authorization check:
         // If admins are not allowed access to all collections, you cannot add yourself to a group.
         // No error is thrown for this, we just don't update groups.
-        var groupsToSave = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
+        var groupsToSave = editingSelf && !organization.AllowAdminAccessToAllCollectionItems
             ? null
             : model.Groups;
 
@@ -443,7 +441,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
             var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
                 organizationUser,
                 organization,
-                organizationAbility,
                 currentAccessIds,
                 postedCollections,
                 model.Type.Value,
@@ -463,7 +460,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         // If admins are not allowed access to all collections, you cannot add yourself to collections.
         // This is not caught by the requirement below that you can ModifyUserAccess and must be checked separately
         if (editingSelf &&
-            !organizationAbility.AllowAdminAccessToAllCollectionItems &&
+            !organization.AllowAdminAccessToAllCollectionItems &&
             model.Collections.Any(c => !currentAccessIds.Contains(c.Id)))
         {
             throw new BadRequestException("You cannot add yourself to a collection.");
