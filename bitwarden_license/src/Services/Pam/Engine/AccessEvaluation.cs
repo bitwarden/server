@@ -30,7 +30,11 @@ public enum DenyReason
     /// <summary>The timezone was unknown/invalid, or the instant fell outside every configured window.</summary>
     NotWithinTimeWindow,
 
-    /// <summary>The engine did not recognize the condition kind, so it could not be shown satisfied (fail closed).</summary>
+    /// <summary>
+    /// A condition entry could not be evaluated — in practice a null entry from a malformed stored document — so it
+    /// fails closed. A genuinely unknown <c>kind</c> cannot reach here: the JSON layer rejects unknown kinds and the
+    /// visitor dispatch is exhaustive at compile time.
+    /// </summary>
     UnsupportedCondition,
 }
 
