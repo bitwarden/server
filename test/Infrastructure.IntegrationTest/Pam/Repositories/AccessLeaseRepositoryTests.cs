@@ -162,7 +162,7 @@ public class LeaseRepositoryTests
 
         var auditDecision = new AccessDecision
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = lease.AccessRequestId,
             DeciderKind = AccessDeciderKind.Human,
             ApproverId = revokerId,
@@ -384,7 +384,7 @@ public class LeaseRepositoryTests
     private static AccessDecision BuildAuditDecision(AccessLease lease, DateTime now)
         => new()
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = lease.AccessRequestId,
             DeciderKind = AccessDeciderKind.Human,
             ApproverId = Guid.NewGuid(),
@@ -425,7 +425,7 @@ public class LeaseRepositoryTests
     private static AccessLease BuildLeaseFor(AccessRequest request, DateTime now)
         => new()
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = request.Id,
             OrganizationId = request.OrganizationId,
             CollectionId = request.CollectionId,
@@ -443,7 +443,7 @@ public class LeaseRepositoryTests
         var collectionId = Guid.NewGuid();
         var request = new AccessRequest
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organizationId,
             CollectionId = collectionId,
             CipherId = cipherId,
@@ -454,14 +454,14 @@ public class LeaseRepositoryTests
         };
         var decision = new AccessDecision
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = request.Id,
             DeciderKind = AccessDeciderKind.Automatic,
             Verdict = AccessDecisionVerdict.Approve,
         };
         var lease = new AccessLease
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = request.Id,
             OrganizationId = organizationId,
             CollectionId = collectionId,
