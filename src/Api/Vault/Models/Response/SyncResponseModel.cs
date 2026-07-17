@@ -125,7 +125,6 @@ public class SyncResponseModel() : ResponseModel("sync")
     public IEnumerable<PolicyResponseModel> Policies { get; set; }
     /// <summary>
     /// Policies for organizations where the user is in the Confirmed or Accepted status.
-    /// Null when the <c>pm-34145-policies-in-accepted-state</c> feature flag is disabled.
     /// New clients should prefer this property and fall back to <see cref="Policies"/> if absent.
     /// </summary>
     public IEnumerable<PolicyResponseModel> PoliciesNew { get; set; }

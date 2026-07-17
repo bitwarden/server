@@ -39,6 +39,32 @@ public class GetOrganizationInviteLinkStatusQueryTests
         Assert.True(status.LinksEnabled);
     }
 
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task GetStatusAsync_SupportsConfirmation(
+        bool supportsConfirmation,
+        Guid code,
+        OrganizationInviteLink inviteLink,
+        Organization organization,
+        SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
+    {
+        // Arrange
+        organization.Seats = null;
+        inviteLink.OrganizationId = organization.Id;
+        inviteLink.SupportsConfirmation = supportsConfirmation;
+
+        SetupMocks(sutProvider, code, inviteLink, organization);
+        SetupOccupiedSeats(sutProvider, organization.Id, 0);
+
+        // Act
+        var result = await sutProvider.Sut.GetStatusAsync(code);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(supportsConfirmation, result.AsSuccess.SupportsConfirmation);
+    }
+
     [Theory, BitAutoData]
     public async Task GetStatusAsync_InviteLinkNotFound_ReturnsNotFoundError(
         Guid organizationId,

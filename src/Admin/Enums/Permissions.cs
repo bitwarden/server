@@ -26,6 +26,7 @@ public enum Permission
     Org_CheckEnabledBox,
     Org_BusinessInformation_View,
     Org_InitiateTrial,
+    Org_InitiateSalesAssistedTrial,
     Org_RequestDelete,
     Org_Delete,
     Org_BillingInformation_View,
@@ -54,5 +55,5 @@ public enum Permission
     Tools_ManageTaxRates,
     Tools_CreateEditTransaction,
     Tools_ProcessStripeEvents,
-    Tools_ManagePlanMigrationCohorts
+    Tools_ManagePlanMigrationCohorts,
 }
