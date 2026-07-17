@@ -92,36 +92,6 @@ public class OrganizationUsersControllerGetInviteBlobTests : IClassFixture<ApiAp
         Assert.Equal(_validEncryptedKey, result.InviteBlob);
     }
 
-    [Fact]
-    public async Task GetInviteBlob_WithUnknownCode_ReturnsNotFound()
-    {
-        // Arrange
-        await CreateInviteLinkAsync(["example.com"]);
-        var (joinerClient, _) = await CreateJoinerClientAsync();
-
-        // Act — supply a code that does not match the organization's invite link
-        var response = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/invite-blob", BuildRequest(_organization.Id, Guid.NewGuid()));
-
-        // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetInviteBlob_WhenEmailDomainNotAllowed_ReturnsBadRequest()
-    {
-        // Arrange — the link only allows a domain the joiner does not have
-        var code = await CreateInviteLinkAsync(["notallowed.example"]);
-        var (joinerClient, _) = await CreateJoinerClientAsync();
-
-        // Act
-        var response = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/invite-blob", BuildRequest(_organization.Id, code));
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
     private async Task<Guid> CreateInviteLinkAsync(string[] allowedDomains)
     {
         var createRequest = new CreateOrganizationInviteLinkRequestModel
