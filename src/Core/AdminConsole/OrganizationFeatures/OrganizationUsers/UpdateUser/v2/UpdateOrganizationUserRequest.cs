@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
@@ -21,7 +20,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUse
 public record UpdateOrganizationUserRequest(
     OrganizationUser OrganizationUserToUpdate,
     Organization Organization,
-    OrganizationAbility OrganizationAbility,
     HashSet<Guid> CurrentCollectionsIds,
     ICollection<Collection> ReferencedCollections,
     OrganizationUserType NewType,

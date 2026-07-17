@@ -8,7 +8,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
@@ -80,11 +79,9 @@ public class UpdateOrganizationUserValidatorTests
     {
         orgUser.UserId = Guid.NewGuid();
         var performedBy = new StandardUser(orgUser.UserId!.Value, false);
-        var ability = CreateAbility(orgUser.OrganizationId, allowAdminAccessToAllCollectionItems: false);
 
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
             performedBy: performedBy,
-            ability: ability,
             collections: [new CollectionAccessSelection { Id = newCollectionId }],
             currentAccessIds: []);
 
@@ -393,7 +390,6 @@ public class UpdateOrganizationUserValidatorTests
         IActingUser performedBy = null,
         OrganizationUser performedByOrganizationUser = null,
         Organization organization = null,
-        OrganizationAbility ability = null,
         List<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> groups = null,
         HashSet<Guid> currentAccessIds = null,
@@ -418,7 +414,6 @@ public class UpdateOrganizationUserValidatorTests
         return new UpdateOrganizationUserRequest(
             organizationUser,
             organization ?? CreateOrganization(organizationUser.OrganizationId, PlanType.EnterpriseAnnually),
-            ability ?? CreateAbility(organizationUser.OrganizationId, allowAdminAccessToAllCollectionItems: true),
             currentAccessIds ?? [],
             // By default, treat every posted collection as an existing shared collection in the org so
             // validation passes; tests override this to exercise missing or default collections.
@@ -455,7 +450,4 @@ public class UpdateOrganizationUserValidatorTests
 
     private static Organization CreateOrganization(Guid id, PlanType planType, bool useCustomPermissions = true) =>
         new() { Id = id, PlanType = planType, UseCustomPermissions = useCustomPermissions };
-
-    private static OrganizationAbility CreateAbility(Guid id, bool allowAdminAccessToAllCollectionItems) =>
-        new() { Id = id, AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems };
 }

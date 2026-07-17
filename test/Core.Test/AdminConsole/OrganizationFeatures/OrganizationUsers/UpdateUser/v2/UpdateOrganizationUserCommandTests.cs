@@ -8,7 +8,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -326,7 +325,6 @@ public class UpdateOrganizationUserCommandTests
         return new UpdateOrganizationUserRequest(
             organizationUser,
             organization,
-            new OrganizationAbility { Id = organization.Id },
             [],
             [],
             type,

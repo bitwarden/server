@@ -219,7 +219,7 @@ public class UpdateOrganizationUserValidator(
                           && request.OrganizationUserToUpdate.UserId == request.PerformedBy.UserId;
 
         return editingSelf
-               && !request.OrganizationAbility.AllowAdminAccessToAllCollectionItems
+               && !request.Organization.AllowAdminAccessToAllCollectionItems
                && (request.NewCollections ?? []).Any(c => !request.CurrentCollectionsIds.Contains(c.Id));
     }
 
