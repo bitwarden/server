@@ -314,9 +314,11 @@ public class RestoreOrganizationUserCommand(
 
     private async Task CheckPoliciesBeforeRestoreAsync(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
     {
-        // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
-        // The user will be subject to the same checks when they try to accept the invite
-        if (orgUser.GetPriorActiveOrganizationUserStatusType() == OrganizationUserStatusType.Invited)
+        // An Invited or Staged OrganizationUser isn't linked with a user account yet, so these checks
+        // are irrelevant (and there is no UserId to check against). The user will be subject to the
+        // same checks when they accept the invite.
+        var priorStatus = orgUser.GetPriorActiveOrganizationUserStatusType();
+        if (priorStatus is OrganizationUserStatusType.Invited or OrganizationUserStatusType.Staged)
         {
             return;
         }

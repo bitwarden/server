@@ -165,6 +165,8 @@ public static class FeatureFlagKeys
     public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
     public const string PM37165_RotateUserApiKeyCommand = "pm-37165-rotate-user-api-key-command";
     public const string PM30806_SelfServiceChangeEmailCommand = "pm-30806-self-service-change-email-command";
+    public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
+    public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -250,6 +252,7 @@ public static class FeatureFlagKeys
     public const string SdkSendsApi = "pm-30110-sdk-sends-api";
     public const string SendEventLogging = "pm-36560-send-event-logging";
     public const string SendControlsExistingSends = "pm-31885-send-controls-existing-sends";
+    public const string TemporaryItemSharing = "pm-34203-temporary-item-sharing";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
@@ -295,6 +298,7 @@ public static class FeatureFlagKeys
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
     public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
+    public const string EventManagementForGenericHec = "event-management-for-generic-hec";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
@@ -302,6 +306,9 @@ public static class FeatureFlagKeys
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
+
+    /* VFO */
+    public const string VFO1Foundation = "vfo1-foundation";
 
     public static List<string> GetAllKeys()
     {

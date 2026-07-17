@@ -236,7 +236,9 @@ public class OrganizationInviteLinksControllerTests
 
         var okResult = Assert.IsType<Ok<OrganizationInviteLinkStatusResponseModel>>(result);
         Assert.Equal(status.OrganizationName, okResult.Value!.OrganizationName);
+        Assert.Equal(status.LinksEnabled, okResult.Value.LinksEnabled);
         Assert.Equal(status.SeatsAvailable, okResult.Value.SeatsAvailable);
+        Assert.Equal(status.SupportsConfirmation, okResult.Value.SupportsConfirmation);
     }
 
     [Theory, BitAutoData]
@@ -251,20 +253,6 @@ public class OrganizationInviteLinksControllerTests
         var result = await sutProvider.Sut.GetStatus(model);
 
         Assert.IsType<NotFound<ErrorResponseModel>>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetStatus_WithNotAvailableError_ReturnsBadRequest(
-        GetOrganizationInviteLinkStatusRequestModel model,
-        SutProvider<OrganizationInviteLinksController> sutProvider)
-    {
-        sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
-            .GetStatusAsync(model.Code)
-            .Returns(new CommandResult<OrganizationInviteLinkStatus>(new InviteLinkNotAvailable()));
-
-        var result = await sutProvider.Sut.GetStatus(model);
-
-        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 
     [Theory, BitAutoData]

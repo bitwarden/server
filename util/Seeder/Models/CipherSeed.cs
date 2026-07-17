@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core.Vault.Enums;
+using Bit.Seeder.Enums;
 using Bit.Seeder.Factories;
 
 namespace Bit.Seeder.Models;
@@ -27,6 +28,11 @@ internal record CipherSeed
     /// Symmetric key (org key or user key) used for Rust FFI encryption.
     /// </summary>
     public string? EncryptionKey { get; init; }
+
+    /// <summary>
+    /// How the cipher's fields are encrypted (user key vs. per-cipher key). Defaults to user key.
+    /// </summary>
+    public CipherEncryptionType CipherEncryption { get; init; } = CipherEncryptionType.UserKey;
 
     /// <summary>
     /// Optional plaintext notes (will be encrypted by the factory).
@@ -113,13 +119,17 @@ internal record CipherSeed
         Type = MapCipherType(item.Type),
         Name = item.Name,
         Notes = item.Notes,
+        CipherEncryption = ParseCipherEncryption(item.CipherEncryption),
         Reprompt = item.Reprompt == 1 ? CipherRepromptType.Password : CipherRepromptType.None,
         Fields = MapFields(item.Fields),
         Login = MapLogin(item.Login),
         Card = MapCard(item.Card),
         Identity = MapIdentity(item.Identity),
         SecureNote = item.Type == "secureNote" ? new SecureNoteViewDto { Type = 0 } : null,
-        SshKey = MapSshKey(item.SshKey)
+        SshKey = MapSshKey(item.SshKey),
+        BankAccount = MapBankAccount(item.BankAccount),
+        DriversLicense = MapDriversLicense(item.DriversLicense),
+        Passport = MapPassport(item.Passport)
     };
 
     private static CipherType MapCipherType(string type) => type switch
@@ -129,7 +139,17 @@ internal record CipherSeed
         "identity" => CipherType.Identity,
         "secureNote" => CipherType.SecureNote,
         "sshKey" => CipherType.SSHKey,
+        "bankAccount" => CipherType.BankAccount,
+        "driversLicense" => CipherType.DriversLicense,
+        "passport" => CipherType.Passport,
         _ => throw new ArgumentException($"Unknown cipher type: '{type}'", nameof(type))
+    };
+
+    private static CipherEncryptionType ParseCipherEncryption(string? value) => value switch
+    {
+        null or "userKey" => CipherEncryptionType.UserKey,
+        "cipherKey" => CipherEncryptionType.CipherKey,
+        _ => throw new ArgumentException($"Unknown cipherEncryption: '{value}'. Expected \"userKey\" or \"cipherKey\".", nameof(value))
     };
 
     private static List<FieldViewDto>? MapFields(List<SeedField>? fields) =>
@@ -230,5 +250,54 @@ internal record CipherSeed
             PrivateKey = sshKey.PrivateKey,
             PublicKey = sshKey.PublicKey,
             Fingerprint = sshKey.KeyFingerprint
+        };
+
+    private static BankAccountViewDto? MapBankAccount(SeedBankAccount? bankAccount) =>
+        bankAccount == null ? null : new BankAccountViewDto
+        {
+            BankName = bankAccount.BankName,
+            NameOnAccount = bankAccount.NameOnAccount,
+            AccountType = bankAccount.AccountType,
+            AccountNumber = bankAccount.AccountNumber,
+            RoutingNumber = bankAccount.RoutingNumber,
+            BranchNumber = bankAccount.BranchNumber,
+            Pin = bankAccount.Pin,
+            SwiftCode = bankAccount.SwiftCode,
+            Iban = bankAccount.Iban,
+            BankContactPhone = bankAccount.BankContactPhone
+        };
+
+    private static DriversLicenseViewDto? MapDriversLicense(SeedDriversLicense? driversLicense) =>
+        driversLicense == null ? null : new DriversLicenseViewDto
+        {
+            FirstName = driversLicense.FirstName,
+            MiddleName = driversLicense.MiddleName,
+            LastName = driversLicense.LastName,
+            DateOfBirth = driversLicense.DateOfBirth,
+            LicenseNumber = driversLicense.LicenseNumber,
+            IssuingCountry = driversLicense.IssuingCountry,
+            IssuingState = driversLicense.IssuingState,
+            IssueDate = driversLicense.IssueDate,
+            IssuingAuthority = driversLicense.IssuingAuthority,
+            ExpirationDate = driversLicense.ExpirationDate,
+            LicenseClass = driversLicense.LicenseClass
+        };
+
+    private static PassportViewDto? MapPassport(SeedPassport? passport) =>
+        passport == null ? null : new PassportViewDto
+        {
+            Surname = passport.Surname,
+            GivenName = passport.GivenName,
+            DateOfBirth = passport.DateOfBirth,
+            Sex = passport.Sex,
+            BirthPlace = passport.BirthPlace,
+            Nationality = passport.Nationality,
+            PassportNumber = passport.PassportNumber,
+            PassportType = passport.PassportType,
+            IssuingCountry = passport.IssuingCountry,
+            IssuingAuthority = passport.IssuingAuthority,
+            IssueDate = passport.IssueDate,
+            ExpirationDate = passport.ExpirationDate,
+            NationalIdentificationNumber = passport.NationalIdentificationNumber
         };
 }

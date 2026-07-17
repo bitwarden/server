@@ -34,7 +34,9 @@ public class OrganizationInviteLinksController(
         return Handle(result, status =>
             TypedResults.Ok(new OrganizationInviteLinkStatusResponseModel(
                 status.OrganizationName,
+                status.LinksEnabled,
                 status.SeatsAvailable,
+                status.SupportsConfirmation,
                 status.Sso is null
                     ? null
                     : new OrganizationInviteLinkSsoResponseModel(status.Sso.OrgSsoId, status.Sso.Required))));
