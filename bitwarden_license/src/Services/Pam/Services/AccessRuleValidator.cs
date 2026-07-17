@@ -8,12 +8,6 @@ public sealed class AccessRuleValidator : IAccessRuleValidator
 {
     private const int MaxConditions = 10;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
     public AccessRuleValidationResult Validate(string? conditionsJson)
     {
         if (conditionsJson is null)
@@ -29,7 +23,7 @@ public sealed class AccessRuleValidator : IAccessRuleValidator
         List<AccessCondition>? conditions;
         try
         {
-            conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, JsonOptions);
+            conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options);
         }
         catch (JsonException ex)
         {

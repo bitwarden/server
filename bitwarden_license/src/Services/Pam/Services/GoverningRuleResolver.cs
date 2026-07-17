@@ -11,12 +11,6 @@ namespace Bit.Services.Pam.Services;
 
 public class GoverningRuleResolver : IGoverningRuleResolver
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAccessRuleRepository _accessRuleRepository;
@@ -102,7 +96,7 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     {
         try
         {
-            return JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, _jsonOptions) ?? FailSafe();
+            return JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options) ?? FailSafe();
         }
         catch (JsonException)
         {
