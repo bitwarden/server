@@ -43,13 +43,15 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             .Where(c => collectionIds.Contains(c.Id) && c.AccessRuleId.HasValue);
 
         // Load every rule on the collections through which the caller reaches the cipher, keeping each paired with
-        // the collection it gates. A rule that no longer loads (deleted after the collection was read — deletes clear
-        // the link, so this is only a race) is skipped, so a deleted rule stops governing.
+        // the collection it gates. A rule is dropped — so it stops governing — when it is disabled (Enabled is false;
+        // the admin has switched it off, and a disabled rule does not gate access) or no longer loads (deleted after
+        // the collection was read; deletes clear the link, so a missing rule is only a race). Dropping a disabled rule
+        // also stops it shadowing a newer active rule under the oldest-wins selection below.
         var candidates = new List<(Collection Collection, AccessRule Rule)>();
         foreach (var collection in governedCollections)
         {
             var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId!.Value);
-            if (accessRule is not null)
+            if (accessRule is { Enabled: true })
             {
                 candidates.Add((collection, accessRule));
             }
