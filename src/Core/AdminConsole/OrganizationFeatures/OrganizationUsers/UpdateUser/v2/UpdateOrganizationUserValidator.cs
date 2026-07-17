@@ -146,19 +146,27 @@ public class UpdateOrganizationUserValidator(
             return null;
         }
 
-        var actingUser = request.PerformedByOrganizationUser;
-        var actingUserId = request.PerformedBy.UserId!.Value;
-
-        var requestedRole = new OrganizationUser
+        var userWithNewRole = new OrganizationUser
         {
             Type = request.NewType,
             OrganizationId = request.OrganizationUserToUpdate.OrganizationId
         };
 
+        var actingUser = new OrganizationUser
+        {
+            Type = request.PerformedBy.OrganizationUserType!.Value,
+            UserId = request.PerformedBy.UserId!.Value,
+        };
+
+        if (request.PerformedBy.Permissions is not null)
+        {
+            actingUser.SetPermissions(request.PerformedBy.Permissions);
+        }
+
         var canManageCurrentRole =
-            await organizationUserValidationService.CanManage(actingUserId, actingUser, request.OrganizationUserToUpdate) is null;
+            await organizationUserValidationService.CanManage(actingUser.UserId.Value, actingUser, request.OrganizationUserToUpdate) is null;
         var canManageNewRole =
-            await organizationUserValidationService.CanManage(actingUserId, actingUser, requestedRole) is null;
+            await organizationUserValidationService.CanManage(actingUser.UserId.Value, actingUser, userWithNewRole) is null;
 
         if (canManageCurrentRole && canManageNewRole)
         {
@@ -186,18 +194,17 @@ public class UpdateOrganizationUserValidator(
             return null;
         }
 
-        // System users and providers (no membership) aren't constrained to a member's own permission set.
-        if (request.PerformedBy is SystemUser || request.PerformedByOrganizationUser is null)
+        if (request.PerformedBy is not StandardUser)
         {
             return null;
         }
 
-        if (request.PerformedByOrganizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin)
+        if (request.PerformedBy.OrganizationUserType is OrganizationUserType.Owner or OrganizationUserType.Admin)
         {
             return null;
         }
 
-        var actingPermissions = request.PerformedByOrganizationUser.GetPermissions() ?? new Permissions();
+        var actingPermissions = request.PerformedBy.Permissions ?? new Permissions();
 
         return GrantsPermissionNotHeldByActor(request.NewPermissions, actingPermissions)
             ? new CustomUsersCanOnlyGrantOwnPermissions()

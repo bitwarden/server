@@ -259,8 +259,7 @@ public class UpdateOrganizationUserValidatorTests
         // Neither the current (User) nor requested (Admin) role is Owner, so the denial maps to the
         // custom-user error rather than the owner-specific one.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false),
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Custom));
+            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom));
 
         sutProvider.GetDependency<IOrganizationUserValidationService>()
             .CanManage(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUser>())
@@ -281,8 +280,7 @@ public class UpdateOrganizationUserValidatorTests
         // The target is currently an Owner, so a denied management attempt maps to the owner-specific error
         // regardless of the requested role.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false),
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Custom));
+            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom));
 
         sutProvider.GetDependency<IOrganizationUserValidationService>()
             .CanManage(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUser>())
@@ -303,8 +301,7 @@ public class UpdateOrganizationUserValidatorTests
         // The requested role is Owner, so a denied management attempt maps to the owner-specific error even
         // though the target's current role (User) is not.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Owner,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false),
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Custom));
+            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom));
 
         sutProvider.GetDependency<IOrganizationUserValidationService>()
             .CanManage(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUser>())
@@ -323,8 +320,7 @@ public class UpdateOrganizationUserValidatorTests
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Owner,
-            performedBy: new SystemUser(EventSystemUser.SCIM),
-            performedByOrganizationUser: null);
+            performedBy: new SystemUser(EventSystemUser.SCIM));
 
         var result = await sutProvider.Sut.ValidateAsync(request);
 
@@ -339,8 +335,8 @@ public class UpdateOrganizationUserValidatorTests
     {
         // A Custom actor holding only ManageUsers cannot grant a target a permission (ManageSso) it lacks.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Custom,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false),
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Custom),
+            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom,
+                new Permissions { ManageUsers = true }),
             newPermissions: new Permissions { ManageSso = true });
 
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -357,8 +353,8 @@ public class UpdateOrganizationUserValidatorTests
     {
         // The actor holds ManageUsers and grants only ManageUsers, which is within their own authority.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Custom,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false),
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Custom),
+            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom,
+                new Permissions { ManageUsers = true }),
             newPermissions: new Permissions { ManageUsers = true });
 
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -374,8 +370,7 @@ public class UpdateOrganizationUserValidatorTests
     {
         // An Owner is exempt from the grant-subset check and may grant any custom permission.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Custom,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: true),
-            performedByOrganizationUser: ActingOrganizationUser(OrganizationUserType.Owner),
+            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: true, OrganizationUserType.Owner),
             newPermissions: new Permissions { ManageScim = true, ManageSso = true, AccessImportExport = true });
 
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -388,7 +383,6 @@ public class UpdateOrganizationUserValidatorTests
         OrganizationUser organizationUser,
         OrganizationUserType newType,
         IActingUser performedBy = null,
-        OrganizationUser performedByOrganizationUser = null,
         Organization organization = null,
         List<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> groups = null,
@@ -405,11 +399,8 @@ public class UpdateOrganizationUserValidatorTests
             .Returns(true);
 
         // When a test doesn't specify an actor, default to an authorized owner member so unrelated rules can
-        // be exercised. If a test provides its own actor, respect a null membership (e.g. a system user or a
-        // provider, whose authority is resolved by the service rather than a membership role).
-        var actingUser = performedBy ?? new StandardUser(Guid.NewGuid(), true);
-        var actingMembership = performedByOrganizationUser
-                               ?? (performedBy is null ? ActingOrganizationUser(OrganizationUserType.Owner) : null);
+        // be exercised. The actor's role and permissions travel on the acting user itself.
+        var actingUser = performedBy ?? new StandardUser(Guid.NewGuid(), true, OrganizationUserType.Owner);
 
         return new UpdateOrganizationUserRequest(
             organizationUser,
@@ -431,21 +422,7 @@ public class UpdateOrganizationUserValidatorTests
             collections ?? [],
             groups,
             actingUser,
-            actingMembership,
             null);
-    }
-
-    // The acting user's own membership. Custom users are given ManageUsers by default, since that is the
-    // authority a Custom user needs to act on other members.
-    private static OrganizationUser ActingOrganizationUser(OrganizationUserType type, bool manageUsers = true)
-    {
-        var actingUser = new OrganizationUser { Type = type };
-        if (type == OrganizationUserType.Custom)
-        {
-            actingUser.SetPermissions(new Permissions { ManageUsers = manageUsers });
-        }
-
-        return actingUser;
     }
 
     private static Organization CreateOrganization(Guid id, PlanType planType, bool useCustomPermissions = true) =>

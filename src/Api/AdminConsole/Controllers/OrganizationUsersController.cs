@@ -431,12 +431,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
             var (collectionsToSave, postedCollections) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess);
 
             var actingContext = _currentContext.GetOrganization(organization.Id);
-            OrganizationUser savingOrganizationUser = null;
-            if (actingContext != null)
-            {
-                savingOrganizationUser = new OrganizationUser { Type = actingContext.Type };
-                savingOrganizationUser.SetPermissions(actingContext.Permissions);
-            }
 
             var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
                 organizationUser,
@@ -448,8 +442,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 model.AccessSecretsManager,
                 collectionsToSave,
                 groupsToSave,
-                new StandardUser(userId, await _currentContext.OrganizationOwner(organization.Id)),
-                savingOrganizationUser,
+                new StandardUser(
+                    userId,
+                    await _currentContext.OrganizationOwner(organization.Id),
+                    actingContext?.Type,
+                    actingContext?.Permissions),
                 model.DefaultUserCollectionName);
 
             var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);

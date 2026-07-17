@@ -15,7 +15,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUse
 /// <param name="NewPermissions">The requested custom permissions (used when <paramref name="NewType"/> is Custom).</param>
 /// <param name="NewCollections">The updated collection access; null removes all collection access.</param>
 /// <param name="NewGroups">The updated group access; null leaves groups unchanged.</param>
-/// <param name="PerformedByOrganizationUser">The actor's own membership; null when the actor is not an organization member (e.g. a provider).</param>
 /// <param name="DefaultUserCollectionName">Default collection name used when applicable</param>
 public record UpdateOrganizationUserRequest(
     OrganizationUser OrganizationUserToUpdate,
@@ -28,7 +27,6 @@ public record UpdateOrganizationUserRequest(
     List<CollectionAccessSelection>? NewCollections,
     IEnumerable<Guid>? NewGroups,
     IActingUser PerformedBy,
-    OrganizationUser? PerformedByOrganizationUser,
     string? DefaultUserCollectionName)
 {
     public bool IsDemotedFromPrivilegedRole() =>

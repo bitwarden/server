@@ -7,8 +7,6 @@ using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
-#nullable enable
-
 namespace Bit.Core.Entities;
 
 /// <summary>

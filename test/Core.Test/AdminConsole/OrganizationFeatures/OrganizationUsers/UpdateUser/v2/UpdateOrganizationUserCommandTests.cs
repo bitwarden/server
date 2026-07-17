@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -204,7 +205,7 @@ public class UpdateOrganizationUserCommandTests
         organizationUser.Type = existingType;
         var request = Setup(sutProvider, organization, organizationUser,
             type: OrganizationUserType.User, defaultUserCollectionName: defaultUserCollectionName);
-        SetupDataOwnershipPolicy(sutProvider, organizationUser.UserId!.Value, OrganizationDataOwnershipState.Enabled);
+        SetupDataOwnershipPolicy(sutProvider, organizationUser, organization, OrganizationDataOwnershipState.Enabled);
 
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
@@ -251,7 +252,7 @@ public class UpdateOrganizationUserCommandTests
         organizationUser.Type = existingType;
         var request = Setup(sutProvider, organization, organizationUser,
             type: OrganizationUserType.User, defaultUserCollectionName: defaultUserCollectionName);
-        SetupDataOwnershipPolicy(sutProvider, organizationUser.UserId!.Value, OrganizationDataOwnershipState.Disabled);
+        SetupDataOwnershipPolicy(sutProvider, organizationUser, organization, OrganizationDataOwnershipState.Disabled);
 
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
@@ -332,16 +333,30 @@ public class UpdateOrganizationUserCommandTests
             targetAccessSecretsManager,
             collections,
             groups,
-            new StandardUser(organizationUser.UserId ?? Guid.NewGuid(), true),
-            new OrganizationUser { Type = OrganizationUserType.Owner },
+            new StandardUser(organizationUser.UserId ?? Guid.NewGuid(), true, OrganizationUserType.Owner),
             defaultUserCollectionName);
     }
 
     private static void SetupDataOwnershipPolicy(SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Guid userId, OrganizationDataOwnershipState state)
+        OrganizationUser organizationUser, Organization organization, OrganizationDataOwnershipState state)
     {
+        // The factory derives Enabled/Disabled from whether any policy details apply, and the requirement's
+        // update check keys off those details for the organization. Mirror that: an enabled policy contributes
+        // a confirmed detail for the organization, a disabled one contributes none.
+        PolicyDetails[] policyDetails = state == OrganizationDataOwnershipState.Enabled
+            ?
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = organization.Id,
+                    OrganizationUserId = organizationUser.Id,
+                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed
+                }
+            ]
+            : [];
+
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsyncVNext<OrganizationDataOwnershipPolicyRequirement>(userId)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(state, []));
+            .GetAsyncVNext<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(state, policyDetails));
     }
 }
