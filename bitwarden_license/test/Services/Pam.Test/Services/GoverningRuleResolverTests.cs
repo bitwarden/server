@@ -263,12 +263,47 @@ public class GoverningRuleResolverTests
         olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
         newerRule.Conditions = """[{"kind":"human_approval"}]""";
+        newerRule.Enabled = true;
         olderCollection.AccessRuleId = olderRule.Id;
         newerCollection.AccessRuleId = newerRule.Id;
         SetupReachableCollections(sutProvider, userId, cipherId, olderCollection, newerCollection);
         // Only the newer rule loads; GetByIdAsync(olderRule.Id) is left unstubbed so the deleted oldest returns null.
         sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(newerRule.Id).Returns(newerRule);
         DriveRealEngine(sutProvider);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.Equal(newerCollection.Id, result!.CollectionId);
+        Assert.Equal(newerRule.Id, result.RuleId);
+        Assert.True(result.RequiresHumanApproval);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_DisabledRule_NotGoverned(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // A disabled rule is inactive and does not gate access, so a cipher reached only through it is ungoverned.
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+        rule.Enabled = false;
+
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_OldestRuleDisabled_NewerEnabledRuleGoverns(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
+    {
+        // The oldest rule is disabled and auto-granting; the newer rule is enabled and needs human approval. A disabled
+        // rule must not shadow a newer active one, so the newer rule governs — access is not silently auto-granted.
+        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        olderRule.Conditions = "[]";
+        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.Conditions = """[{"kind":"human_approval"}]""";
+        SetupGovernedCollections(sutProvider, userId, cipherId,
+            (olderCollection, olderRule), (newerCollection, newerRule));
+        olderRule.Enabled = false;
 
         var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
 
@@ -318,6 +353,8 @@ public class GoverningRuleResolverTests
         foreach (var (collection, rule) in pairs)
         {
             collection.AccessRuleId = rule.Id;
+            // A governing rule must be enabled; pin it so the outcome does not depend on AutoFixture's bool sequence.
+            rule.Enabled = true;
         }
 
         SetupReachableCollections(sutProvider, userId, cipherId, pairs.Select(p => p.collection).ToArray());
