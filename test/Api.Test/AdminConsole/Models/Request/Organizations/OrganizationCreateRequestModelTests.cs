@@ -185,14 +185,10 @@ public class OrganizationCreateRequestModelTests
     }
 
     [Theory]
-    [InlineData(CountryAbbreviations.UnitedStates, true)]
-    [InlineData(CountryAbbreviations.Switzerland, true)]
-    [InlineData("DE", false)]
-    [InlineData(null, false)]
-    [InlineData("", false)]
-    public void Validate_PaidPlanWithoutPostalCode_RequiresPostalCodeForExpectedCountries(
-        string? billingAddressCountry,
-        bool postalCodeRequired)
+    [InlineData(CountryAbbreviations.UnitedStates)]
+    [InlineData(CountryAbbreviations.Switzerland)]
+    public void Validate_PaidPlanWithoutPostalCode_RequiresPostalCode_ForUsAndSwitzerland(
+        string billingAddressCountry)
     {
         var model = new OrganizationCreateRequestModel
         {
@@ -212,14 +208,35 @@ public class OrganizationCreateRequestModelTests
 
         var results = ValidateModel(model);
 
-        if (postalCodeRequired)
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(OrganizationCreateRequestModel.BillingAddressPostalCode)));
+    }
+
+    [Theory]
+    [InlineData("DE")]
+    [InlineData(null)]
+    [InlineData("")]
+    public void Validate_PaidPlanWithoutPostalCode_DoesNotRequirePostalCode_ForOtherCountries(
+        string? billingAddressCountry)
+    {
+        var model = new OrganizationCreateRequestModel
         {
-            Assert.Contains(results, r => r.MemberNames.Contains(nameof(OrganizationCreateRequestModel.BillingAddressPostalCode)));
-        }
-        else
-        {
-            Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(OrganizationCreateRequestModel.BillingAddressPostalCode)));
-        }
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Key = "test-key",
+            UseSecretsManager = false,
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = "test-public-key",
+                EncryptedPrivateKey = "test-encrypted-private-key"
+            },
+            PlanType = PlanType.TeamsAnnually2023,
+            BillingAddressCountry = billingAddressCountry,
+            BillingAddressPostalCode = null
+        };
+
+        var results = ValidateModel(model);
+
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(OrganizationCreateRequestModel.BillingAddressPostalCode)));
     }
 
     private static List<ValidationResult> ValidateModel(object model)
