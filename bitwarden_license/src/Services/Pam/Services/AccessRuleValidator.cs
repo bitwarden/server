@@ -8,6 +8,9 @@ public sealed class AccessRuleValidator : IAccessRuleValidator
 {
     private const int MaxConditions = 10;
 
+    // Stateless, so one shared instance serves every call.
+    private static readonly ConditionValidator _conditionValidator = new();
+
     public AccessRuleValidationResult Validate(string? conditionsJson)
     {
         if (conditionsJson is null)
@@ -47,32 +50,36 @@ public sealed class AccessRuleValidator : IAccessRuleValidator
             ?? AccessRuleValidationResult.Valid;
     }
 
-    private static AccessRuleValidationResult ValidateCondition(AccessCondition? condition)
-    {
-        return condition switch
-        {
-            HumanApprovalCondition => AccessRuleValidationResult.Valid,
-            IpAllowlistCondition ip => ValidateIpAllowlist(ip),
-            null => AccessRuleValidationResult.Invalid("Conditions cannot contain a null entry."),
-            _ => AccessRuleValidationResult.Invalid($"Unsupported condition kind: {condition.GetType().Name}."),
-        };
-    }
+    private static AccessRuleValidationResult ValidateCondition(AccessCondition? condition) =>
+        condition is null
+            ? AccessRuleValidationResult.Invalid("Conditions cannot contain a null entry.")
+            : condition.Accept(_conditionValidator);
 
-    private static AccessRuleValidationResult ValidateIpAllowlist(IpAllowlistCondition condition)
+    /// <summary>
+    /// Checks a single condition is well-formed. Stateless, mirroring the engine's evaluator: neither public
+    /// service is itself a visitor; each delegates to a private one.
+    /// </summary>
+    private sealed class ConditionValidator : IAccessConditionVisitor<AccessRuleValidationResult>
     {
-        if (condition.Cidrs.Count == 0)
-        {
-            return AccessRuleValidationResult.Invalid("ip_allowlist requires at least one CIDR.");
-        }
+        public AccessRuleValidationResult VisitHumanApproval(HumanApprovalCondition condition) =>
+            AccessRuleValidationResult.Valid;
 
-        foreach (var cidr in condition.Cidrs)
+        public AccessRuleValidationResult VisitIpAllowlist(IpAllowlistCondition condition)
         {
-            if (string.IsNullOrWhiteSpace(cidr) || !IPNetwork.TryParse(cidr, out _))
+            if (condition.Cidrs.Count == 0)
             {
-                return AccessRuleValidationResult.Invalid($"Invalid CIDR: '{cidr}'.");
+                return AccessRuleValidationResult.Invalid("ip_allowlist requires at least one CIDR.");
             }
-        }
 
-        return AccessRuleValidationResult.Valid;
+            foreach (var cidr in condition.Cidrs)
+            {
+                if (string.IsNullOrWhiteSpace(cidr) || !IPNetwork.TryParse(cidr, out _))
+                {
+                    return AccessRuleValidationResult.Invalid($"Invalid CIDR: '{cidr}'.");
+                }
+            }
+
+            return AccessRuleValidationResult.Valid;
+        }
     }
 }

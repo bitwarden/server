@@ -83,12 +83,12 @@ public class AccessRuleEngineTests
         // The reason travels from the condition that denied, not from the rule as a whole.
         var conditions = Set(
             new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] },
-            new UnknownCondition());
+            new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
 
         var evaluation = _sut.Evaluate(conditions, Signals(IPAddress.Parse("10.1.2.3")));
 
         Assert.Equal(AccessEvaluationOutcome.Deny, evaluation.Outcome);
-        Assert.Equal(DenyReason.UnsupportedCondition, evaluation.Reason);
+        Assert.Equal(DenyReason.NotWithinIpRange, evaluation.Reason);
     }
 
     [Fact]
@@ -128,9 +128,11 @@ public class AccessRuleEngineTests
     }
 
     [Fact]
-    public void Evaluate_UnsupportedConditionKind_DeniesClosed()
+    public void Evaluate_NullConditionEntry_DeniesClosed()
     {
-        var evaluation = _sut.Evaluate(Set(new UnknownCondition()), Signals());
+        // A null entry (only reachable from a malformed stored document) cannot be evaluated, so it fails closed.
+        // An unknown condition kind can no longer reach the engine: visitor dispatch is exhaustive at compile time.
+        var evaluation = _sut.Evaluate([null!], Signals());
 
         Assert.Equal(AccessEvaluationOutcome.Deny, evaluation.Outcome);
         Assert.Equal(DenyReason.UnsupportedCondition, evaluation.Reason);
@@ -159,5 +161,4 @@ public class AccessRuleEngineTests
         Assert.Equal(AccessEvaluationOutcome.Allow, evaluation.Outcome);
     }
 
-    private sealed class UnknownCondition : AccessCondition;
 }

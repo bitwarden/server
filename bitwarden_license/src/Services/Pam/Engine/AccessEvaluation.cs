@@ -27,7 +27,11 @@ public enum DenyReason
     /// <summary>The caller's IP was absent, the allowlist was empty, or the IP fell outside every listed CIDR.</summary>
     NotWithinIpRange,
 
-    /// <summary>The engine did not recognize the condition kind, so it could not be shown satisfied (fail closed).</summary>
+    /// <summary>
+    /// A condition entry could not be evaluated — in practice a null entry from a malformed stored document — so it
+    /// fails closed. A genuinely unknown <c>kind</c> cannot reach here: the JSON layer rejects unknown kinds and the
+    /// visitor dispatch is exhaustive at compile time.
+    /// </summary>
     UnsupportedCondition,
 }
 
