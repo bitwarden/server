@@ -47,6 +47,9 @@ public class AccessRequestDetails
     /// </summary>
     public List<AccessRequestDecision> Decisions { get; set; } = new();
 
+    /// <summary>The requester's display name, denormalized from the User join; null when unset or the user could not be resolved.</summary>
     public string? RequesterName { get; set; }
+
+    /// <summary>The requester's email, the fallback display when <see cref="RequesterName"/> is unset.</summary>
     public string? RequesterEmail { get; set; }
 }
