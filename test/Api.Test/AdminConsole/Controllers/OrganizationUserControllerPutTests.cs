@@ -3,14 +3,12 @@ using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -29,11 +27,11 @@ public class OrganizationUserControllerPutTests
     [Theory]
     [BitAutoData]
     public async Task Put_Success(OrganizationUserUpdateRequestModel model,
-        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, Organization organization,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
         // Arrange
-        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: []);
 
         // Authorize all changes for basic happy path test. The controller authorizes the posted collections
         // as a single bulk set, then re-checks each current collection individually for the readonly merge.
@@ -52,7 +50,7 @@ public class OrganizationUserControllerPutTests
         var existingUserType = organizationUser.Type;
 
         // Act
-        await sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model);
+        await sutProvider.Sut.Put(organization, organizationUser.Id, model);
 
         // Assert
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
@@ -71,30 +69,30 @@ public class OrganizationUserControllerPutTests
     [Theory]
     [BitAutoData]
     public async Task Put_NoAdminAccess_CannotAddSelfToCollections(OrganizationUserUpdateRequestModel model,
-        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, Organization organization,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
         // Updating self
         organizationUser.UserId = savingUserId;
-        organizationAbility.AllowAdminAccessToAllCollectionItems = false;
+        organization.AllowAdminAccessToAllCollectionItems = false;
 
-        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: []);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.Put(organization, organizationUser.Id, model));
         Assert.Contains("You cannot add yourself to a collection.", exception.Message);
     }
     [Theory]
     [BitAutoData]
     public async Task Put_NoAdminAccess_CannotAddSelfToGroups(OrganizationUserUpdateRequestModel model,
-        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, Organization organization,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
         // Arrange
         // Updating self
         organizationUser.UserId = savingUserId;
-        organizationAbility.AllowAdminAccessToAllCollectionItems = false;
+        organization.AllowAdminAccessToAllCollectionItems = false;
 
-        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: []);
 
         // Not changing any collection access
         model.Collections = new List<SelectionReadOnlyRequestModel>();
@@ -104,7 +102,7 @@ public class OrganizationUserControllerPutTests
         var existingUserType = organizationUser.Type;
 
         // Act
-        await sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model);
+        await sutProvider.Sut.Put(organization, organizationUser.Id, model);
 
         // Assert
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
@@ -124,15 +122,15 @@ public class OrganizationUserControllerPutTests
     [Theory]
     [BitAutoData]
     public async Task Put_WithAdminAccess_CanAddSelfToGroups(OrganizationUserUpdateRequestModel model,
-        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, Organization organization,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
         // Arrange
         // Updating self
         organizationUser.UserId = savingUserId;
-        organizationAbility.AllowAdminAccessToAllCollectionItems = true;
+        organization.AllowAdminAccessToAllCollectionItems = true;
 
-        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: []);
 
         // Not changing any collection access
         model.Collections = new List<SelectionReadOnlyRequestModel>();
@@ -142,7 +140,7 @@ public class OrganizationUserControllerPutTests
         var existingUserType = organizationUser.Type;
 
         // Act
-        await sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model);
+        await sutProvider.Sut.Put(organization, organizationUser.Id, model);
 
         // Assert
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
@@ -161,7 +159,7 @@ public class OrganizationUserControllerPutTests
     [Theory]
     [BitAutoData]
     public async Task Put_UpdateCollections_DoesNotOverwriteUnauthorizedCollections(OrganizationUserUpdateRequestModel model,
-        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, Organization organization,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
         // Arrange
@@ -194,7 +192,7 @@ public class OrganizationUserControllerPutTests
             },
         };
 
-        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess);
 
         // User is upgrading editedCollectionId to manage
         model.Collections = new List<SelectionReadOnlyRequestModel>
@@ -226,7 +224,7 @@ public class OrganizationUserControllerPutTests
         var existingUserType = organizationUser.Type;
 
         // Act
-        await sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model);
+        await sutProvider.Sut.Put(organization, organizationUser.Id, model);
 
         // Assert
         // Expect all collection access (modified and unmodified) to be saved
@@ -249,11 +247,11 @@ public class OrganizationUserControllerPutTests
     [Theory]
     [BitAutoData]
     public async Task Put_UpdateCollections_ThrowsIfSavingUserCannotUpdateCollections(OrganizationUserUpdateRequestModel model,
-        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, Organization organization,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
         // Target user is currently assigned to the POSTed collections
-        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId,
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId,
             currentCollectionAccess: model.Collections.Select(cas => cas.ToSelectionReadOnly()).ToList());
 
         var postedCollectionIds = model.Collections.Select(c => c.Id).ToHashSet();
@@ -264,17 +262,17 @@ public class OrganizationUserControllerPutTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(organization, organizationUser.Id, model));
     }
 
     [Theory]
     [BitAutoData]
     public async Task Put_UpdateCollections_ThrowsIfSavingUserCannotAddCollections(OrganizationUserUpdateRequestModel model,
-        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, Organization organization,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
         // The target user is not currently assigned to any collections, so we're granting access for the first time
-        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: []);
 
         var postedCollectionIds = model.Collections.Select(c => c.Id).ToHashSet();
         // But the saving user does not have permission to assign access to the collections
@@ -283,20 +281,18 @@ public class OrganizationUserControllerPutTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(organization, organizationUser.Id, model));
     }
 
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider,
-        OrganizationAbility organizationAbility, OrganizationUser organizationUser, Guid savingUserId,
+        Organization organization, OrganizationUser organizationUser, Guid savingUserId,
         List<CollectionAccessSelection> currentCollectionAccess)
     {
-        var orgId = organizationAbility.Id = organizationUser.OrganizationId;
+        var orgId = organization.Id = organizationUser.OrganizationId;
 
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(orgId)
-            .Returns(organizationAbility);
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
 
         // OrganizationUserRepository: return the user with current collection access

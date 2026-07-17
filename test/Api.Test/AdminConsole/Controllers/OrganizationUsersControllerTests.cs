@@ -3,7 +3,6 @@ using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
@@ -25,7 +24,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
@@ -245,12 +243,10 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Invite_Success(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
+    public async Task Invite_Success(Guid orgId, OrganizationUserInviteRequestModel model,
         Guid userId, SutProvider<OrganizationUsersController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 Arg.Any<IEnumerable<Collection>>(),
@@ -258,9 +254,9 @@ public class OrganizationUsersControllerTests
             .Returns(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
-        await sutProvider.Sut.Invite(organizationAbility.Id, model);
+        await sutProvider.Sut.Invite(orgId, model);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUsersAsync(organizationAbility.Id,
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUsersAsync(orgId,
             userId, systemUser: null, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites =>
                 invites.Count() == 1 &&
                 invites.First().Item1.Emails.SequenceEqual(model.Emails) &&
@@ -270,12 +266,10 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Invite_NotAuthorizedToGiveAccessToCollections_Throws(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
+    public async Task Invite_NotAuthorizedToGiveAccessToCollections_Throws(Guid orgId, OrganizationUserInviteRequestModel model,
         Guid userId, SutProvider<OrganizationUsersController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 Arg.Any<IEnumerable<Collection>>(),
@@ -283,7 +277,7 @@ public class OrganizationUsersControllerTests
             .Returns(AuthorizationResult.Failed());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(organizationAbility.Id, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(orgId, model));
     }
 
     [Theory, BitAutoData]
@@ -315,11 +309,11 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task GetMany_ReturnsUsers(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
+        ICollection<OrganizationUserUserDetails> organizationUsers, Guid orgId,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        GetMany_Setup(organizationAbility, organizationUsers, sutProvider);
-        var response = await sutProvider.Sut.GetAll(organizationAbility.Id, false, false);
+        GetMany_Setup(orgId, organizationUsers, sutProvider);
+        var response = await sutProvider.Sut.GetAll(orgId, false, false);
 
         Assert.True(response.Data.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
     }
@@ -446,7 +440,7 @@ public class OrganizationUsersControllerTests
             sutProvider.Sut.BulkDeleteAccount(orgId, model));
     }
 
-    private void GetMany_Setup(OrganizationAbility organizationAbility,
+    private void GetMany_Setup(Guid orgId,
         ICollection<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -454,8 +448,6 @@ public class OrganizationUsersControllerTests
         {
             orgUser.Permissions = null;
         }
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
 
         sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>().GetOrganizationUserUserDetails(Arg.Any<OrganizationUserUserDetailsQueryRequest>()).Returns(organizationUsers);
 
@@ -466,7 +458,7 @@ public class OrganizationUsersControllerTests
             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyDetailsByOrganizationAsync(organizationAbility.Id, Arg.Any<bool>(), Arg.Any<bool>())
+            .GetManyDetailsByOrganizationAsync(orgId, Arg.Any<bool>(), Arg.Any<bool>())
             .Returns(organizationUsers);
     }
 
@@ -833,10 +825,10 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Put_WhenFeatureFlagEnabled_RoutesToV2AndReturnsNoContentOnSuccess(
-        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId, OrganizationAbility organizationAbility,
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, organizationAbility, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
 
         sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
@@ -856,10 +848,10 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Put_WhenFeatureFlagEnabledAndCommandFails_MapsErrorToStatus(
-        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId, OrganizationAbility organizationAbility,
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, organizationAbility, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
 
         sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
@@ -873,10 +865,10 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Put_WhenFeatureFlagDisabled_RoutesToV1(
-        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId, OrganizationAbility organizationAbility,
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, organizationAbility, userId, featureEnabled: false);
+        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: false);
 
         var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
 
@@ -893,11 +885,11 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Put_WhenFeatureFlagEnabled_ExcludesDefaultCollectionsFromPreservedAccess(
-        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId, OrganizationAbility organizationAbility,
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, Guid sharedCollectionId, Guid defaultCollectionId,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, organizationAbility, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
 
         // The client posts no collections; the user currently has access to a shared and a default collection.
         model.Collections = [];
@@ -941,19 +933,16 @@ public class OrganizationUsersControllerTests
     }
 
     private static void PutSetup(SutProvider<OrganizationUsersController> sutProvider, Organization organization,
-        OrganizationUser organizationUser, OrganizationAbility organizationAbility, Guid userId, bool featureEnabled)
+        OrganizationUser organizationUser, Guid userId, bool featureEnabled)
     {
         organizationUser.OrganizationId = organization.Id;
-        organizationAbility.Id = organization.Id;
-        organizationAbility.AllowAdminAccessToAllCollectionItems = true;
+        organization.AllowAdminAccessToAllCollectionItems = true;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdWithCollectionsAsync(organizationUser.Id)
             .Returns(new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(
                 organizationUser, new List<CollectionAccessSelection>()));
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id)
-            .Returns(organizationAbility);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection>());
         sutProvider.GetDependency<IAuthorizationService>()

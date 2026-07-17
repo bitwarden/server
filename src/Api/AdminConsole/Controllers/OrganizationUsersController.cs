@@ -10,7 +10,6 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
@@ -70,7 +69,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
@@ -108,7 +106,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
-        IOrganizationAbilityCacheService organizationAbilityCacheService,
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
@@ -146,7 +143,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _authorizationService = authorizationService;
-        _organizationAbilityCacheService = organizationAbilityCacheService;
         _ssoConfigRepository = ssoConfigRepository;
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
