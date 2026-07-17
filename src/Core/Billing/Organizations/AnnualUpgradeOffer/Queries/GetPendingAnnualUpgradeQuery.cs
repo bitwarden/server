@@ -45,18 +45,22 @@ public class GetPendingAnnualUpgradeQuery(
             return null;
         }
 
-        var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
-
-        // Fail-closed on any Stripe error from here on: this query runs inline on page load
-        // (see GetPendingAnnualUpgradeQuery consumers), so a schedule/price lookup failure must
-        // degrade to "no pending upgrade" rather than 500 the page.
+        // Fail-closed on any error from here on: this query runs inline on page load, so a
+        // pricing/schedule/price lookup failure must degrade to "no pending upgrade" rather
+        // than 500 the page.
         try
         {
+            var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
+
             var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-                new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+                new SubscriptionScheduleListOptions
+                {
+                    Customer = subscription.CustomerId,
+                    Expand = ["data.phases.items.price"]
+                });
 
             // Redeemed marker: an active schedule for this subscription whose phases contain the
-            // annual-latest seat price (mirrors GetAnnualUpgradeOfferQuery's alreadyRedeemed check).
+            // annual-latest seat price.
             var activeSchedule = schedules.Data.FirstOrDefault(schedule =>
                 schedule.SubscriptionId == subscription.Id &&
                 schedule.Status == SubscriptionScheduleStatus.Active &&
@@ -70,9 +74,12 @@ public class GetPendingAnnualUpgradeQuery(
 
             var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
-            // Earliest future phase (the post-renewal annual phase); StartDate is the renewal date.
+            // Earliest future phase that actually carries the annual-latest seat price. Past/current
+            // phases are retained by Stripe for the schedule's whole life, so once the annual phase
+            // is active there is no future phase and we correctly report nothing pending.
             var upcomingPhase = activeSchedule.Phases
-                .Where(phase => phase.StartDate > now)
+                .Where(phase => phase.StartDate > now &&
+                    phase.Items.Any(item => item.PriceId == annualLatestPlan.PasswordManager.StripeSeatPlanId))
                 .MinBy(phase => phase.StartDate);
 
             if (upcomingPhase is null)
@@ -83,7 +90,7 @@ public class GetPendingAnnualUpgradeQuery(
             var lineItems = new List<PendingAnnualUpgradeLineItem>();
             foreach (var item in upcomingPhase.Items)
             {
-                var price = await stripeAdapter.GetPriceAsync(item.PriceId, null);
+                var price = item.Price;
 
                 lineItems.Add(new PendingAnnualUpgradeLineItem
                 {
@@ -105,11 +112,12 @@ public class GetPendingAnnualUpgradeQuery(
                 EffectiveDate = upcomingPhase.StartDate
             };
         }
-        catch (StripeException stripeException)
+        catch (Exception exception)
         {
             logger.LogWarning(
-                "{Query}: Could not resolve pending annual upgrade for Organization ({OrganizationId}) | Code = {Code}",
-                nameof(GetPendingAnnualUpgradeQuery), organization.Id, stripeException.StripeError?.Code);
+                exception,
+                "{Query}: Could not resolve pending annual upgrade for Organization ({OrganizationId})",
+                nameof(GetPendingAnnualUpgradeQuery), organization.Id);
             return null;
         }
     }
