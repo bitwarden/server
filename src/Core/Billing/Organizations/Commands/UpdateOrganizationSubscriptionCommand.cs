@@ -159,7 +159,7 @@ public class UpdateOrganizationSubscriptionCommand(
                 "{Command}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating {PhaseCount} active phase(s)",
                 CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
 
-            var (sourcePlan, targetPlan) = await ResolvePhasePlansAsync(organization);
+            var (sourcePlan, targetPlan) = await ResolveCohortMigrationPhasePlansAsync(organization);
             var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes, sourcePlan, targetPlan,
                 subscription.Customer?.Discount);
 
@@ -236,7 +236,7 @@ public class UpdateOrganizationSubscriptionCommand(
         }
     }
 
-    private async Task<(Plan source, Plan target)> ResolvePhasePlansAsync(Organization organization)
+    private async Task<(Plan source, Plan target)> ResolveCohortMigrationPhasePlansAsync(Organization organization)
     {
         var migrationPath = await TryResolveMigrationPathAsync(organization.Id);
         if (migrationPath is null)
