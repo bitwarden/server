@@ -49,7 +49,15 @@ public class AccessRequest : ITableObject<Guid>
     /// </summary>
     public string? Reason { get; set; }
 
+    /// <summary>
+    /// The request's position in its lifecycle. Created <see cref="AccessRequestStatus.Pending"/> for human approval or
+    /// already <see cref="AccessRequestStatus.Approved"/> for automatic approval, then settling in one terminal state.
+    /// </summary>
     public AccessRequestStatus Status { get; set; }
+
+    /// <summary>
+    /// When the request was submitted, stamped in UTC at construction.
+    /// </summary>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     /// <summary>

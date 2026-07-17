@@ -5,7 +5,10 @@
 /// </summary>
 public enum AccessDeciderKind : byte
 {
+    /// <summary>A condition on the governing access rule decided, with no human involved.</summary>
     Automatic = 0,
+
+    /// <summary>A human approver decided.</summary>
     Human = 1,
 }
 
@@ -14,6 +17,9 @@ public enum AccessDeciderKind : byte
 /// </summary>
 public enum AccessDecisionVerdict : byte
 {
+    /// <summary>Access was refused.</summary>
     Deny = 0,
+
+    /// <summary>Access was granted.</summary>
     Approve = 1,
 }

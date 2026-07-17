@@ -7,7 +7,12 @@
 /// </summary>
 public enum AccessConditionKind : byte
 {
+    /// <summary>Requires a human approver; matching requests are routed for manual approval rather than auto-decided.</summary>
     HumanApproval = 0,
+
+    /// <summary>Matches when the requester's IP is on a configured allowlist.</summary>
     IpAllowlist = 1,
+
+    /// <summary>Matches when the request falls within a configured time-of-day window.</summary>
     TimeOfDay = 2,
 }
