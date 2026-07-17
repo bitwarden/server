@@ -97,7 +97,7 @@ public class AccessRequestRepositoryTests
 
         var lease = new AccessLease
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = approved.Id,
             OrganizationId = approved.OrganizationId,
             CollectionId = approved.CollectionId,
@@ -121,7 +121,7 @@ public class AccessRequestRepositoryTests
         // the row out of the Active group and stop offering a Revoke that the server would now reject.
         var auditDecision = new AccessDecision
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = approved.Id,
             DeciderKind = AccessDeciderKind.Human,
             ApproverId = Guid.NewGuid(),
@@ -163,7 +163,7 @@ public class AccessRequestRepositoryTests
 
         var decision = new AccessDecision
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = request.Id,
             DeciderKind = AccessDeciderKind.Human,
             ApproverId = approverId,
@@ -237,7 +237,7 @@ public class AccessRequestRepositoryTests
 
         var decision = new AccessDecision
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = request.Id,
             DeciderKind = AccessDeciderKind.Human,
             ApproverId = Guid.NewGuid(),
@@ -309,7 +309,7 @@ public class AccessRequestRepositoryTests
         // Once the approval produces a lease it is activated, not approved, and leaves this read.
         var lease = new AccessLease
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = startable.Id,
             OrganizationId = startable.OrganizationId,
             CollectionId = startable.CollectionId,
@@ -375,7 +375,7 @@ public class AccessRequestRepositoryTests
 
         var decision = new AccessDecision
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = request.Id,
             DeciderKind = AccessDeciderKind.Human,
             ApproverId = approver.Id,
@@ -431,7 +431,7 @@ public class AccessRequestRepositoryTests
             request,
             new AccessDecision
             {
-                Id = CoreHelpers.GenerateComb(),
+                Id = CombGuid.Generate(),
                 AccessRequestId = request.Id,
                 DeciderKind = AccessDeciderKind.Human,
                 ApproverId = firstApproverId,
@@ -447,7 +447,7 @@ public class AccessRequestRepositoryTests
             request,
             new AccessDecision
             {
-                Id = CoreHelpers.GenerateComb(),
+                Id = CombGuid.Generate(),
                 AccessRequestId = request.Id,
                 DeciderKind = AccessDeciderKind.Human,
                 ApproverId = secondApproverId,
@@ -536,7 +536,7 @@ public class AccessRequestRepositoryTests
             request,
             new AccessDecision
             {
-                Id = CoreHelpers.GenerateComb(),
+                Id = CombGuid.Generate(),
                 AccessRequestId = request.Id,
                 DeciderKind = AccessDeciderKind.Human,
                 ApproverId = approver.Id,

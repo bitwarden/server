@@ -144,7 +144,7 @@ public class AccessRequestExtensionRepositoryTests
 
         var lease = new AccessLease
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = approved.Id,
             OrganizationId = approved.OrganizationId,
             CollectionId = approved.CollectionId,
