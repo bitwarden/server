@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Services.Pam.Api.Endpoints.Filters;
 
