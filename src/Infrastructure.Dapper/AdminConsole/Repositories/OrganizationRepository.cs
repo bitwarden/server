@@ -120,18 +120,6 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
-    public async Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync()
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<OrganizationAbility>(
-                "[dbo].[Organization_ReadAbilities]",
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
     public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))

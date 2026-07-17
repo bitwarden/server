@@ -47,7 +47,7 @@ ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
-RUN apk add --no-cache curl \
+RUN apk add --no-cache \
     krb5 \
     icu-libs \
     tzdata \
@@ -59,6 +59,6 @@ WORKDIR /app
 COPY --from=build /source/src/Api/out /app
 COPY ./src/Api/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
+HEALTHCHECK CMD wget --quiet --tries=1 --output-document=/dev/null http://localhost:5000/alive || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
