@@ -88,7 +88,7 @@ public class GroupsController : Controller
     }
 
     [HttpGet("")]
-    [Authorize<MemberOrProviderRequirement>]
+    [Authorize<OrganizationCollectionManagementAccessRequirement>]
     public async Task<ListResponseModel<GroupResponseModel>> GetOrganizationGroups(Guid orgId)
     {
         var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
