@@ -519,4 +519,35 @@ public class OrganizationsControllerTests : IDisposable
 
         Assert.Null(response.PendingAnnualUpgrade);
     }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_HidesPendingAnnualUpgradeLineItems_WhenSensitiveDataHidden(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(false); // -> hideSensitiveData == true
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(monthlyPlan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo());
+
+        var effectiveDate = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
+        _getPendingAnnualUpgradeQuery.Run(organization).Returns(new PendingAnnualUpgrade
+        {
+            Plan = annualPlan,
+            LineItems = [new PendingAnnualUpgradeLineItem { Name = "Teams (Annually) Seat", Amount = 48m, Quantity = 5, Interval = "year" }],
+            EffectiveDate = effectiveDate
+        });
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.NotNull(response.PendingAnnualUpgrade);
+        Assert.Null(response.PendingAnnualUpgrade.LineItems);              // hidden
+        Assert.Equal(effectiveDate, response.PendingAnnualUpgrade.EffectiveDate); // preserved
+        Assert.Equal(PlanType.TeamsAnnually, response.PendingAnnualUpgrade.Plan.Type); // preserved
+    }
 }
