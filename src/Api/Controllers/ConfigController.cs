@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Models.Response;
-using Bit.Core.Services;
 using Bit.Core.Settings;
-
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;
