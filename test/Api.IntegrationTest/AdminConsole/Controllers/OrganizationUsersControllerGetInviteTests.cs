@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
-public class OrganizationUsersControllerGetInviteBlobTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class OrganizationUsersControllerGetInviteTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -27,7 +27,7 @@ public class OrganizationUsersControllerGetInviteBlobTests : IClassFixture<ApiAp
     private Organization _organization = null!;
     private string _ownerEmail = null!;
 
-    public OrganizationUsersControllerGetInviteBlobTests(ApiApplicationFactory factory)
+    public OrganizationUsersControllerGetInviteTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<IFeatureService>(featureService =>
@@ -74,7 +74,7 @@ public class OrganizationUsersControllerGetInviteBlobTests : IClassFixture<ApiAp
     }
 
     [Fact]
-    public async Task GetInviteBlob_WithValidRequest_ReturnsOkAndInviteBlob()
+    public async Task GetInvite_WithValidRequest_ReturnsOkAndInvite()
     {
         // Arrange
         var code = await CreateInviteLinkAsync(["example.com"]);
@@ -82,14 +82,14 @@ public class OrganizationUsersControllerGetInviteBlobTests : IClassFixture<ApiAp
 
         // Act
         var response = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/invite-blob", BuildRequest(_organization.Id, code));
+            "/organizations/users/invite-link/invite", BuildRequest(_organization.Id, code));
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var result = await response.Content.ReadFromJsonAsync<OrganizationInviteBlobResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<OrganizationInviteResponseModel>();
         Assert.NotNull(result);
-        Assert.Equal(_validEncryptedKey, result.InviteBlob);
+        Assert.Equal(_validEncryptedKey, result.Invite);
     }
 
     private async Task<Guid> CreateInviteLinkAsync(string[] allowedDomains)
@@ -119,7 +119,7 @@ public class OrganizationUsersControllerGetInviteBlobTests : IClassFixture<ApiAp
         return (joinerClient, joinerEmail);
     }
 
-    private static GetOrganizationInviteBlobRequestModel BuildRequest(Guid organizationId, Guid code) =>
+    private static GetOrganizationInviteRequestModel BuildRequest(Guid organizationId, Guid code) =>
         new()
         {
             OrganizationId = organizationId,

@@ -2,7 +2,7 @@
 
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
-public class GetOrganizationInviteBlobRequestModel
+public class GetOrganizationInviteRequestModel
 {
     [Required]
     public required Guid Code { get; set; }

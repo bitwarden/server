@@ -7,15 +7,15 @@ using Bit.Core.AdminConsole.Utilities.v2.Results;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 /// <summary>
-/// Retrieves the opaque invite blob for an invite link. See
-/// <see cref="IGetOrganizationInviteBlobCommand"/> for the behavior.
+/// Retrieves the opaque invite for an invite link. See
+/// <see cref="IGetOrganizationInviteCommand"/> for the behavior.
 /// </summary>
-public class GetOrganizationInviteBlobCommand(
+public class GetOrganizationInviteCommand(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
     IOrganizationAbilityCacheService organizationAbilityCacheService)
-    : IGetOrganizationInviteBlobCommand
+    : IGetOrganizationInviteCommand
 {
-    public async Task<CommandResult<string>> GetInviteBlobAsync(GetOrganizationInviteBlobRequest request)
+    public async Task<CommandResult<string>> GetInviteAsync(GetOrganizationInviteRequest request)
     {
         var user = request.User;
 

@@ -13,15 +13,15 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 
 [SutProviderCustomize]
-public class GetOrganizationInviteBlobCommandTests
+public class GetOrganizationInviteCommandTests
 {
     [Theory, BitAutoData]
-    public async Task GetInviteBlobAsync_WithLinkNotFound_ReturnsInviteLinkNotFound(
-        GetOrganizationInviteBlobRequest request,
-        SutProvider<GetOrganizationInviteBlobCommand> sutProvider)
+    public async Task GetInviteAsync_WithLinkNotFound_ReturnsInviteLinkNotFound(
+        GetOrganizationInviteRequest request,
+        SutProvider<GetOrganizationInviteCommand> sutProvider)
     {
         // Act
-        var result = await sutProvider.Sut.GetInviteBlobAsync(request);
+        var result = await sutProvider.Sut.GetInviteAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -29,10 +29,10 @@ public class GetOrganizationInviteBlobCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetInviteBlobAsync_WithCodeMismatch_ReturnsInviteLinkNotFound(
+    public async Task GetInviteAsync_WithCodeMismatch_ReturnsInviteLinkNotFound(
         OrganizationInviteLink inviteLink,
         User user,
-        SutProvider<GetOrganizationInviteBlobCommand> sutProvider)
+        SutProvider<GetOrganizationInviteCommand> sutProvider)
     {
         // Arrange
         inviteLink.Code = Guid.NewGuid().ToString();
@@ -42,13 +42,13 @@ public class GetOrganizationInviteBlobCommandTests
             .Returns(inviteLink);
 
         // Act — pass a different code than the one stored on the link
-        var request = new GetOrganizationInviteBlobRequest
+        var request = new GetOrganizationInviteRequest
         {
             OrganizationId = inviteLink.OrganizationId,
             Code = Guid.NewGuid(),
             User = user,
         };
-        var result = await sutProvider.Sut.GetInviteBlobAsync(request);
+        var result = await sutProvider.Sut.GetInviteAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -56,10 +56,10 @@ public class GetOrganizationInviteBlobCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetInviteBlobAsync_WithOrganizationAbilityNotFound_ReturnsInviteLinkNotFound(
+    public async Task GetInviteAsync_WithOrganizationAbilityNotFound_ReturnsInviteLinkNotFound(
         OrganizationInviteLink inviteLink,
         User user,
-        SutProvider<GetOrganizationInviteBlobCommand> sutProvider)
+        SutProvider<GetOrganizationInviteCommand> sutProvider)
     {
         // Arrange
         inviteLink.Code = Guid.NewGuid().ToString();
@@ -72,13 +72,13 @@ public class GetOrganizationInviteBlobCommandTests
             .Returns((OrganizationAbility?)null);
 
         // Act
-        var request = new GetOrganizationInviteBlobRequest
+        var request = new GetOrganizationInviteRequest
         {
             OrganizationId = inviteLink.OrganizationId,
             Code = Guid.Parse(inviteLink.Code),
             User = user,
         };
-        var result = await sutProvider.Sut.GetInviteBlobAsync(request);
+        var result = await sutProvider.Sut.GetInviteAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -86,11 +86,11 @@ public class GetOrganizationInviteBlobCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetInviteBlobAsync_WithOrganizationDisabled_ReturnsInviteLinkNotFound(
+    public async Task GetInviteAsync_WithOrganizationDisabled_ReturnsInviteLinkNotFound(
         OrganizationInviteLink inviteLink,
         OrganizationAbility organizationAbility,
         User user,
-        SutProvider<GetOrganizationInviteBlobCommand> sutProvider)
+        SutProvider<GetOrganizationInviteCommand> sutProvider)
     {
         // Arrange
         inviteLink.Code = Guid.NewGuid().ToString();
@@ -104,13 +104,13 @@ public class GetOrganizationInviteBlobCommandTests
             .Returns(organizationAbility);
 
         // Act
-        var request = new GetOrganizationInviteBlobRequest
+        var request = new GetOrganizationInviteRequest
         {
             OrganizationId = inviteLink.OrganizationId,
             Code = Guid.Parse(inviteLink.Code),
             User = user,
         };
-        var result = await sutProvider.Sut.GetInviteBlobAsync(request);
+        var result = await sutProvider.Sut.GetInviteAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -118,11 +118,11 @@ public class GetOrganizationInviteBlobCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetInviteBlobAsync_WhenOrganizationDoesNotUseInviteLinks_ReturnsInviteLinkNotAvailable(
+    public async Task GetInviteAsync_WhenOrganizationDoesNotUseInviteLinks_ReturnsInviteLinkNotAvailable(
         OrganizationInviteLink inviteLink,
         OrganizationAbility organizationAbility,
         User user,
-        SutProvider<GetOrganizationInviteBlobCommand> sutProvider)
+        SutProvider<GetOrganizationInviteCommand> sutProvider)
     {
         // Arrange
         inviteLink.Code = Guid.NewGuid().ToString();
@@ -137,13 +137,13 @@ public class GetOrganizationInviteBlobCommandTests
             .Returns(organizationAbility);
 
         // Act
-        var request = new GetOrganizationInviteBlobRequest
+        var request = new GetOrganizationInviteRequest
         {
             OrganizationId = inviteLink.OrganizationId,
             Code = Guid.Parse(inviteLink.Code),
             User = user,
         };
-        var result = await sutProvider.Sut.GetInviteBlobAsync(request);
+        var result = await sutProvider.Sut.GetInviteAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -151,11 +151,11 @@ public class GetOrganizationInviteBlobCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetInviteBlobAsync_WhenEmailDomainNotAllowed_ReturnsEmailDomainNotAllowed(
+    public async Task GetInviteAsync_WhenEmailDomainNotAllowed_ReturnsEmailDomainNotAllowed(
         OrganizationInviteLink inviteLink,
         OrganizationAbility organizationAbility,
         User user,
-        SutProvider<GetOrganizationInviteBlobCommand> sutProvider)
+        SutProvider<GetOrganizationInviteCommand> sutProvider)
     {
         // Arrange
         inviteLink.Code = Guid.NewGuid().ToString();
@@ -172,13 +172,13 @@ public class GetOrganizationInviteBlobCommandTests
             .Returns(organizationAbility);
 
         // Act
-        var request = new GetOrganizationInviteBlobRequest
+        var request = new GetOrganizationInviteRequest
         {
             OrganizationId = inviteLink.OrganizationId,
             Code = Guid.Parse(inviteLink.Code),
             User = user,
         };
-        var result = await sutProvider.Sut.GetInviteBlobAsync(request);
+        var result = await sutProvider.Sut.GetInviteAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -186,11 +186,11 @@ public class GetOrganizationInviteBlobCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetInviteBlobAsync_WithValidRequest_ReturnsInviteBlob(
+    public async Task GetInviteAsync_WithValidRequest_ReturnsInvite(
         OrganizationInviteLink inviteLink,
         OrganizationAbility organizationAbility,
         User user,
-        SutProvider<GetOrganizationInviteBlobCommand> sutProvider)
+        SutProvider<GetOrganizationInviteCommand> sutProvider)
     {
         // Arrange
         inviteLink.Code = Guid.NewGuid().ToString();
@@ -207,13 +207,13 @@ public class GetOrganizationInviteBlobCommandTests
             .Returns(organizationAbility);
 
         // Act
-        var request = new GetOrganizationInviteBlobRequest
+        var request = new GetOrganizationInviteRequest
         {
             OrganizationId = inviteLink.OrganizationId,
             Code = Guid.Parse(inviteLink.Code),
             User = user,
         };
-        var result = await sutProvider.Sut.GetInviteBlobAsync(request);
+        var result = await sutProvider.Sut.GetInviteAsync(request);
 
         // Assert
         Assert.True(result.IsSuccess);
