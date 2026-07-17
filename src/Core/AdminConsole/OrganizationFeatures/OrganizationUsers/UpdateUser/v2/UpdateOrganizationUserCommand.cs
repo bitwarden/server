@@ -10,7 +10,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using OneOf.Types;
 using CommandError = Bit.Core.AdminConsole.Utilities.v2.Error;
 
@@ -38,15 +37,12 @@ public class UpdateOrganizationUserCommand(
             return validationResult.AsError;
         }
 
-        var wasDemotedFromPrivilegedRole = IsDemotingFromPrivilegedRole(request);
-        var enablingSecretsManager = IsEnablingSecretsManager(request);
+        var organizationUser = request.OrganizationUserToUpdate.UpdateOrganizationUser(request.NewType,
+            request.NewPermissions,
+            request.NewAccessSecretsManager,
+            timeProvider);
 
-        var organizationUser = request.OrganizationUserToUpdate;
-        organizationUser.Type = request.NewType;
-        organizationUser.Permissions = CoreHelpers.ClassToJsonData(request.NewPermissions);
-        organizationUser.AccessSecretsManager = request.NewAccessSecretsManager;
-
-        if (enablingSecretsManager)
+        if (request.IsEnablingSecretsManager())
         {
             var commandError = await TryEnablingSecretsManagerAsync(request);
             if (commandError is not null)
@@ -63,7 +59,7 @@ public class UpdateOrganizationUserCommand(
                 timeProvider.GetUtcNow().UtcDateTime);
         }
 
-        if (await ShouldCreateDefaultCollectionAsync(request, wasDemotedFromPrivilegedRole))
+        if (await ShouldCreateDefaultCollectionAsync(request))
         {
             await collectionRepository.CreateDefaultCollectionsAsync(
                 organizationUser.OrganizationId,
@@ -75,13 +71,6 @@ public class UpdateOrganizationUserCommand(
 
         return new None();
     }
-
-    private static bool IsEnablingSecretsManager(UpdateOrganizationUserRequest request) =>
-        !request.OrganizationUserToUpdate.AccessSecretsManager && request.NewAccessSecretsManager;
-
-    private static bool IsDemotingFromPrivilegedRole(UpdateOrganizationUserRequest request) =>
-        request.OrganizationUserToUpdate.Type is OrganizationUserType.Admin or OrganizationUserType.Owner
-        && request.NewType is not (OrganizationUserType.Admin or OrganizationUserType.Owner);
 
     private async Task<CommandError?> TryEnablingSecretsManagerAsync(UpdateOrganizationUserRequest request)
     {
@@ -112,13 +101,12 @@ public class UpdateOrganizationUserCommand(
         return null;
     }
 
-    private async Task<bool> ShouldCreateDefaultCollectionAsync(UpdateOrganizationUserRequest request,
-        bool wasDemotedFromPrivilegedRole) =>
-        wasDemotedFromPrivilegedRole
+    private async Task<bool> ShouldCreateDefaultCollectionAsync(UpdateOrganizationUserRequest request) =>
+        request.IsDemotedFromPrivilegedRole()
         && request.OrganizationUserToUpdate.UserId.HasValue
         && request.Organization.UseMyItems
         && !string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
-        && (await policyRequirementQuery.GetAsyncVNext<OrganizationDataOwnershipPolicyRequirement>(
-            request.OrganizationUserToUpdate.UserId!.Value))
-        .State == OrganizationDataOwnershipState.Enabled;
+        && (await policyRequirementQuery
+            .GetAsyncVNext<OrganizationDataOwnershipPolicyRequirement>(request.OrganizationUserToUpdate.UserId.Value))
+        .GetDefaultCollectionRequestOnUpdate(request.Organization.Id);
 }

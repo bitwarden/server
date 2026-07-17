@@ -153,4 +153,19 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     {
         Permissions = CoreHelpers.ClassToJsonData(permissions);
     }
+
+    public OrganizationUser UpdateOrganizationUser(OrganizationUserType organizationUserType,
+        Permissions? permissions,
+        bool accessSecretsManager,
+        TimeProvider timeProvider)
+    {
+        if (permissions is not null)
+        {
+            SetPermissions(permissions);
+        }
+        Type = organizationUserType;
+        AccessSecretsManager = accessSecretsManager;
+        RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
+        return this;
+    }
 }
