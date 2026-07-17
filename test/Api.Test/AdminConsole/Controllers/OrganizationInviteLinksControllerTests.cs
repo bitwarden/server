@@ -256,7 +256,7 @@ public class OrganizationInviteLinksControllerTests
             .UpdateAsync(Arg.Is<UpdateInviteSupportConfirmRequest>(r =>
                 r.OrganizationId == orgId &&
                 r.Invite == "new-invite-blob" &&
-                r.SupportsConfirmation == true));
+                r.SupportsConfirmation));
     }
 
     [Theory, BitAutoData]
