@@ -257,19 +257,19 @@ public class PendingAnnualUpgradeResponseModel
     {
         Plan = new PlanResponseModel(pendingAnnualUpgrade.Plan);
         LineItems = pendingAnnualUpgrade.LineItems
-            .Select(lineItem => new PendingAnnualUpgradeLineItemModel(lineItem))
+            .Select(lineItem => new PendingAnnualUpgradeLineItemResponseModel(lineItem))
             .ToList();
         EffectiveDate = pendingAnnualUpgrade.EffectiveDate;
     }
 
     public PlanResponseModel Plan { get; set; }
-    public List<PendingAnnualUpgradeLineItemModel> LineItems { get; set; }
+    public List<PendingAnnualUpgradeLineItemResponseModel> LineItems { get; set; }
     public DateTime EffectiveDate { get; set; }
 }
 
-public class PendingAnnualUpgradeLineItemModel
+public class PendingAnnualUpgradeLineItemResponseModel
 {
-    public PendingAnnualUpgradeLineItemModel(PendingAnnualUpgradeLineItem lineItem)
+    public PendingAnnualUpgradeLineItemResponseModel(PendingAnnualUpgradeLineItem lineItem)
     {
         Name = lineItem.Name;
         Amount = lineItem.Amount;
