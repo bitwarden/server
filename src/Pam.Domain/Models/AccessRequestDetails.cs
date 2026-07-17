@@ -21,11 +21,23 @@ public class AccessRequestDetails
 
     /// <summary>The access rule pinned on the request at submit, or null for requests created before pinning.</summary>
     public Guid? RuleId { get; set; }
+
+    /// <inheritdoc cref="Entities.AccessRequest.NotBefore"/>
     public DateTime NotBefore { get; set; }
+
+    /// <inheritdoc cref="Entities.AccessRequest.NotAfter"/>
     public DateTime NotAfter { get; set; }
+
+    /// <inheritdoc cref="Entities.AccessRequest.Reason"/>
     public string? Reason { get; set; }
+
+    /// <inheritdoc cref="Entities.AccessRequest.Status"/>
     public AccessRequestStatus Status { get; set; }
+
+    /// <inheritdoc cref="Entities.AccessRequest.CreationDate"/>
     public DateTime CreationDate { get; set; }
+
+    /// <inheritdoc cref="Entities.AccessRequest.ResolvedDate"/>
     public DateTime? ResolvedDate { get; set; }
 
     /// <summary>The lease this request produced once activated, or null if it has not produced a lease.</summary>
