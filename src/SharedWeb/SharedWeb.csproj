@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="Bitwarden.Server.Sdk" />
 
   <PropertyGroup>
     <!-- These opt outs should be removed when all warnings are addressed -->
