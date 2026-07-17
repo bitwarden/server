@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.Helpers;
-using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
@@ -16,7 +15,6 @@ using static StripeConstants;
 public class GetPendingAnnualUpgradeQuery(
     ILogger<GetPendingAnnualUpgradeQuery> logger,
     IFeatureService featureService,
-    IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : IGetPendingAnnualUpgradeQuery
 {
@@ -24,13 +22,6 @@ public class GetPendingAnnualUpgradeQuery(
     {
         // Shares the price-migration program flag with the offer query (same kill switch).
         if (!featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
-        {
-            return null;
-        }
-
-        // Membership in a churn-offer-eligible cohort excludes the annual-upgrade path entirely.
-        var membership = await getChurnOfferCohortMembershipQuery.Run(organization);
-        if (membership is not null)
         {
             return null;
         }

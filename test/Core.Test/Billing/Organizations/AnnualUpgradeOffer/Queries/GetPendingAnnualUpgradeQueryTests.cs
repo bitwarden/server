@@ -2,9 +2,6 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
-using Bit.Core.Billing.Organizations.PlanMigration.Entities;
-using Bit.Core.Billing.Organizations.PlanMigration.Models;
-using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
@@ -21,8 +18,6 @@ using static StripeConstants;
 public class GetPendingAnnualUpgradeQueryTests
 {
     private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
-    private readonly IGetChurnOfferCohortMembershipQuery _getChurnOfferCohortMembershipQuery =
-        Substitute.For<IGetChurnOfferCohortMembershipQuery>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ILogger<GetPendingAnnualUpgradeQuery> _logger =
@@ -35,7 +30,7 @@ public class GetPendingAnnualUpgradeQueryTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
         _query = new GetPendingAnnualUpgradeQuery(
-            _logger, _featureService, _getChurnOfferCohortMembershipQuery, _pricingClient, _stripeAdapter);
+            _logger, _featureService, _pricingClient, _stripeAdapter);
     }
 
     private static Organization CreateOrganization(PlanType planType) => new()
@@ -67,22 +62,7 @@ public class GetPendingAnnualUpgradeQueryTests
         var result = await _query.Run(CreateOrganization(PlanType.TeamsMonthly));
 
         Assert.Null(result);
-        await _getChurnOfferCohortMembershipQuery.DidNotReceive().Run(Arg.Any<Organization>());
         await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
-    }
-
-    [Fact]
-    public async Task Run_OrgInChurnOfferCohort_ReturnsNull()
-    {
-        var organization = CreateOrganization(PlanType.TeamsMonthly);
-        _getChurnOfferCohortMembershipQuery.Run(organization).Returns(
-            new ChurnOfferCohortMembership(
-                new OrganizationPlanMigrationCohortAssignment { Id = Guid.NewGuid(), OrganizationId = organization.Id, CohortId = Guid.NewGuid() },
-                new OrganizationPlanMigrationCohort { Id = Guid.NewGuid(), Name = "cohort", IsActive = true, ChurnDiscountCouponCode = "coupon" }));
-
-        var result = await _query.Run(organization);
-
-        Assert.Null(result);
     }
 
     [Fact]
