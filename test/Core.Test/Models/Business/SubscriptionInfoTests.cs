@@ -254,5 +254,25 @@ public class SubscriptionInfoTests
         Assert.Equal(6, result.DurationInMonths);
         Assert.False(result.Active);
     }
+
+    [Theory]
+    [InlineData("unpaid", false)] // Recoverable, not terminal — regression guard for PM-40015
+    [InlineData("canceled", true)]
+    [InlineData("incomplete_expired", true)]
+    [InlineData("past_due", false)]
+    [InlineData("active", false)]
+    [InlineData("trialing", false)]
+    [InlineData("incomplete", false)]
+    [InlineData("paused", false)]
+    [InlineData(null, false)]
+    public void BillingSubscription_Cancelled_DerivedFromStatus(string? status, bool expectedCancelled)
+    {
+        // Act
+        var result = new SubscriptionInfo.BillingSubscription(new Subscription { Status = status });
+
+        // Assert
+        Assert.Equal(status, result.Status);
+        Assert.Equal(expectedCancelled, result.Cancelled);
+    }
 }
 

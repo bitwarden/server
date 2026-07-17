@@ -75,7 +75,6 @@ public class UpdateOrganizationSubscriptionCommandTests
     [InlineData(SubscriptionStatus.Canceled)]
     [InlineData(SubscriptionStatus.Incomplete)]
     [InlineData(SubscriptionStatus.IncompleteExpired)]
-    [InlineData(SubscriptionStatus.Unpaid)]
     [InlineData(SubscriptionStatus.Paused)]
     public async Task Run_InvalidSubscriptionStatus_ReturnsBadRequest(string status)
     {
@@ -101,6 +100,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     [InlineData(SubscriptionStatus.Active)]
     [InlineData(SubscriptionStatus.Trialing)]
     [InlineData(SubscriptionStatus.PastDue)]
+    [InlineData(SubscriptionStatus.Unpaid)]
     public async Task Run_ValidSubscriptionStatus_DoesNotReturnStatusError(string status)
     {
         var organization = CreateOrganization();

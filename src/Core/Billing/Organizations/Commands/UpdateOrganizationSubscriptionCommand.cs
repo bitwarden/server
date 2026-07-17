@@ -58,7 +58,8 @@ public class UpdateOrganizationSubscriptionCommand(
     [
         SubscriptionStatus.Trialing,
         SubscriptionStatus.Active,
-        SubscriptionStatus.PastDue
+        SubscriptionStatus.PastDue,
+        SubscriptionStatus.Unpaid
     ];
 
     private readonly ILogger<UpdateOrganizationSubscriptionCommand> _logger = logger;
