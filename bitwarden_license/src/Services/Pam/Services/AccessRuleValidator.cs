@@ -9,12 +9,6 @@ public sealed partial class AccessRuleValidator : IAccessRuleValidator
 {
     private const int MaxConditions = 10;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
     [GeneratedRegex(@"^([01][0-9]|2[0-3]):[0-5][0-9]$")]
     private static partial Regex TimeOfDayRegex();
 
@@ -33,7 +27,7 @@ public sealed partial class AccessRuleValidator : IAccessRuleValidator
         List<AccessCondition>? conditions;
         try
         {
-            conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, JsonOptions);
+            conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options);
         }
         catch (JsonException ex)
         {
