@@ -65,8 +65,24 @@ public sealed class FixtureParsingTests
         Assert.Contains(ciphers.Items, i => i.CipherEncryption is null or "userKey");
     }
 
+    [Fact]
+    public void EnterpriseBasicFixture_CoversAllCipherTypesWithLifecycle()
+    {
+        var ciphers = _reader.Read<SeedFile>("ciphers.enterprise-basic");
+
+        // The enrichment added the five types that were missing; assert all eight are present.
+        var types = ciphers.Items.Select(i => i.Type).ToHashSet();
+        Assert.Subset(
+            new HashSet<string> { "login", "card", "identity", "secureNote", "sshKey", "bankAccount", "driversLicense", "passport" },
+            types);
+
+        Assert.Contains(ciphers.Items, i => i.Archived == true);
+        Assert.Contains(ciphers.Items, i => i.Deleted == true);
+    }
+
     [Theory]
     [InlineData("encryption-modes")]
+    [InlineData("enterprise-basic")]
     public void AttachmentFixtures_ReferenceEmbeddedBodies(string fixture)
     {
         var ciphers = _reader.Read<SeedFile>($"ciphers.{fixture}");
