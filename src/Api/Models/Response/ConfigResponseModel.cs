@@ -1,12 +1,13 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
@@ -18,7 +19,7 @@ public class ConfigResponseModel : ResponseModel
     public string GitHash { get; set; }
     public ServerConfigResponseModel Server { get; set; }
     public EnvironmentConfigResponseModel Environment { get; set; }
-    public IDictionary<string, object> FeatureStates { get; set; }
+    public IReadOnlyDictionary<string, JsonValue> FeatureStates { get; set; }
     public PushSettings Push { get; set; }
     public CommunicationSettings Communication { get; set; }
     public ServerSettingsResponseModel Settings { get; set; }
@@ -28,12 +29,12 @@ public class ConfigResponseModel : ResponseModel
         Version = AssemblyHelpers.GetVersion();
         GitHash = AssemblyHelpers.GetGitHash();
         Environment = new EnvironmentConfigResponseModel();
-        FeatureStates = new Dictionary<string, object>();
+        FeatureStates = new Dictionary<string, JsonValue>();
         Settings = new ServerSettingsResponseModel();
     }
 
     public ConfigResponseModel(
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IGlobalSettings globalSettings
         ) : base("config")
     {
@@ -50,7 +51,8 @@ public class ConfigResponseModel : ResponseModel
             FillAssistRules = globalSettings.BaseServiceUri.FillAssistRules
         };
         FeatureStates = featureService.GetAll();
-        var webPushEnabled = FeatureStates.TryGetValue(FeatureFlagKeys.WebPush, out var webPushEnabledValue) ? (bool)webPushEnabledValue : false;
+        var webPushEnabled = FeatureStates.TryGetValue(FeatureFlagKeys.WebPush, out var webPushEnabledValue)
+            && webPushEnabledValue?.GetValueKind() == JsonValueKind.True;
         Push = PushSettings.Build(webPushEnabled, globalSettings);
         Communication = CommunicationSettings.Build(globalSettings);
         Settings = new ServerSettingsResponseModel
