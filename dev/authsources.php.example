@@ -15,6 +15,11 @@ $config = array(
             'email' => 'user2@example.com',
             'uid' => array('user2'),
         ),
+        // Maps to the `features.local-sso` seeder preset's org owner (seed without --mangle).
+        'owner:password' => array(
+            'email' => 'dana.whitfield@verdant.example',
+            'uid' => array('local-sso-owner'),
+        ),
     ),
 
 );
