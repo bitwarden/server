@@ -1,4 +1,5 @@
-﻿using Bit.Core.Vault.Enums;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
@@ -100,7 +101,7 @@ internal static class PresetLoader
 
         if (org.Fixture is not null)
         {
-            builder.UseOrganization(org.Fixture, org.PlanType, org.Seats, ToOverrides(org));
+            builder.UseOrganization(org.Fixture, org.PlanType, org.Seats, ToOverrides(org), ParseOrgId(org.Id));
 
             // If using a fixture and domain not explicitly provided, read it from the fixture
             if (domain is null)
@@ -112,7 +113,7 @@ internal static class PresetLoader
         else if (org.Name is not null && org.Domain is not null)
         {
             var planType = PlanFeatures.Parse(org.PlanType);
-            builder.CreateOrganization(org.Name, org.Domain, org.Seats, planType, ToOverrides(org));
+            builder.CreateOrganization(org.Name, org.Domain, org.Seats, planType, ToOverrides(org), ParseOrgId(org.Id));
             domain = org.Domain;
         }
 
@@ -121,6 +122,16 @@ internal static class PresetLoader
         if (org.ClaimedDomains is { Count: > 0 })
         {
             builder.WithOrganizationDomain(org.ClaimedDomains);
+        }
+
+        if (preset.Sso is not null)
+        {
+            builder.WithSso(
+                preset.Sso.Identifier
+                    ?? throw new InvalidOperationException(
+                        $"Preset '{presetName}' has an 'sso' block without an 'identifier'."),
+                preset.Sso.Provider,
+                ParseMemberDecryptionType(preset.Sso.EncryptionType));
         }
 
         if (preset.Roster?.Fixture is not null)
@@ -213,6 +224,19 @@ internal static class PresetLoader
         LimitCollectionCreation = org.LimitCollectionCreation,
         LimitCollectionDeletion = org.LimitCollectionDeletion,
     };
+
+    private static MemberDecryptionType ParseMemberDecryptionType(string? encryptionType) =>
+        encryptionType?.ToLowerInvariant() switch
+        {
+            null or "" or "masterpassword" => MemberDecryptionType.MasterPassword,
+            "trusteddevices" or "trusteddeviceencryption" => MemberDecryptionType.TrustedDeviceEncryption,
+            "keyconnector" => MemberDecryptionType.KeyConnector,
+            _ => throw new InvalidOperationException(
+                $"Unknown SSO encryptionType '{encryptionType}'. Valid values: masterPassword, trustedDevices, keyConnector."),
+        };
+
+    private static Guid? ParseOrgId(string? id) =>
+        string.IsNullOrWhiteSpace(id) ? null : Guid.Parse(id);
 
     private static DensityProfile? ParseDensity(SeedPresetDensity? preset)
     {
