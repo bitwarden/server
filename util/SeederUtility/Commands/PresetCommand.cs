@@ -64,6 +64,11 @@ public class PresetCommand
         ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
         ConsoleOutput.PrintMangleMap(deps);
+
+        if (result.SsoIdentifier is not null)
+        {
+            ConsoleOutput.PrintSsoWiring(result.OrganizationId, result.SsoIdentifier);
+        }
     }
 
     private static void RunIndividualPreset(PresetArgs args)

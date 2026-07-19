@@ -38,4 +38,15 @@ internal static class ConsoleOutput
             Console.Error.WriteLine($"  ... and {map.Count - 15} more");
         }
     }
+
+    internal static void PrintSsoWiring(Guid organizationId, string identifier)
+    {
+        var sp = $"http://localhost:51822/saml2/{organizationId}";
+        Console.Error.WriteLine();
+        Console.Error.WriteLine("--- SSO wiring (cloud Sso profile :51822) ---");
+        Console.Error.WriteLine($"  Login identifier : {identifier}");
+        Console.Error.WriteLine("  Add to dev/.env, then restart the IdP:  docker compose --profile idp up -d");
+        Console.Error.WriteLine($"    IDP_SP_ENTITY_ID={sp}");
+        Console.Error.WriteLine($"    IDP_SP_ACS_URL={sp}/Acs");
+    }
 }
