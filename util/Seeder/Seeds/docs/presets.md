@@ -18,13 +18,16 @@ Test specific Bitwarden features. Fixture-based data for deterministic results.
 dotnet run -- preset --name features.{name} --mangle
 ```
 
-| Preset            | Features Enabled                                   | Org Fixture      | Roster       | Ciphers   |
-| ----------------- | -------------------------------------------------- | ---------------- | ------------ | --------- |
-| sso-enterprise    | SSO (OIDC, masterPassword) + requireSso policy     | verdant-health   | starter-team | sso-vault |
-| tde-enterprise    | SSO (OIDC, trustedDevices/TDE) + requireSso policy | obsidian-labs    | starter-team | tde-vault |
-| policy-enterprise | All policies except requireSso and require2fa      | pinnacle-designs | starter-team | —         |
+| Preset            | Features Enabled                                            | Org Fixture      | Roster           | Ciphers          |
+| ----------------- | ----------------------------------------------------------- | ---------------- | ---------------- | ---------------- |
+| sso-enterprise    | SSO (OIDC, masterPassword) + requireSso policy              | verdant-health   | starter-team     | enterprise-basic |
+| tde-enterprise    | SSO (OIDC, trustedDevices/TDE) + requireSso policy          | obsidian-labs    | starter-team     | enterprise-basic |
+| local-sso         | SSO (SAML 2.0, masterPassword) — golden local-IdP login org | verdant-health   | enterprise-basic | enterprise-basic |
+| policy-enterprise | All policies except requireSso and require2fa               | pinnacle-designs | starter-team     | —                |
 
 `policy-enterprise` has no ciphers — it exists purely for testing policy enforcement.
+
+`local-sso` is the golden clean-slate SAML 2.0 SSO org (fixed GUID; seed **without** `--mangle`). Log in via the bundled SimpleSAMLphp IdP as `owner` / `password` → `dana.whitfield@verdant.example`, who owns the department collections so the vault is populated on first login. Because the `enterprise-basic` cipher fixture carries attachments, Azurite (or a local attachment dir) must be configured to seed it. Wiring: `dev/authsources.php.example`, `dev/.env.example`.
 
 ## QA
 
@@ -34,15 +37,15 @@ Known users, groups, collections, and permissions you can point a client to.
 dotnet run -- preset --name qa.{name} --mangle
 ```
 
-| Preset                            | Org Fixture          | Roster                 | Ciphers                 | Use Case                                          |
-| --------------------------------- | -------------------- | ---------------------- | ----------------------- | ------------------------------------------------- |
-| enterprise-basic                  | redwood-analytics    | enterprise-basic       | enterprise-basic        | Standard enterprise org                           |
-| collection-permissions-enterprise | cobalt-logistics     | collection-permissions | collection-permissions  | Permission edge cases                             |
-| dunder-mifflin-enterprise-full    | dunder-mifflin       | dunder-mifflin         | autofill-testing        | Large handcrafted org                             |
-| families-basic                    | adams-family         | family                 | 150 generated           | Families plan with personal vaults + reprompt     |
-| stark-free-basic                  | stark-industries     | 1 generated user       | autofill-testing        | Free plan personal vault                          |
-| zero-knowledge-labs-enterprise    | zero-knowledge-labs  | zero-knowledge-labs    | zero-knowledge-labs     | Full ZKL org with named folders + favorites       |
-| paper-trail-partners-team         | paper-trail-partners | paper-trail-partners   | encryption-modes (34)   | Teams org: encryption modes across a shared vault |
+| Preset                            | Org Fixture          | Roster                 | Ciphers                | Use Case                                          |
+| --------------------------------- | -------------------- | ---------------------- | ---------------------- | ------------------------------------------------- |
+| enterprise-basic                  | redwood-analytics    | enterprise-basic       | enterprise-basic       | Standard enterprise org                           |
+| collection-permissions-enterprise | cobalt-logistics     | collection-permissions | collection-permissions | Permission edge cases                             |
+| dunder-mifflin-enterprise-full    | dunder-mifflin       | dunder-mifflin         | autofill-testing       | Large handcrafted org                             |
+| families-basic                    | adams-family         | family                 | 150 generated          | Families plan with personal vaults + reprompt     |
+| stark-free-basic                  | stark-industries     | 1 generated user       | autofill-testing       | Free plan personal vault                          |
+| zero-knowledge-labs-enterprise    | zero-knowledge-labs  | zero-knowledge-labs    | zero-knowledge-labs    | Full ZKL org with named folders + favorites       |
+| paper-trail-partners-team         | paper-trail-partners | paper-trail-partners   | encryption-modes (34)  | Teams org: encryption modes across a shared vault |
 
 `families-basic` and `stark-free-basic` mix fixtures with generated data (ciphers and personal ciphers).
 
