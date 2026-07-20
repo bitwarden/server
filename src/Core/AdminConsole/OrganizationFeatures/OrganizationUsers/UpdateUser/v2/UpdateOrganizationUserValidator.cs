@@ -93,7 +93,7 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new MustHaveConfirmedOwner());
         }
 
-        if (collectionsToSave.Count > 0 && collectionsToSave.Any(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords)))
+        if (collectionsToSave.Count > 0 && collectionsToSave.Any(cas => !cas.Valid()))
         {
             return Invalid(request, new ManageMutuallyExclusive());
         }
