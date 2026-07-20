@@ -7,6 +7,7 @@ CREATE TABLE [dbo].[OrganizationPlanMigrationCohortAssignment] (
     [ChurnDiscountAppliedDate] DATETIME2(7)     NULL,
     [CreationDate]             DATETIME2(7)     NOT NULL,
     [RevisionDate]             DATETIME2(7)     NOT NULL,
+    [RenewalNotificationSentDate] DATETIME2(7)     NULL,
     CONSTRAINT [PK_OrganizationPlanMigrationCohortAssignment] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationPlanMigrationCohortAssignment_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_OrganizationPlanMigrationCohortAssignment_Cohort] FOREIGN KEY ([CohortId]) REFERENCES [dbo].[OrganizationPlanMigrationCohort] ([Id]) ON DELETE CASCADE,
