@@ -52,10 +52,9 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
         IOrganizationRepository organizationRepository,
         DateTime? expirationDate,
         bool hasGatewayCustomerId = true,
-        bool hasGatewaySubscriptionId = true,
-        string identifier = "test")
+        bool hasGatewaySubscriptionId = true)
     {
-        var organization = await organizationRepository.CreateTestOrganizationAsync(identifier: identifier);
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
         organization.ExpirationDate = expirationDate;
         organization.GatewayCustomerId = hasGatewayCustomerId ? organization.GatewayCustomerId : null;
         organization.GatewaySubscriptionId = hasGatewaySubscriptionId ? organization.GatewaySubscriptionId : null;
@@ -415,10 +414,10 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
         var cohort = await cohortRepository.CreateAsync(CreateTestCohort());
         var noCustomerOrg = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
             organizationRepository, expirationDate: DateTime.UtcNow.AddDays(15),
-            hasGatewayCustomerId: false, identifier: "no-customer");
+            hasGatewayCustomerId: false);
         var noSubscriptionOrg = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
             organizationRepository, expirationDate: DateTime.UtcNow.AddDays(15),
-            hasGatewaySubscriptionId: false, identifier: "no-subscription");
+            hasGatewaySubscriptionId: false);
         var noCustomerAssignment = await assignmentRepository.CreateAsync(CreateTestAssignment(noCustomerOrg, cohort));
         var noSubscriptionAssignment = await assignmentRepository.CreateAsync(CreateTestAssignment(noSubscriptionOrg, cohort));
 
@@ -440,11 +439,11 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
     {
         var cohort = await cohortRepository.CreateAsync(CreateTestCohort());
         var expiredOrg = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
-            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(-5), identifier: "before-window");
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(-5));
         var farFutureOrg = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
-            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(60), identifier: "after-window");
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(60));
         var nullExpirationOrg = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
-            organizationRepository, expirationDate: null, identifier: "null-expiration");
+            organizationRepository, expirationDate: null);
         var expiredAssignment = await assignmentRepository.CreateAsync(CreateTestAssignment(expiredOrg, cohort));
         var farFutureAssignment = await assignmentRepository.CreateAsync(CreateTestAssignment(farFutureOrg, cohort));
         var nullExpirationAssignment = await assignmentRepository.CreateAsync(CreateTestAssignment(nullExpirationOrg, cohort));

@@ -6,6 +6,10 @@ BEGIN
 END
 GO
 
+-- Refresh the OrganizationPlanMigrationCohortAssignmentView View
+EXECUTE sp_refreshview N'[dbo].[OrganizationPlanMigrationCohortAssignmentView]';
+GO
+
 -- Backfill RenewalNotificationSentDate = ScheduledDate for rows already processed via the
 -- charge_automatically path, so they read as notified rather than incomplete.
 UPDATE [dbo].[OrganizationPlanMigrationCohortAssignment]
