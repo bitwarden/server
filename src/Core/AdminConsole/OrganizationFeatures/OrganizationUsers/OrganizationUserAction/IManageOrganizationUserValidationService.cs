@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Utilities.v2;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
@@ -43,4 +44,16 @@ public interface IManageOrganizationUserValidationService
     /// <returns><c>null</c> when allowed, otherwise the error describing the denial.</returns>
     Task<Error?> CanManageRoleChangeAsync(Guid actingUserId, IOrganizationUserRole actingUser, IOrganizationUserRole targetUser,
         OrganizationUserType targetNewUserType, Permissions? targetNewPermissions);
+
+    /// <summary>
+    /// On a Free plan, a user may only be an Admin or Owner of a single organization. Checks whether giving the user
+    /// the requested role would exceed that limit, accounting for the organization they are already a member of.
+    /// </summary>
+    /// <param name="userId">The member's user id, or <c>null</c> for an invite that isn't linked to a user yet.</param>
+    /// <param name="planType">The organization's plan.</param>
+    /// <param name="currentUserType">The member's current role (already counted toward the limit if privileged).</param>
+    /// <param name="newUserType">The role being requested.</param>
+    /// <returns><c>null</c> when allowed, otherwise a <see cref="CannotBeAdminOfMultipleFreeOrganizations"/>.</returns>
+    Task<Error?> ValidateFreeOrgAdminLimitAsync(Guid? userId, PlanType planType, OrganizationUserType currentUserType,
+        OrganizationUserType newUserType);
 }

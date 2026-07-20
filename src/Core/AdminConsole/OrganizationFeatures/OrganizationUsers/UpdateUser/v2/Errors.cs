@@ -2,11 +2,10 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
-public record CollectionNotFound() : NotFoundError();
-public record GroupNotFound() : NotFoundError();
+public record CollectionNotFound : NotFoundError;
+public record GroupNotFound : NotFoundError;
 
 public record InviteUserFirst() : BadRequestError("Invite the user first.");
-public record CannotBeAdminOfMultipleFreeOrgs() : BadRequestError("User can only be an admin of one free organization.");
 public record CannotAddSelfToCollection() : BadRequestError("You cannot add yourself to a collection.");
 public record MustHaveConfirmedOwner() : BadRequestError("Organization must have at least one confirmed owner.");
 public record ManageMutuallyExclusive() : BadRequestError("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");

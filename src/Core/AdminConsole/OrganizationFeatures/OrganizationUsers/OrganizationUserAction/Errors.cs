@@ -9,3 +9,5 @@ public record OnlyOwnersCanManageOwners() : BadRequestError("Only an Owner can m
 public record CustomUsersCannotManageAdminsOrOwners() : BadRequestError("Custom users can not manage Admins or Owners.");
 
 public record CustomUsersCanOnlyGrantOwnPermissions() : BadRequestError("Custom users can only grant the same custom permissions that they have.");
+
+public record CannotBeAdminOfMultipleFreeOrganizations() : BadRequestError("User can only be an admin of one free organization.");

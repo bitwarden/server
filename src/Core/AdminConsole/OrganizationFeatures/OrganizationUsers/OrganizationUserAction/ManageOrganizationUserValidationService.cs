@@ -2,13 +2,17 @@
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 
 /// <inheritdoc />
-public class ManageOrganizationUserValidationService(IProviderUserRepository providerUserRepository) : IManageOrganizationUserValidationService
+public class ManageOrganizationUserValidationService(
+    IProviderUserRepository providerUserRepository,
+    IOrganizationUserRepository organizationUserRepository) : IManageOrganizationUserValidationService
 {
     public async Task<Error?> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser)
     {
@@ -36,6 +40,24 @@ public class ManageOrganizationUserValidationService(IProviderUserRepository pro
         }
 
         return ValidateCustomPermissionsGrant(actingUser, targetNewUserType, targetNewPermissions);
+    }
+
+    public async Task<Error?> ValidateFreeOrgAdminLimitAsync(Guid? userId, PlanType planType,
+        OrganizationUserType currentUserType, OrganizationUserType newUserType)
+    {
+        if (planType != PlanType.Free
+            || !userId.HasValue
+            || newUserType is not (OrganizationUserType.Admin or OrganizationUserType.Owner))
+        {
+            return null;
+        }
+
+        var freeOrgAdminCount = await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(userId.Value);
+
+        // The count already includes this organization when the member is currently an Admin or Owner, so allow one.
+        var alreadyCounted = currentUserType is OrganizationUserType.Admin or OrganizationUserType.Owner ? 1 : 0;
+
+        return freeOrgAdminCount > alreadyCounted ? new CannotBeAdminOfMultipleFreeOrganizations() : null;
     }
 
     private static CustomUsersCanOnlyGrantOwnPermissions? ValidateCustomPermissionsGrant(

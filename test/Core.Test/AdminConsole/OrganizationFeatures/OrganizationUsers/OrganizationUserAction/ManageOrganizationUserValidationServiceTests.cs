@@ -2,9 +2,11 @@
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using NSubstitute;
 using Xunit;
 
@@ -16,11 +18,12 @@ public class ManageOrganizationUserValidationServiceTests
     private static readonly Guid _organizationId = Guid.NewGuid();
 
     private readonly IProviderUserRepository _providerUserRepository = Substitute.For<IProviderUserRepository>();
+    private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
     private readonly ManageOrganizationUserValidationService _sut;
 
     public ManageOrganizationUserValidationServiceTests()
     {
-        _sut = new ManageOrganizationUserValidationService(_providerUserRepository);
+        _sut = new ManageOrganizationUserValidationService(_providerUserRepository, _organizationUserRepository);
     }
 
     // NOTE: A null `actingUser` represents a non-member (provider-only user). Custom users are granted the
@@ -236,6 +239,75 @@ public class ManageOrganizationUserValidationServiceTests
             new Permissions { ManageScim = true, ManageSso = true });
 
         Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData(PlanType.EnterpriseAnnually, OrganizationUserType.User, OrganizationUserType.Admin)]
+    [InlineData(PlanType.Free, OrganizationUserType.User, OrganizationUserType.User)]
+    public async Task ValidateFreeOrgAdminLimitAsync_WhenLimitDoesNotApply_ReturnsNull(
+        PlanType planType, OrganizationUserType currentType, OrganizationUserType newType)
+    {
+        var result = await _sut.ValidateFreeOrgAdminLimitAsync(Guid.NewGuid(), planType, currentType, newType);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task ValidateFreeOrgAdminLimitAsync_WhenUserIdIsNull_ReturnsNull()
+    {
+        var result = await _sut.ValidateFreeOrgAdminLimitAsync(null, PlanType.Free, OrganizationUserType.User,
+            OrganizationUserType.Admin);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task ValidateFreeOrgAdminLimitAsync_WhenPromotingAndAdminElsewhere_ReturnsCannotBeAdminOfMultipleFreeOrganizations()
+    {
+        var userId = Guid.NewGuid();
+        _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(userId).Returns(1);
+
+        var result = await _sut.ValidateFreeOrgAdminLimitAsync(userId, PlanType.Free, OrganizationUserType.User,
+            OrganizationUserType.Admin);
+
+        Assert.IsType<CannotBeAdminOfMultipleFreeOrganizations>(result);
+    }
+
+    [Fact]
+    public async Task ValidateFreeOrgAdminLimitAsync_WhenPromotingAndNotAdminElsewhere_ReturnsNull()
+    {
+        var userId = Guid.NewGuid();
+        _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(userId).Returns(0);
+
+        var result = await _sut.ValidateFreeOrgAdminLimitAsync(userId, PlanType.Free, OrganizationUserType.User,
+            OrganizationUserType.Admin);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task ValidateFreeOrgAdminLimitAsync_WhenAlreadyAdminOfThisOrgOnly_ReturnsNull()
+    {
+        // The count includes this organization, so a single free-org admin membership is allowed.
+        var userId = Guid.NewGuid();
+        _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(userId).Returns(1);
+
+        var result = await _sut.ValidateFreeOrgAdminLimitAsync(userId, PlanType.Free, OrganizationUserType.Admin,
+            OrganizationUserType.Owner);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task ValidateFreeOrgAdminLimitAsync_WhenAlreadyAdminAndAdminElsewhere_ReturnsCannotBeAdminOfMultipleFreeOrganizations()
+    {
+        var userId = Guid.NewGuid();
+        _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(userId).Returns(2);
+
+        var result = await _sut.ValidateFreeOrgAdminLimitAsync(userId, PlanType.Free, OrganizationUserType.Admin,
+            OrganizationUserType.Owner);
+
+        Assert.IsType<CannotBeAdminOfMultipleFreeOrganizations>(result);
     }
 
     private static OrganizationUser CustomUser(Permissions permissions)

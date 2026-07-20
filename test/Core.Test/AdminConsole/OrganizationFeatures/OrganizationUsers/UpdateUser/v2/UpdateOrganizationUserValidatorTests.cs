@@ -8,7 +8,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -52,22 +51,22 @@ public class UpdateOrganizationUserValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_WhenBecomingAdminOfSecondFreeOrg_ReturnsCannotBeAdminOfMultipleFreeOrgs(
+    public async Task ValidateAsync_WhenFreeOrgAdminLimitExceeded_ReturnsTheServiceError(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
-        orgUser.UserId = Guid.NewGuid();
-        var organization = CreateOrganization(orgUser.OrganizationId, PlanType.Free);
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin, organization: organization);
+        // The free-org admin limit lives in the validation service; the validator just forwards its error.
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(orgUser.UserId!.Value)
-            .Returns(1);
+        sutProvider.GetDependency<IManageOrganizationUserValidationService>()
+            .ValidateFreeOrgAdminLimitAsync(Arg.Any<Guid?>(), Arg.Any<PlanType>(), Arg.Any<OrganizationUserType>(),
+                Arg.Any<OrganizationUserType>())
+            .Returns(new CannotBeAdminOfMultipleFreeOrganizations());
 
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<CannotBeAdminOfMultipleFreeOrgs>(result.AsError);
+        Assert.IsType<CannotBeAdminOfMultipleFreeOrganizations>(result.AsError);
     }
 
     [Theory]

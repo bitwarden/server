@@ -5,17 +5,14 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationU
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 public class UpdateOrganizationUserValidator(
-    IOrganizationUserRepository organizationUserRepository,
     IGroupRepository groupRepository,
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
     IManageOrganizationUserValidationService manageOrganizationUserValidationService)
@@ -31,10 +28,11 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new InviteUserFirst());
         }
 
-        // A user can only be an admin or owner of a single free organization.
-        if (!await IsValidFreeOrganizationAdminAsync(organizationUser, request.NewType, request.Organization))
+        var freeOrgAdminError = await manageOrganizationUserValidationService.ValidateFreeOrgAdminLimitAsync(
+            organizationUser.UserId, request.Organization.PlanType, organizationUser.Type, request.NewType);
+        if (freeOrgAdminError is not null)
         {
-            return Invalid(request, new CannotBeAdminOfMultipleFreeOrgs());
+            return Invalid(request, freeOrgAdminError);
         }
 
         // When admins are not allowed access to all collections, a user editing themselves cannot add
@@ -93,39 +91,6 @@ public class UpdateOrganizationUserValidator(
         }
 
         return Valid(request);
-    }
-
-    private async Task<bool> IsValidFreeOrganizationAdminAsync(OrganizationUser organizationUser, OrganizationUserType newType, Organization organization)
-    {
-        if (organization.PlanType != PlanType.Free)
-        {
-            return true;
-        }
-
-        if (!organizationUser.UserId.HasValue)
-        {
-            return true;
-        }
-
-        if (newType is not (OrganizationUserType.Admin or OrganizationUserType.Owner))
-        {
-            return true;
-        }
-
-        var adminCount = await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(organizationUser.UserId!.Value);
-        var isCurrentAdminOrOwner = organizationUser.Type is OrganizationUserType.Admin or OrganizationUserType.Owner;
-
-        if (isCurrentAdminOrOwner && adminCount <= 1)
-        {
-            return true;
-        }
-
-        if (!isCurrentAdminOrOwner && adminCount == 0)
-        {
-            return true;
-        }
-
-        return false;
     }
 
     /// <summary>
