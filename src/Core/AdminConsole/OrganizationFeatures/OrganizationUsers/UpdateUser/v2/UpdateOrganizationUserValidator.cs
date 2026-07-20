@@ -80,7 +80,7 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, grantError);
         }
 
-        // Custom permissions require an Enterprise plan.
+        // Ensure the organization's plan supports custom permissions.
         if (request is { NewType: OrganizationUserType.Custom, Organization.UseCustomPermissions: false })
         {
             return Invalid(request, new CustomPermissionsNotEnabled());
