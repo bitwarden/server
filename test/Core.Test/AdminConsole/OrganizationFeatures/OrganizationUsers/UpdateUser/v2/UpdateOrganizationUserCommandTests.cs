@@ -17,6 +17,7 @@ using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
@@ -54,11 +55,13 @@ public class UpdateOrganizationUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task UpdateUserAsync_OnSuccessWithGroups_ReplacesUserUpdatesGroupsAndLogsEvent(
-        SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser,
         Guid groupId)
     {
+        var sutProvider = new SutProvider<UpdateOrganizationUserCommand>().WithFakeTimeProvider().Create();
+        var updatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(updatedAt);
         var request = Setup(sutProvider, organization, organizationUser, groups: [groupId]);
 
         var result = await sutProvider.Sut.UpdateUserAsync(request);
@@ -67,10 +70,12 @@ public class UpdateOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .ReplaceAsync(organizationUser, Arg.Any<IEnumerable<CollectionAccessSelection>>());
+            .ReplaceAsync(organizationUser, Arg.Is<IEnumerable<CollectionAccessSelection>>(collections => !collections.Any()));
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .UpdateGroupsAsync(organizationUser.Id, Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
+            .UpdateGroupsAsync(organizationUser.Id,
+                Arg.Is<IEnumerable<Guid>>(groups => groups.SequenceEqual(new[] { groupId })),
+                updatedAt);
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
@@ -91,7 +96,7 @@ public class UpdateOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .ReplaceAsync(organizationUser, Arg.Any<IEnumerable<CollectionAccessSelection>>());
+            .ReplaceAsync(organizationUser, Arg.Is<IEnumerable<CollectionAccessSelection>>(collections => !collections.Any()));
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceive()
             .UpdateGroupsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
