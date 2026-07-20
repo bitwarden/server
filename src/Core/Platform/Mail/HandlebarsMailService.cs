@@ -1622,7 +1622,7 @@ public class HandlebarsMailService : IMailService
         MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
         {
             var sanitizedOrgName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false);
-            var message = CreateDefaultMessage($"{sanitizedOrgName} has identified {notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")}", notification.Email);
+            var message = CreateDefaultMessage($"{notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")} identified", notification.Email);
             var model = new SecurityTaskNotificationViewModel
             {
                 OrgName = CoreHelpers.SanitizeForEmail(sanitizedOrgName, false),
