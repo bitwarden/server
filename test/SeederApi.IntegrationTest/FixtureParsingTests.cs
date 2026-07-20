@@ -11,7 +11,7 @@ namespace Bit.SeederApi.IntegrationTest;
 /// </summary>
 public sealed class FixtureParsingTests
 {
-    private const int ExpectedCipherCount = 34;
+    private const int _expectedCipherCount = 34;
     private readonly SeedReader _reader = new();
 
     [Fact]
@@ -23,7 +23,7 @@ public sealed class FixtureParsingTests
         Assert.Equal("encryption-modes", preset.Ciphers?.Fixture);
 
         var ciphers = _reader.Read<SeedFile>("ciphers.encryption-modes");
-        Assert.Equal(ExpectedCipherCount, ciphers.Items.Count);
+        Assert.Equal(_expectedCipherCount, ciphers.Items.Count);
     }
 
     [Fact]
@@ -44,9 +44,9 @@ public sealed class FixtureParsingTests
         Assert.Contains(roster.Users, u => u.Role == "owner");
 
         var ciphers = _reader.Read<SeedFile>("ciphers.encryption-modes");
-        Assert.Equal(ExpectedCipherCount, ciphers.Items.Count);
-        Assert.Contains(ciphers.Items, i => i.Archived == true);
-        Assert.Contains(ciphers.Items, i => i.Deleted == true);
+        Assert.Equal(_expectedCipherCount, ciphers.Items.Count);
+        Assert.Contains(ciphers.Items, i => i.Archived is true);
+        Assert.Contains(ciphers.Items, i => i.Deleted is true);
     }
 
     [Fact]

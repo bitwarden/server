@@ -15,7 +15,7 @@ internal static class OrganizationSeeder
         var billingHash = DeriveShortHash(domain);
         var org = new Organization
         {
-            Id = id ?? CoreHelpers.GenerateComb(),
+            Id = id ?? CombGuid.Generate(),
             Identifier = manglerService.Mangle(domain),
             Name = manglerService.Mangle(name),
             BillingEmail = $"billing{billingHash}@{billingHash}.{domain}",
