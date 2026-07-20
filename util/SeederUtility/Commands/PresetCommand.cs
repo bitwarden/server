@@ -67,7 +67,7 @@ public class PresetCommand
 
         if (result.SsoIdentifier is not null)
         {
-            ConsoleOutput.PrintSsoWiring(result.OrganizationId, result.SsoIdentifier);
+            ConsoleOutput.PrintSsoWiring(result.OrganizationId, result.SsoIdentifier, args.OwnerEmail);
         }
     }
 

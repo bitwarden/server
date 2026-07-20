@@ -16,9 +16,9 @@ $config = array(
             'uid' => array('user2'),
         ),
         // Maps to the `features.local-sso` seeder preset's org owner (seed without --mangle).
-        'owner:password' => array(
+        'dana.whitfield:a-password-goes-here' => array(
             'email' => 'dana.whitfield@verdant.example',
-            'uid' => array('local-sso-owner'),
+            'uid' => array('dana.whitfield-local-sso-owner'),
         ),
     ),
 
