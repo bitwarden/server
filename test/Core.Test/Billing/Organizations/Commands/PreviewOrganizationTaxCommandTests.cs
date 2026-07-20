@@ -1494,6 +1494,132 @@ public class PreviewOrganizationTaxCommandTests
                 item.Price == plan.SecretsManager.StripeServiceAccountPlanId && item.Quantity == 20)));
     }
 
+    // Regression test: upgrading from a flat-rate, non-seat-based plan (e.g. Teams Starter) has no
+    // per-seat Password Manager line item on the subscription to read a quantity from, so the command
+    // must fall back to the organization's occupied seat count instead of throwing a KeyNotFoundException.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_TeamsStarterToTeams_UsesOrganizationSeats()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsStarter2023,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 10
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "10012"
+        };
+
+        var currentPlan = new TeamsStarterPlan2023();
+        var newPlan = new Teams2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        // The flat-rate plan's subscription only contains its single, non-seat-based line item -
+        // there is no per-seat price for the command to look up.
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = currentPlan.PasswordManager.StripePlanId }, Quantity = 1 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 900 }],
+            Total = 9900
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == newPlan.PasswordManager.StripeSeatPlanId &&
+            options.SubscriptionDetails.Items[0].Quantity == organization.Seats));
+    }
+
+    // Regression test: if the organization's current plan is seat-based but its subscription does not
+    // contain a line item matching that plan's price (a data discrepancy), the command should return a
+    // BadRequest rather than throwing a KeyNotFoundException from the dictionary lookup.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_SubscriptionMissingCurrentPlanPriceLineItem_ReturnsBadRequest()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsMonthly2023,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 5
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var currentPlan = new Teams2023Plan(false);
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        // The subscription does not contain a line item for the current plan's Password Manager price.
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "some-other-unrelated-price" }, Quantity = 5 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT1);
+        var badRequest = result.AsT1;
+        Assert.Equal(
+            "Your organization's subscription does not match its current plan. Please contact support for assistance.",
+            badRequest.Response);
+
+        await _stripeAdapter.DidNotReceive().CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>());
+    }
+
     [Fact]
     public async Task Run_OrganizationPlanChange_ExistingSubscriptionWithDiscount_PreservesCoupon()
     {
