@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -12,114 +12,114 @@ public class SendResponseModelTests
     [Fact]
     public void NullSend_Throws()
     {
-      Send send = null;
-      SendResponseModel responseModel;
-      Assert.Throws<ArgumentNullException>(() => responseModel = new SendResponseModel(send));
+        Send send = null;
+        SendResponseModel responseModel;
+        Assert.Throws<ArgumentNullException>(() => responseModel = new SendResponseModel(send));
     }
 
     [Fact]
     public void TextSend_NullData_Throws()
     {
-      var send = new Send
-      {
-        Type = SendType.Text,
-        Data = null
-      };
-      SendResponseModel responseModel;
-      Assert.Throws<NullReferenceException>(() => responseModel = new SendResponseModel(send));
+        var send = new Send
+        {
+            Type = SendType.Text,
+            Data = null
+        };
+        SendResponseModel responseModel;
+        Assert.Throws<NullReferenceException>(() => responseModel = new SendResponseModel(send));
     }
 
     [Fact]
     public void TextSend_NonDeserializableData_Throws()
     {
-      var send = new Send
-      {
-        Type = SendType.Text,
-        Data = "bad_data"
-      };
-      SendResponseModel responseModel;
-      Assert.Throws<JsonException>(() => responseModel = new SendResponseModel(send));
+        var send = new Send
+        {
+            Type = SendType.Text,
+            Data = "bad_data"
+        };
+        SendResponseModel responseModel;
+        Assert.Throws<JsonException>(() => responseModel = new SendResponseModel(send));
     }
 
     [Fact]
     public void FileSend_NullData_Throws()
     {
-      var send = new Send
-      {
-        Type = SendType.File,
-        Data = null
-      };
-      SendResponseModel responseModel;
-      Assert.Throws<NullReferenceException>(() => responseModel = new SendResponseModel(send));
+        var send = new Send
+        {
+            Type = SendType.File,
+            Data = null
+        };
+        SendResponseModel responseModel;
+        Assert.Throws<NullReferenceException>(() => responseModel = new SendResponseModel(send));
     }
 
     [Fact]
     public void FileSend_NonDeserializableData_Throws()
     {
-      var send = new Send
-      {
-        Type = SendType.File,
-        Data = "bad_data"
-      };
-      SendResponseModel responseModel;
-      Assert.Throws<JsonException>(() => responseModel = new SendResponseModel(send));
+        var send = new Send
+        {
+            Type = SendType.File,
+            Data = "bad_data"
+        };
+        SendResponseModel responseModel;
+        Assert.Throws<JsonException>(() => responseModel = new SendResponseModel(send));
     }
 
     [Fact]
     public void ItemSend_NullData_Throws()
     {
-      var send = new Send
-      {
-        Type = SendType.Item,
-        Data = null
-      };
-      SendResponseModel responseModel;
-      Assert.Throws<NullReferenceException>(() => responseModel = new SendResponseModel(send));
+        var send = new Send
+        {
+            Type = SendType.Item,
+            Data = null
+        };
+        SendResponseModel responseModel;
+        Assert.Throws<NullReferenceException>(() => responseModel = new SendResponseModel(send));
     }
 
     [Fact]
     public void FromSend_Success()
     {
-      var send = new Send
-      {
-        Id = Guid.NewGuid(),
-        AuthType = AuthType.None,
-        Key = "encrypted_key",
-        MaxAccessCount = 5,
-        AccessCount = 0,
-        RevisionDate = new DateTime(),
-        ExpirationDate = new DateTime(),
-        DeletionDate = new DateTime(),
-        Password = null,
-        Emails = null,
-        Disabled = false,
-        HideEmail = false,
-        Type = SendType.Text,
-        Data = JsonSerializer.Serialize(new SendTextData
+        var send = new Send
         {
-          Hidden = false,
-          Name = "encrypted_name",
-          Notes = null,
-          Text = "encrypted_text"
-        })
-      };
-      var responseModel = new SendResponseModel(send);
-      Assert.Equal(send.Id, responseModel.Id);
-      Assert.Equal(send.AuthType, responseModel.AuthType);
-      Assert.Equal(send.Key, responseModel.Key);
-      Assert.Equal(send.MaxAccessCount, responseModel.MaxAccessCount);
-      Assert.Equal(send.AccessCount, responseModel.AccessCount);
-      Assert.Equal(send.RevisionDate, responseModel.RevisionDate);
-      Assert.Equal(send.ExpirationDate, responseModel.ExpirationDate);
-      Assert.Equal(send.DeletionDate, responseModel.DeletionDate);
-      Assert.Equal(send.Password, responseModel.Password);
-      Assert.Equal(send.Emails, responseModel.Emails);
-      Assert.Equal(send.Disabled, responseModel.Disabled);
-      Assert.Equal(send.HideEmail, responseModel.HideEmail);
-      Assert.Equal(send.Type, responseModel.Type);
-      Assert.False(responseModel.Text.Hidden);
-      Assert.Equal("encrypted_name", responseModel.Name);
-      Assert.Null(responseModel.Notes);
-      Assert.Equal("encrypted_text", responseModel.Text.Text);
+            Id = Guid.NewGuid(),
+            AuthType = AuthType.None,
+            Key = "encrypted_key",
+            MaxAccessCount = 5,
+            AccessCount = 0,
+            RevisionDate = new DateTime(),
+            ExpirationDate = new DateTime(),
+            DeletionDate = new DateTime(),
+            Password = null,
+            Emails = null,
+            Disabled = false,
+            HideEmail = false,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData
+            {
+                Hidden = false,
+                Name = "encrypted_name",
+                Notes = null,
+                Text = "encrypted_text"
+            })
+        };
+        var responseModel = new SendResponseModel(send);
+        Assert.Equal(send.Id, responseModel.Id);
+        Assert.Equal(send.AuthType, responseModel.AuthType);
+        Assert.Equal(send.Key, responseModel.Key);
+        Assert.Equal(send.MaxAccessCount, responseModel.MaxAccessCount);
+        Assert.Equal(send.AccessCount, responseModel.AccessCount);
+        Assert.Equal(send.RevisionDate, responseModel.RevisionDate);
+        Assert.Equal(send.ExpirationDate, responseModel.ExpirationDate);
+        Assert.Equal(send.DeletionDate, responseModel.DeletionDate);
+        Assert.Equal(send.Password, responseModel.Password);
+        Assert.Equal(send.Emails, responseModel.Emails);
+        Assert.Equal(send.Disabled, responseModel.Disabled);
+        Assert.Equal(send.HideEmail, responseModel.HideEmail);
+        Assert.Equal(send.Type, responseModel.Type);
+        Assert.False(responseModel.Text.Hidden);
+        Assert.Equal("encrypted_name", responseModel.Name);
+        Assert.Null(responseModel.Notes);
+        Assert.Equal("encrypted_text", responseModel.Text.Text);
     }
 }
