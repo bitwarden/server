@@ -282,6 +282,7 @@ public static class FeatureFlagKeys
     public const string PM37785_DesktopVaultBatchBar = "pm-37785-desktop-vault-batch-bar";
     public const string PM29968_FillAfterSave = "pm-29968-fill-after-save";
     public const string PM32380_BtnTextAddCreate = "pm-32380-btn-text-add-create";
+    public const string PM40201_DeriveSSHKeys = "pm-40201-derive-ssh-keys";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
