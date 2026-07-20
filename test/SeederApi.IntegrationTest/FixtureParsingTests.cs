@@ -72,7 +72,7 @@ public sealed class FixtureParsingTests
 
         // The enrichment added the five types that were missing; assert all eight are present.
         var types = ciphers.Items.Select(i => i.Type).ToHashSet();
-        Assert.Subset(
+        Assert.Superset(
             new HashSet<string> { "login", "card", "identity", "secureNote", "sshKey", "bankAccount", "driversLicense", "passport" },
             types);
 
