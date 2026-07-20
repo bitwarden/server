@@ -82,4 +82,16 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
             new { JsonData = jsonData, RevisionDate = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task<IReadOnlyList<OrganizationPlanMigrationCohortAssignment>> GetSendInvoiceCandidatesInWindowAsync(int minDays, int maxDays)
+    {
+        await using var connection = new SqlConnection(ReadOnlyConnectionString);
+
+        var results = await connection.QueryAsync<OrganizationPlanMigrationCohortAssignment>(
+            $"[{Schema}].[{Table}_ReadManySendInvoiceCandidatesInDateRange]",
+            new { MinDays = minDays, MaxDays = maxDays },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
 }
