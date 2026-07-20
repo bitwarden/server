@@ -144,5 +144,5 @@ public interface IMailService
 #nullable enable
     Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList);
     Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string? userName);
-    Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails, bool useV2Template = false);
+    Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails);
 }

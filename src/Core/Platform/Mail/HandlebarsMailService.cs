@@ -1619,8 +1619,6 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails, bool useV2Template = false)
     {
-        var templateName = useV2Template ? "SecurityTasksNotificationV2" : "SecurityTasksNotification";
-
         MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
         {
             var sanitizedOrgName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false);
@@ -1633,7 +1631,7 @@ public class HandlebarsMailService : IMailService
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             };
             message.Category = "SecurityTasksNotification";
-            return new MailQueueMessage(message, templateName, model);
+            return new MailQueueMessage(message, "SecurityTasksNotification", model);
         }
         var messageModels = securityTaskNotifications.Select(CreateMessage);
         await EnqueueMailAsync(messageModels.ToList());

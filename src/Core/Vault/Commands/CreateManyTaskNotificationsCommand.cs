@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Entities;
@@ -22,7 +21,6 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
     private readonly ICreateNotificationCommand _createNotificationCommand;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IFeatureService _featureService;
 
     public CreateManyTaskNotificationsCommand(
         IGetSecurityTasksNotificationDetailsQuery getSecurityTasksNotificationDetailsQuery,
@@ -30,8 +28,7 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
         IMailService mailService,
         ICreateNotificationCommand createNotificationCommand,
         IPushNotificationService pushNotificationService,
-        IOrganizationUserRepository organizationUserRepository,
-        IFeatureService featureService)
+        IOrganizationUserRepository organizationUserRepository)
     {
         _getSecurityTasksNotificationDetailsQuery = getSecurityTasksNotificationDetailsQuery;
         _organizationRepository = organizationRepository;
@@ -39,7 +36,6 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
         _createNotificationCommand = createNotificationCommand;
         _pushNotificationService = pushNotificationService;
         _organizationUserRepository = organizationUserRepository;
-        _featureService = featureService;
     }
 
     public async Task CreateAsync(Guid orgId, IEnumerable<SecurityTask> securityTasks)
@@ -66,9 +62,7 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
         // Ensure proper deserialization of emails
         var orgAdminAndOwnerEmails = orgAdminEmails.Concat(orgOwnerEmails).Distinct().ToList();
 
-        var useV2Template = _featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation);
-
-        await _mailService.SendBulkSecurityTaskNotificationsAsync(organization, userTaskCount, orgAdminAndOwnerEmails, useV2Template);
+        await _mailService.SendBulkSecurityTaskNotificationsAsync(organization, userTaskCount, orgAdminAndOwnerEmails);
 
         // Break securityTaskCiphers into separate lists by user Id
         var securityTaskCiphersByUser = securityTaskCiphers.GroupBy(x => x.UserId)
