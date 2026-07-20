@@ -252,6 +252,7 @@ public static class FeatureFlagKeys
     public const string SdkSendsApi = "pm-30110-sdk-sends-api";
     public const string SendEventLogging = "pm-36560-send-event-logging";
     public const string SendControlsExistingSends = "pm-31885-send-controls-existing-sends";
+    public const string TemporaryItemSharing = "pm-34203-temporary-item-sharing";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
