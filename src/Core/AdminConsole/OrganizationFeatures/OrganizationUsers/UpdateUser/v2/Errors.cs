@@ -2,9 +2,8 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
-// Use generic "Resource not found." messages to avoid enumeration.
-public record CollectionNotFound() : NotFoundError("Resource not found.");
-public record GroupNotFound() : NotFoundError("Resource not found.");
+public record CollectionNotFound() : NotFoundError();
+public record GroupNotFound() : NotFoundError();
 
 public record InviteUserFirst() : BadRequestError("Invite the user first.");
 public record CannotBeAdminOfMultipleFreeOrgs() : BadRequestError("User can only be an admin of one free organization.");
