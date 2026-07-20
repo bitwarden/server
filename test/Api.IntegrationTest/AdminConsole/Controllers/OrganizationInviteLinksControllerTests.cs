@@ -22,7 +22,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
 
-    private const string _invite = "opaque-invite-blob";
+    private const string _invite = "opaque-invite";
 
     private Organization _organization = null!;
     private string _ownerEmail = null!;
@@ -202,7 +202,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
         Assert.NotNull(created);
 
-        const string updatedInvite = "updated-invite-blob";
+        const string updatedInvite = "updated-invite";
         var updateRequest = new UpdateInviteSupportConfirmRequestModel
         {
             Invite = updatedInvite,

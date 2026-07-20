@@ -7,7 +7,7 @@ namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 public class UpdateInviteSupportConfirmRequestModel
 {
     /// <summary>
-    /// An opaque cryptographic blob. The server only stores and transports it, so its format is not
+    /// An opaque cryptographic invite. The server only stores and transports it, so its format is not
     /// validated here.
     /// </summary>
     [Required]

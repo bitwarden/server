@@ -35,7 +35,7 @@ public class UpdateInviteSupportConfirmCommandTests
             Id = Guid.NewGuid(),
             Code = Guid.NewGuid(),
             OrganizationId = organizationId,
-            Invite = "old-invite-blob",
+            Invite = "old-invite",
             SupportsConfirmation = false,
             CreationDate = originalCreationDate,
             RevisionDate = originalCreationDate,
@@ -47,7 +47,7 @@ public class UpdateInviteSupportConfirmCommandTests
             .GetByOrganizationIdAsync(organizationId)
             .Returns(existingLink);
 
-        var request = CreateRequest(organizationId, "new-invite-blob", supportsConfirmation: true);
+        var request = CreateRequest(organizationId, "new-invite", supportsConfirmation: true);
 
         // Act
         var result = await sutProvider.Sut.UpdateAsync(request);
@@ -56,7 +56,7 @@ public class UpdateInviteSupportConfirmCommandTests
         Assert.True(result.IsSuccess);
         var link = result.AsSuccess;
         Assert.Same(existingLink, link);
-        Assert.Equal("new-invite-blob", link.Invite);
+        Assert.Equal("new-invite", link.Invite);
         Assert.True(link.SupportsConfirmation);
         Assert.Equal(now, link.RevisionDate);
         Assert.Equal(originalCreationDate, link.CreationDate);
@@ -77,7 +77,7 @@ public class UpdateInviteSupportConfirmCommandTests
             .GetByOrganizationIdAsync(organizationId)
             .Returns((OrganizationInviteLink?)null);
 
-        var request = CreateRequest(organizationId, "new-invite-blob", supportsConfirmation: true);
+        var request = CreateRequest(organizationId, "new-invite", supportsConfirmation: true);
 
         // Act
         var result = await sutProvider.Sut.UpdateAsync(request);
@@ -98,7 +98,7 @@ public class UpdateInviteSupportConfirmCommandTests
         var sutProvider = GetSutProvider();
         SetupAbility(sutProvider, organizationId, useInviteLinks: false);
 
-        var request = CreateRequest(organizationId, "new-invite-blob", supportsConfirmation: true);
+        var request = CreateRequest(organizationId, "new-invite", supportsConfirmation: true);
 
         // Act
         var result = await sutProvider.Sut.UpdateAsync(request);
@@ -121,7 +121,7 @@ public class UpdateInviteSupportConfirmCommandTests
             .GetOrganizationAbilityAsync(organizationId)
             .Returns((OrganizationAbility?)null);
 
-        var request = CreateRequest(organizationId, "new-invite-blob", supportsConfirmation: true);
+        var request = CreateRequest(organizationId, "new-invite", supportsConfirmation: true);
 
         // Act
         var result = await sutProvider.Sut.UpdateAsync(request);

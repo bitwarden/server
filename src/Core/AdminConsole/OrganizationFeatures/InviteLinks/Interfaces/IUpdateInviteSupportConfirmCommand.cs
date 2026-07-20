@@ -6,7 +6,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 public interface IUpdateInviteSupportConfirmCommand
 {
     /// <summary>
-    /// Updates only the <see cref="OrganizationInviteLink.Invite"/> blob and
+    /// Updates only the <see cref="OrganizationInviteLink.Invite"/> and
     /// <see cref="OrganizationInviteLink.SupportsConfirmation"/> flag for the specified organization's invite link.
     /// </summary>
     /// <param name="request">The details for the invite link update.</param>

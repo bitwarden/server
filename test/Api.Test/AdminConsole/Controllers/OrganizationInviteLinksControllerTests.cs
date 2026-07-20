@@ -32,7 +32,7 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            Invite = "invite-blob",
+            Invite = "invite",
             SupportsConfirmation = false,
         };
 
@@ -53,7 +53,7 @@ public class OrganizationInviteLinksControllerTests
             .Received(1)
             .CreateAsync(Arg.Is<CreateOrganizationInviteLinkRequest>(r =>
                 r.OrganizationId == orgId &&
-                r.Invite == "invite-blob"));
+                r.Invite == "invite"));
     }
 
     [Theory, BitAutoData]
@@ -64,7 +64,7 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            Invite = "invite-blob",
+            Invite = "invite",
             SupportsConfirmation = false,
         };
 
@@ -137,7 +137,7 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = [],
-            Invite = "invite-blob",
+            Invite = "invite",
             SupportsConfirmation = false,
         };
 
@@ -234,7 +234,7 @@ public class OrganizationInviteLinksControllerTests
 
         var model = new UpdateInviteSupportConfirmRequestModel
         {
-            Invite = "new-invite-blob",
+            Invite = "new-invite",
             SupportsConfirmation = true,
         };
 
@@ -255,7 +255,7 @@ public class OrganizationInviteLinksControllerTests
             .Received(1)
             .UpdateAsync(Arg.Is<UpdateInviteSupportConfirmRequest>(r =>
                 r.OrganizationId == orgId &&
-                r.Invite == "new-invite-blob" &&
+                r.Invite == "new-invite" &&
                 r.SupportsConfirmation));
     }
 
@@ -267,7 +267,7 @@ public class OrganizationInviteLinksControllerTests
         // Arrange
         var model = new UpdateInviteSupportConfirmRequestModel
         {
-            Invite = "new-invite-blob",
+            Invite = "new-invite",
             SupportsConfirmation = true,
         };
 
@@ -291,7 +291,7 @@ public class OrganizationInviteLinksControllerTests
         // Arrange
         var model = new UpdateInviteSupportConfirmRequestModel
         {
-            Invite = "new-invite-blob",
+            Invite = "new-invite",
             SupportsConfirmation = true,
         };
 

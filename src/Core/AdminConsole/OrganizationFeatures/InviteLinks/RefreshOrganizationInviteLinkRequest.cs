@@ -5,7 +5,7 @@ public record RefreshOrganizationInviteLinkRequest
     public required Guid OrganizationId { get; init; }
 
     /// <summary>
-    /// The invite link cryptographic blob.
+    /// The cryptographic invite link.
     /// </summary>
     public required string Invite { get; init; }
 
