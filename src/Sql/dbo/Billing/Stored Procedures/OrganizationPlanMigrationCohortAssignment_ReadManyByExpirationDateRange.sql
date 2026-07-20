@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_ReadManySendInvoiceCandidatesInDateRange]
+CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_ReadManyByExpirationDateRange]
     @MinDays INT,
     @MaxDays INT
 AS

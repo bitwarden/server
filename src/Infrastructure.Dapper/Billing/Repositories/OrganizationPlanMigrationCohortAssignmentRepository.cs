@@ -88,7 +88,7 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
         await using var connection = new SqlConnection(ReadOnlyConnectionString);
 
         var results = await connection.QueryAsync<OrganizationPlanMigrationCohortAssignment>(
-            $"[{Schema}].[{Table}_ReadManySendInvoiceCandidatesInDateRange]",
+            $"[{Schema}].[{Table}_ReadManyByExpirationDateRange]",
             new { MinDays = minDays, MaxDays = maxDays },
             commandType: CommandType.StoredProcedure);
 

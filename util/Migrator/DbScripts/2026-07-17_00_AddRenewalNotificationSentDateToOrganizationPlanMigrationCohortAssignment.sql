@@ -91,8 +91,8 @@ BEGIN
 END
 GO
 
--- Add ReadManySendInvoiceCandidatesInDateRange stored procedure
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_ReadManySendInvoiceCandidatesInDateRange]
+-- Add ReadManyByExpirationDateRange stored procedure
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_ReadManyByExpirationDateRange]
     @MinDays INT,
     @MaxDays INT
 AS
