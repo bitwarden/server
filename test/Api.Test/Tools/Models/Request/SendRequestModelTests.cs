@@ -60,6 +60,68 @@ public class SendRequestModelTests
     }
 
     [Fact]
+    public void ToSend_Item_Success()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            ExpirationDate = null,
+            HideEmail = false,
+            Key = "encrypted_key",
+            MaxAccessCount = null,
+            Name = "encrypted_name",
+            Notes = null,
+            Password = "Password",
+            Data = "encrypted_data",
+            Type = SendType.Item,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        sendAuthorizationService.HashPassword(Arg.Any<string>())
+            .Returns((info) => $"hashed_{(string)info[0]}");
+
+        var send = sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService);
+
+        Assert.Equal(deletionDate, send.DeletionDate);
+        Assert.False(send.Disabled);
+        Assert.Null(send.ExpirationDate);
+        Assert.False(send.HideEmail);
+        Assert.Equal("encrypted_key", send.Key);
+        Assert.Equal("hashed_Password", send.Password);
+        Assert.Equal("encrypted_data", send.Data);
+    }
+
+    [Fact]
+    public void ToSend_Item_NullData()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            ExpirationDate = null,
+            HideEmail = false,
+            Key = "encrypted_key",
+            MaxAccessCount = null,
+            Name = "encrypted_name",
+            Notes = null,
+            Password = "Password",
+            Data = null,
+            Type = SendType.Item,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        sendAuthorizationService.HashPassword(Arg.Any<string>())
+            .Returns((info) => $"hashed_{(string)info[0]}");
+
+        Assert.Throws<ArgumentNullException>(() => sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService));
+    }
+
+    [Fact]
     public void ValidateEdit_DeletionDateInPast_ThrowsBadRequestException()
     {
         var send = new SendRequestModel

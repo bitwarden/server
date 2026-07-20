@@ -34,7 +34,6 @@ public class SendAccessResponseModel : ResponseModel
         Type = send.Type;
         AuthType = send.AuthType;
 
-        SendData sendData;
         switch (send.Type)
         {
             case SendType.File:
@@ -43,7 +42,7 @@ public class SendAccessResponseModel : ResponseModel
                                                              throw new NullReferenceException(
                                                                  "Send Data is required")) ??
                     throw new JsonException("Failed to deserialize send file data.");
-                sendData = fileData;
+                Name = fileData.Name;
                 File = new SendFileModel(fileData);
                 break;
             case SendType.Text:
@@ -52,14 +51,17 @@ public class SendAccessResponseModel : ResponseModel
                                                              throw new NullReferenceException(
                                                                  "Send Data is required")) ??
                     throw new JsonException("Failed to deserialize send text data.");
-                sendData = textData;
+                Name = textData.Name;
                 Text = new SendTextModel(textData);
+                break;
+            case SendType.Item:
+                Name = "";
+                Data = send.Data ?? throw new NullReferenceException("Send Data is required");
                 break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
 
-        Name = sendData.Name;
         ExpirationDate = send.ExpirationDate;
     }
 
@@ -100,6 +102,11 @@ public class SendAccessResponseModel : ResponseModel
     /// Contains text data uploaded with the send.
     /// </summary>
     public SendTextModel? Text { get; set; }
+
+    /// <summary>
+    /// Encrypted string containing secret Send data
+    /// </summary>
+    public string? Data { get; set; }
 
     /// <summary>
     /// The date after which a send cannot be accessed. When this value is
