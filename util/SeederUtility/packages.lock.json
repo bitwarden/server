@@ -10,11 +10,11 @@
       },
       "Spectre.Console": {
         "type": "Direct",
-        "requested": "[0.55.2, 0.55.2]",
-        "resolved": "0.55.2",
-        "contentHash": "yc0g12YJpmZHofGJLTQX02/uqfzJ6XHRx6pe9rANNjleQptXMHPxD9KI2/DWkXiJWddc+4oizEdGox15c89hhw==",
+        "requested": "[0.57.2, 0.57.2]",
+        "resolved": "0.57.2",
+        "contentHash": "wzsB+P9i6F9G+cFOJxRotCiQWNSzZVAMxi8YMiHlGXXU1JLMXGp7zSSqBMmROZS2bzpK5jk+Saa7Evp8HwqhKg==",
         "dependencies": {
-          "Spectre.Console.Ansi": "0.55.2"
+          "Spectre.Console.Ansi": "0.57.2"
         }
       },
       "AdaptiveCards": {
@@ -1282,8 +1282,8 @@
       },
       "Spectre.Console.Ansi": {
         "type": "Transitive",
-        "resolved": "0.55.2",
-        "contentHash": "tN3KEJQQZwLW9HJnG5YTSAxfBwxsmg1wVuGvhGG2rM+pbl+NGaHU8pDcNofPlOXlgpkbpBMxI5t9o9qPfy3sHQ=="
+        "resolved": "0.57.2",
+        "contentHash": "Y1+u73shwP+JYHmrkdN6bSt2kaGBEAafhi2nrecczbXdFRey+k7J/WF9YPfcB0rqivv2S8fmif6FSBq9m/AFvw=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -1476,6 +1476,7 @@
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
           "Braintree": "[5.36.0, 5.36.0]",
           "CsvHelper": "[33.1.0, 33.1.0]",
+          "Data": "[2026.7.0, )",
           "DnsClient": "[1.8.0, 1.8.0]",
           "Duende.IdentityServer": "[7.4.6, 7.4.6]",
           "DuoUniversal": "[1.3.1, 1.3.1]",
@@ -1518,6 +1519,9 @@
           "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.0.2, 2.0.2]",
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
+      },
+      "data": {
+        "type": "Project"
       },
       "infrastructure.dapper": {
         "type": "Project",
