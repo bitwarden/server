@@ -183,7 +183,9 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
 
     private static void AssertBlob(string baseDir, Guid cipherId, string attachmentId, long expectedSize)
     {
-        var path = Path.Combine(baseDir, cipherId.ToString(), Path.GetFileName(attachmentId));
+        var fileName = Path.GetFileName(attachmentId);
+        var cipherDir = Path.Combine(baseDir, cipherId.ToString());
+        var path = Path.Combine(cipherDir, fileName);
         Assert.True(File.Exists(path), $"expected attachment blob at {path}");
 
         var bytes = File.ReadAllBytes(path);
