@@ -76,7 +76,7 @@ public sealed class FixtureParsingTests
             new HashSet<string> { "login", "card", "identity", "secureNote", "sshKey", "bankAccount", "driversLicense", "passport" },
             types);
 
-        Assert.Contains(ciphers.Items, i => i.Archived == true);
+        Assert.Contains(ciphers.Items, i => i.Archived is true);
         Assert.Contains(ciphers.Items, i => i.Deleted == true);
     }
 
