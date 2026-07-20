@@ -64,19 +64,19 @@
       },
       "AspNetCore.HealthChecks.SqlServer": {
         "type": "Transitive",
-        "resolved": "8.0.2",
-        "contentHash": "sTcVVq7/zhfUrSTs0WAktvPdpU1He/sj14gRTogq4eFhn0oImolxNNhJczkYMgFF92RMMW+O+rlcFO7HVOpfiQ==",
+        "resolved": "9.0.0",
+        "contentHash": "UxCf65iCF2nU1u7AcB320abjL4CRg5swCgJECY6mKk1j5lrGMfVtskWwriGs1T29pYdRig9Vra3SPnP+4G82pA==",
         "dependencies": {
-          "Microsoft.Data.SqlClient": "5.2.0",
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "8.0.0"
+          "Microsoft.Data.SqlClient": "5.2.2",
+          "Microsoft.Extensions.Diagnostics.HealthChecks": "8.0.11"
         }
       },
       "AspNetCore.HealthChecks.Uris": {
         "type": "Transitive",
-        "resolved": "8.0.1",
-        "contentHash": "A1ahRx4pdXjrSGlGFLoyoXOV4Lfp5sfs+OIGfvi14RwecIAac4xs6cP0Q8tw/rv4Ng+KAaYpzD4qhxXVwUcIyA==",
+        "resolved": "9.0.0",
+        "contentHash": "XYdNlA437KeF8p9qOpZFyNqAN+c0FXt/JjTvzH/Qans0q0O3pPE8KPnn39ucQQjR/Roum1vLTP3kXiUs8VHyuA==",
         "dependencies": {
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "8.0.0",
+          "Microsoft.Extensions.Diagnostics.HealthChecks": "8.0.11",
           "Microsoft.Extensions.Http": "8.0.0"
         }
       },
@@ -913,19 +913,19 @@
       },
       "Microsoft.Extensions.Diagnostics.HealthChecks": {
         "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "P9SoBuVZhJPpALZmSq72aQEb9ryP67EdquaCZGXGrrcASTNHYdrUhnpgSwIipgM5oVC+dKpRXg5zxobmF9xr5g==",
+        "resolved": "8.0.11",
+        "contentHash": "zLgN22Zp9pk8RHlwssRTexw4+a6wqOnKWN+VejdPn5Yhjql4XiBhkFo35Nu8mmqHIk/UEmmCnMGLWq75aFfkOw==",
         "dependencies": {
-          "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": "8.0.0",
-          "Microsoft.Extensions.Hosting.Abstractions": "8.0.0",
-          "Microsoft.Extensions.Logging.Abstractions": "8.0.0",
-          "Microsoft.Extensions.Options": "8.0.0"
+          "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": "8.0.11",
+          "Microsoft.Extensions.Hosting.Abstractions": "8.0.1",
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.2",
+          "Microsoft.Extensions.Options": "8.0.2"
         }
       },
       "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": {
         "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "AT2qqos3IgI09ok36Qag9T8bb6kHJ3uT9Q5ki6CySybFsK6/9JbvQAgAHf1pVEjST0/N4JaFaCbm40R5edffwg=="
+        "resolved": "8.0.11",
+        "contentHash": "So3JUdRxozRjvQ3cxU6F3nI/i4emDnjane6yMYcJhvTTTu29ltlIdoXjkFGRceIWz8yKvuEpzXItZ0x5GvN2nQ=="
       },
       "Microsoft.Extensions.Diagnostics.Testing": {
         "type": "Transitive",
@@ -1707,8 +1707,8 @@
       "api": {
         "type": "Project",
         "dependencies": {
-          "AspNetCore.HealthChecks.SqlServer": "[8.0.2, 8.0.2]",
-          "AspNetCore.HealthChecks.Uris": "[8.0.1, 8.0.1]",
+          "AspNetCore.HealthChecks.SqlServer": "[9.0.0, 9.0.0]",
+          "AspNetCore.HealthChecks.Uris": "[9.0.0, 9.0.0]",
           "Azure.Messaging.EventGrid": "[5.0.0, 5.0.0]",
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
           "Commercial.Core": "[2026.7.0, )",
@@ -1772,6 +1772,7 @@
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
           "Braintree": "[5.36.0, 5.36.0]",
           "CsvHelper": "[33.1.0, 33.1.0]",
+          "Data": "[2026.7.0, )",
           "DnsClient": "[1.8.0, 1.8.0]",
           "Duende.IdentityServer": "[7.4.6, 7.4.6]",
           "DuoUniversal": "[1.3.1, 1.3.1]",
@@ -1828,6 +1829,9 @@
           "NSubstitute": "[5.1.0, )",
           "xunit": "[2.6.6, )"
         }
+      },
+      "data": {
+        "type": "Project"
       },
       "httpextensions": {
         "type": "Project"
