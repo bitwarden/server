@@ -104,7 +104,7 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateUserAsync_AppliesRequestedChangesToTheDatabaseCopy(
+    public async Task UpdateUserAsync_AppliesRequestedChangesToUser(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
