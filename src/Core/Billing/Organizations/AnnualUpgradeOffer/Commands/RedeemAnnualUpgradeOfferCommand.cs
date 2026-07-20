@@ -155,7 +155,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             {
                 await stripeAdapter.ReleaseSubscriptionScheduleAsync(schedule.Id);
             }
-            catch (Exception releaseEx)
+            catch (StripeException releaseEx)
             {
                 _logger.LogError(releaseEx,
                     "{Command}: Failed to release orphaned annual-upgrade schedule ({ScheduleId}) for Organization ({OrganizationId})",

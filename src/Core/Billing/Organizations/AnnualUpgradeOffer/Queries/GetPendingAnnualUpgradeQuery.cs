@@ -4,6 +4,7 @@ using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -112,7 +113,7 @@ public class GetPendingAnnualUpgradeQuery(
                 EffectiveDate = upcomingPhase.StartDate
             };
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is StripeException or BillingException or NotFoundException)
         {
             logger.LogWarning(
                 exception,
