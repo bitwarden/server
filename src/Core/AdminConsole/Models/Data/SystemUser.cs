@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 
 namespace Bit.Core.AdminConsole.Models.Data;
 
@@ -9,6 +8,4 @@ public class SystemUser(EventSystemUser systemUser) : IActingUser
 
     public bool IsOrganizationOwnerOrProvider => false;
     public EventSystemUser? SystemUserType { get; } = systemUser;
-    public Permissions? Permissions => null;
-    public OrganizationUserType? OrganizationUserType => null;
 }
