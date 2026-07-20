@@ -44,12 +44,7 @@ public class SingleOrganizationScene(
         public bool EnableSecretsManager { get; set; }
         public int? SmSeats { get; set; }
         public int? SmServiceAccounts { get; set; }
-
-        /// <summary>
-        /// Optional capability flag overrides applied on top of the plan defaults.
-        /// </summary>
         public OrganizationOverrides? Overrides { get; set; }
-
         public GatewayType? Gateway { get; set; }
         public string? GatewayCustomerId { get; set; }
         public string? GatewaySubscriptionId { get; set; }

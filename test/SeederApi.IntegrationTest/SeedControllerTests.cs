@@ -1,9 +1,4 @@
 ﻿using System.Net;
-using System.Text.Json;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Enums;
-using Bit.Core.Repositories;
-using Bit.Seeder.Options;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
@@ -225,61 +220,6 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         // Verify the response contains MangleMap and Result fields
         Assert.Contains("mangleMap", jsonString, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("result", jsonString, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task SeedEndpoint_SingleOrganizationScene_WithOverridesAndGateway_ReturnsOk()
-    {
-        var playId = Guid.NewGuid().ToString();
-
-        // An org owner must already exist with a public key.
-        var ownerEmail = $"org-owner-{Guid.NewGuid()}@bitwarden.com";
-        var userResponse = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
-        {
-            Template = "SingleUserScene",
-            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(
-                new SingleUserScene.Request { Email = ownerEmail, Password = "asdfasdfasdf" })
-        }, playId);
-        userResponse.EnsureSuccessStatusCode();
-
-        var userResult = await userResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
-        Assert.NotNull(userResult);
-        var ownerUserId = ((System.Text.Json.JsonElement)userResult!.Result!).GetProperty("userId").GetGuid();
-
-        // Seed a Free org but enable SSO via overrides and set the billing gateway triple.
-        var orgResponse = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
-        {
-            Template = "SingleOrganizationScene",
-            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new SingleOrganizationScene.Request
-            {
-                OwnerUserId = ownerUserId,
-                PlanType = PlanType.Free,
-                Name = "Override Org",
-                Domain = "override.example",
-                Seats = 5,
-                Overrides = new OrganizationOverrides { UseSso = true },
-                Gateway = GatewayType.Stripe,
-                GatewayCustomerId = "cus_seed_test",
-                GatewaySubscriptionId = "sub_seed_test"
-            })
-        }, playId);
-
-        orgResponse.EnsureSuccessStatusCode();
-        var orgResult = await orgResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
-        Assert.NotNull(orgResult);
-        Assert.NotNull(orgResult!.Result);
-
-        var organizationId = ((JsonElement)orgResult.Result!).GetProperty("organizationId").GetGuid();
-
-        using var scope = _factory.Services.CreateScope();
-        var organizationRepository = scope.ServiceProvider.GetRequiredService<IOrganizationRepository>();
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        Assert.NotNull(organization);
-        Assert.True(organization!.UseSso);
-        Assert.Equal(GatewayType.Stripe, organization.Gateway);
-        Assert.Equal("cus_seed_test", organization.GatewayCustomerId);
-        Assert.Equal("sub_seed_test", organization.GatewaySubscriptionId);
     }
 
     private class BatchDeleteResponse

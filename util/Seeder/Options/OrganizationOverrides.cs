@@ -6,14 +6,12 @@
 /// </summary>
 public sealed record OrganizationOverrides
 {
-    // Collection management settings.
     public bool? UseAutomaticUserConfirmation { get; init; }
     public bool? AllowAdminAccessToAllCollectionItems { get; init; }
     public bool? LimitItemDeletion { get; init; }
     public bool? LimitCollectionCreation { get; init; }
     public bool? LimitCollectionDeletion { get; init; }
 
-    // Capability flags. Set Secrets Manager via PlanFeatures.EnableSecretsManager, not here.
     public bool? UseGroups { get; init; }
     public bool? UsePolicies { get; init; }
     public bool? UseSso { get; init; }
