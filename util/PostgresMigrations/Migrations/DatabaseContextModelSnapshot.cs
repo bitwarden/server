@@ -1049,6 +1049,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("RenewalNotificationSentDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
