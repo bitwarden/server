@@ -71,8 +71,8 @@ public class SendResponseModel : HttpExtensions.ResponseModel
             case SendType.Item:
                 // These fields are included in send.Data, but since the entire
                 // object is encrypted as a blob we can't extract them here.
-                Name = "";
-                Notes = "";
+                Name = string.Empty;
+                Notes = string.Empty;
                 Data = send.Data ?? throw new NullReferenceException("Send Data is required");
                 break;
             default:

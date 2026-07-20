@@ -55,7 +55,7 @@ public class SendAccessResponseModel : ResponseModel
                 Text = new SendTextModel(textData);
                 break;
             case SendType.Item:
-                Name = "";
+                Name = string.Empty;
                 Data = send.Data ?? throw new NullReferenceException("Send Data is required");
                 break;
             default:
