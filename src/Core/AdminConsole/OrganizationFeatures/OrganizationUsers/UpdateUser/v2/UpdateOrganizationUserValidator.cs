@@ -18,7 +18,7 @@ public class UpdateOrganizationUserValidator(
     IOrganizationUserRepository organizationUserRepository,
     IGroupRepository groupRepository,
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-    IOrganizationUserValidationService organizationUserValidationService)
+    IManageOrganizationUserValidationService manageOrganizationUserValidationService)
     : IUpdateOrganizationUserValidator
 {
     public async Task<ValidationResult<UpdateOrganizationUserRequest>> ValidateAsync(
@@ -68,16 +68,10 @@ public class UpdateOrganizationUserValidator(
             }
         }
 
-        var escalationError = await ValidateNotEscalatingAboveOwnRoleAsync(request);
-        if (escalationError is not null)
+        var roleChangeError = await ValidateRoleChangeAsync(request);
+        if (roleChangeError is not null)
         {
-            return Invalid(request, escalationError);
-        }
-
-        var grantError = ValidateCustomPermissionsGrant(request);
-        if (grantError is not null)
-        {
-            return Invalid(request, grantError);
+            return Invalid(request, roleChangeError);
         }
 
         // Ensure the organization's plan supports custom permissions.
@@ -135,88 +129,27 @@ public class UpdateOrganizationUserValidator(
     }
 
     /// <summary>
-    /// Prevents a caller from granting or modifying a role higher than their own. Delegates the authority
-    /// decision to <see cref="IOrganizationUserValidationService.CanManage"/>, checking both the member's
-    /// current and requested role. System users skip the check; a denial is mapped to a specific error.
+    /// Delegates the role-change authority decision to
+    /// <see cref="IManageOrganizationUserValidationService.CanManageRoleChangeAsync"/>. System users skip the check.
     /// </summary>
-    private async Task<Error?> ValidateNotEscalatingAboveOwnRoleAsync(UpdateOrganizationUserRequest request)
+    private async Task<Error?> ValidateRoleChangeAsync(UpdateOrganizationUserRequest request)
     {
-        if (request.PerformedBy is SystemUser)
+        if (request.PerformedBy is not StandardUser standardUser)
         {
             return null;
         }
 
-        var userWithNewRole = new OrganizationUser
-        {
-            Type = request.NewType,
-            OrganizationId = request.OrganizationUserToUpdate.OrganizationId
-        };
+        var actingUser = new OrganizationUserRole(
+            standardUser.OrganizationUserType!.Value,
+            request.OrganizationUserToUpdate.OrganizationId,
+            standardUser.Permissions);
 
-        var actingUser = new OrganizationUser
-        {
-            Type = request.PerformedBy.OrganizationUserType!.Value,
-            UserId = request.PerformedBy.UserId!.Value,
-        };
-
-        if (request.PerformedBy.Permissions is not null)
-        {
-            actingUser.SetPermissions(request.PerformedBy.Permissions);
-        }
-
-        var canManageCurrentRole =
-            await organizationUserValidationService.CanManage(actingUser.UserId.Value, actingUser, request.OrganizationUserToUpdate) is null;
-        var canManageNewRole =
-            await organizationUserValidationService.CanManage(actingUser.UserId.Value, actingUser, userWithNewRole) is null;
-
-        if (canManageCurrentRole && canManageNewRole)
-        {
-            return null;
-        }
-
-        // Only an Owner can manage an Owner; otherwise it's a Custom user reaching above their authority.
-        if (request.OrganizationUserToUpdate.Type == OrganizationUserType.Owner || request.NewType == OrganizationUserType.Owner)
-        {
-            return new OnlyOwnersCanManageOwners();
-        }
-
-        return new CustomUsersCannotManageAdminsOrOwners();
-    }
-
-    /// <summary>
-    /// A Custom caller can only grant another member the custom permissions they themselves hold. Owners,
-    /// admins, providers (no membership), and system users are exempt: their authority already exceeds any
-    /// grantable custom permission.
-    /// </summary>
-    private static Error? ValidateCustomPermissionsGrant(UpdateOrganizationUserRequest request)
-    {
-        if (request.NewType != OrganizationUserType.Custom || request.NewPermissions is null)
-        {
-            return null;
-        }
-
-        if (request.PerformedBy is not StandardUser)
-        {
-            return null;
-        }
-
-        if (request.PerformedBy.OrganizationUserType is OrganizationUserType.Owner or OrganizationUserType.Admin)
-        {
-            return null;
-        }
-
-        var actingPermissions = request.PerformedBy.Permissions ?? new Permissions();
-
-        return GrantsPermissionNotHeldByActor(request.NewPermissions, actingPermissions)
-            ? new CustomUsersCanOnlyGrantOwnPermissions()
-            : null;
-    }
-
-    private static bool GrantsPermissionNotHeldByActor(Permissions requested, Permissions actorPermissions)
-    {
-        var actorClaims = actorPermissions.ClaimsMap.ToDictionary(c => c.ClaimName, c => c.Permission);
-
-        // Every permission being granted must also be held by the acting user.
-        return requested.ClaimsMap.Any(granted => granted.Permission && !actorClaims[granted.ClaimName]);
+        return await manageOrganizationUserValidationService.CanManageRoleChangeAsync(
+            standardUser.UserId!.Value,
+            actingUser,
+            request.OrganizationUserToUpdate,
+            request.NewType,
+            request.NewPermissions);
     }
 
     private static bool IsAddingSelfToCollection(UpdateOrganizationUserRequest request)

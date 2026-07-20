@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
@@ -13,7 +14,7 @@ namespace Bit.Core.Entities;
 /// An association table between one <see cref="User"/> and one <see cref="Organization"/>, representing that user's
 /// membership in the organization. "Member" refers to the OrganizationUser object.
 /// </summary>
-public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
+public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser, IOrganizationUserRole
 {
     /// <summary>
     /// A unique random identifier.

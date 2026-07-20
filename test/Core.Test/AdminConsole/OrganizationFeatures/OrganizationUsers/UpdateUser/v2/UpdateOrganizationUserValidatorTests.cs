@@ -249,65 +249,24 @@ public class UpdateOrganizationUserValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_WhenManagementDeniedAndNoOwnerInvolved_ReturnsCustomUsersCannotManageAdminsOrOwners(
+    public async Task ValidateAsync_WhenRoleChangeIsDenied_ReturnsTheServiceError(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
-        // With CanManage stubbed to deny, neither the current (User) nor requested (Admin) role is Owner,
-        // so the denial maps to the custom-user error rather than the owner-specific one.
+        // The escalation decision (and which error to return) lives in the validation service; the validator
+        // just forwards whatever it returns. The mapping itself is covered by the service's own unit tests.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin,
             performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom));
 
-        sutProvider.GetDependency<IOrganizationUserValidationService>()
-            .CanManage(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUser>())
-            .Returns(new CannotManageTargetUser());
+        sutProvider.GetDependency<IManageOrganizationUserValidationService>()
+            .CanManageRoleChangeAsync(Arg.Any<Guid>(), Arg.Any<IOrganizationUserRole>(), Arg.Any<IOrganizationUserRole>(),
+                Arg.Any<OrganizationUserType>(), Arg.Any<Permissions>())
+            .Returns(new CustomUsersCannotManageAdminsOrOwners());
 
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsError);
         Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenManagementDeniedAndTargetIsOwner_ReturnsOnlyOwnersCanManageOwners(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser)
-    {
-        // The target is currently an Owner, so a denied management attempt maps to the owner-specific error
-        // regardless of the requested role.
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom));
-
-        sutProvider.GetDependency<IOrganizationUserValidationService>()
-            .CanManage(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUser>())
-            .Returns(new CannotManageTargetUser());
-
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<OnlyOwnersCanManageOwners>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenManagementDeniedAndPromotingToOwner_ReturnsOnlyOwnersCanManageOwners(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
-    {
-        // The requested role is Owner, so a denied management attempt maps to the owner-specific error even
-        // though the target's current role (User) is not.
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Owner,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom));
-
-        sutProvider.GetDependency<IOrganizationUserValidationService>()
-            .CanManage(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUser>())
-            .Returns(new CannotManageTargetUser());
-
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<OnlyOwnersCanManageOwners>(result.AsError);
     }
 
     [Theory]
@@ -318,57 +277,6 @@ public class UpdateOrganizationUserValidatorTests
     {
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Owner,
             performedBy: new SystemUser(EventSystemUser.SCIM));
-
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsValid);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenCustomActorGrantsPermissionTheyDoNotHold_ReturnsCustomUsersCanOnlyGrantOwnPermissions(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
-    {
-        // A Custom actor holding only ManageUsers cannot grant a target a permission (ManageSso) it lacks.
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Custom,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom,
-                new Permissions { ManageUsers = true }),
-            newPermissions: new Permissions { ManageSso = true });
-
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<CustomUsersCanOnlyGrantOwnPermissions>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenCustomActorGrantsOnlyPermissionsTheyHold_ReturnsValid(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
-    {
-        // The actor holds ManageUsers and grants only ManageUsers, which is within their own authority.
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Custom,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom,
-                new Permissions { ManageUsers = true }),
-            newPermissions: new Permissions { ManageUsers = true });
-
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsValid);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenOwnerGrantsPermissionsBeyondAnyMember_ReturnsValid(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
-    {
-        // An Owner is exempt from the grant-subset check and may grant any custom permission.
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Custom,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: true, OrganizationUserType.Owner),
-            newPermissions: new Permissions { ManageScim = true, ManageSso = true, AccessImportExport = true });
 
         var result = await sutProvider.Sut.ValidateAsync(request);
 
@@ -387,8 +295,8 @@ public class UpdateOrganizationUserValidatorTests
         ICollection<Collection> postedCollections = null,
         Permissions newPermissions = null)
     {
-        // IOrganizationUserValidationService is auto-mocked; an unstubbed CanManage returns null ("allowed"),
-        // so the escalation check passes by default. Its role rules have their own unit tests.
+        // IManageOrganizationUserValidationService is auto-mocked; an unstubbed CanManageRoleChange returns null
+        // ("allowed"), so the escalation check passes by default. Its role rules have their own unit tests.
 
         // Default to a state where validation passes unless a test overrides it.
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
