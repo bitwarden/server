@@ -2290,6 +2290,50 @@ public class UpdateOrganizationSubscriptionCommandTests
                 opts.Phases[1].Items.All(i => i.Price != monthlySeat)));
     }
 
+    [Fact]
+    public async Task Run_ActiveScheduleNotAnnualUpgrade_FallsBackToNonMigrationResolution()
+    {
+        // The org's plan type resolves an annual-latest target, but the active schedule does NOT
+        // carry the annual-latest seat price, so it is not an annual-upgrade schedule. Resolution
+        // must fall through to the cohort path; with no cohort assignment it resolves source==target
+        // (non-migration), leaving the phase priced at the monthly seat rather than mapping to annual.
+        var organization = CreateOrganization();
+        organization.PlanType = PlanType.EnterpriseMonthly;
+
+        var currentPlan = MockPlans.Get(PlanType.EnterpriseMonthly);
+        var annualLatest = MockPlans.Get(PlanType.EnterpriseAnnually);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(annualLatest);
+
+        var monthlySeat = currentPlan.PasswordManager.StripeSeatPlanId;
+        var annualSeat = annualLatest.PasswordManager.StripeSeatPlanId;
+
+        var subscription = CreateSubscription(items: [(monthlySeat, "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+
+        // Single monthly-only phase: no annual-latest seat price anywhere, so annual-upgrade
+        // detection returns false.
+        var schedule = CreateMockSchedule(subscription.Id, [(monthlySeat, 5)]);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(monthlySeat, 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        // Non-migration resolution leaves the monthly seat price in place (no annual mapping).
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Items.Any(i => i.Price == monthlySeat && i.Quantity == 10) &&
+                opts.Phases[0].Items.All(i => i.Price != annualSeat)));
+    }
+
     private void SetupMigration(
         Organization organization,
         MigrationPathId pathId,

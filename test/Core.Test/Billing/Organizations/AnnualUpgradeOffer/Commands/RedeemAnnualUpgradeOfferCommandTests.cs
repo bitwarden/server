@@ -293,4 +293,46 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync(schedule.Id);
     }
+
+    [Fact]
+    public async Task Run_OfferValidButPlanTypeHasNoAnnualMapping_ReturnsConflict_WithoutFetchingSubscription()
+    {
+        // Re-validation still surfaces an offer, but the org's plan type has no annual-latest
+        // mapping (e.g. it is already annual). The command must fail closed with the default
+        // conflict before touching Stripe.
+        var organization = CreateOrganization(PlanType.TeamsAnnually);
+        _getOfferQuery.Run(organization).Returns(new AnnualUpgradeOfferResult(60m, 48m, 12m));
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT2);
+        Assert.Equal("We had a problem switching your billing to annual. Please contact support for assistance.", result.AsT2.Response);
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+        await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+    }
+
+    [Fact]
+    public async Task Run_ScheduleUpdateFails_AndReleaseAlsoFails_StillReturnsUnhandled()
+    {
+        var organization = CreateOrganization(PlanType.EnterpriseMonthly);
+        var monthlyPlan = new EnterprisePlan(false);
+        var annualPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(annualPlan);
+
+        var (_, schedule) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 5 }]);
+        _stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id, Arg.Any<SubscriptionScheduleUpdateOptions>())
+            .Returns<SubscriptionSchedule>(_ => throw new StripeException { StripeError = new StripeError { Code = "api_error" } });
+        // The cleanup release also fails: the inner catch must swallow the release failure and let
+        // the original schedule-update exception surface as the command result.
+        _stripeAdapter.ReleaseSubscriptionScheduleAsync(schedule.Id)
+            .Returns<SubscriptionSchedule>(_ => throw new StripeException { StripeError = new StripeError { Code = "api_error" } });
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT3);
+        Assert.IsType<StripeException>(result.AsT3.Exception);
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync(schedule.Id);
+    }
 }

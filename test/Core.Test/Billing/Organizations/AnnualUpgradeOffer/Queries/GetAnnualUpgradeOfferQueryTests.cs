@@ -291,4 +291,68 @@ public class GetAnnualUpgradeOfferQueryTests
 
         Assert.NotNull(result);
     }
+
+    [Fact]
+    public async Task Run_AnnualScheduleForDifferentSubscriptionOrInactive_StillReturnsOffer()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        _getChurnOfferCohortMembershipQuery.Run(organization).Returns((ChurnOfferCohortMembership?)null);
+
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        SetupSubscription(organization,
+            new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 20 });
+
+        // Two schedules carry the annual seat price but neither marks THIS subscription as
+        // redeemed: one belongs to a different subscription, the other is not active. The offer
+        // must still surface.
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        SubscriptionId = "sub_other",
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = [new SubscriptionSchedulePhase { Items = [new SubscriptionSchedulePhaseItem { PriceId = annualPlan.PasswordManager.StripeSeatPlanId, Quantity = 20 }] }]
+                    },
+                    new SubscriptionSchedule
+                    {
+                        SubscriptionId = "sub_123",
+                        Status = SubscriptionScheduleStatus.Canceled,
+                        Phases = [new SubscriptionSchedulePhase { Items = [new SubscriptionSchedulePhaseItem { PriceId = annualPlan.PasswordManager.StripeSeatPlanId, Quantity = 20 }] }]
+                    }
+                ]
+            });
+
+        var result = await _query.Run(organization);
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task Run_ItemWithNullPrice_IgnoredWhenLocatingSeat_ReturnsOffer()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        _getChurnOfferCohortMembershipQuery.Run(organization).Returns((ChurnOfferCohortMembership?)null);
+
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        // A line item with no expanded Price must be skipped safely when locating the seat line.
+        SetupSubscription(organization,
+            new SubscriptionItem { Price = null, Quantity = 1 },
+            new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 20 });
+
+        var result = await _query.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.Equal(monthlyPlan.PasswordManager.SeatPrice * 20 * 12, result.CurrentAnnualCost);
+    }
 }
