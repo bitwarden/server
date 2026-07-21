@@ -50,5 +50,6 @@ public interface IOrganizationPlanMigrationCohortAssignmentRepository
     /// <param name="minDays">The minimum number of days from today for the ExpirationDate.</param>
     /// <param name="maxDays">The maximum number of days from today for the ExpirationDate.</param>
     /// <returns>A list of assignments that are eligible for sending invoices.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="minDays"/> is greater than <paramref name="maxDays"/>.</exception>
     Task<IReadOnlyList<OrganizationPlanMigrationCohortAssignment>> GetSendInvoiceCandidatesInWindowAsync(int minDays, int maxDays);
 }
