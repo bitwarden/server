@@ -213,13 +213,20 @@ public class PreviewOrganizationTaxCommand(
                 var options = GetBaseOptions(billingAddress, planChange.Tier != ProductTierType.Families);
 
                 var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                    new SubscriptionGetOptions { Expand = ["customer"] });
+                    new SubscriptionGetOptions
+                    {
+                        Expand = ["customer", "discounts.coupon.applies_to"]
+                    });
 
-                if (subscription.Customer.Discount != null)
+                // Genuine org coupons (complimentary PM, SM-standalone) attach at the subscription level, not the
+                // customer. The migration coupon lives on the schedule, not the live subscription, so it's excluded.
+                var discount = subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault();
+
+                if (discount != null)
                 {
                     options.Discounts =
                     [
-                        new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                        new InvoiceDiscountOptions { Coupon = discount.Coupon.Id }
                     ];
                 }
 
@@ -322,16 +329,22 @@ public class PreviewOrganizationTaxCommand(
             }
 
             var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions { Expand = ["customer.tax_ids"] });
+                new SubscriptionGetOptions
+                {
+                    Expand = ["customer.tax_ids", "discounts.coupon.applies_to"]
+                });
 
             var options = GetBaseOptions(subscription.Customer,
                 organization.GetProductUsageType() == ProductUsageType.Business);
 
-            if (subscription.Customer.Discount != null)
+            // Prefer a customer discount, else the first subscription-level one (see plan-change overload).
+            var discount = subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault();
+
+            if (discount != null)
             {
                 options.Discounts =
                 [
-                    new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                    new InvoiceDiscountOptions { Coupon = discount.Coupon.Id }
                 ];
             }
 

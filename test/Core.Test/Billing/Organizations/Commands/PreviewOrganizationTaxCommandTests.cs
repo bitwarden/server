@@ -1575,6 +1575,145 @@ public class PreviewOrganizationTaxCommandTests
             options.Discounts[0].Coupon == "EXISTING_DISCOUNT_50"));
     }
 
+    // PM-40440: genuine org coupons (complimentary PM, SM-standalone) attach at the subscription level, not the
+    // customer. The preview must read subscription.Discounts too, or it over-quotes by dropping the coupon.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_ExistingSubscriptionWithSubscriptionLevelDiscount_PreservesCoupon()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "90210"
+        };
+
+        var currentPlan = new TeamsPlan(true);
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2023-teams-org-seat-annually" }, Quantity = 5 }
+        };
+
+        // A genuine complimentary/SM-standalone coupon lives at the subscription level, with no customer discount.
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null },
+            Discounts = [new Discount { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } }]
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        // The subscription-level coupon is applied to the preview so Stripe nets it out of the total.
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == "COMPLIMENTARY_PM_100"));
+    }
+
+    // PM-40440 guardrail: the schedule-derived migration coupon lives on the subscription SCHEDULE (Phase 2),
+    // never on the live subscription. A migrating org (schedule present, no live discount) must still preview the
+    // full target-plan price — reading only live discounts keeps the migration coupon out of the preview.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_MigratingOrgWithScheduleCoupon_DoesNotApplyMigrationDiscount()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsAnnually2020,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 10
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "90210"
+        };
+
+        var currentPlan = new Teams2020Plan(true);
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2020-teams-org-seat-annually" }, Quantity = 10 }
+        };
+
+        // Migrating org: the migration coupon is only on the subscription schedule's Phase 2; the live
+        // subscription (Phase 1) carries no discount at the customer or subscription level.
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            ScheduleId = "sub_sched_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null },
+            Discounts = []
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        // No discount is applied.
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts == null));
+
+        // The preview must never fetch the schedule — the only place the migration coupon lives — which is what
+        // keeps it out of the quote. Guards against a future regression that starts reading the schedule here.
+        await _stripeAdapter.DidNotReceive().GetSubscriptionScheduleAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionScheduleGetOptions>());
+    }
+
     [Fact]
     public async Task Run_OrganizationPlanChange_OrganizationWithoutGatewayIds_ReturnsBadRequest()
     {
@@ -2314,6 +2453,62 @@ public class PreviewOrganizationTaxCommandTests
             options.Discounts != null &&
             options.Discounts.Count == 1 &&
             options.Discounts[0].Coupon == "ENTERPRISE_DISCOUNT_20"));
+    }
+
+    // PM-40440: the update-overload preview must also read subscription-level discounts, not just the customer
+    // discount — same over-quote bug as the plan-change path (the fix is applied to both overloads).
+    [Fact]
+    public async Task Run_OrganizationSubscriptionUpdate_SubscriptionLevelDiscount_PreservesCoupon()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123"
+        };
+
+        var update = new OrganizationSubscriptionUpdate
+        {
+            PasswordManager = new OrganizationSubscriptionUpdate.PasswordManagerSelections
+            {
+                Seats = 25
+            }
+        };
+
+        var plan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+
+        // A genuine coupon lives at the subscription level, with no customer-level discount.
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "US", PostalCode = "90210" },
+                Discount = null
+            },
+            Discounts = [new Discount { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } }]
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, update);
+
+        Assert.True(result.IsT0);
+
+        // The subscription-level coupon is applied to the preview so Stripe nets it out of the total.
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == "COMPLIMENTARY_PM_100"));
     }
 
     [Fact]
