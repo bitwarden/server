@@ -235,5 +235,8 @@ public class RecipeBuilderValidationTests
             };
 
         public IReadOnlyList<string> ListAvailable() => [];
+
+        public byte[] ReadBytes(string fileName) =>
+            throw new NotSupportedException("StubSeedReader does not provide binary samples.");
     }
 }

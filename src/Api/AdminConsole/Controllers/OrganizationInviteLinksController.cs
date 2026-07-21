@@ -19,6 +19,7 @@ public class OrganizationInviteLinksController(
     IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
     IGetOrganizationInviteLinkStatusQuery getOrganizationInviteLinkStatusQuery,
     IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
+    IUpdateInviteSupportConfirmCommand updateInviteSupportConfirmCommand,
     IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
     IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand,
     IValidateOrganizationInviteLinkEmailDomainQuery validateOrganizationInviteLinkEmailDomainQuery,
@@ -36,6 +37,7 @@ public class OrganizationInviteLinksController(
                 status.OrganizationName,
                 status.LinksEnabled,
                 status.SeatsAvailable,
+                status.SupportsConfirmation,
                 status.Sso is null
                     ? null
                     : new OrganizationInviteLinkSsoResponseModel(status.Sso.OrgSsoId, status.Sso.Required))));
@@ -90,6 +92,17 @@ public class OrganizationInviteLinksController(
     public async Task<IResult> Update(Guid orgId, [FromBody] UpdateOrganizationInviteLinkRequestModel model)
     {
         var result = await updateOrganizationInviteLinkCommand.UpdateAsync(
+            model.ToCommandRequest(orgId));
+
+        return Handle(result, link =>
+            TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
+    }
+
+    [HttpPut("support-confirm")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> UpdateInviteSupportConfirm(Guid orgId, [FromBody] UpdateInviteSupportConfirmRequestModel model)
+    {
+        var result = await updateInviteSupportConfirmCommand.UpdateAsync(
             model.ToCommandRequest(orgId));
 
         return Handle(result, link =>

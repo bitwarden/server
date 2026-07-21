@@ -733,7 +733,7 @@ public class OrganizationService : IOrganizationService
 
             if (provider.Type == ProviderType.Reseller)
             {
-                return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
+                return (false, $"Seat limit of {organization.Seats} has been reached. Contact your provider to purchase additional seats.");
             }
         }
 
