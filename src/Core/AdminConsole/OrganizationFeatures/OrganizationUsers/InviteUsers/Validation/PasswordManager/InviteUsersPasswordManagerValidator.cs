@@ -99,7 +99,7 @@ public class InviteUsersPasswordManagerValidator(
 
         if (provider is not null)
         {
-            var providerValidationResult = InvitingUserOrganizationProviderValidator.Validate(new InviteOrganizationProvider(provider));
+            var providerValidationResult = InvitingUserOrganizationProviderValidator.Validate(new InviteOrganizationProvider(provider), request.Seats);
 
             if (providerValidationResult is Invalid<InviteOrganizationProvider> invalidProviderValidation)
             {

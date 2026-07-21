@@ -44,8 +44,8 @@ public class ConfirmOrganizationInviteLinkValidator(
     {
         var user = request.User;
 
-        var link = await organizationInviteLinkRepository.GetByCodeAsync(request.Code);
-        if (link is null)
+        var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
+        if (link is null || !link.CodeMatches(request.Code.ToString()))
         {
             return new InviteLinkNotFound();
         }
