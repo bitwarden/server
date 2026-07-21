@@ -120,7 +120,7 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
         var dbContext = GetDatabaseContext(scope);
         var now = DateTime.UtcNow;
         var results = await (
-            from cma in dbContext.OrganizationPlanMigrationCohortAssignments
+            from cma in dbContext.OrganizationPlanMigrationCohortAssignments.AsNoTracking()
             join c in dbContext.OrganizationPlanMigrationCohorts on cma.CohortId equals c.Id
             join o in dbContext.Organizations on cma.OrganizationId equals o.Id
             where c.IsActive
