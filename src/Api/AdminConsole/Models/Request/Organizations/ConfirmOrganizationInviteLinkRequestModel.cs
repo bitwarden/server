@@ -6,6 +6,9 @@ namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 public class ConfirmOrganizationInviteLinkRequestModel
 {
     [Required]
+    public required Guid OrganizationId { get; set; }
+
+    [Required]
     public required Guid Code { get; set; }
 
     /// <summary>
