@@ -48,7 +48,6 @@ public class GetOrganizationInviteLinkStatusQueryTests
         Organization organization,
         SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
     {
-        // Arrange
         var code = Guid.NewGuid();
         organization.Id = inviteLink.OrganizationId;
         organization.Seats = null;
@@ -58,10 +57,8 @@ public class GetOrganizationInviteLinkStatusQueryTests
         SetupMocks(sutProvider, inviteLink, organization);
         SetupOccupiedSeats(sutProvider, inviteLink.OrganizationId, 0);
 
-        // Act
         var result = await sutProvider.Sut.GetStatusAsync(inviteLink.OrganizationId, code);
 
-        // Assert
         Assert.True(result.IsSuccess);
         Assert.Equal(supportsConfirmation, result.AsSuccess.SupportsConfirmation);
     }
@@ -158,7 +155,6 @@ public class GetOrganizationInviteLinkStatusQueryTests
         Assert.False(status.SeatsAvailable);
         Assert.Null(status.Sso);
 
-        // When links are disabled we short-circuit without touching seats or SSO.
         await sutProvider.GetDependency<IOrganizationRepository>()
             .DidNotReceiveWithAnyArgs()
             .GetOccupiedSeatCountByOrganizationIdAsync(default);

@@ -45,7 +45,6 @@ public class OrganizationInviteLinkRepositoryTests
             RevisionDate = DateTime.UtcNow,
         });
 
-        // The repository must unprotect on read — the entity's Code should match what was passed in
         var result = await repository.GetByOrganizationIdAsync(organization.Id);
 
         Assert.NotNull(result);
@@ -164,7 +163,6 @@ public class OrganizationInviteLinkRepositoryTests
         var org1Link = await repository.CreateTestOrganizationInviteLinkAsync(org1);
         await repository.CreateTestOrganizationInviteLinkAsync(org2);
 
-        // Try to refresh org1's link with a new link that claims org2's OrganizationId — violates unique index
         var conflictingLink = new OrganizationInviteLink
         {
             Code = Guid.NewGuid().ToString(),

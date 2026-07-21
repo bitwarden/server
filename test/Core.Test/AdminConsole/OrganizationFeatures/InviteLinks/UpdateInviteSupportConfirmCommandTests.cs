@@ -22,7 +22,6 @@ public class UpdateInviteSupportConfirmCommandTests
     [Theory, BitAutoData]
     public async Task UpdateAsync_WithValidInput_UpdatesOnlyInviteAndSupportsConfirmation(Guid organizationId)
     {
-        // Arrange
         var sutProvider = GetSutProvider();
         var now = new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc);
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
@@ -49,10 +48,8 @@ public class UpdateInviteSupportConfirmCommandTests
 
         var request = CreateRequest(organizationId, "new-invite", supportsConfirmation: true);
 
-        // Act
         var result = await sutProvider.Sut.UpdateAsync(request);
 
-        // Assert
         Assert.True(result.IsSuccess);
         var link = result.AsSuccess;
         Assert.Same(existingLink, link);

@@ -225,7 +225,6 @@ public class OrganizationInviteLinksControllerTests
         OrganizationInviteLink inviteLink,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
-        // Arrange
         inviteLink.OrganizationId = orgId;
         inviteLink.AllowedDomains = "[\"acme.com\"]";
         inviteLink.Code = Guid.NewGuid().ToString();
@@ -240,10 +239,8 @@ public class OrganizationInviteLinksControllerTests
             .UpdateAsync(Arg.Any<UpdateInviteSupportConfirmRequest>())
             .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
 
-        // Act
         var result = await sutProvider.Sut.UpdateInviteSupportConfirm(orgId, model);
 
-        // Assert
         var okResult = Assert.IsType<Ok<OrganizationInviteLinkResponseModel>>(result);
         Assert.NotNull(okResult.Value);
         Assert.Equal(inviteLink.Id, okResult.Value.Id);
