@@ -23,7 +23,7 @@ COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/util/MsSqlMigratorUtility
-RUN . /tmp/rid.txt && dotnet restore -r $RID
+RUN dotnet restore
 
 # Build project
 WORKDIR /source/util/MsSqlMigratorUtility

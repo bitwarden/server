@@ -20,6 +20,7 @@
     <NuGetAuditLevel>critical</NuGetAuditLevel>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode Condition="'$(MSBuildProjectName)' != 'AppHost'">true</RestoreLockedMode>
+    <RuntimeIdentifiers>linux-musl-x64;linux-musl-arm64;linux-musl-arm</RuntimeIdentifiers>
   </PropertyGroup>
 
   <PropertyGroup>
