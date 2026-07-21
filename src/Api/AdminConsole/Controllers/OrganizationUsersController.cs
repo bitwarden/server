@@ -867,6 +867,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var result = await _acceptOrganizationInviteLinkCommand.AcceptAsync(new AcceptOrganizationInviteLinkRequest
         {
+            OrganizationId = model.OrganizationId,
             Code = model.Code,
             User = user,
             ResetPasswordKey = model.ResetPasswordKey,
@@ -887,6 +888,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var result = await _confirmOrganizationInviteLinkCommand.ConfirmAsync(new ConfirmOrganizationInviteLinkRequest
         {
+            OrganizationId = model.OrganizationId,
             Code = model.Code,
             User = user,
             OrgUserKey = model.OrgUserKey,

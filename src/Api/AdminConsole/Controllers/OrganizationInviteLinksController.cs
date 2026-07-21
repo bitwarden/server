@@ -30,7 +30,7 @@ public class OrganizationInviteLinksController(
     [HttpPost("/organizations/invite-link/status")]
     public async Task<IResult> GetStatus([FromBody] GetOrganizationInviteLinkStatusRequestModel model)
     {
-        var result = await getOrganizationInviteLinkStatusQuery.GetStatusAsync(model.Code);
+        var result = await getOrganizationInviteLinkStatusQuery.GetStatusAsync(model.OrganizationId, model.Code);
 
         return Handle(result, status =>
             TypedResults.Ok(new OrganizationInviteLinkStatusResponseModel(
@@ -47,7 +47,7 @@ public class OrganizationInviteLinksController(
     [HttpPost("/organizations/invite-link/policies")]
     public async Task<IResult> GetPolicies([FromBody] GetOrganizationInviteLinkPoliciesRequestModel model)
     {
-        var result = await getOrganizationInviteLinkPoliciesQuery.GetPoliciesAsync(model.Code);
+        var result = await getOrganizationInviteLinkPoliciesQuery.GetPoliciesAsync(model.OrganizationId, model.Code);
         return Handle(result, policies =>
             TypedResults.Ok(new ListResponseModel<PolicyResponseModel>(
                 policies.Select(p => new PolicyResponseModel(p)))));
@@ -58,7 +58,7 @@ public class OrganizationInviteLinksController(
     public async Task<IResult> ValidateEmailDomain(
         [FromBody] OrganizationInviteLinkValidateEmailDomainRequestModel model)
     {
-        var result = await validateOrganizationInviteLinkEmailDomainQuery.ValidateAsync(model.Code, model.Email);
+        var result = await validateOrganizationInviteLinkEmailDomainQuery.ValidateAsync(model.OrganizationId, model.Code, model.Email);
 
         return Handle(result, isAllowed =>
             TypedResults.Ok(new OrganizationInviteLinkValidateEmailDomainResponseModel(isAllowed)));
