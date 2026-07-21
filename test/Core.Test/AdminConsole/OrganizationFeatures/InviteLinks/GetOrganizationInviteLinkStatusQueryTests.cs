@@ -44,21 +44,22 @@ public class GetOrganizationInviteLinkStatusQueryTests
     [BitAutoData(false)]
     public async Task GetStatusAsync_SupportsConfirmation(
         bool supportsConfirmation,
-        Guid code,
         OrganizationInviteLink inviteLink,
         Organization organization,
         SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
     {
         // Arrange
+        var code = Guid.NewGuid();
+        organization.Id = inviteLink.OrganizationId;
         organization.Seats = null;
-        inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = code.ToString();
         inviteLink.SupportsConfirmation = supportsConfirmation;
 
-        SetupMocks(sutProvider, code, inviteLink, organization);
-        SetupOccupiedSeats(sutProvider, organization.Id, 0);
+        SetupMocks(sutProvider, inviteLink, organization);
+        SetupOccupiedSeats(sutProvider, inviteLink.OrganizationId, 0);
 
         // Act
-        var result = await sutProvider.Sut.GetStatusAsync(code);
+        var result = await sutProvider.Sut.GetStatusAsync(inviteLink.OrganizationId, code);
 
         // Assert
         Assert.True(result.IsSuccess);
