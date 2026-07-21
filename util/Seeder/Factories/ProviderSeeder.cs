@@ -16,7 +16,7 @@ internal static class ProviderSeeder
     {
         return new Provider
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             Name = manglerService.Mangle(name),
             BillingEmail = SeederBilling.DeriveBillingEmail(domain),
             Type = type,

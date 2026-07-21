@@ -15,7 +15,7 @@ internal static class ProviderPlanSeeder
     {
         return new ProviderPlan
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             ProviderId = provider.Id,
             PlanType = planType,
             SeatMinimum = seats,

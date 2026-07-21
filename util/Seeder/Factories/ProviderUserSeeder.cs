@@ -30,7 +30,7 @@ internal static class ProviderUserSeeder
 
         return new ProviderUser
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             ProviderId = provider.Id,
             UserId = shouldLinkUserId ? user.Id : null,
             Email = shouldLinkUserId ? null : user.Email,

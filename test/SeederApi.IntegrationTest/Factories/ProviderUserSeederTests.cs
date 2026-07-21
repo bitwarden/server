@@ -15,7 +15,7 @@ public class ProviderUserSeederTests
     {
         var providerKey = RustSdkService.GenerateOrganizationKeys().Key;
         var ownerKeys = RustSdkService.GenerateUserKeys("owner@provider.test", "asdfasdfasdf");
-        var owner = new User { Id = CoreHelpers.GenerateComb(), PublicKey = ownerKeys.PublicKey };
+        var owner = new User { Id = CombGuid.Generate(), PublicKey = ownerKeys.PublicKey };
         var provider = ProviderSeeder.Create("Acme MSP", "acme-msp.test", ProviderType.Msp, new NoOpManglerService());
 
         var providerUser = ProviderUserSeeder.CreateConfirmedAdmin(provider, owner, providerKey);
@@ -45,7 +45,7 @@ public class ProviderUserSeederTests
         var provider = ProviderSeeder.Create("Acme MSP", "acme-msp.test", ProviderType.Msp, new NoOpManglerService());
         var user = new User
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             Email = "member@provider.test",
             PublicKey = "public-key"
         };
