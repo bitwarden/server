@@ -88,6 +88,28 @@ public static class PlanFeatures
         org.LimitItemDeletion = overrides.LimitItemDeletion ?? org.LimitItemDeletion;
         org.LimitCollectionCreation = overrides.LimitCollectionCreation ?? org.LimitCollectionCreation;
         org.LimitCollectionDeletion = overrides.LimitCollectionDeletion ?? org.LimitCollectionDeletion;
+
+        org.UseGroups = overrides.UseGroups ?? org.UseGroups;
+        org.UsePolicies = overrides.UsePolicies ?? org.UsePolicies;
+        org.UseSso = overrides.UseSso ?? org.UseSso;
+        org.UseKeyConnector = overrides.UseKeyConnector ?? org.UseKeyConnector;
+        org.UseScim = overrides.UseScim ?? org.UseScim;
+        org.UseDirectory = overrides.UseDirectory ?? org.UseDirectory;
+        org.UseEvents = overrides.UseEvents ?? org.UseEvents;
+        org.UseTotp = overrides.UseTotp ?? org.UseTotp;
+        org.Use2fa = overrides.Use2fa ?? org.Use2fa;
+        org.UseApi = overrides.UseApi ?? org.UseApi;
+        org.UseResetPassword = overrides.UseResetPassword ?? org.UseResetPassword;
+        org.UseCustomPermissions = overrides.UseCustomPermissions ?? org.UseCustomPermissions;
+        org.UseOrganizationDomains = overrides.UseOrganizationDomains ?? org.UseOrganizationDomains;
+        org.UsersGetPremium = overrides.UsersGetPremium ?? org.UsersGetPremium;
+        org.SelfHost = overrides.SelfHost ?? org.SelfHost;
+        org.UseRiskInsights = overrides.UseRiskInsights ?? org.UseRiskInsights;
+        org.UseMyItems = overrides.UseMyItems ?? org.UseMyItems;
+        org.UseAdminSponsoredFamilies = overrides.UseAdminSponsoredFamilies ?? org.UseAdminSponsoredFamilies;
+        org.UseInviteLinks = overrides.UseInviteLinks ?? org.UseInviteLinks;
+        org.SyncSeats = overrides.SyncSeats ?? org.SyncSeats;
+        org.UsePasswordManager = overrides.UsePasswordManager ?? org.UsePasswordManager;
     }
 
     /// <summary>
