@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -18,5 +15,5 @@ public class OrganizationPrivateKeyResponseModel : ResponseModel
         PrivateKey = org.PrivateKey;
     }
 
-    public string PrivateKey { get; set; }
+    public string? PrivateKey { get; set; }
 }
