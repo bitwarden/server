@@ -523,14 +523,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         return (collectionsToSave, collections);
     }
 
-    [HttpPost("{id}")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task<IResult> PostPut([BindOrganization] Organization organization, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
-    {
-        return await Put(organization, id, model);
-    }
-
     [HttpPut("{userId}/reset-password-enrollment")]
     public async Task PutResetPasswordEnrollment(Guid orgId, Guid userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
     {
