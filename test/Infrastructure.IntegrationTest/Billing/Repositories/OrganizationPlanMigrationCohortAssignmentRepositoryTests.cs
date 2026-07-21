@@ -459,4 +459,12 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
         await organizationRepository.DeleteAsync(farFutureOrg);
         await organizationRepository.DeleteAsync(nullExpirationOrg);
     }
+
+    [Theory, DatabaseData]
+    public async Task GetSendInvoiceCandidatesInWindowAsync_MinDaysGreaterThanMaxDays_Throws(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository)
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            assignmentRepository.GetSendInvoiceCandidatesInWindowAsync(minDays: 30, maxDays: 0));
+    }
 }
