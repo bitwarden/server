@@ -1,6 +1,5 @@
--- Data-protect OrganizationInviteLink.Code at rest: change column from UNIQUEIDENTIFIER to
--- NVARCHAR(300), drop the Code unique index and ReadByCode sproc, refresh view and sproc metadata.
--- COORDINATED DEPLOY: run only after all server instances are on the new version.
+-- Data-protect OrganizationInviteLink.Code: change type from UNIQUEIDENTIFIER to NVARCHAR(300),
+-- drop the Code index and ReadByCode sproc.
 
 IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_OrganizationInviteLink_Code' AND object_id = OBJECT_ID('[dbo].[OrganizationInviteLink]'))
 BEGIN
