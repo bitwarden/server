@@ -19,6 +19,7 @@
     <WarningsNotAsErrors>$(WarningsNotAsErrors);BWA0001;BWA0002</WarningsNotAsErrors>
     <NuGetAuditLevel>critical</NuGetAuditLevel>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode>true</RestoreLockedMode>
   </PropertyGroup>
 
   <PropertyGroup>
