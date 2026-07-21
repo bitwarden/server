@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
@@ -216,6 +217,113 @@ public class StripePaymentServiceTests
 
         // Assert
         Assert.Null(result.CustomerDiscount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_UnpaidSubscription_ExemptOrganization_NotCancelled(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber)
+    {
+        // Arrange
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+        subscriber.ExemptFromBillingAutomation = true;
+
+        SetupUnpaidSubscription(sutProvider, subscriber.GatewaySubscriptionId);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert
+        Assert.NotNull(result.Subscription);
+        Assert.False(result.Subscription.Cancelled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_UnpaidSubscription_NonExemptOrganization_Cancelled(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber)
+    {
+        // Arrange
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+        subscriber.ExemptFromBillingAutomation = false;
+
+        SetupUnpaidSubscription(sutProvider, subscriber.GatewaySubscriptionId);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert
+        Assert.NotNull(result.Subscription);
+        Assert.True(result.Subscription.Cancelled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_UnpaidSubscription_User_Cancelled(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        SetupUnpaidSubscription(sutProvider, subscriber.GatewaySubscriptionId);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert
+        Assert.NotNull(result.Subscription);
+        Assert.True(result.Subscription.Cancelled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_UnpaidSubscription_Provider_Cancelled(
+        SutProvider<StripePaymentService> sutProvider,
+        Provider subscriber)
+    {
+        // Arrange
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        SetupUnpaidSubscription(sutProvider, subscriber.GatewaySubscriptionId);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert
+        Assert.NotNull(result.Subscription);
+        Assert.True(result.Subscription.Cancelled);
+    }
+
+    private static void SetupUnpaidSubscription(SutProvider<StripePaymentService> sutProvider, string subscriptionId)
+    {
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            CollectionMethod = "charge_automatically",
+            Customer = new Customer(),
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .SearchInvoiceAsync(Arg.Any<InvoiceSearchOptions>())
+            .Returns([]);
     }
 
     [Theory]

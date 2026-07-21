@@ -58,8 +58,7 @@ public class UpdateOrganizationSubscriptionCommand(
     [
         SubscriptionStatus.Trialing,
         SubscriptionStatus.Active,
-        SubscriptionStatus.PastDue,
-        SubscriptionStatus.Unpaid
+        SubscriptionStatus.PastDue
     ];
 
     private readonly ILogger<UpdateOrganizationSubscriptionCommand> _logger = logger;
@@ -79,7 +78,7 @@ public class UpdateOrganizationSubscriptionCommand(
             return new BadRequest("We couldn't find your subscription.");
         }
 
-        if (!_validSubscriptionStatusesForUpdate.Contains(subscription.Status))
+        if (!SubscriptionCanBeUpdated(organization, subscription))
         {
             _logger.LogWarning(
                 "{Command}: Tried to update organization ({OrganizationId}) subscription ({SubscriptionId}) with status ({SubscriptionStatus})",
@@ -214,6 +213,13 @@ public class UpdateOrganizationSubscriptionCommand(
 
         return updatedSubscription;
     });
+
+    // Unpaid subscriptions can only be updated by organizations exempt from billing automation.
+    // These organizations retain service while unpaid, and the billing risks of modifying an
+    // unpaid subscription are accepted for them (PM-40015).
+    private static bool SubscriptionCanBeUpdated(Organization organization, Subscription subscription) =>
+        _validSubscriptionStatusesForUpdate.Contains(subscription.Status) ||
+        (subscription.Status == SubscriptionStatus.Unpaid && organization.ExemptFromBillingAutomation);
 
     // PM-37510: the command body dereferences subscription.Customer for tax reconciliation, so a
     // reused subscription is only safe when Customer is expanded. test_clock is optional here.

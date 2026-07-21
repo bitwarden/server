@@ -126,7 +126,7 @@ public class SubscriptionInfo
 
     public class BillingSubscription
     {
-        public BillingSubscription(Subscription sub)
+        public BillingSubscription(Subscription sub, bool treatUnpaidAsCancelled = true)
         {
             Status = sub?.Status;
             TrialStartDate = sub?.TrialStart;
@@ -141,9 +141,10 @@ public class SubscriptionInfo
             CancelledDate = sub?.CanceledAt;
             CancelAtEndDate = sub?.CancelAtPeriodEnd ?? false;
             var status = sub?.Status;
-            // "unpaid" is deliberately excluded: an unpaid subscription is recoverable (the customer
-            // can still pay the open invoice), so it must not be reported as cancelled (PM-40015).
-            Cancelled = status is SubscriptionStatus.Canceled or SubscriptionStatus.IncompleteExpired;
+            // "unpaid" reports as cancelled by default so clients block subscription management;
+            // callers pass treatUnpaidAsCancelled: false to keep an unpaid subscription manageable.
+            Cancelled = status is SubscriptionStatus.Canceled or SubscriptionStatus.IncompleteExpired ||
+                (treatUnpaidAsCancelled && status is SubscriptionStatus.Unpaid);
             if (sub?.Items?.Data != null)
             {
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));

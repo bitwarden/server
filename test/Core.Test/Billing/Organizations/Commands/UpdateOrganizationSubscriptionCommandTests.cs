@@ -100,11 +100,72 @@ public class UpdateOrganizationSubscriptionCommandTests
     [InlineData(SubscriptionStatus.Active)]
     [InlineData(SubscriptionStatus.Trialing)]
     [InlineData(SubscriptionStatus.PastDue)]
-    [InlineData(SubscriptionStatus.Unpaid)]
     public async Task Run_ValidSubscriptionStatus_DoesNotReturnStatusError(string status)
     {
         var organization = CreateOrganization();
         var subscription = CreateSubscription(status: status, items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task Run_UnpaidStatus_NonExemptOrganization_ReturnsBadRequest()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(status: SubscriptionStatus.Unpaid, items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.IsT1);
+        Assert.Equal("Your subscription cannot be updated in its current status.", result.AsT1.Response);
+    }
+
+    [Theory]
+    [InlineData(SubscriptionStatus.Canceled)]
+    [InlineData(SubscriptionStatus.Incomplete)]
+    [InlineData(SubscriptionStatus.IncompleteExpired)]
+    [InlineData(SubscriptionStatus.Paused)]
+    public async Task Run_InvalidStatus_ExemptOrganization_ReturnsBadRequest(string status)
+    {
+        // Exemption from billing automation only unlocks unpaid subscriptions, not other invalid statuses.
+        var organization = CreateOrganization(exemptFromBillingAutomation: true);
+        var subscription = CreateSubscription(status: status, items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.IsT1);
+        Assert.Equal("Your subscription cannot be updated in its current status.", result.AsT1.Response);
+    }
+
+    [Fact]
+    public async Task Run_UnpaidStatus_ExemptOrganization_DoesNotReturnStatusError()
+    {
+        var organization = CreateOrganization(exemptFromBillingAutomation: true);
+        var subscription = CreateSubscription(status: SubscriptionStatus.Unpaid, items: [("price_seats", "si_1", 5)]);
 
         SetupGetSubscription(organization, subscription);
         SetupUpdateSubscription(subscription);
@@ -2101,10 +2162,11 @@ public class UpdateOrganizationSubscriptionCommandTests
         _pricingClient.GetPlanOrThrow(targetPlanType).Returns(targetPlan);
     }
 
-    private static Organization CreateOrganization() => new()
+    private static Organization CreateOrganization(bool exemptFromBillingAutomation = false) => new()
     {
         Id = Guid.NewGuid(),
-        GatewaySubscriptionId = "sub_123"
+        GatewaySubscriptionId = "sub_123",
+        ExemptFromBillingAutomation = exemptFromBillingAutomation
     };
 
     private static Subscription CreateSubscription(
