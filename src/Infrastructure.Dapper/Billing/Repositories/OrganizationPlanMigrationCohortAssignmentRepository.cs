@@ -85,6 +85,11 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
 
     public async Task<IReadOnlyList<OrganizationPlanMigrationCohortAssignment>> GetSendInvoiceCandidatesInWindowAsync(int minDays, int maxDays)
     {
+        if (minDays > maxDays)
+        {
+            throw new ArgumentException("minDays must be less than or equal to maxDays.");
+        }
+
         await using var connection = new SqlConnection(ReadOnlyConnectionString);
 
         var results = await connection.QueryAsync<OrganizationPlanMigrationCohortAssignment>(
