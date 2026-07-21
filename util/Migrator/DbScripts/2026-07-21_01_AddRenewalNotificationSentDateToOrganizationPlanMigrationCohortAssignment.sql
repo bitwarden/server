@@ -99,6 +99,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @Now DATETIME2(7) = GETUTCDATE();
+
     SELECT
         CMA.*
     FROM
@@ -114,7 +116,7 @@ BEGIN
         AND O.[GatewayCustomerId] IS NOT NULL
         AND O.[GatewaySubscriptionId] IS NOT NULL
         AND O.[ExpirationDate] IS NOT NULL
-        AND O.[ExpirationDate] >= DATEADD(DAY, @MinDays, GETUTCDATE())
-        AND O.[ExpirationDate] <= DATEADD(DAY, @MaxDays, GETUTCDATE())
+        AND O.[ExpirationDate] >= DATEADD(DAY, @MinDays, @Now)
+        AND O.[ExpirationDate] <= DATEADD(DAY, @MaxDays, @Now)
 END
 GO
