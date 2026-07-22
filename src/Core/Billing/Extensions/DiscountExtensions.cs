@@ -4,14 +4,15 @@ namespace Bit.Core.Billing.Extensions;
 
 public static class DiscountExtensions
 {
+    // TODO: Remove — unused. No call sites in src/ or test/; the Coupon overload below is the one in use.
     public static bool AppliesTo(this Discount discount, SubscriptionItem subscriptionItem)
-        => discount.Coupon.AppliesTo.Products.Contains(subscriptionItem.Price.Product.Id);
+        => discount.Source.Coupon.AppliesTo.Products.Contains(subscriptionItem.Price.Product.Id);
 
     public static bool AppliesTo(this Coupon coupon, SubscriptionItem subscriptionItem)
         => coupon.AppliesTo?.Products?.Contains(subscriptionItem.Price.Product.Id) ?? false;
 
     public static bool IsValid(this Discount? discount)
-        => discount?.Coupon?.Valid ?? false;
+        => discount?.Source?.Coupon?.Valid ?? false;
 
     /// <summary>
     /// Merges customer-level, existing subscription/phase, and newly applied coupon IDs into one
@@ -20,7 +21,7 @@ public static class DiscountExtensions
     /// must be copied into the array explicitly to stack. Order: customer first, then existing, then new.
     /// </summary>
     /// <param name="customerDiscount">Customer-level discount to carry over (any present coupon, regardless of validity), or null. Pass from an expanded customer object.</param>
-    /// <param name="existingDiscountCouponIds">Coupon IDs already on the subscription/phase, in order (materialized — <c>d.Coupon.Id</c> NPEs on unexpanded discounts).</param>
+    /// <param name="existingDiscountCouponIds">Coupon IDs already on the subscription/phase, in order (materialized — <c>d.Source.Coupon.Id</c> NPEs on unexpanded discounts).</param>
     /// <param name="newCouponIds">Coupon ID(s) being applied (churn / proactive / milestone).</param>
     /// <returns>Ordered, de-duplicated coupon IDs.</returns>
     public static IReadOnlyList<string> MergeDiscountCouponIds(
@@ -40,7 +41,7 @@ public static class DiscountExtensions
         }
 
         // Customer coupon first; carried whenever present, regardless of validity.
-        Add(customerDiscount?.Coupon?.Id);
+        Add(customerDiscount?.Source?.Coupon?.Id);
 
         foreach (var id in existingDiscountCouponIds ?? [])
         {

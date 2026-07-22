@@ -261,8 +261,12 @@ public class SubscriberService(
         {
             CancelAtPeriodEnd = true,
             CancellationDetails = cancellationDetails,
-            Metadata = cancellingUserMetadata
         };
+        // Only set metadata if provided to prevent clearing existing metadata on the subscription.
+        if (cancellingUserMetadata != null)
+        {
+            updateOptions.Metadata = cancellingUserMetadata;
+        }
 
         if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
             featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
@@ -555,7 +559,7 @@ public class SubscriberService(
     public async Task ResumeFromUnpaidCancellationAsync(ISubscriber subscriber)
     {
         var subscription = await GetSubscription(subscriber,
-            new SubscriptionGetOptions { Expand = ["customer.discount", "discounts"] });
+            new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon", "discounts.source.coupon"] });
 
         if (subscription is null ||
             subscription.Status != SubscriptionStatus.Unpaid ||

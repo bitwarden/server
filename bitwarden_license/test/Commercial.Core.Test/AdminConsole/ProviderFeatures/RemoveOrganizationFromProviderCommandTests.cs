@@ -157,7 +157,7 @@ public class RemoveOrganizationFromProviderCommandTests
         ]);
 
         sutProvider.GetDependency<IStripeAdapter>().GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
-                options => options.Expand.Contains("customer")))
+                options => options.Expand.Contains("customer.discount.source.coupon")))
             .Returns(GetSubscription(organization.GatewaySubscriptionId, organization.GatewayCustomerId));
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
@@ -381,10 +381,7 @@ public class RemoveOrganizationFromProviderCommandTests
             {
                 Discount = new Discount
                 {
-                    Coupon = new Coupon
-                    {
-                        Id = "coupon-id"
-                    }
+                    Source = new DiscountSource { Coupon = new Coupon { Id = "coupon-id" } }
                 }
             },
             Status = StripeConstants.SubscriptionStatus.Active,

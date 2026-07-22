@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Nodes;
+using Bit.Core.Billing.Enums;
 
 namespace Bit.Billing.IntegrationTest;
 
@@ -28,10 +29,139 @@ public class StripeWebhookTests(StripeWebhookTestsFixture fixture) : IClassFixtu
             await fixture.PrepareOrganizationOwnerAsync("webhook-subscription-updated@example.com");
         var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
 
+        // A real *.updated event always carries the prior values of the changed fields under
+        // previous_attributes; SubscriptionWentUnpaid deserializes it, so an empty one throws.
         await fixture.Billing.SendStripeWebhookAsync(
             "customer.subscription.updated",
             new JsonObject { ["id"] = subscriptionId, ["object"] = "subscription" },
+            $"evt_{Guid.NewGuid():N}",
+            previousAttributes: new JsonObject { ["description"] = "previous description" });
+    }
+
+    [BillingFact]
+    public async Task SubscriptionUpdated_WhenSecretsManagerTrialRemoved_RemovesTheStandaloneCoupon()
+    {
+        // Drives SubscriptionUpdatedHandler.RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync.
+        // Production applies the "sm-standalone" trial coupon to subscription.Discounts at signup
+        // (OrganizationBillingService applies CustomerSetup.SystemCoupons via SubscriptionDiscountOptions),
+        // so SeedAndAttachSubscriptionCouponAsync reproduces the real shape. The handler re-fetches the
+        // subscription and reads `Discounts[].Source.Coupon.Id` to detect the trial, then deletes it. That
+        // read requires `discounts.source.coupon` in the re-fetch expand (the 2025-09-30.clover refactor
+        // wrapped Coupon under Discount.Source); with only `discounts` the coupon is an unexpanded stub,
+        // Id is null, and the removal silently no-ops. Asserting the coupon is actually gone catches that.
+        var (_, _, organizationId, _) =
+            await fixture.PrepareOrganizationOwnerAsync("webhook-sm-trial-removal@example.com", PlanType.EnterpriseAnnually);
+        var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+
+        // Attach the SM-standalone trial coupon to the (PM-only) subscription, as signup would.
+        await fixture.SeedAndAttachSubscriptionCouponAsync(subscriptionId, "sm-standalone", percentOff: 100);
+
+        // Simulate a subscription.updated where the PREVIOUS attributes carried an SM seat item and the
+        // current (live) subscription does not — i.e. Secrets Manager was just removed.
+        var secretsManagerSeatPlanId = await fixture.GetSecretsManagerSeatPlanIdAsync(PlanType.EnterpriseAnnually);
+
+        await fixture.Billing.SendStripeWebhookAsync(
+            "customer.subscription.updated",
+            new JsonObject { ["id"] = subscriptionId, ["object"] = "subscription" },
+            $"evt_{Guid.NewGuid():N}",
+            previousAttributes: new JsonObject
+            {
+                ["items"] = new JsonObject
+                {
+                    ["object"] = "list",
+                    ["data"] = new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["id"] = $"si_{Guid.NewGuid():N}",
+                            ["object"] = "subscription_item",
+                            ["quantity"] = 1,
+                            ["plan"] = new JsonObject
+                            {
+                                ["id"] = secretsManagerSeatPlanId,
+                                ["object"] = "plan",
+                            },
+                            ["price"] = new JsonObject
+                            {
+                                ["id"] = secretsManagerSeatPlanId,
+                                ["object"] = "price",
+                            },
+                        },
+                    },
+                },
+            });
+
+        var couponIds = await fixture.GetSubscriptionDiscountCouponIdsAsync(subscriptionId);
+        Assert.DoesNotContain("sm-standalone", couponIds);
+    }
+
+    [BillingFact]
+    public async Task SubscriptionUpdated_WhenSecretsManagerTrialRemoved_RemovesTheCustomerLevelStandaloneCoupon()
+    {
+        // Customer-level variant of the SM-trial removal path in SubscriptionUpdatedHandler:
+        // `customerHasSecretsManagerTrial` reads subscription.Customer.Discount.Source.Coupon.Id and
+        // calls DeleteCustomerDiscountAsync. Same clover Source.Coupon expand dependency as the
+        // subscription-level path (guards the `customer.discount.source.coupon` half of the fix).
+        var (_, _, organizationId, _) =
+            await fixture.PrepareOrganizationOwnerAsync("webhook-sm-trial-customer@example.com", PlanType.EnterpriseAnnually);
+        var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+        var customerId = await fixture.GetOrganizationGatewayCustomerIdAsync(organizationId);
+
+        // Attach the SM-standalone coupon at the customer level.
+        await fixture.SeedAndAttachCustomerCouponAsync(customerId, "sm-standalone", percentOff: 100);
+
+        var secretsManagerSeatPlanId = await fixture.GetSecretsManagerSeatPlanIdAsync(PlanType.EnterpriseAnnually);
+
+        await fixture.Billing.SendStripeWebhookAsync(
+            "customer.subscription.updated",
+            new JsonObject { ["id"] = subscriptionId, ["object"] = "subscription" },
+            $"evt_{Guid.NewGuid():N}",
+            previousAttributes: new JsonObject
+            {
+                ["items"] = new JsonObject
+                {
+                    ["object"] = "list",
+                    ["data"] = new JsonArray
+                    {
+                        new JsonObject { ["plan"] = new JsonObject { ["id"] = secretsManagerSeatPlanId, ["object"] = "plan" } },
+                    },
+                },
+            });
+
+        Assert.False(await fixture.CustomerHasDiscountAsync(customerId));
+    }
+
+    [BillingFact]
+    public async Task InvoiceCreated_WithSubscriptionLevelPercentOffCoupon_RecordsDiscountedLineItemTotals()
+    {
+        // Drives ProviderEventService.TryRecordInvoiceLineItems for invoice.created. The handler re-fetches
+        // the invoice and computes each ProviderInvoiceItem.Total using
+        // `invoice.Discounts[].Source.Coupon.PercentOff`. That read requires `discounts.source.coupon` in
+        // the GetInvoice expand (the 2025-09-30.clover refactor wrapped Coupon under Discount.Source); with
+        // only `discounts` the coupon is a stub, PercentOff is null, totalPercentOff is 0, and the recorded
+        // Total silently omits the discount. Asserting the persisted Total is discounted catches that.
+        const decimal percentOff = 25m;
+
+        var (_, providerId) = await fixture.PrepareProviderAdminAsync("webhook-invoice-created-coupon@example.com");
+        var subscriptionId = await fixture.GetProviderGatewaySubscriptionIdAsync(providerId);
+
+        // Attach a percent-off coupon to the provider subscription, then end the trial so Stripe cuts a real
+        // subscription-cycle invoice that carries the discount.
+        await fixture.SeedAndAttachSubscriptionCouponAsync(subscriptionId, $"prov_inv_{Guid.NewGuid():N}", percentOff);
+        var invoiceId = await fixture.EndTrialAndGetLatestInvoiceIdAsync(subscriptionId);
+
+        await fixture.Billing.SendStripeWebhookAsync(
+            "invoice.created",
+            new JsonObject { ["id"] = invoiceId, ["object"] = "invoice" },
             $"evt_{Guid.NewGuid():N}");
+
+        var seatPrice = await fixture.GetProviderPortalSeatPriceAsync(providerId);
+        var items = await fixture.GetProviderInvoiceItemsAsync(providerId, invoiceId);
+
+        Assert.NotEmpty(items);
+        Assert.Contains(
+            items,
+            item => item.AssignedSeats > 0 && item.Total == item.AssignedSeats * seatPrice * (100 - percentOff) / 100);
     }
 
     [BillingFact]
@@ -43,8 +173,9 @@ public class StripeWebhookTests(StripeWebhookTestsFixture fixture) : IClassFixtu
         var customerId = await fixture.GetOrganizationGatewayCustomerIdAsync(organizationId);
         var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
 
-        // Stripe will create a real upcoming-invoice preview for this subscription on demand;
-        // we synthesize the event payload with the IDs and let the handler re-fetch via the API.
+        // The handler reads the invoice from the event payload (upcoming invoices have no persisted
+        // id to refetch), so include the `lines` a real invoice.upcoming carries — otherwise
+        // invoice.Lines is null and SendUpcomingInvoiceEmailsAsync throws on .Select(...).
         await fixture.Billing.SendStripeWebhookAsync(
             "invoice.upcoming",
             new JsonObject
@@ -53,6 +184,23 @@ public class StripeWebhookTests(StripeWebhookTestsFixture fixture) : IClassFixtu
                 ["object"] = "invoice",
                 ["customer"] = customerId,
                 ["subscription"] = subscriptionId,
+                ["lines"] = new JsonObject
+                {
+                    ["object"] = "list",
+                    ["has_more"] = false,
+                    ["url"] = $"/v1/invoices/upcoming/lines?customer={customerId}",
+                    ["data"] = new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["id"] = $"il_{Guid.NewGuid():N}",
+                            ["object"] = "line_item",
+                            ["amount"] = 1000,
+                            ["currency"] = "usd",
+                            ["description"] = "1 × Enterprise (at $10.00 / month)",
+                        },
+                    },
+                },
             },
             $"evt_{Guid.NewGuid():N}");
     }
@@ -66,11 +214,16 @@ public class StripeWebhookTests(StripeWebhookTestsFixture fixture) : IClassFixtu
             await fixture.PrepareOrganizationOwnerAsync("webhook-pm-attached@example.com");
         var customerId = await fixture.GetOrganizationGatewayCustomerIdAsync(organizationId);
 
+        // Attach a real payment method: the region check re-fetches the pm fresh and reads its
+        // Customer, so the shared `pm_card_visa` token (which comes back with no Customer) would be
+        // dropped as out-of-region before the handler ever runs.
+        var paymentMethodId = await fixture.AttachCardPaymentMethodAsync(customerId);
+
         await fixture.Billing.SendStripeWebhookAsync(
             "payment_method.attached",
             new JsonObject
             {
-                ["id"] = "pm_card_visa",
+                ["id"] = paymentMethodId,
                 ["object"] = "payment_method",
                 ["customer"] = customerId,
             },

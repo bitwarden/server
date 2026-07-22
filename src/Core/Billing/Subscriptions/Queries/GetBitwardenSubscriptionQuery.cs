@@ -191,7 +191,8 @@ public class GetBitwardenSubscriptionQuery(
                             Price = isSeatItem ? availablePlan.Seat.StripePriceId : item.Price.Id,
                             Quantity = item.Quantity
                         };
-                    })]
+                    })],
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }
                 };
 
                 if (couponIds is { Count: > 0 })
@@ -229,29 +230,49 @@ public class GetBitwardenSubscriptionQuery(
     /// </summary>
     private async Task<List<Coupon>> GetRelevantCouponsAsync(Subscription subscription)
     {
-        var coupons = new List<Coupon>();
+        var couponIds = new List<string>();
 
         if (subscription.Customer.Discount.IsValid())
         {
-            coupons.Add(subscription.Customer.Discount.Coupon);
+            couponIds.Add(subscription.Customer.Discount.Source.Coupon.Id);
         }
 
         if (!string.IsNullOrEmpty(subscription.ScheduleId))
         {
-            coupons.AddRange(await GetSchedulePhase2CouponsAsync(subscription));
+            couponIds.AddRange(await GetSchedulePhase2CouponIdsAsync(subscription));
         }
         else
         {
-            coupons.AddRange((subscription.Discounts ?? [])
+            couponIds.AddRange((subscription.Discounts ?? [])
                 .Where(d => d.IsValid())
-                .Select(d => d.Coupon));
+                .Select(d => d.Source.Coupon.Id));
         }
 
-        // The customer coupon can appear both here and in the mirrored Phase 2 list.
-        return coupons
-            .Where(coupon => coupon is not null)
-            .DistinctBy(coupon => coupon.Id, StringComparer.Ordinal)
+        // Re-fetch each unique coupon with applies_to explicitly expanded.
+        //
+        // Two long-standing Stripe rules interact here:
+        //  1. `expand` strings have a max depth of 4 (https://docs.stripe.com/expand).
+        //  2. `coupon.applies_to` is expandable, not inline — without an explicit
+        //     expand it comes back null (https://docs.stripe.com/api/coupons/object).
+        //
+        // Before the 2025-09-30.clover API version, Discount pointed at Coupon
+        // directly, so `customer.discount.coupon.applies_to` sat at exactly 4 levels
+        // and both rules were satisfied. That release moved Coupon under a Source
+        // wrapper (Discount.Source.Coupon), pushing the equivalent path to 5
+        // levels and over the cap. Rooting a separate fetch at the Coupon itself
+        // keeps applies_to only 1 level deep.
+        //
+        // Skipping this refetch would let every product-scoped coupon silently
+        // misclassify as cart-level in PartitionCouponsByScope below.
+        var uniqueIds = couponIds
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
             .ToList();
+
+        var enriched = await Task.WhenAll(uniqueIds.Select(id =>
+            stripeAdapter.GetCouponAsync(id, new CouponGetOptions { Expand = ["applies_to"] })));
+
+        return [.. enriched.Where(coupon => coupon is not null)];
     }
 
     private static (Coupon? CartLevel, List<Coupon> ProductLevel) PartitionCouponsByScope(
@@ -277,13 +298,18 @@ public class GetBitwardenSubscriptionQuery(
         return (cartLevel.FirstOrDefault(), productLevel);
     }
 
-    private async Task<List<Coupon>> GetSchedulePhase2CouponsAsync(Subscription subscription)
+    private async Task<List<string>> GetSchedulePhase2CouponIdsAsync(Subscription subscription)
     {
         try
         {
             var schedule = await stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
                 new SubscriptionScheduleGetOptions
                 {
+                    // `SubscriptionSchedulePhaseDiscount` exposes `Coupon` directly (not
+                    // wrapped under `Source` like the 2025-09-30.clover Discount refactor).
+                    // Expanding through `phases.discounts.coupon.applies_to` fits Stripe's
+                    // 4-level cap and includes applies_to inline; no per-coupon refetch
+                    // is needed for the phase-2 branch.
                     Expand = ["phases.discounts.coupon.applies_to"]
                 });
 
@@ -305,7 +331,7 @@ public class GetBitwardenSubscriptionQuery(
 
             return phase2.Discounts?
                 .Where(d => d?.Coupon?.Valid == true)
-                .Select(d => d.Coupon)
+                .Select(d => d.Coupon!.Id)
                 .ToList() ?? [];
         }
         catch (StripeException stripeException)
@@ -328,8 +354,12 @@ public class GetBitwardenSubscriptionQuery(
             {
                 Expand =
                 [
-                    "customer.discount.coupon.applies_to",
-                    "discounts.coupon.applies_to",
+                    // Stops at 4 levels: `customer.discount.source.coupon.applies_to`
+                    // would be 5, over Stripe's 4-level expand cap (the 2025-09-30.clover
+                    // change wrapped Coupon under Discount.Source). AppliesTo is filled
+                    // in by GetRelevantCouponsAsync's per-coupon refetch step.
+                    "customer.discount.source.coupon",
+                    "discounts.source.coupon.applies_to",
                     "items.data.price.product",
                     "test_clock"
                 ]

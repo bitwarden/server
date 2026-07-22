@@ -2,6 +2,8 @@
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -9,6 +11,9 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Billing.Subscriptions.Repositories;
@@ -39,10 +44,18 @@ public class StripeTestsFixture : IAsyncDisposable
     /// </summary>
     protected virtual ApiApplicationFactory CreateApi()
     {
-        return new ApiApplicationFactory
+        var api = new ApiApplicationFactory
         {
             StripeEnabled = true,
         };
+        // Stripe test-mode caps at ~25 req/s per account. Our tests parallel-fire
+        // real Stripe calls in bursts that exceed that on every full-suite run. The
+        // Stripe SDK retries 429s that carry `Stripe-Should-Retry: true`, so simply
+        // giving it more retries lets bursts naturally drain via the Retry-After
+        // header. The production default of 2 isn't enough under test load;
+        // MaxParallelThreads=2 in xunit.runner.json further reduces peak rate.
+        api.UpdateConfiguration("globalSettings:stripe:maxNetworkRetries", "5");
+        return api;
     }
 
     /// <summary>
@@ -250,6 +263,19 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Resolves the Secrets Manager seat plan id (Stripe price/plan id) for a plan type,
+    /// as SubscriptionUpdatedHandler does via <see cref="IPricingClient.ListPlans"/>. Used to
+    /// synthesize a subscription.updated event whose previous_attributes carry an SM seat item.
+    /// </summary>
+    public async Task<string> GetSecretsManagerSeatPlanIdAsync(PlanType planType)
+    {
+        using var scope = Api.Services.CreateScope();
+        var pricingClient = scope.ServiceProvider.GetRequiredService<IPricingClient>();
+        var plan = await pricingClient.GetPlanOrThrow(planType);
+        return plan.SecretsManager.StripeSeatPlanId;
+    }
+
+    /// <summary>
     /// Looks up the persisted Stripe customer id for a provider.
     /// </summary>
     public async Task<string> GetProviderGatewayCustomerIdAsync(Guid providerId)
@@ -258,6 +284,67 @@ public class StripeTestsFixture : IAsyncDisposable
         var provider = await scope.ServiceProvider.GetRequiredService<IProviderRepository>()
             .GetByIdAsync(providerId);
         return provider!.GatewayCustomerId!;
+    }
+
+    /// <summary>
+    /// Looks up the persisted Stripe subscription id for a provider.
+    /// </summary>
+    public async Task<string> GetProviderGatewaySubscriptionIdAsync(Guid providerId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var provider = await scope.ServiceProvider.GetRequiredService<IProviderRepository>()
+            .GetByIdAsync(providerId);
+        return provider!.GatewaySubscriptionId!;
+    }
+
+    /// <summary>
+    /// Returns the Stripe subscription's billing_mode.type (e.g. "classic"), used to verify the
+    /// BillingMode the app sets at creation actually lands on the Stripe subscription.
+    /// </summary>
+    public async Task<string?> GetSubscriptionBillingModeTypeAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId);
+        return subscription.BillingMode?.Type;
+    }
+
+    /// <summary>
+    /// Ends the subscription's trial immediately so Stripe cuts a real subscription-cycle invoice
+    /// (Parent.Type == "subscription_details") carrying any active subscription/customer discount,
+    /// and returns that invoice's id. Avoids needing a test clock for a one-shot invoice.
+    /// </summary>
+    public async Task<string> EndTrialAndGetLatestInvoiceIdAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        var options = new SubscriptionUpdateOptions { ProrationBehavior = "none" };
+        // The special value "now" ends the trial immediately; a timestamp would be rejected as "in the past".
+        options.AddExtraParam("trial_end", "now");
+        var updated = await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, options);
+        return updated.LatestInvoiceId;
+    }
+
+    /// <summary>
+    /// Reads the ProviderInvoiceItem rows ProviderEventService persists for a given invoice.
+    /// </summary>
+    public async Task<ICollection<ProviderInvoiceItem>> GetProviderInvoiceItemsAsync(Guid providerId, string invoiceId)
+    {
+        using var scope = Api.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<IProviderInvoiceItemRepository>()
+            .GetByProviderIdAndInvoiceId(providerId, invoiceId);
+    }
+
+    /// <summary>
+    /// Resolves the ProviderPortalSeatPrice for a provider's first plan, used to compute the
+    /// expected discounted line-item total.
+    /// </summary>
+    public async Task<decimal> GetProviderPortalSeatPriceAsync(Guid providerId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var providerPlans = await scope.ServiceProvider.GetRequiredService<IProviderPlanRepository>()
+            .GetByProviderId(providerId);
+        var pricingClient = scope.ServiceProvider.GetRequiredService<IPricingClient>();
+        var plan = await pricingClient.GetPlanOrThrow(providerPlans.First().PlanType);
+        return plan.PasswordManager.ProviderPortalSeatPrice;
     }
 
     /// <summary>
@@ -272,6 +359,18 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Convenience: same as <see cref="GetUserGatewayCustomerIdAsync(Guid)"/> but
+    /// keyed by email, for premium prep helpers that don't hand back a user id.
+    /// </summary>
+    public async Task<string> GetUserGatewayCustomerIdByEmailAsync(string email)
+    {
+        using var scope = Api.Services.CreateScope();
+        var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
+            .GetByEmailAsync(email);
+        return user!.GatewayCustomerId!;
+    }
+
+    /// <summary>
     /// Looks up the persisted Stripe subscription id for a user (premium subscriber).
     /// </summary>
     public async Task<string> GetUserGatewaySubscriptionIdAsync(Guid userId)
@@ -280,6 +379,89 @@ public class StripeTestsFixture : IAsyncDisposable
         var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
             .GetByIdAsync(userId);
         return user!.GatewaySubscriptionId!;
+    }
+
+    /// <summary>
+    /// Same as <see cref="GetUserGatewaySubscriptionIdAsync(Guid)"/> but keyed by email, for
+    /// premium prep helpers that don't hand back a user id.
+    /// </summary>
+    public async Task<string> GetUserGatewaySubscriptionIdByEmailAsync(string email)
+    {
+        using var scope = Api.Services.CreateScope();
+        var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
+            .GetByEmailAsync(email);
+        return user!.GatewaySubscriptionId!;
+    }
+
+    /// <summary>
+    /// Reads the current metadata on a Stripe subscription — used to verify update/cancel flows
+    /// don't clear keys (e.g. organizationId, userId) they don't explicitly set.
+    /// </summary>
+    public async Task<IDictionary<string, string>> GetSubscriptionMetadataAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId);
+        return subscription.Metadata ?? new Dictionary<string, string>();
+    }
+
+    /// <summary>
+    /// Returns whether the Stripe customer currently has an active discount (coupon expanded).
+    /// </summary>
+    public async Task<bool> CustomerHasDiscountAsync(string customerId)
+    {
+        var stripeClient = CreateStripeClient();
+        var customer = await stripeClient.V1.Customers.GetAsync(customerId, new CustomerGetOptions
+        {
+            Expand = ["discount.source.coupon"],
+        });
+        return customer.Discount?.Source?.Coupon != null;
+    }
+
+    /// <summary>
+    /// Immediately cancels the organization's Stripe subscription (Status becomes Canceled), so a
+    /// subsequent restart flow has a canceled subscription to act on.
+    /// </summary>
+    public async Task CancelOrganizationSubscriptionAsync(Guid organizationId)
+    {
+        var subscriptionId = await GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+        var stripeClient = CreateStripeClient();
+        await stripeClient.V1.Subscriptions.CancelAsync(subscriptionId);
+    }
+
+    /// <summary>
+    /// Creates a fresh, attachable card PaymentMethod from Stripe's `tok_visa` test token and returns
+    /// its id. Unlike the shared `pm_card_visa` token, this pm keeps its id when attached to an
+    /// existing customer — matching what a real client sends after tokenizing a card.
+    /// </summary>
+    public async Task<string> CreateCardPaymentMethodAsync()
+    {
+        var stripeClient = CreateStripeClient();
+        var paymentMethod = await stripeClient.V1.PaymentMethods.CreateAsync(new PaymentMethodCreateOptions
+        {
+            Type = "card",
+            Card = new PaymentMethodCardOptions { Token = "tok_visa" },
+        });
+        return paymentMethod.Id;
+    }
+
+    /// <summary>
+    /// Creates a fresh card PaymentMethod and attaches it to the given customer, returning its id.
+    /// The <c>payment_method.attached</c> webhook path re-fetches the payment method fresh and reads
+    /// its <c>Customer</c> for the cloud-region check, so the pm must actually be attached — the shared
+    /// <c>pm_card_visa</c> token comes back with a null Customer and the event is dropped as out-of-region.
+    /// </summary>
+    public async Task<string> AttachCardPaymentMethodAsync(string customerId)
+    {
+        var stripeClient = CreateStripeClient();
+        var paymentMethod = await stripeClient.V1.PaymentMethods.CreateAsync(new PaymentMethodCreateOptions
+        {
+            Type = "card",
+            Card = new PaymentMethodCardOptions { Token = "tok_visa" },
+        });
+        await stripeClient.V1.PaymentMethods.AttachAsync(
+            paymentMethod.Id,
+            new PaymentMethodAttachOptions { Customer = customerId });
+        return paymentMethod.Id;
     }
 
     /// <summary>
@@ -437,6 +619,50 @@ public class StripeTestsFixture : IAsyncDisposable
     /// <see cref="ISubscriberService.RemovePaymentSource"/> on the org as part of
     /// unlinking it from a provider.
     /// </summary>
+    /// <summary>
+    /// Adopts an existing (Stripe-enabled, non-Managed) organization into a newly-created reseller
+    /// provider via a direct ProviderOrganization link — the org keeps its own subscription and its
+    /// Created status. This is the topology that routes <see cref="RemoveAnyOrganizationFromProviderAsync"/>
+    /// to the `else if (organization.IsStripeEnabled())` branch (discount deletion), unlike
+    /// business-unit conversion which produces a Managed org with no own subscription.
+    /// </summary>
+    public async Task<Guid> AdoptOrganizationIntoResellerProviderAsync(Guid organizationId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var providerRepo = scope.ServiceProvider.GetRequiredService<IProviderRepository>();
+        var providerOrgRepo = scope.ServiceProvider.GetRequiredService<IProviderOrganizationRepository>();
+
+        var provider = await providerRepo.CreateAsync(new Provider
+        {
+            Name = $"reseller-{Guid.NewGuid():N}",
+            Type = ProviderType.Reseller,
+            Status = ProviderStatusType.Created,
+            Enabled = true,
+            UseEvents = false,
+            BillingEmail = "reseller@example.com",
+        });
+
+        await providerOrgRepo.CreateAsync(new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organizationId,
+        });
+
+        return provider.Id;
+    }
+
+    /// <summary>
+    /// Returns the organization id of the first organization managed by a provider. Capture this
+    /// before <see cref="RemoveAnyOrganizationFromProviderAsync"/>, which deletes the link.
+    /// </summary>
+    public async Task<Guid> GetFirstProviderOrganizationIdAsync(Guid providerId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var providerOrgRepo = scope.ServiceProvider.GetRequiredService<IProviderOrganizationRepository>();
+        var details = (await providerOrgRepo.GetManyDetailsByProviderAsync(providerId)).First();
+        return details.OrganizationId;
+    }
+
     public async Task RemoveAnyOrganizationFromProviderAsync(Guid providerId)
     {
         using var scope = Api.Services.CreateScope();
@@ -547,6 +773,351 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Creates a Stripe coupon whose <c>applies_to.products</c> scopes it to the
+    /// Premium product, then re-fetches it with an <em>empty</em> expand list and
+    /// returns the retrieved <see cref="CouponAppliesTo"/>. Any pre-existing coupon
+    /// with the same id is deleted first so the test is re-runnable.
+    ///
+    /// Isolates the load-bearing invariant behind
+    /// <see cref="GetBitwardenSubscriptionQuery"/> and
+    /// <see cref="StripePaymentService"/> dropping <c>.applies_to</c> from
+    /// <c>customer.discount.source.coupon.applies_to</c> (and
+    /// <c>phases.discounts.source.coupon.applies_to</c>) expand paths that would
+    /// otherwise exceed Stripe's 4-level cap: <c>Coupon.applies_to</c> arrives
+    /// inline on the Coupon JSON regardless of whether the caller expanded it.
+    /// If Stripe changes that contract, this returns a null / empty products list
+    /// and every downstream product-vs-cart discount classification silently flips.
+    /// </summary>
+    public async Task<CouponAppliesTo?> CreateAndReloadProductScopedCouponAsync(string couponId)
+    {
+        var stripeClient = CreateStripeClient();
+
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+
+        await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
+        {
+            Id = couponId,
+            Name = "Integration Test Product-Scoped Coupon",
+            PercentOff = 10,
+            Duration = "once",
+            AppliesTo = new CouponAppliesToOptions
+            {
+                Products = [StripeConstants.ProductIDs.Premium],
+            },
+        });
+
+        // No Expand at all — the whole point is to prove applies_to is inline.
+        // (Passing an empty array serializes as `expand=` on the wire, which
+        // Stripe rejects as an attempt to unset the parameter.)
+        var reloaded = await stripeClient.V1.Coupons.GetAsync(couponId);
+
+        return reloaded.AppliesTo;
+    }
+
+    /// <summary>
+    /// Companion to <see cref="CreateAndReloadProductScopedCouponAsync"/> that fetches
+    /// the same coupon with <c>Expand = ["applies_to"]</c>. Used to confirm that when
+    /// the direct-probe test finds <c>AppliesTo</c> null without expansion, the same
+    /// coupon does carry the products list when the caller explicitly expands
+    /// <c>applies_to</c> — pinning the empirical rule.
+    /// </summary>
+    public async Task<CouponAppliesTo?> ReloadCouponWithAppliesToExpandedAsync(string couponId)
+    {
+        var stripeClient = CreateStripeClient();
+        var reloaded = await stripeClient.V1.Coupons.GetAsync(couponId, new CouponGetOptions
+        {
+            Expand = ["applies_to"],
+        });
+        return reloaded.AppliesTo;
+    }
+
+    /// <summary>
+    /// Purchases premium and attaches a product-scoped Stripe coupon (bound to the
+    /// Premium product via <c>applies_to.products</c>) to the resulting subscription's
+    /// discount list. Any pre-existing coupon with the same id is deleted first so
+    /// the test is re-runnable.
+    ///
+    /// Exercises <see cref="GetBitwardenSubscriptionQuery.GetRelevantCouponsAsync"/>'s
+    /// per-coupon enrichment step end-to-end: the parent subscription fetch stops at
+    /// <c>discounts.source.coupon.applies_to</c>, so the seat-scoped coupon should
+    /// land on <c>cart.passwordManager.seats.discount</c> (product-level) rather than
+    /// <c>cart.discount</c> (cart-level).
+    /// </summary>
+    public async Task<HttpClient> PreparePremiumUserWithProductScopedSubscriptionCouponAsync(
+        string email, string couponId)
+    {
+        var stripeClient = CreateStripeClient();
+
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+
+        await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
+        {
+            Id = couponId,
+            Name = "IT Product-Scoped Premium Coupon",
+            PercentOff = 10,
+            Duration = "once",
+            AppliesTo = new CouponAppliesToOptions
+            {
+                Products = [StripeConstants.ProductIDs.Premium],
+            },
+        });
+
+        var client = await PreparePremiumUserAsync(email);
+
+        string subscriptionId;
+        using (var scope = Api.Services.CreateScope())
+        {
+            var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
+                .GetByEmailAsync(email);
+            subscriptionId = user!.GatewaySubscriptionId!;
+        }
+
+        await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId,
+            new SubscriptionUpdateOptions
+            {
+                Discounts = [new SubscriptionDiscountOptions { Coupon = couponId }],
+            });
+
+        return client;
+    }
+
+    /// <summary>
+    /// Purchases premium, wraps the resulting Stripe subscription in a
+    /// <see cref="SubscriptionSchedule"/>, and appends a future Phase 2 whose
+    /// Discounts reference a product-scoped Stripe coupon (bound to the Premium
+    /// product via <c>applies_to.products</c>). Any pre-existing coupon with the
+    /// same id is deleted first so the test is re-runnable.
+    ///
+    /// Exercises the schedule Phase-2 read path in
+    /// <see cref="GetBitwardenSubscriptionQuery"/> — the <c>phases.discounts.coupon.applies_to</c>
+    /// expand, plus the <c>d.Coupon</c> reader that <see cref="SubscriptionSchedulePhaseDiscount"/>
+    /// actually exposes (as opposed to the wire-invalid <c>d.Discount.Source.Coupon</c>
+    /// path the SDK bump initially introduced).
+    /// </summary>
+    public async Task<HttpClient> PreparePremiumUserWithProductScopedPhase2CouponAsync(
+        string email, string couponId)
+    {
+        var stripeClient = CreateStripeClient();
+
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+
+        await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
+        {
+            Id = couponId,
+            Name = "IT Phase2 Premium Coupon",
+            PercentOff = 10,
+            Duration = "once",
+            AppliesTo = new CouponAppliesToOptions
+            {
+                Products = [StripeConstants.ProductIDs.Premium],
+            },
+        });
+
+        var client = await PreparePremiumUserAsync(email);
+
+        string subscriptionId;
+        using (var scope = Api.Services.CreateScope())
+        {
+            var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
+                .GetByEmailAsync(email);
+            subscriptionId = user!.GatewaySubscriptionId!;
+        }
+
+        // Wrap the existing subscription in a schedule so `subscription.ScheduleId`
+        // is populated on the GET path.
+        var schedule = await stripeClient.V1.SubscriptionSchedules.CreateAsync(new SubscriptionScheduleCreateOptions
+        {
+            FromSubscription = subscriptionId,
+        });
+
+        // Append a future Phase 2 that carries the product-scoped coupon.
+        // FromSubscription seeds Phase 1 from the current sub; we mirror its items
+        // and add a follow-up phase with a matching item and the new coupon.
+        var phase1 = schedule.Phases[0];
+        var phase1EndDate = phase1.EndDate;
+        var phase1Items = phase1.Items
+            .Select(i => new SubscriptionSchedulePhaseItemOptions
+            {
+                Price = i.PriceId,
+                Quantity = i.Quantity,
+            })
+            .ToList();
+
+        await stripeClient.V1.SubscriptionSchedules.UpdateAsync(schedule.Id,
+            new SubscriptionScheduleUpdateOptions
+            {
+                Phases =
+                [
+                    new SubscriptionSchedulePhaseOptions
+                    {
+                        StartDate = phase1.StartDate,
+                        EndDate = phase1EndDate,
+                        Items = phase1Items,
+                    },
+                    new SubscriptionSchedulePhaseOptions
+                    {
+                        StartDate = phase1EndDate,
+                        EndDate = phase1EndDate.AddYears(1),
+                        Items = phase1Items,
+                        Discounts = [new SubscriptionSchedulePhaseDiscountOptions { Coupon = couponId }],
+                    },
+                ],
+            });
+
+        return client;
+    }
+
+    /// <summary>
+    /// Creates (or replaces) a Stripe coupon with the given id. Optionally scoped
+    /// to a product via <c>applies_to.products</c>. Any pre-existing coupon with
+    /// the same id is deleted first so the test is re-runnable.
+    /// </summary>
+    public async Task CreateStripeCouponAsync(
+        string couponId,
+        decimal percentOff,
+        string? scopedToProductId = null)
+    {
+        var stripeClient = CreateStripeClient();
+
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+
+        await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
+        {
+            Id = couponId,
+            Name = "IT Customer Coupon",
+            PercentOff = percentOff,
+            Duration = "once",
+            AppliesTo = scopedToProductId is not null
+                ? new CouponAppliesToOptions { Products = [scopedToProductId] }
+                : null,
+        });
+    }
+
+    /// <summary>
+    /// Attaches a coupon to a Stripe customer via a raw <c>POST /v1/customers/{id}</c>
+    /// with a legacy <c>Stripe-Version</c> header. Stripe.net 51.1 (pinned at
+    /// <c>2026-04-22.dahlia</c>) removed <c>coupon</c> from the typed
+    /// <see cref="CustomerUpdateOptions"/>, and the newer HTTP endpoint rejects
+    /// <c>coupon</c> in the body. Since Bitwarden never programmatically writes
+    /// <see cref="Stripe.Customer.Discount"/> in production (see the comment in
+    /// <see cref="Bit.Core.Billing.Organizations.PlanMigration.Queries.GetChurnMitigationOfferQuery"/>
+    /// about manual coupon application by finance), we simulate that state with
+    /// a request pinned to a pre-clover API version. The subsequent SDK reads
+    /// use the current API version and return the discount in the modern
+    /// <c>Discount.Source.Coupon</c> shape.
+    /// </summary>
+    private async Task AttachCustomerCouponAsync(string customerId, string couponId)
+    {
+        var settings = Api.Services.GetRequiredService<GlobalSettings>().Stripe;
+        using var http = new HttpClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
+        // Pre-clover API version: still accepts the `coupon` body param on customer update.
+        http.DefaultRequestHeaders.Add("Stripe-Version", "2024-06-20");
+
+        using var content = new FormUrlEncodedContent(new[]
+        {
+            new KeyValuePair<string, string>("coupon", couponId),
+        });
+
+        var response = await http.PostAsync(
+            $"https://api.stripe.com/v1/customers/{customerId}", content);
+        response.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
+    /// Convenience: seed a percent-off coupon and attach it to the given customer.
+    /// Callers pass the customer id resolved from an already-prepared org/premium/provider.
+    /// Verifies the attach took effect by re-fetching the customer via the typed
+    /// SDK and asserting <see cref="Stripe.Customer.Discount"/> is populated —
+    /// guards against the raw-HTTP write silently no-op'ing if Stripe ever stops
+    /// honoring the legacy <c>Stripe-Version</c> header for this endpoint.
+    /// </summary>
+    public async Task SeedAndAttachCustomerCouponAsync(
+        string customerId,
+        string couponId,
+        decimal percentOff,
+        string? scopedToProductId = null)
+    {
+        await CreateStripeCouponAsync(couponId, percentOff, scopedToProductId);
+        await AttachCustomerCouponAsync(customerId, couponId);
+
+        var stripeClient = CreateStripeClient();
+        var customer = await stripeClient.V1.Customers.GetAsync(customerId, new CustomerGetOptions
+        {
+            Expand = ["discount.source.coupon"],
+        });
+
+        if (customer.Discount?.Source?.Coupon?.Id != couponId)
+        {
+            throw new InvalidOperationException(
+                $"Raw-HTTP customer-coupon attach did not take effect for customer {customerId}. " +
+                $"Expected Discount.Source.Coupon.Id = '{couponId}', got '{customer.Discount?.Source?.Coupon?.Id ?? "<null>"}'. " +
+                $"Stripe may have stopped accepting the legacy Stripe-Version pinned in AttachCustomerCouponAsync.");
+        }
+    }
+
+    /// <summary>
+    /// Fetches the org's Stripe subscription and returns the first line item's
+    /// product id. Used by tests that need to scope a coupon's
+    /// <c>applies_to.products</c> to a product actually present on the subscription
+    /// (e.g. the SM standalone metadata check's product-id intersection).
+    /// </summary>
+    public async Task<string> GetOrganizationFirstProductIdAsync(Guid organizationId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscriptionId = await GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId, new SubscriptionGetOptions
+        {
+            Expand = ["items.data.price.product"],
+        });
+        return subscription.Items.Data.First().Price.Product.Id;
+    }
+
+    /// <summary>
+    /// Reads back the subscription's current sub-level discount coupon ids. Used
+    /// by redeem tests that need to verify the merged set on Stripe after the
+    /// call — e.g. asserting the customer coupon survived the merge into the
+    /// subscription's Discounts list.
+    /// </summary>
+    public async Task<List<string>> GetSubscriptionDiscountCouponIdsAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId, new SubscriptionGetOptions
+        {
+            Expand = ["discounts.source.coupon"],
+        });
+        return subscription.Discounts?
+            .Where(d => d?.Source?.Coupon?.Id is not null)
+            .Select(d => d.Source.Coupon.Id)
+            .ToList() ?? [];
+    }
+
+    /// <summary>
+    /// Attaches a product-scoped Stripe coupon to a subscription's Discounts list
+    /// via the typed SDK (no raw-HTTP legacy header needed for the subscription
+    /// endpoint — <c>SubscriptionUpdateOptions.Discounts</c> is still typed).
+    /// Deletes any pre-existing coupon with the same id first for re-runnability.
+    /// </summary>
+    public async Task SeedAndAttachSubscriptionCouponAsync(
+        string subscriptionId,
+        string couponId,
+        decimal percentOff,
+        string? scopedToProductId = null)
+    {
+        await CreateStripeCouponAsync(couponId, percentOff, scopedToProductId);
+
+        var stripeClient = CreateStripeClient();
+        await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, new SubscriptionUpdateOptions
+        {
+            Discounts = [new SubscriptionDiscountOptions { Coupon = couponId }],
+        });
+    }
+
+    /// <summary>
     /// Creates a no-op Stripe Checkout Session attached to the given customer for
     /// webhook tests that simulate <c>checkout.session.completed</c>.
     /// </summary>
@@ -562,6 +1133,142 @@ public class StripeTestsFixture : IAsyncDisposable
             CancelUrl = "https://example.com/cancel",
         });
         return session.Id;
+    }
+
+    /// <summary>
+    /// Moves a premium subscription's seat item onto the legacy (unavailable) premium price pulled
+    /// from the pricing service. <see cref="IPriceIncreaseScheduler"/> only defers a price migration
+    /// when the subscription still carries the <c>!Available</c> seat price
+    /// (see <c>ResolvePhase2ForPremiumAsync</c>); fixtures create subscribers on the current price,
+    /// so this puts them into the migration-eligible state the deferred-schedule tests require.
+    /// </summary>
+    public async Task MovePremiumSubscriptionToLegacyPriceAsync(string subscriptionId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var pricingClient = scope.ServiceProvider.GetRequiredService<IPricingClient>();
+        var premiumPlans = await pricingClient.ListPremiumPlans();
+        var legacyPlan = premiumPlans.FirstOrDefault(plan => !plan.Available)
+            ?? throw new InvalidOperationException(
+                "No legacy (unavailable) premium plan found in the pricing service; cannot make the " +
+                "subscription price-migration-eligible.");
+        var currentPlan = premiumPlans.FirstOrDefault(plan => plan.Available)
+            ?? throw new InvalidOperationException("No current (available) premium plan found in the pricing service.");
+
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId);
+        var seatItem = subscription.Items.Data.FirstOrDefault(item => item.Price.Id == currentPlan.Seat.StripePriceId)
+            ?? subscription.Items.Data.First();
+
+        await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, new SubscriptionUpdateOptions
+        {
+            Items = [new SubscriptionItemOptions { Id = seatItem.Id, Price = legacyPlan.Seat.StripePriceId }],
+            ProrationBehavior = "none",
+        });
+    }
+
+    /// <summary>
+    /// Moves a Families organization subscription's password-manager item onto the legacy
+    /// <see cref="PlanType.FamiliesAnnually2019"/> price pulled from the pricing service.
+    /// <c>ResolvePhase2ForFamiliesAsync</c> only builds a Phase 2 when the subscription carries a
+    /// legacy families price, so this puts the families subscriber into the migration-eligible state
+    /// the deferred-schedule tests require (the personal/families branch of the scheduler).
+    /// </summary>
+    public async Task MoveFamiliesSubscriptionToLegacyPriceAsync(string subscriptionId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var pricingClient = scope.ServiceProvider.GetRequiredService<IPricingClient>();
+        var currentPlan = await pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
+        var legacyPlan = await pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019);
+
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId);
+        var seatItem = subscription.Items.Data.FirstOrDefault(item =>
+            item.Price.Id == currentPlan.PasswordManager.StripePlanId)
+            ?? subscription.Items.Data.First();
+
+        await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, new SubscriptionUpdateOptions
+        {
+            Items = [new SubscriptionItemOptions { Id = seatItem.Id, Price = legacyPlan.PasswordManager.StripePlanId }],
+            ProrationBehavior = "none",
+        });
+    }
+
+    /// <summary>
+    /// Turns off the subscription's automatic tax. <c>UpdateBillingAddressCommand.EnableAutomaticTaxAsync</c>
+    /// only rebuilds the schedule (and carries the customer coupon into the future phase) when automatic
+    /// tax is currently off; freshly-created orgs have it on. Call this before creating the schedule so the
+    /// off state is captured into the schedule's phases, reproducing the real "org with auto-tax off + active
+    /// migration schedule" state.
+    /// </summary>
+    public async Task DisableSubscriptionAutomaticTaxAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, new SubscriptionUpdateOptions
+        {
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = false },
+        });
+    }
+
+    /// <summary>
+    /// Drives the real <see cref="IPriceIncreaseScheduler"/> to create the active 2-phase
+    /// deferred-migration schedule that the coupon-carry branches in
+    /// <c>UpdatePremiumStorageCommand</c>, <c>UpdateBillingAddressCommand</c>, and
+    /// <c>UpdateOrganizationSubscriptionCommand</c> require. Throws if the scheduler declines so the
+    /// precondition fails loudly rather than leaving a test silently exercising the no-schedule path.
+    /// Requires <c>PM32645_DeferPriceMigrationToRenewal</c> enabled and (for premium) the subscriber
+    /// on the legacy price via <see cref="MovePremiumSubscriptionToLegacyPriceAsync"/>.
+    /// </summary>
+    public async Task CreateDeferredPriceIncreaseScheduleAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId, new SubscriptionGetOptions
+        {
+            Expand = ["customer", "test_clock", "discounts", "items.data.price"],
+        });
+
+        using var scope = Api.Services.CreateScope();
+        var scheduler = scope.ServiceProvider.GetRequiredService<IPriceIncreaseScheduler>();
+        var scheduled = await scheduler.ScheduleForSubscription(subscription);
+
+        if (!scheduled)
+        {
+            throw new InvalidOperationException(
+                $"IPriceIncreaseScheduler declined to create a schedule for subscription {subscriptionId}. " +
+                "Confirm the subscriber is on the legacy price (MovePremiumSubscriptionToLegacyPriceAsync), " +
+                "PM32645_DeferPriceMigrationToRenewal is enabled, and no active schedule already exists.");
+        }
+    }
+
+    /// <summary>
+    /// Reads the coupon ids on the given 0-based phase of the subscription's active schedule.
+    /// Schedule phase discounts expose <c>Coupon</c> directly (not wrapped under <c>Source</c> like
+    /// the 2025-09-30.clover subscription/customer discount), so <c>phases.discounts.coupon</c> is the
+    /// correct expand. Returns an empty list if the phase index is out of range.
+    /// </summary>
+    public async Task<List<string>> GetSchedulePhaseCouponIdsAsync(string subscriptionId, int phaseIndex)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId);
+        var schedules = await stripeClient.V1.SubscriptionSchedules.ListAsync(new SubscriptionScheduleListOptions
+        {
+            Customer = subscription.CustomerId,
+        });
+        var activeSchedule = schedules.Data.FirstOrDefault(schedule =>
+            schedule.SubscriptionId == subscriptionId && schedule.Status == "active")
+            ?? throw new InvalidOperationException($"No active schedule found for subscription {subscriptionId}.");
+
+        var schedule = await stripeClient.V1.SubscriptionSchedules.GetAsync(activeSchedule.Id,
+            new SubscriptionScheduleGetOptions { Expand = ["phases.discounts.coupon"] });
+
+        if (phaseIndex >= schedule.Phases.Count)
+        {
+            return [];
+        }
+
+        return schedule.Phases[phaseIndex].Discounts?
+            .Where(discount => discount?.Coupon?.Id is not null)
+            .Select(discount => discount.Coupon.Id)
+            .ToList() ?? [];
     }
 
     public virtual async ValueTask DisposeAsync()

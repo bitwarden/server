@@ -19,9 +19,37 @@ public class CancellingAndReinstatingSubscriptionTests(StripeTestsFixture fixtur
     }
 
     [BillingFact]
+    public async Task CancelPremium_PreservesSubscriptionMetadata()
+    {
+        // The SDK-bump audit verified cancellation doesn't clear metadata it doesn't set. The premium
+        // subscription carries a `userId` metadata key from creation; cancelling must not wipe it.
+        const string email = "cancel-metadata-preserve@example.com";
+        var client = await fixture.PreparePremiumUserAsync(email);
+
+        var response = await client.PostAsJsonAsync(
+            "/accounts/cancel",
+            new { Reason = "user_test", Feedback = "integration test cancellation" });
+        await Assert.SuccessResponseAsync(response);
+
+        var subscriptionId = await fixture.GetUserGatewaySubscriptionIdByEmailAsync(email);
+        var metadata = await fixture.GetSubscriptionMetadataAsync(subscriptionId);
+        Assert.Contains("userId", metadata.Keys);
+    }
+
+    [BillingFact]
     public async Task Reinstate_FetchesCanceledSubscriptionAndCreatesReplacement()
     {
-        var client = await fixture.PreparePremiumUserAsync("reinstate-premium@example.com");
+        const string email = "reinstate-premium@example.com";
+        var client = await fixture.PreparePremiumUserAsync(email);
+        var customerId = await fixture.GetUserGatewayCustomerIdByEmailAsync(email);
+        var subscriptionId = await fixture.GetUserGatewaySubscriptionIdByEmailAsync(email);
+
+        // Attach a customer- and a subscription-level discount so the reinstate fetch runs against a
+        // discounted subscriber. ReinstateSubscriptionCommand's ScheduleForSubscription reads
+        // Customer.Discount.Source.Coupon and Discounts[].Source.Coupon, which the 2025-09-30.clover
+        // refactor moved under Source.
+        await fixture.SeedAndAttachCustomerCouponAsync(customerId, $"reinstate_cust_{Guid.NewGuid():N}", percentOff: 15);
+        await fixture.SeedAndAttachSubscriptionCouponAsync(subscriptionId, $"reinstate_sub_{Guid.NewGuid():N}", percentOff: 10);
 
         // Cancel first so reinstate has something to act on.
         var cancelResponse = await client.PostAsJsonAsync(
@@ -29,8 +57,9 @@ public class CancellingAndReinstatingSubscriptionTests(StripeTestsFixture fixtur
             new { Reason = "user_test", Feedback = "" });
         await Assert.SuccessResponseAsync(cancelResponse);
 
-        // Drives ReinstateSubscriptionCommand which fetches the canceled subscription
-        // with Expand=["discounts", "customer.discount"].
+        // Drives ReinstateSubscriptionCommand which fetches the canceled subscription with
+        // Expand=["discounts.source.coupon", "customer.discount.source.coupon"] — an over-cap
+        // expand would 400 the fetch and fail the test.
         var reinstateResponse = await client.PostAsync(
             "/account/billing/vnext/subscription/reinstate", content: null);
         await Assert.SuccessResponseAsync(reinstateResponse);

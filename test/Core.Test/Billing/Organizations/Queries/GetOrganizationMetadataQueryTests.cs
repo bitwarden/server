@@ -95,7 +95,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
-                options.Expand.Contains("discounts.coupon.applies_to")))
+                options.Expand.Contains("discounts.source.coupon.applies_to")))
             .ReturnsNull();
 
         var result = await sutProvider.Sut.Run(organization);
@@ -122,14 +122,14 @@ public class GetOrganizationMetadataQueryTests
             [
                 new Discount
                 {
-                    Coupon = new Coupon
+                    Source = new DiscountSource { Coupon = new Coupon
                     {
                         Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
                         AppliesTo = new CouponAppliesTo
                         {
                             Products = [productId]
                         }
-                    }
+                    } }
                 }
             ],
             Items = new StripeList<SubscriptionItem>
@@ -158,7 +158,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
-                options.Expand.Contains("discounts.coupon.applies_to")))
+                options.Expand.Contains("discounts.source.coupon.applies_to")))
             .Returns(subscription);
 
         sutProvider.GetDependency<IPricingClient>()
@@ -211,7 +211,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
-                options.Expand.Contains("discounts.coupon.applies_to")))
+                options.Expand.Contains("discounts.source.coupon.applies_to")))
             .Returns(subscription);
 
         sutProvider.GetDependency<IPricingClient>()
@@ -241,14 +241,14 @@ public class GetOrganizationMetadataQueryTests
             [
                 new Discount
                 {
-                    Coupon = new Coupon
+                    Source = new DiscountSource { Coupon = new Coupon
                     {
                         Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
                         AppliesTo = new CouponAppliesTo
                         {
                             Products = ["different_product_id"]
                         }
-                    }
+                    } }
                 }
             ],
             Items = new StripeList<SubscriptionItem>
@@ -277,7 +277,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
-                options.Expand.Contains("discounts.coupon.applies_to")))
+                options.Expand.Contains("discounts.source.coupon.applies_to")))
             .Returns(subscription);
 
         sutProvider.GetDependency<IPricingClient>()
@@ -308,14 +308,14 @@ public class GetOrganizationMetadataQueryTests
             [
                 new Discount
                 {
-                    Coupon = new Coupon
+                    Source = new DiscountSource { Coupon = new Coupon
                     {
                         Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
                         AppliesTo = new CouponAppliesTo
                         {
                             Products = [productId]
                         }
-                    }
+                    } }
                 }
             ],
             Items = new StripeList<SubscriptionItem>
@@ -344,7 +344,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
-                options.Expand.Contains("discounts.coupon.applies_to")))
+                options.Expand.Contains("discounts.source.coupon.applies_to")))
             .Returns(subscription);
 
         sutProvider.GetDependency<IPricingClient>()

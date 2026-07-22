@@ -169,6 +169,13 @@ public class GetBitwardenSubscriptionQueryTests
         Assert.Equal(subscription.Items.First().CurrentPeriodEnd, result.NextCharge);
         Assert.Null(result.Suspension);
         Assert.Null(result.GracePeriod);
+        await _stripeAdapter.Received(1).GetSubscriptionAsync(
+            user.GatewaySubscriptionId,
+            Arg.Is<SubscriptionGetOptions>(o =>
+                // customer.discount.source.coupon stops at 4 levels — .applies_to would exceed the
+                // cap, so it's overlaid via GetRelevantCouponsAsync's per-coupon refetch instead.
+                o.Expand.Contains("customer.discount.source.coupon") &&
+                o.Expand.Contains("discounts.source.coupon.applies_to")));
     }
 
     [Fact]
@@ -351,10 +358,13 @@ public class GetBitwardenSubscriptionQueryTests
         var user = CreateUser();
         var subscription = CreateSubscription(SubscriptionStatus.Active);
         subscription.Customer.Discount = CreateDiscount(discountType: "cart");
+        var coupon = subscription.Customer.Discount.Source.Coupon;
         var premiumPlans = CreatePremiumPlans();
 
         _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+        // Production re-fetches the coupon by id to expand applies_to past the depth cap.
+        _stripeAdapter.GetCouponAsync(coupon.Id, Arg.Any<CouponGetOptions>()).Returns(coupon);
         _pricingClient.ListPremiumPlans().Returns(premiumPlans);
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(CreateInvoicePreview());
@@ -374,10 +384,13 @@ public class GetBitwardenSubscriptionQueryTests
         var subscription = CreateSubscription(SubscriptionStatus.Active);
         var productDiscount = CreateDiscount(discountType: "product", productId: "prod_premium_seat");
         subscription.Discounts = [productDiscount];
+        var coupon = productDiscount.Source.Coupon;
         var premiumPlans = CreatePremiumPlans();
 
         _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+        // Production re-fetches the coupon by id to expand applies_to past the depth cap.
+        _stripeAdapter.GetCouponAsync(coupon.Id, Arg.Any<CouponGetOptions>()).Returns(coupon);
         _pricingClient.ListPremiumPlans().Returns(premiumPlans);
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(CreateInvoicePreview());
@@ -588,9 +601,12 @@ public class GetBitwardenSubscriptionQueryTests
         subscription.ScheduleId = "sub_sched_test";
         var premiumPlans = CreatePremiumPlans();
         var schedule = CreateSubscriptionSchedule(percentOff: 30);
+        var phase2Coupon = schedule.Phases[1].Discounts[0].Coupon;
 
         _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+        // Production re-fetches the phase-2 coupon by id to expand applies_to past the depth cap.
+        _stripeAdapter.GetCouponAsync(phase2Coupon.Id, Arg.Any<CouponGetOptions>()).Returns(phase2Coupon);
         _pricingClient.ListPremiumPlans().Returns(premiumPlans);
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(CreateInvoicePreview());
@@ -612,13 +628,18 @@ public class GetBitwardenSubscriptionQueryTests
     {
         var user = CreateUser();
         var subscription = CreateSubscription(SubscriptionStatus.Active);
-        subscription.Customer.Discount = CreateDiscount(discountType: "cart");
+        subscription.Customer.Discount = CreateDiscount(discountType: "cart", couponId: "customer-coupon");
+        var customerCoupon = subscription.Customer.Discount.Source.Coupon;
         subscription.ScheduleId = "sub_sched_test";
         var premiumPlans = CreatePremiumPlans();
         var schedule = CreateSubscriptionSchedule(percentOff: 30);
+        var phase2Coupon = schedule.Phases[1].Discounts[0].Coupon;
 
         _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+        // Production re-fetches each coupon by id to expand applies_to past the depth cap.
+        _stripeAdapter.GetCouponAsync(customerCoupon.Id, Arg.Any<CouponGetOptions>()).Returns(customerCoupon);
+        _stripeAdapter.GetCouponAsync(phase2Coupon.Id, Arg.Any<CouponGetOptions>()).Returns(phase2Coupon);
         _pricingClient.ListPremiumPlans().Returns(premiumPlans);
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(CreateInvoicePreview());
@@ -690,9 +711,12 @@ public class GetBitwardenSubscriptionQueryTests
         subscription.ScheduleId = "sub_sched_test";
         var premiumPlans = CreatePremiumPlans();
         var schedule = CreateSubscriptionSchedule(amountOff: 500);
+        var phase2Coupon = schedule.Phases[1].Discounts[0].Coupon;
 
         _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+        // Production re-fetches the phase-2 coupon by id to expand applies_to past the depth cap.
+        _stripeAdapter.GetCouponAsync(phase2Coupon.Id, Arg.Any<CouponGetOptions>()).Returns(phase2Coupon);
         _pricingClient.ListPremiumPlans().Returns(premiumPlans);
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(CreateInvoicePreview());
@@ -719,9 +743,12 @@ public class GetBitwardenSubscriptionQueryTests
             percentOff: 25,
             couponId: "phase2-seat-coupon",
             appliesToProductId: "prod_premium_seat");
+        var phase2Coupon = schedule.Phases[1].Discounts[0].Coupon;
 
         _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+        // Production re-fetches the phase-2 coupon by id to expand applies_to past the depth cap.
+        _stripeAdapter.GetCouponAsync(phase2Coupon.Id, Arg.Any<CouponGetOptions>()).Returns(phase2Coupon);
         _pricingClient.ListPremiumPlans().Returns(premiumPlans);
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(CreateInvoicePreview());
@@ -795,9 +822,12 @@ public class GetBitwardenSubscriptionQueryTests
         subscription.ScheduleId = "sub_sched_test";
         var premiumPlans = CreatePremiumPlans();
         var schedule = CreateSubscriptionSchedule(percentOff: 30, couponId: "milestone-2c");
+        var phase2Coupon = schedule.Phases[1].Discounts[0].Coupon;
 
         _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+        // Production re-fetches the phase-2 coupon by id to expand applies_to past the depth cap.
+        _stripeAdapter.GetCouponAsync(phase2Coupon.Id, Arg.Any<CouponGetOptions>()).Returns(phase2Coupon);
         _pricingClient.ListPremiumPlans().Returns(premiumPlans);
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(CreateInvoicePreview(totalTax: 150));
@@ -820,14 +850,18 @@ public class GetBitwardenSubscriptionQueryTests
     {
         var user = CreateUser();
         var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
-        subscription.Customer.Discount = CreateDiscount(discountType: "cart");
-        subscription.Customer.Discount.Coupon.Id = "customer-coupon";
+        subscription.Customer.Discount = CreateDiscount(discountType: "cart", couponId: "customer-coupon");
+        var customerCoupon = subscription.Customer.Discount.Source.Coupon;
         subscription.ScheduleId = "sub_sched_test";
         var premiumPlans = CreatePremiumPlans();
         var schedule = CreateSubscriptionSchedule(percentOff: 30, couponId: "milestone-2c");
+        var phase2Coupon = schedule.Phases[1].Discounts[0].Coupon;
 
         _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+        // Production re-fetches each coupon by id to expand applies_to past the depth cap.
+        _stripeAdapter.GetCouponAsync(customerCoupon.Id, Arg.Any<CouponGetOptions>()).Returns(customerCoupon);
+        _stripeAdapter.GetCouponAsync(phase2Coupon.Id, Arg.Any<CouponGetOptions>()).Returns(phase2Coupon);
         _pricingClient.ListPremiumPlans().Returns(premiumPlans);
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(CreateInvoicePreview(totalTax: 150));
@@ -855,8 +889,8 @@ public class GetBitwardenSubscriptionQueryTests
         // return it twice and pass a duplicate to the tax preview. It must appear once.
         var user = CreateUser();
         var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
-        subscription.Customer.Discount = CreateDiscount(discountType: "cart");
-        subscription.Customer.Discount.Coupon.Id = "shared-coupon";
+        subscription.Customer.Discount = CreateDiscount(discountType: "cart", couponId: "shared-coupon");
+        var sharedCoupon = subscription.Customer.Discount.Source.Coupon;
         subscription.ScheduleId = "sub_sched_test";
         var premiumPlans = CreatePremiumPlans();
         // Phase 2 carries the SAME coupon id as the customer-level discount.
@@ -864,6 +898,8 @@ public class GetBitwardenSubscriptionQueryTests
 
         _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+        // Production dedups by id and re-fetches the coupon once to expand applies_to past the depth cap.
+        _stripeAdapter.GetCouponAsync("shared-coupon", Arg.Any<CouponGetOptions>()).Returns(sharedCoupon);
         _pricingClient.ListPremiumPlans().Returns(premiumPlans);
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(CreateInvoicePreview(totalTax: 150));
@@ -957,6 +993,12 @@ public class GetBitwardenSubscriptionQueryTests
         Assert.NotNull(result);
         Assert.Null(result.Cart.Discount);
         Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        await _stripeAdapter.Received(1).GetSubscriptionScheduleAsync(
+            "sub_sched_test",
+            Arg.Is<SubscriptionScheduleGetOptions>(o =>
+                // Schedule phase discounts expose Coupon directly (no Source wrapper), so the path
+                // is phases.discounts.coupon.applies_to.
+                o.Expand.Contains("phases.discounts.coupon.applies_to")));
     }
 
     #region Helper Methods
@@ -1126,9 +1168,10 @@ public class GetBitwardenSubscriptionQueryTests
             var discounts = percentOff != null || amountOff != null
                 ? new List<SubscriptionSchedulePhaseDiscount>
                 {
+                    // Schedule phase discounts expose Coupon directly (no Source wrapper),
+                    // unlike a subscription/customer Discount.
                     new()
                     {
-                        CouponId = couponId,
                         Coupon = new Coupon
                         {
                             Id = couponId,
@@ -1158,10 +1201,11 @@ public class GetBitwardenSubscriptionQueryTests
         };
     }
 
-    private static Discount CreateDiscount(string discountType = "cart", string? productId = null)
+    private static Discount CreateDiscount(string discountType = "cart", string? productId = null, string couponId = "test-coupon")
     {
         var coupon = new Coupon
         {
+            Id = couponId,
             Valid = true,
             PercentOff = 20,
             AppliesTo = discountType == "product" && productId != null
@@ -1171,7 +1215,7 @@ public class GetBitwardenSubscriptionQueryTests
 
         return new Discount
         {
-            Coupon = coupon
+            Source = new DiscountSource { Coupon = coupon }
         };
     }
 

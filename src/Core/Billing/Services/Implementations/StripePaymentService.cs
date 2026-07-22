@@ -93,7 +93,7 @@ public class StripePaymentService : IStripePaymentService
         SubscriptionUpdate subscriptionUpdate, bool invoiceNow = false)
     {
         // remember, when in doubt, throw
-        var subGetOptions = new SubscriptionGetOptions { Expand = ["customer.tax", "customer.tax_ids"] };
+        var subGetOptions = new SubscriptionGetOptions { Expand = ["customer.tax", "customer.tax_ids", "customer.discount.source.coupon"] };
         var sub = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId, subGetOptions);
         if (sub == null)
         {
@@ -106,7 +106,7 @@ public class StripePaymentService : IStripePaymentService
                 "You do not have an active subscription. Reinstate your subscription to make changes.");
         }
 
-        var existingCoupon = sub.Customer.Discount?.Coupon?.Id;
+        var existingCoupon = sub.Customer.Discount?.Source?.Coupon?.Id;
 
         var collectionMethod = sub.CollectionMethod;
         var daysUntilDue = sub.DaysUntilDue;
@@ -217,9 +217,10 @@ public class StripePaymentService : IStripePaymentService
                     });
             }
 
-            var customer = await _stripeAdapter.GetCustomerAsync(sub.CustomerId);
+            var customer = await _stripeAdapter.GetCustomerAsync(sub.CustomerId,
+                new CustomerGetOptions { Expand = ["discount.source.coupon"] });
 
-            var newCoupon = customer.Discount?.Coupon?.Id;
+            var newCoupon = customer.Discount?.Source?.Coupon?.Id;
 
             if (!string.IsNullOrEmpty(existingCoupon) && string.IsNullOrEmpty(newCoupon))
             {
@@ -647,7 +648,11 @@ public class StripePaymentService : IStripePaymentService
         }
 
         var subscription = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer.discount.coupon.applies_to", "discounts.coupon.applies_to", "test_clock"] });
+            // `customer.discount.source.coupon` stops at 4 levels: appending `.applies_to`
+            // would put it at 5, over Stripe's 4-level expand cap (the 2025-09-30.clover
+            // change wrapped Coupon under Discount.Source). AppliesTo is filled in by
+            // EnsureDiscountCouponAppliesToAsync's per-coupon refetch below.
+            new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon", "discounts.source.coupon.applies_to", "test_clock"] });
 
         if (subscription == null)
         {
@@ -667,6 +672,7 @@ public class StripePaymentService : IStripePaymentService
 
         if (discount != null)
         {
+            await EnsureDiscountCouponAppliesToAsync(discount);
             subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(discount);
         }
 
@@ -690,7 +696,7 @@ public class StripePaymentService : IStripePaymentService
             var invoiceCreatePreviewOptions = new InvoiceCreatePreviewOptions
             {
                 Customer = subscriber.GatewayCustomerId,
-                Subscription = subscriber.GatewaySubscriptionId
+                Subscription = subscriber.GatewaySubscriptionId,
             };
 
             var upcomingInvoice = await _stripeAdapter.CreateInvoicePreviewAsync(invoiceCreatePreviewOptions);
@@ -726,6 +732,11 @@ public class StripePaymentService : IStripePaymentService
             var schedule = await _stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
                 new SubscriptionScheduleGetOptions
                 {
+                    // `SubscriptionSchedulePhaseDiscount` exposes `Coupon` directly (not
+                    // wrapped under `Source` like the 2025-09-30.clover Discount refactor).
+                    // Expanding through `phases.discounts.coupon.applies_to` fits Stripe's
+                    // 4-level cap and includes applies_to inline; no separate coupon
+                    // refetch is needed for the phase-2 branch.
                     Expand = ["phases.discounts.coupon.applies_to", "phases.items.price"]
                 });
 
@@ -814,6 +825,8 @@ public class StripePaymentService : IStripePaymentService
             var phase2Discount = phase2.Discounts?.FirstOrDefault();
             if (phase2Discount?.Coupon != null)
             {
+                // Coupon comes populated (with AppliesTo) from the parent
+                // `phases.discounts.coupon.applies_to` expand — see comment above.
                 subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
             }
         }
@@ -828,6 +841,44 @@ public class StripePaymentService : IStripePaymentService
                 ex.StripeError?.Code);
         }
     }
+
+    /// <summary>
+    /// Overlays a fresh Coupon fetch (with <c>Expand = ["applies_to"]</c>) onto the
+    /// Coupon inside <paramref name="discount"/> so downstream readers (e.g.
+    /// <see cref="SubscriptionInfo.BillingCustomerDiscount(Discount)"/>) find
+    /// <c>Coupon.AppliesTo.Products</c> populated.
+    ///
+    /// Required because two stable Stripe rules combine to make the natural
+    /// single-fetch expand impossible after the 2025-09-30.clover API version:
+    /// <list type="bullet">
+    ///   <item><description><c>expand</c> has a max depth of 4
+    ///     (<see href="https://docs.stripe.com/expand"/>).</description></item>
+    ///   <item><description><c>coupon.applies_to</c> is expandable, not inline
+    ///     (<see href="https://docs.stripe.com/api/coupons/object"/>).</description></item>
+    /// </list>
+    /// The clover release wrapped Coupon under <c>Discount.Source</c>, so the
+    /// formerly-at-the-cap path <c>customer.discount.coupon.applies_to</c> became
+    /// the over-the-cap path <c>customer.discount.source.coupon.applies_to</c>.
+    /// Rooting the refetch at Coupons.Retrieve keeps <c>applies_to</c> only 1
+    /// level deep.
+    /// </summary>
+    private async Task EnsureDiscountCouponAppliesToAsync(Discount discount)
+    {
+        if (discount.Source?.Coupon is not { Id: not null and not "" } coupon)
+        {
+            return;
+        }
+
+        var enriched = await FetchCouponWithAppliesToAsync(coupon.Id);
+        if (enriched != null)
+        {
+            coupon.AppliesTo = enriched.AppliesTo;
+        }
+    }
+
+    private async Task<Coupon> FetchCouponWithAppliesToAsync(string couponId) =>
+        await _stripeAdapter.GetCouponAsync(couponId,
+            new CouponGetOptions { Expand = ["applies_to"] });
 
     public async Task<bool> HasSecretsManagerStandalone(Organization organization) =>
         await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,
@@ -850,9 +901,10 @@ public class StripePaymentService : IStripePaymentService
             return false;
         }
 
-        var customer = await _stripeAdapter.GetCustomerAsync(gatewayCustomerId);
+        var customer = await _stripeAdapter.GetCustomerAsync(gatewayCustomerId,
+            new CustomerGetOptions { Expand = ["discount.source.coupon"] });
 
-        return customer?.Discount?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
+        return customer?.Discount?.Source?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
     }
 
     private async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)

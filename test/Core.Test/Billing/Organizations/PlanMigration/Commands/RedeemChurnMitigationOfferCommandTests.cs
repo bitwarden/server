@@ -216,7 +216,7 @@ public class RedeemChurnMitigationOfferCommandTests
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
-            Coupon = new Coupon { Id = "customer-level-coupon" }
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
         });
         SetupGetSubscription(organization, subscription);
         SetupActiveScheduleWithTwoPhases(subscription);
@@ -240,7 +240,7 @@ public class RedeemChurnMitigationOfferCommandTests
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
-            Coupon = new Coupon { Id = "customer-level-coupon" }
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
         });
         SetupGetSubscription(organization, subscription);
         SetupActiveScheduleWithTwoPhases(subscription);
@@ -364,7 +364,7 @@ public class RedeemChurnMitigationOfferCommandTests
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
-            Coupon = new Coupon { Id = "customer-level-coupon" }
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
         });
         SetupGetSubscription(organization, subscription);
 
@@ -386,10 +386,10 @@ public class RedeemChurnMitigationOfferCommandTests
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
-            Coupon = new Coupon { Id = "shared-coupon" }
+            Source = new DiscountSource { Coupon = new Coupon { Id = "shared-coupon" } }
         });
         // The same coupon id is already present on the subscription's discounts.
-        subscription.Discounts = [new Discount { Coupon = new Coupon { Id = "shared-coupon" } }];
+        subscription.Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "shared-coupon" } } }];
         SetupGetSubscription(organization, subscription);
 
         await _command.Run(organization);
@@ -412,7 +412,7 @@ public class RedeemChurnMitigationOfferCommandTests
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
-            Coupon = new Coupon { Id = "forever-25" }
+            Source = new DiscountSource { Coupon = new Coupon { Id = "forever-25" } }
         });
         subscription.Discounts = [];
         SetupGetSubscription(organization, subscription);
@@ -438,9 +438,9 @@ public class RedeemChurnMitigationOfferCommandTests
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
-            Coupon = new Coupon { Id = "customer-level-coupon" }
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
         });
-        subscription.Discounts = [new Discount { Coupon = new Coupon { Id = ChurnCouponCode } }];
+        subscription.Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = ChurnCouponCode } } }];
         SetupGetSubscription(organization, subscription);
 
         await _command.Run(organization);
@@ -465,12 +465,12 @@ public class RedeemChurnMitigationOfferCommandTests
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
-            Coupon = new Coupon { Id = "customer-level-coupon" }
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
         });
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "customer-level-coupon" } },
-            new Discount { Coupon = new Coupon { Id = ChurnCouponCode } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } } },
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = ChurnCouponCode } } }
         ];
         SetupGetSubscription(organization, subscription);
 

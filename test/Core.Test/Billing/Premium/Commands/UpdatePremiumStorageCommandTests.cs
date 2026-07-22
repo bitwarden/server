@@ -239,6 +239,27 @@ public class UpdatePremiumStorageCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task Run_FetchesSubscriptionWithCustomerDiscountSourceCouponExpanded(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        // Act
+        await _command.Run(user, 9);
+
+        // Assert
+        await _stripeAdapter.Received().GetSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer.discount.source.coupon")));
+    }
+
+    [Theory, BitAutoData]
     public async Task Run_AddStorageFromZero_Success(User user)
     {
         // Arrange
@@ -676,7 +697,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 4);
-        subscription.Customer.Discount = new Discount { Coupon = new Coupon { Id = "retention" } };
+        subscription.Customer.Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } };
         _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4);
@@ -708,7 +729,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 4);
-        subscription.Customer.Discount = new Discount { Coupon = new Coupon { Id = "retention" } };
+        subscription.Customer.Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } };
         _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4, phase2Active: true);

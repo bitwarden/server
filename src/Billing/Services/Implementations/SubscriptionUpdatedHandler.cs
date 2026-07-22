@@ -93,7 +93,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     public async Task HandleAsync(Event parsedEvent)
     {
-        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer.discount", "discounts", "latest_invoice", "test_clock"]);
+        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer.discount.source.coupon", "discounts.source.coupon", "latest_invoice", "test_clock"]);
         SubscriberId subscriberId = subscription;
 
         var subscriber = await GetSubscriberAsync(subscriberId);
@@ -422,10 +422,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var customerHasSecretsManagerTrial = subscription.Customer
             ?.Discount
-            ?.Coupon
+            ?.Source?.Coupon
             ?.Id == "sm-standalone";
 
-        var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Coupon.Id)
+        var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Source?.Coupon?.Id)
             .Contains(CouponIDs.SecretsManagerStandalone);
 
         if (customerHasSecretsManagerTrial)
