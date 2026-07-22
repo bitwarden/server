@@ -193,7 +193,6 @@ public class AcceptOrganizationInviteLinkCommandTests
         Assert.True(result.IsError);
         Assert.IsType<EmailNotVerified>(result.AsError);
 
-        // Guard runs in the validation phase - no membership should be created.
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(default!);
@@ -976,7 +975,6 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetManyByUserAsync(user.Id)
             .Returns(new List<OrganizationUser>());
 
-        // No provider membership by default
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetManyByUserAsync(user.Id)
             .Returns([]);
@@ -985,7 +983,6 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
             .Returns(new ResetPasswordPolicyRequirement([]));
 
-        // Membership validator returns valid (no restrictions) by default
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
             .ValidateAsync(Arg.Is<AcceptOrganizationMembershipValidationRequest>(r =>
                 r.OrganizationId == org.Id && r.User == user))
