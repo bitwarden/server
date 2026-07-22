@@ -312,7 +312,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
     private static ConfirmOrganizationInviteLinkRequest BuildRequest(OrganizationInviteLink inviteLink, User user) =>
         new()
         {
-            Code = inviteLink.Code,
+            OrganizationId = inviteLink.OrganizationId,
+            Code = Guid.Parse(inviteLink.Code),
             User = user,
             OrgUserKey = "4.orgUserKey",
             DefaultUserCollectionName = "2.defaultCollectionName",
@@ -326,6 +327,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
         inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = Guid.NewGuid().ToString();
         if (existingOrganizationUser is not null)
         {
             existingOrganizationUser.OrganizationId = organization.Id;

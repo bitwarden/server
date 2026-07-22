@@ -31,6 +31,17 @@ internal static class OrganizationSeeder
     }
 
     /// <summary>
+    /// Applies billing gateway identity to an organization so it resembles a real billed org.
+    /// Only non-null values are set; nulls leave the field unchanged.
+    /// </summary>
+    internal static void ApplyBilling(Organization org, GatewayType? gateway, string? gatewayCustomerId, string? gatewaySubscriptionId)
+    {
+        org.Gateway = gateway ?? org.Gateway;
+        org.GatewayCustomerId = gatewayCustomerId ?? org.GatewayCustomerId;
+        org.GatewaySubscriptionId = gatewaySubscriptionId ?? org.GatewaySubscriptionId;
+    }
+
+    /// <summary>
     /// Derives a deterministic 8-char hex string from a domain for safe billing email generation.
     /// Always applied regardless of mangle flag — billing emails must never be deliverable.
     /// </summary>
