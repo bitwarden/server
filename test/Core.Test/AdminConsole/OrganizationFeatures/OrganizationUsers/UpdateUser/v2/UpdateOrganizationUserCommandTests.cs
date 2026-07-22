@@ -7,8 +7,8 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
@@ -337,7 +337,6 @@ public class UpdateOrganizationUserCommandTests
             newEmail,
             newName,
             defaultUserCollectionName,
-            new StandardUser(organizationUser.UserId ?? Guid.NewGuid(), true),
-            new OrganizationUser { Type = OrganizationUserType.Owner });
+            new StandardUser(organizationUser.UserId ?? Guid.NewGuid(), true));
     }
 }

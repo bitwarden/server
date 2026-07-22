@@ -45,8 +45,6 @@ public class UpdateOrganizationUserCommand(
             return validationResult.AsError;
         }
 
-        var isEmailChanging = IsEmailChanging(request);
-
         var organizationUser = request.OrganizationUserToUpdate.UpdateOrganizationUser(request.NewType,
             request.NewPermissions,
             request.NewAccessSecretsManager,
@@ -61,9 +59,9 @@ public class UpdateOrganizationUserCommand(
             }
         }
 
-        if (isEmailChanging || IsNameChanging(request))
+        if (request.IsEmailChanged() || request.IsNameChanged())
         {
-            var commandError = await TryApplyAccountChangesAsync(request, isEmailChanging);
+            var commandError = await TryApplyAccountChangesAsync(request);
             if (commandError is not null)
             {
                 return commandError;
@@ -91,20 +89,23 @@ public class UpdateOrganizationUserCommand(
         return new None();
     }
 
-    private async Task<CommandError?> TryApplyAccountChangesAsync(UpdateOrganizationUserRequest request,
-        bool isEmailChanging)
+    private async Task<CommandError?> TryApplyAccountChangesAsync(UpdateOrganizationUserRequest request)
     {
         if (request.UserToUpdate is null)
         {
             return null;
         }
 
-        var userToUpdate = request.UserToUpdate;
-        userToUpdate.Name = string.IsNullOrWhiteSpace(request.NewName) ? null : request.NewName; // update name in update method
-
         try
         {
-            if (isEmailChanging)
+            var userToUpdate = request.UserToUpdate;
+
+            if (request.IsNameChanged())
+            {
+                userToUpdate.Name = request.NormalizedNewName;
+            }
+
+            if (request.IsEmailChanged())
             {
                 // ChangeEmailAsync persists the account (including any name change above) and syncs Stripe.
                 await changeEmailCommand.ChangeEmailAsync(request.UserToUpdate, request.NewEmail!);
@@ -133,22 +134,6 @@ public class UpdateOrganizationUserCommand(
         OrganizationDomainAllowEmailChangeQuery.EmailNotOnVerifiedDomainError => new NewEmailDomainNotClaimedError(),
         _ => new EmailChangeFailedError(ex.Message)
     };
-
-    private static bool IsEmailChanging(UpdateOrganizationUserRequest request) =>
-        !string.IsNullOrWhiteSpace(request.NewEmail)
-        && request.UserToUpdate is not null
-        && !string.Equals(request.UserToUpdate.Email, request.NewEmail, StringComparison.InvariantCultureIgnoreCase);
-
-    private static bool IsNameChanging(UpdateOrganizationUserRequest request)
-    {
-        if (request.NewName is null || request.UserToUpdate is null)
-        {
-            return false;
-        }
-
-        var normalizedName = string.IsNullOrWhiteSpace(request.NewName) ? null : request.NewName;
-        return !string.Equals(request.UserToUpdate.Name, normalizedName, StringComparison.Ordinal);
-    }
 
     private async Task<CommandError?> TryEnablingSecretsManagerAsync(UpdateOrganizationUserRequest request)
     {

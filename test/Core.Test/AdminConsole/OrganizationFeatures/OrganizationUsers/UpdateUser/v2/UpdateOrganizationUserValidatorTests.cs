@@ -433,7 +433,6 @@ public class UpdateOrganizationUserValidatorTests
             null,
             null,
             actingUser,
-            actingMembership,
             userToUpdate);
     }
 
