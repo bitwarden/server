@@ -32,9 +32,9 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
             TitleSecondBold =
                 orgInvitesInfo.IsFreeOrg
                     ? string.Empty
-                    : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
+                    : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName),
             TitleThird = orgInvitesInfo.IsFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
-            OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName),
             Email = WebUtility.UrlEncode(orgUser.Email),
             OrganizationId = orgUser.OrganizationId.ToString(),
             OrganizationUserId = orgUser.Id.ToString(),
