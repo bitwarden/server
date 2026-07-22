@@ -31,7 +31,7 @@ public class ProviderSeederTests
     {
         var provider = ProviderSeeder.Create(Name, Domain, ProviderType.Msp, new NoOpManglerService());
 
-        Assert.Equal(SeederBilling.DeriveBillingEmail(Domain), provider.BillingEmail);
+        Assert.Equal(BillingEmailSeeder.DeriveBillingEmail(Domain), provider.BillingEmail);
         Assert.StartsWith("billing", provider.BillingEmail);
         // Non-deliverable: the domain is nested under a derived hash subdomain, never the bare domain.
         Assert.EndsWith($".{Domain}", provider.BillingEmail);

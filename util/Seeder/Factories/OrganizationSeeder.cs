@@ -15,7 +15,7 @@ internal static class OrganizationSeeder
             Id = CoreHelpers.GenerateComb(),
             Identifier = manglerService.Mangle(domain),
             Name = manglerService.Mangle(name),
-            BillingEmail = SeederBilling.DeriveBillingEmail(domain),
+            BillingEmail = BillingEmailSeeder.DeriveBillingEmail(domain),
             Seats = seats,
             Status = OrganizationStatusType.Created,
             PublicKey = publicKey,

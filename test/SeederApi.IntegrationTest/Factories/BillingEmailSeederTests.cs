@@ -3,15 +3,15 @@ using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Factories;
 
-public class SeederBillingTests
+public class BillingEmailSeederTests
 {
     [Fact]
     public void DeriveBillingEmail_IsDeterministic_ForSameDomain()
     {
         const string domain = "acme-msp.test";
 
-        var first = SeederBilling.DeriveBillingEmail(domain);
-        var second = SeederBilling.DeriveBillingEmail(domain);
+        var first = BillingEmailSeeder.DeriveBillingEmail(domain);
+        var second = BillingEmailSeeder.DeriveBillingEmail(domain);
 
         Assert.Equal(first, second);
     }
@@ -19,8 +19,8 @@ public class SeederBillingTests
     [Fact]
     public void DeriveBillingEmail_DiffersByDomain()
     {
-        var one = SeederBilling.DeriveBillingEmail("acme-msp.test");
-        var two = SeederBilling.DeriveBillingEmail("other-msp.test");
+        var one = BillingEmailSeeder.DeriveBillingEmail("acme-msp.test");
+        var two = BillingEmailSeeder.DeriveBillingEmail("other-msp.test");
 
         Assert.NotEqual(one, two);
     }
@@ -30,7 +30,7 @@ public class SeederBillingTests
     {
         const string domain = "acme-msp.test";
 
-        var email = SeederBilling.DeriveBillingEmail(domain);
+        var email = BillingEmailSeeder.DeriveBillingEmail(domain);
 
         Assert.StartsWith("billing", email);
         // The domain is nested under a derived hash subdomain, never used as the bare mail domain.

@@ -10,7 +10,7 @@ using Duende.IdentityModel.Client;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Scenes;
 
 /// <summary>
 /// Exercises the composable SingleProviderScene end-to-end through POST /seed, matching the Provider-Scenes
@@ -18,12 +18,12 @@ namespace Bit.SeederApi.IntegrationTest;
 /// the org owner, then a provider that links the admin (as a confirmed ProviderAdmin) and the client org,
 /// then cleanup via DELETE /seed/{playId} (providers are torn down first).
 /// </summary>
-public class SeedControllerProviderTests : IClassFixture<InPlaySeederApiApplicationFactory>, IAsyncLifetime
+public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly InPlaySeederApiApplicationFactory _factory;
 
-    public SeedControllerProviderTests(InPlaySeederApiApplicationFactory factory)
+    public SingleProviderSceneTests(InPlaySeederApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();

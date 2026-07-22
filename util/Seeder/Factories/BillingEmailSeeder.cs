@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Bit.Seeder.Factories;
 
-internal static class SeederBilling
+internal static class BillingEmailSeeder
 {
     /// <summary>
     /// Derives a deterministic, non-deliverable billing email from a domain.

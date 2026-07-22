@@ -79,7 +79,9 @@ public class SingleProviderScene(
                 $"User {request.OwnerUserId} has no public key; cannot encrypt the provider key for the owner.");
         }
 
-        var domain = ProviderSceneHelpers.ResolveDomain(request.Domain);
+        var domain = string.IsNullOrWhiteSpace(request.Domain)
+            ? $"{Guid.NewGuid():N}.provider.test"
+            : request.Domain;
         var providerKey = RustSdkService.GenerateOrganizationKeys().Key;
 
         var provider = ProviderSeeder.Create(request.Name, domain, request.Type, manglerService);
@@ -90,12 +92,7 @@ public class SingleProviderScene(
             request.GatewaySubscriptionId);
         await providerRepository.CreateAsync(provider);
 
-        var providerUser = ProviderUserSeeder.CreateProviderUser(
-            provider,
-            owner,
-            ProviderUserType.ProviderAdmin,
-            ProviderUserStatusType.Confirmed,
-            RustSdkService.GenerateUserOrganizationKey(owner.PublicKey!, providerKey));
+        var providerUser = ProviderUserSeeder.CreateConfirmedAdmin(provider, owner, providerKey);
         await providerUserRepository.CreateAsync(providerUser);
 
         foreach (var plan in request.Plans)

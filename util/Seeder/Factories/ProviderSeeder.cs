@@ -18,7 +18,7 @@ internal static class ProviderSeeder
         {
             Id = CombGuid.Generate(),
             Name = manglerService.Mangle(name),
-            BillingEmail = SeederBilling.DeriveBillingEmail(domain),
+            BillingEmail = BillingEmailSeeder.DeriveBillingEmail(domain),
             Type = type,
             Status = ProviderStatusType.Billable,
             Enabled = true,
