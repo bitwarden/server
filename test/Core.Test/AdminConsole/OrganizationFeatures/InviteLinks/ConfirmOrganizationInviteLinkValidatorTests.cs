@@ -43,7 +43,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         User user,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
-        // Arrange
         inviteLink.OrganizationId = organization.Id;
         inviteLink.Code = Guid.NewGuid().ToString();
 
@@ -51,7 +50,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns(inviteLink);
 
-        // Act — pass a different code than the one stored on the link
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -60,7 +58,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         };
         var result = await sutProvider.Sut.ValidateAsync(request);
 
-        // Assert
         Assert.True(result.IsError);
         Assert.IsType<InviteLinkNotFound>(result.AsError);
     }
@@ -71,14 +68,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         User user,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
-        // Arrange
         inviteLink.Code = Guid.NewGuid().ToString();
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .GetByOrganizationIdAsync(inviteLink.OrganizationId)
             .Returns(inviteLink);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = inviteLink.OrganizationId,
@@ -110,7 +105,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -143,7 +137,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -167,7 +160,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         inviteLink.AllowedDomains = "[\"allowed.example.com\"]";
         user.Email = "user@notallowed.example.com";
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -194,7 +186,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetManyByUserAsync(user.Id)
             .Returns([providerUser]);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -222,7 +213,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByOrganizationAsync(organization.Id, user.Id)
             .Returns(revokedOrganizationUser);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -252,7 +242,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByOrganizationEmailAsync(organization.Id, user.Email)
             .Returns(revokedEmailInvite);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -281,7 +270,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByOrganizationAsync(organization.Id, user.Id)
             .Returns(existingOrganizationUser);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -313,7 +301,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByOrganizationAsync(organization.Id, user.Id)
             .Returns(existingOrganizationUser);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -346,7 +333,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
             .Returns(new OrganizationSeatCounts { Users = 4, Sponsored = 0 });
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -378,7 +364,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetManyByUserAsync(user.Id)
             .Returns([membershipInAnotherOrganization]);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -413,7 +398,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
                 }
             ]));
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -445,7 +429,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .TwoFactorIsEnabledAsync(user)
             .Returns(false);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -476,7 +459,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .TwoFactorIsEnabledAsync(user)
             .Returns(true);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -497,7 +479,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -530,7 +511,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByOrganizationEmailAsync(organization.Id, user.Email)
             .Returns(invitedOrganizationUser);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -569,7 +549,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetCountByFreeOrganizationAdminUserAsync(user.Id)
             .Returns(1);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,
@@ -604,7 +583,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetCountByFreeOrganizationAdminUserAsync(user.Id)
             .Returns(0);
 
-        // Act
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
             OrganizationId = organization.Id,

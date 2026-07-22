@@ -49,7 +49,6 @@ public class AcceptOrganizationInviteLinkCommandTests
         OrganizationInviteLink inviteLink,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
-        // Store a different code than what the request presents
         inviteLink.OrganizationId = request.OrganizationId;
         inviteLink.Code = Guid.NewGuid().ToString();
 
@@ -78,7 +77,6 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns(inviteLink);
 
-        // Organization repo returns null → not found
         var request = new AcceptOrganizationInviteLinkRequest
         {
             OrganizationId = organization.Id,
@@ -930,11 +928,6 @@ public class AcceptOrganizationInviteLinkCommandTests
                 })));
     }
 
-    /// <summary>
-    /// Configures the default "happy path" mocks. Sets <see cref="OrganizationInviteLink.Code"/> to
-    /// a fresh Guid string so tests can derive <c>request.Code = Guid.Parse(inviteLink.Code)</c> and
-    /// have <see cref="OrganizationInviteLink.CodeMatches"/> succeed.
-    /// </summary>
     private static void SetupHappyPath(
         Organization org,
         OrganizationInviteLink link,
