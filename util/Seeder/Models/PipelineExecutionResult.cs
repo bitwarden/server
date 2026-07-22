@@ -15,4 +15,5 @@ internal record PipelineExecutionResult(
     int GroupsCount,
     int CollectionsCount,
     int CiphersCount,
-    int FoldersCount);
+    int FoldersCount,
+    string? SsoIdentifier);
