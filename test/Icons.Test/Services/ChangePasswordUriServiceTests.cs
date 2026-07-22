@@ -103,7 +103,7 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
     {
         // A transient failure must not be reported as a definitive "not supported" answer.
         var mockHttpFactory = Substitute.For<IHttpClientFactory>();
-        var httpClient = new HttpClient(new ThrowingHttpMessageHandler());
+        using var httpClient = new HttpClient(new ThrowingHttpMessageHandler());
         mockHttpFactory.CreateClient("ChangePasswordUri").Returns(httpClient);
 
         var service = new ChangePasswordUriService(mockHttpFactory);

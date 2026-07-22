@@ -58,9 +58,9 @@ public class ChangePasswordUriService : IChangePasswordUriService
             Path = "/.well-known/resource-that-should-not-exist-whose-status-code-should-not-be-200"
         };
 
-        var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
+        using var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
 
-        var response = await _httpClient.SendAsync(request);
+        using var response = await _httpClient.SendAsync(request);
         return !response.IsSuccessStatusCode;
     }
 
@@ -77,9 +77,9 @@ public class ChangePasswordUriService : IChangePasswordUriService
         // to be distinguished from a definitive answer.
         var url = new UriBuilder(urlDomain) { Path = "/.well-known/change-password" };
 
-        var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
+        using var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
 
-        var response = await _httpClient.SendAsync(request);
+        using var response = await _httpClient.SendAsync(request);
         return response.IsSuccessStatusCode ? url.ToString() : null;
     }
 }
