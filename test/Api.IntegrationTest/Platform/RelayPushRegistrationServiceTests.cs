@@ -5,6 +5,10 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Platform.PushRegistration;
 using Bit.Core.Platform.PushRegistration.Internal;
 using Bit.Core.Settings;
+using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using NSubstitute;
 using Xunit;
@@ -37,6 +41,13 @@ public class RelayPushRegistrationServiceTests
                     Key = "test_key",
                     Enabled = true,
                 });
+        });
+
+        // Replace the NullLoggerFactory so we can capture identity server logs for diagnostics.
+        _cloudApi.Identity.ConfigureServices(services =>
+        {
+            services.RemoveAll<ILoggerFactory>();
+            services.AddLogging(b => b.AddFakeLogging());
         });
 
         var cloudApiHttpClient = _cloudApi.CreateClient();
@@ -93,8 +104,14 @@ public class RelayPushRegistrationServiceTests
 
     private void DumpLogs(string context)
     {
-        var logs = _logCollector.GetSnapshot();
-        _output.WriteLine($"--- Captured logs ({context}): {logs.Count} entries ---");
+        DumpCollector($"RelayPushRegistrationService logs ({context})", _logCollector);
+        DumpCollector($"Identity server logs ({context})", _cloudApi.Identity.GetService<FakeLogCollector>());
+    }
+
+    private void DumpCollector(string label, FakeLogCollector collector)
+    {
+        var logs = collector.GetSnapshot();
+        _output.WriteLine($"--- {label}: {logs.Count} entries ---");
         foreach (var log in logs)
         {
             _output.WriteLine($"[{log.Level}] {log.Message}");
@@ -115,9 +132,19 @@ public class RelayPushRegistrationServiceTests
         var organizationId = Guid.NewGuid();
         var installationId = Guid.NewGuid();
 
-        ThreadPool.GetAvailableThreads(out var workersBefore, out var ioBefore);
         ThreadPool.GetMaxThreads(out var maxWorkers, out var maxIo);
-        _output.WriteLine($"ThreadPool before call: {workersBefore}/{maxWorkers} workers, {ioBefore}/{maxIo} IO available");
+
+        using var pollCts = new CancellationTokenSource();
+        var pollTask = Task.Run(async () =>
+        {
+            var sw = Stopwatch.StartNew();
+            while (!pollCts.Token.IsCancellationRequested)
+            {
+                ThreadPool.GetAvailableThreads(out var w, out var io);
+                _output.WriteLine($"[+{sw.Elapsed.TotalSeconds:F1}s] ThreadPool: {w}/{maxWorkers} workers, {io}/{maxIo} IO available");
+                await Task.Delay(TimeSpan.FromSeconds(5), pollCts.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            }
+        }, pollCts.Token);
 
         await _sut.CreateOrUpdateRegistrationAsync(
             new PushRegistrationData("PushToken"),
@@ -129,8 +156,8 @@ public class RelayPushRegistrationServiceTests
             installationId
         );
 
-        ThreadPool.GetAvailableThreads(out var workersAfter, out var ioAfter);
-        _output.WriteLine($"ThreadPool after call:  {workersAfter}/{maxWorkers} workers, {ioAfter}/{maxIo} IO available");
+        await pollCts.CancelAsync();
+        await pollTask;
 
         var logs = _logCollector.GetSnapshot();
 
