@@ -85,6 +85,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
 
         var validateRequest = new OrganizationInviteLinkValidateEmailDomainRequestModel
         {
+            OrganizationId = _organization.Id,
             Code = created.Code,
             Email = "user@acme.com",
         };
@@ -319,7 +320,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var anonClient = _factory.CreateClient();
         var statusResponse = await anonClient.PostAsJsonAsync(
             "/organizations/invite-link/status",
-            new GetOrganizationInviteLinkStatusRequestModel { Code = created.Code });
+            new GetOrganizationInviteLinkStatusRequestModel { OrganizationId = _organization.Id, Code = created.Code });
 
         Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
         var status = await statusResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkStatusResponseModel>();
@@ -348,7 +349,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var anonClient = _factory.CreateClient();
         var policiesResponse = await anonClient.PostAsJsonAsync(
             "/organizations/invite-link/policies",
-            new GetOrganizationInviteLinkPoliciesRequestModel { Code = created.Code });
+            new GetOrganizationInviteLinkPoliciesRequestModel { OrganizationId = _organization.Id, Code = created.Code });
 
         Assert.Equal(HttpStatusCode.OK, policiesResponse.StatusCode);
         var body = await policiesResponse.Content.ReadFromJsonAsync<ListResponseModel<PolicyResponseModel>>();

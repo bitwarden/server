@@ -42,6 +42,7 @@ public class RefreshOrganizationInviteLinkCommand(
             RevisionDate = now,
         };
         newLink.SetNewId();
+        newLink.SetNewCode();
 
         await organizationInviteLinkRepository.RefreshAsync(existing, newLink);
 
