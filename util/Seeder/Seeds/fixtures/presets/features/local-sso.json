@@ -1,0 +1,122 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "id": "a1b2c3d4-0000-4000-8000-000000000001",
+    "fixture": "verdant-health",
+    "planType": "enterprise-annually",
+    "seats": 30,
+    "allowAdminAccessToAllCollectionItems": true
+  },
+  "roster": {
+    "fixture": "enterprise-basic"
+  },
+  "ciphers": {
+    "fixture": "enterprise-basic"
+  },
+  "sso": {
+    "identifier": "local-sso",
+    "encryptionType": "masterPassword",
+    "provider": "saml"
+  },
+  "collectionAssignments": [
+    { "cipher": "Concur Travel & Expense", "collection": "Finance" },
+    { "cipher": "Bill.com — Accounts Payable", "collection": "Finance" },
+    { "cipher": "ADP Workforce Now — Payroll", "collection": "Finance" },
+    {
+      "cipher": "Operating Account — First National Bank",
+      "collection": "Finance"
+    },
+    {
+      "cipher": "Payroll Account — First National Bank",
+      "collection": "Finance"
+    },
+    { "cipher": "Corporate Amex — Finance", "collection": "Finance" },
+    { "cipher": "QuickBooks Online", "collection": "Finance" },
+    { "cipher": "Stripe Dashboard", "collection": "Finance" },
+    { "cipher": "Paychex — Former Payroll Provider", "collection": "Finance" },
+    { "cipher": "Closed Money Market Account", "collection": "Finance" },
+    { "cipher": "Workday HCM", "collection": "Human Resources" },
+    { "cipher": "BambooHR", "collection": "Human Resources" },
+    { "cipher": "Greenhouse Recruiting", "collection": "Human Resources" },
+    {
+      "cipher": "Employee Record — Dana Whitfield (CEO)",
+      "collection": "Human Resources"
+    },
+    {
+      "cipher": "Contractor Onboarding — Availa Consulting",
+      "collection": "Human Resources"
+    },
+    {
+      "cipher": "Executive Travel Passport — D. Whitfield",
+      "collection": "Human Resources"
+    },
+    {
+      "cipher": "Fleet Driver License — Operations",
+      "collection": "Human Resources"
+    },
+    {
+      "cipher": "Benefits — Open Enrollment Notes",
+      "collection": "Human Resources"
+    },
+    {
+      "cipher": "Former Vendor — Acme Supplies (W-9)",
+      "collection": "Human Resources"
+    },
+    { "cipher": "Okta Admin Console", "collection": "Information Technology" },
+    { "cipher": "AWS Root Account", "collection": "Information Technology" },
+    {
+      "cipher": "GitHub Enterprise — verdant-health",
+      "collection": "Information Technology"
+    },
+    {
+      "cipher": "Cloudflare Dashboard",
+      "collection": "Information Technology"
+    },
+    { "cipher": "Datadog Monitoring", "collection": "Information Technology" },
+    { "cipher": "PagerDuty", "collection": "Information Technology" },
+    { "cipher": "Jamf Pro — MDM", "collection": "Information Technology" },
+    {
+      "cipher": "Production Bastion Host Key",
+      "collection": "Information Technology"
+    },
+    { "cipher": "CI/CD Deploy Key", "collection": "Information Technology" },
+    {
+      "cipher": "Server Room Wi-Fi + Door Codes",
+      "collection": "Information Technology"
+    },
+    { "cipher": "Terraform Cloud", "collection": "Information Technology" },
+    { "cipher": "IT Security Policy", "collection": "Information Technology" },
+    {
+      "cipher": "Legacy VPN — Cisco AnyConnect",
+      "collection": "Information Technology"
+    },
+    {
+      "cipher": "Decommissioned Jenkins",
+      "collection": "Information Technology"
+    },
+    {
+      "cipher": "Old Server Room Wi-Fi",
+      "collection": "Information Technology"
+    },
+    { "cipher": "Google Workspace Admin", "collection": "Company-Wide" },
+    { "cipher": "Slack Workspace", "collection": "Company-Wide" },
+    { "cipher": "Zoom Company Account", "collection": "Company-Wide" },
+    { "cipher": "Salesforce CRM", "collection": "Company-Wide" },
+    { "cipher": "Zendesk Support", "collection": "Company-Wide" },
+    { "cipher": "DocuSign", "collection": "Company-Wide" },
+    {
+      "cipher": "LinkedIn — Verdant Health Page",
+      "collection": "Company-Wide"
+    },
+    {
+      "cipher": "Company Visa — Travel & Facilities",
+      "collection": "Company-Wide"
+    },
+    { "cipher": "Guest Wi-Fi Credentials", "collection": "Company-Wide" },
+    {
+      "cipher": "Prior Office Lease & Facilities Docs",
+      "collection": "Company-Wide"
+    },
+    { "cipher": "Cancelled T-Mobile Business", "collection": "Company-Wide" }
+  ]
+}
