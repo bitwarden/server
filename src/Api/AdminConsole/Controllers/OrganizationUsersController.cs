@@ -91,6 +91,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
     private readonly IAcceptOrganizationInviteLinkCommand _acceptOrganizationInviteLinkCommand;
     private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
+    private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommandVNext;
 
@@ -128,6 +129,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery,
         IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand,
         IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
+        IGetOrganizationInviteCommand getOrganizationInviteCommand,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext)
     {
@@ -165,6 +167,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
         _acceptOrganizationInviteLinkCommand = acceptOrganizationInviteLinkCommand;
         _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
+        _getOrganizationInviteCommand = getOrganizationInviteCommand;
         _featureService = featureService;
         _updateOrganizationUserCommandVNext = updateOrganizationUserCommandVNext;
     }
@@ -940,5 +943,25 @@ public class OrganizationUsersController : BaseAdminConsoleController
         });
 
         return Handle(result, _ => TypedResults.Ok());
+    }
+
+    [HttpPost("/organizations/users/invite-link/invite")]
+    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
+    public async Task<IResult> GetInvite([FromBody] GetOrganizationInviteRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _getOrganizationInviteCommand.GetInviteAsync(new GetOrganizationInviteRequest
+        {
+            OrganizationId = model.OrganizationId,
+            Code = model.Code,
+            User = user,
+        });
+
+        return Handle(result, invite => TypedResults.Ok(new OrganizationInviteResponseModel(invite)));
     }
 }
