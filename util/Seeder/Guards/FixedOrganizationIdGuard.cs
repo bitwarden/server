@@ -29,6 +29,19 @@ internal static class FixedOrganizationIdGuard
     /// Parses a preset's declared organization ID, if any. Presets that omit <c>organization.id</c>
     /// get a fresh <see cref="Guid"/> generated at seed time and are never subject to this guard.
     /// </summary>
-    internal static Guid? ResolveFixedId(SeedPresetOrganization? organization) =>
-        string.IsNullOrWhiteSpace(organization?.Id) ? null : Guid.Parse(organization.Id);
+    internal static Guid? ResolveFixedId(SeedPresetOrganization? organization)
+    {
+        if (string.IsNullOrWhiteSpace(organization?.Id))
+        {
+            return null;
+        }
+
+        if (!Guid.TryParse(organization.Id, out var id))
+        {
+            throw new InvalidOperationException(
+                $"Preset organization.id '{organization.Id}' is not a valid GUID.");
+        }
+
+        return id;
+    }
 }

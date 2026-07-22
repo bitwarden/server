@@ -16,7 +16,8 @@ $config = array(
             'uid' => array('user2'),
         ),
         // Maps to the `features.local-sso` seeder preset's org owner (seed without --mangle).
-        'dana.whitfield:a-password-goes-here' => array(
+        // Docs (Seeds/docs/presets.md) say to log in as owner/password -- keep this key in sync.
+        'owner:password' => array(
             'email' => 'dana.whitfield@verdant.example',
             'uid' => array('dana.whitfield-local-sso-owner'),
         ),

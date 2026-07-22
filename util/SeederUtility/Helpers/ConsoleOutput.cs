@@ -55,10 +55,17 @@ internal static class ConsoleOutput
             Console.Error.WriteLine("  --owner-email was set. The local IdP identifies you via dev/authsources.php, not");
             Console.Error.WriteLine("  the database — add or update your login entry there (email AND uid together):");
             Console.Error.WriteLine("    '<username>:<password>' => array(");
-            Console.Error.WriteLine($"        'email' => '{ownerEmailOverride}',");
+            Console.Error.WriteLine($"        'email' => '{EscapePhpSingleQuotedString(ownerEmailOverride)}',");
             Console.Error.WriteLine("        'uid'   => array('<unique-id>'),");
             Console.Error.WriteLine("    ),");
             Console.Error.WriteLine("  See dev/authsources.php.example for the default (no-override) entry. Live-mounted — no IdP restart needed.");
         }
     }
+
+    /// <summary>
+    /// Escapes backslashes and single quotes so the value stays valid inside a PHP single-quoted
+    /// string literal when printed as a copy/paste snippet for dev/authsources.php.
+    /// </summary>
+    private static string EscapePhpSingleQuotedString(string value) =>
+        value.Replace("\\", "\\\\").Replace("'", "\\'");
 }

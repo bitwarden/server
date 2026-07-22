@@ -98,9 +98,12 @@ public sealed class FixedOrganizationIdGuardTests
     }
 
     [Fact]
-    public void ResolveFixedId_MalformedId_ThrowsFormatException()
+    public void ResolveFixedId_MalformedId_ThrowsInvalidOperationExceptionWithBadValue()
     {
-        Assert.Throws<FormatException>(() =>
+        var ex = Assert.Throws<InvalidOperationException>(() =>
             FixedOrganizationIdGuard.ResolveFixedId(new SeedPresetOrganization { Id = "not-a-guid" }));
+
+        Assert.Contains("organization.id", ex.Message);
+        Assert.Contains("not-a-guid", ex.Message);
     }
 }
