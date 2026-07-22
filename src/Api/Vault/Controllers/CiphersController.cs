@@ -900,7 +900,14 @@ public class CiphersController : Controller
     }
 
     [HttpPost("bulk-collections")]
+    [Obsolete("Replaced by /shared-folders route; retained for backwards compatibility")]
     public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
+    {
+        await PostBulkSharedFolders(model);
+    }
+
+    [HttpPost("bulk-shared-folders")]
+    public async Task PostBulkSharedFolders([FromBody] CipherBulkUpdateCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
         await _cipherService.ValidateBulkCollectionAssignmentAsync(model.CollectionIds, model.CipherIds, userId);
