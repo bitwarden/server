@@ -8,6 +8,7 @@ using Bit.Core.Settings;
 using Microsoft.Extensions.Logging.Testing;
 using NSubstitute;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Bit.Api.IntegrationTest.Platform;
 
@@ -17,9 +18,11 @@ public class RelayPushRegistrationServiceTests
     private readonly Guid _fakeInstallationId;
     private readonly FakeLogCollector _logCollector;
     private readonly RelayPushRegistrationService _sut;
+    private readonly ITestOutputHelper _output;
 
-    public RelayPushRegistrationServiceTests()
+    public RelayPushRegistrationServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _cloudApi = new ApiApplicationFactory();
         _cloudApi.SubstituteService<IPushRegistrationService>(service => { });
 
@@ -84,6 +87,21 @@ public class RelayPushRegistrationServiceTests
         Assert.DoesNotContain(logs, l => l.Level >= LogLevel.Warning);
     }
 
+    private void DumpLogs(string context)
+    {
+        var logs = _logCollector.GetSnapshot();
+        _output.WriteLine($"--- Captured logs ({context}): {logs.Count} entries ---");
+        foreach (var log in logs)
+        {
+            _output.WriteLine($"[{log.Level}] {log.Message}");
+            if (log.Exception is not null)
+            {
+                _output.WriteLine($"  Exception: {log.Exception}");
+            }
+        }
+        _output.WriteLine("---");
+    }
+
     [Fact]
     public async Task MobileData_ShouldNotLogIssues()
     {
@@ -104,6 +122,8 @@ public class RelayPushRegistrationServiceTests
         );
 
         var logs = _logCollector.GetSnapshot();
+
+        DumpLogs("after CreateOrUpdateRegistrationAsync");
 
         Assert.DoesNotContain(logs, l => l.Level >= LogLevel.Warning);
 
