@@ -42,41 +42,37 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     public required int ExpiryDays { get; set; }
 
     public string HeroTitle => TrialLength > 0
-        ? $"You're invited to start a <b>{TrialLength}-day free trial</b> of {ProductName}"
+        ? $"You're invited to start a <b>{TrialLength}-day<br/>free trial</b> of {ProductName}"
         : $"You're invited to try <b>{ProductName}</b>";
 
     public string ProductName => ProductTier switch
     {
+        ProductTierType.Free => "Bitwarden",
         ProductTierType.Families => "Bitwarden Families",
         ProductTierType.Teams => "Bitwarden Teams",
-        ProductTierType.TeamsStarter => "Bitwarden Teams Starter",
         ProductTierType.Enterprise => "Bitwarden Enterprise",
-        _ => "Bitwarden"
+        _ => throw new InvalidOperationException($"Unexpected ProductTierType: {ProductTier}")
     };
 
     public string SpotImageUrl => ProductTier switch
     {
-        ProductTierType.Families => "https://assets.bitwarden.com/email/v1/spot-family-homes.png",
         ProductTierType.Free => "https://assets.bitwarden.com/email/v1/account-fill.png",
+        ProductTierType.Families => "https://assets.bitwarden.com/email/v1/spot-family-homes.png",
         ProductTierType.Teams => "https://assets.bitwarden.com/email/v1/spot-enterprise.png",
-        ProductTierType.TeamsStarter => "https://assets.bitwarden.com/email/v1/spot-enterprise.png",
         ProductTierType.Enterprise => "https://assets.bitwarden.com/email/v1/spot-enterprise.png",
-        _ => "https://assets.bitwarden.com/email/v1/spot-enterprise.png"
+        _ => throw new InvalidOperationException($"Unexpected ProductTierType: {ProductTier}")
     };
 
     public IEnumerable<string> Features => ProductTier switch
     {
+        ProductTierType.Free => [],
         ProductTierType.Families =>
         [
             "Securely store and share passwords, credentials, and sensitive data",
             "Cover up to 6 family members, each with their own personal encrypted vault",
             "Store up to 5GB of encrypted file attachments",
         ],
-        ProductTierType.Free =>
-        [
-            "Securely store and share passwords, credentials, and sensitive data",
-        ],
-        ProductTierType.Teams or ProductTierType.TeamsStarter =>
+        ProductTierType.Teams =>
         [
             "Securely store and share passwords, credentials, and sensitive data",
             "Manage team access with group-based permissions and admin controls",
@@ -88,7 +84,7 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
             "Enforce security policies across your entire organization",
             "Integrate with your existing SSO provider and directory services",
         ],
-        _ => []
+        _ => throw new InvalidOperationException($"Unexpected ProductTierType: {ProductTier}")
     };
 
     /// <summary>

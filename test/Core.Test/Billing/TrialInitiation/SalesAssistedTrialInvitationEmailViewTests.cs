@@ -21,13 +21,11 @@ public class SalesAssistedTrialInvitationEmailViewTests
         };
 
     [Fact]
-    public void Features_Free_ReturnsSharedBulletOnly()
+    public void Features_Free_ReturnsEmpty()
     {
         var view = CreateView(ProductTierType.Free);
 
-        Assert.Equal(
-            ["Securely store and share passwords, credentials, and sensitive data"],
-            view.Features);
+        Assert.Empty(view.Features);
     }
 
     [Fact]
@@ -44,12 +42,10 @@ public class SalesAssistedTrialInvitationEmailViewTests
             view.Features);
     }
 
-    [Theory]
-    [InlineData(ProductTierType.Teams)]
-    [InlineData(ProductTierType.TeamsStarter)]
-    public void Features_Teams_ReturnsTeamsCopy(ProductTierType productTier)
+    [Fact]
+    public void Features_Teams_ReturnsTeamsCopy()
     {
-        var view = CreateView(productTier);
+        var view = CreateView(ProductTierType.Teams);
 
         Assert.Equal(
             [
@@ -74,20 +70,10 @@ public class SalesAssistedTrialInvitationEmailViewTests
             view.Features);
     }
 
-    [Fact]
-    public void Features_EnterpriseAndTeams_AreNotIdentical()
-    {
-        var enterprise = CreateView(ProductTierType.Enterprise).Features;
-        var teams = CreateView(ProductTierType.Teams).Features;
-
-        Assert.NotEqual(teams, enterprise);
-    }
-
     [Theory]
     [InlineData(ProductTierType.Families, "https://assets.bitwarden.com/email/v1/spot-family-homes.png")]
     [InlineData(ProductTierType.Free, "https://assets.bitwarden.com/email/v1/account-fill.png")]
     [InlineData(ProductTierType.Teams, "https://assets.bitwarden.com/email/v1/spot-enterprise.png")]
-    [InlineData(ProductTierType.TeamsStarter, "https://assets.bitwarden.com/email/v1/spot-enterprise.png")]
     [InlineData(ProductTierType.Enterprise, "https://assets.bitwarden.com/email/v1/spot-enterprise.png")]
     public void SpotImageUrl_ReturnsTierBucketedImage(ProductTierType productTier, string expectedUrl)
     {

@@ -19,6 +19,7 @@
           <mj-text padding="15px 15px 8px 15px">
             Your Bitwarden contact, <b>{{SenderEmail}}</b>, has arranged this trial for you.
           </mj-text>
+          <mj-raw>{{#if Features}}</mj-raw>
           <mj-text padding="0px 15px 8px 15px">
             {{#if TrialLength}}During your {{TrialLength}}-day free trial of {{ProductName}}, your team can:{{else}}With your {{ProductName}} plan, your team can:{{/if}}
           </mj-text>
@@ -26,6 +27,7 @@
             <ul style="margin: 0; padding-left: 20px; list-style-type: disc;">{{#each Features}}<li style="margin-bottom: 8px; line-height: 24px;">{{this}}</li>
 {{/each}}</ul>
           </mj-text>
+          <mj-raw>{{/if}}</mj-raw>
         </mj-column>
       </mj-section>
 
