@@ -57,6 +57,10 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     public string SpotImageUrl => ProductTier switch
     {
         ProductTierType.Families => "https://assets.bitwarden.com/email/v1/spot-family-homes.png",
+        ProductTierType.Free => "https://assets.bitwarden.com/email/v1/account-fill.png",
+        ProductTierType.Teams => "https://assets.bitwarden.com/email/v1/spot-enterprise.png",
+        ProductTierType.TeamsStarter => "https://assets.bitwarden.com/email/v1/spot-enterprise.png",
+        ProductTierType.Enterprise => "https://assets.bitwarden.com/email/v1/spot-enterprise.png",
         _ => "https://assets.bitwarden.com/email/v1/spot-enterprise.png"
     };
 
@@ -68,12 +72,23 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
             "Cover up to 6 family members, each with their own personal encrypted vault",
             "Store up to 5GB of encrypted file attachments",
         ],
-        _ =>
+        ProductTierType.Free =>
+        [
+            "Securely store and share passwords, credentials, and sensitive data",
+        ],
+        ProductTierType.Teams or ProductTierType.TeamsStarter =>
         [
             "Securely store and share passwords, credentials, and sensitive data",
             "Manage team access with group-based permissions and admin controls",
             "Connect to your directory service for automated user provisioning",
-        ]
+        ],
+        ProductTierType.Enterprise =>
+        [
+            "Securely store and share passwords, credentials, and sensitive data",
+            "Enforce security policies across your entire organization",
+            "Integrate with your existing SSO provider and directory services",
+        ],
+        _ => []
     };
 
     /// <summary>
