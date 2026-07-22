@@ -41,6 +41,10 @@ public class RelayPushRegistrationServiceTests
 
         var cloudApiHttpClient = _cloudApi.CreateClient();
         var cloudIdentityHttpClient = _cloudApi.Identity.CreateClient();
+        // Default HttpClient.Timeout is 100 s. Lower it so that thread-pool starvation
+        // (the suspected flakiness cause) surfaces as a fast failure rather than a
+        // 100-second hang, making it easier to reproduce and cheaper to observe in CI.
+        cloudIdentityHttpClient.Timeout = TimeSpan.FromSeconds(10);
 
         var httpClientFactory = Substitute.For<IHttpClientFactory>();
 
@@ -111,6 +115,10 @@ public class RelayPushRegistrationServiceTests
         var organizationId = Guid.NewGuid();
         var installationId = Guid.NewGuid();
 
+        ThreadPool.GetAvailableThreads(out var workersBefore, out var ioBefore);
+        ThreadPool.GetMaxThreads(out var maxWorkers, out var maxIo);
+        _output.WriteLine($"ThreadPool before call: {workersBefore}/{maxWorkers} workers, {ioBefore}/{maxIo} IO available");
+
         await _sut.CreateOrUpdateRegistrationAsync(
             new PushRegistrationData("PushToken"),
             deviceId.ToString(),
@@ -120,6 +128,9 @@ public class RelayPushRegistrationServiceTests
             [organizationId.ToString()],
             installationId
         );
+
+        ThreadPool.GetAvailableThreads(out var workersAfter, out var ioAfter);
+        _output.WriteLine($"ThreadPool after call:  {workersAfter}/{maxWorkers} workers, {ioAfter}/{maxIo} IO available");
 
         var logs = _logCollector.GetSnapshot();
 
