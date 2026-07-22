@@ -45,6 +45,8 @@ public class PreviewOrganizationTaxCommand(
     ISubscriptionDiscountService subscriptionDiscountService)
     : BaseBillingCommand<PreviewOrganizationTaxCommand>(logger), IPreviewOrganizationTaxCommand
 {
+    private readonly ILogger<PreviewOrganizationTaxCommand> _logger = logger;
+
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
         User user,
         OrganizationSubscriptionPurchase purchase,
@@ -238,15 +240,34 @@ public class PreviewOrganizationTaxCommand(
 
                 var items = new List<InvoiceSubscriptionDetailsItemOptions>();
 
-                var passwordManagerSeats = subscriptionItemsByPriceId[
-                    currentPlan.HasNonSeatBasedPasswordManagerPlan()
-                        ? currentPlan.PasswordManager.StripePlanId
-                        : currentPlan.PasswordManager.StripeSeatPlanId];
+                long quantity;
 
-                var quantity = currentPlan.HasNonSeatBasedPasswordManagerPlan() &&
-                               !newPlan.HasNonSeatBasedPasswordManagerPlan()
-                    ? (long)organization.Seats!
-                    : passwordManagerSeats.Quantity;
+                if (currentPlan.HasNonSeatBasedPasswordManagerPlan() && !newPlan.HasNonSeatBasedPasswordManagerPlan())
+                {
+                    // The current plan doesn't have a per-seat subscription item to read a quantity from
+                    // (e.g. upgrading from a flat-rate plan like Teams Starter), so fall back to the
+                    // organization's occupied seat count instead of looking it up on the subscription.
+                    quantity = (long)organization.Seats!;
+                }
+                else
+                {
+                    var passwordManagerPriceId = currentPlan.HasNonSeatBasedPasswordManagerPlan()
+                        ? currentPlan.PasswordManager.StripePlanId
+                        : currentPlan.PasswordManager.StripeSeatPlanId;
+
+                    if (!subscriptionItemsByPriceId.TryGetValue(passwordManagerPriceId, out var passwordManagerSeats))
+                    {
+                        _logger.LogError(
+                            "Organization {OrganizationId}'s subscription {SubscriptionId} does not contain a " +
+                            "Password Manager line item matching its current plan's price {PriceId}",
+                            organization.Id, organization.GatewaySubscriptionId, passwordManagerPriceId);
+
+                        return new BadRequest(
+                            "Your organization's subscription does not match its current plan. Please contact support for assistance.");
+                    }
+
+                    quantity = passwordManagerSeats.Quantity;
+                }
 
                 items.Add(new InvoiceSubscriptionDetailsItemOptions
                 {

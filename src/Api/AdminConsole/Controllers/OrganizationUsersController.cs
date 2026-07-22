@@ -190,9 +190,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Returns a set of basic information about all members of the organization. This is available to all members of
-    /// the organization to manage collections. For this reason, it contains as little information as possible and no
-    /// cryptographic keys or other sensitive data.
+    /// Returns a set of basic information about all members of the organization. This is available to all members
+    /// of the organization, since a broad range of features across the app depend on basic member lookups
+    /// (collection management, group management, event logs, sponsorship, etc.) that are not specific to any one
+    /// permission. For this reason, it contains as little information as possible and no cryptographic keys or
+    /// other sensitive data.
     /// </summary>
     /// <param name="orgId">Organization identifier</param>
     /// <returns>List of users for the organization.</returns>
@@ -865,6 +867,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var result = await _acceptOrganizationInviteLinkCommand.AcceptAsync(new AcceptOrganizationInviteLinkRequest
         {
+            OrganizationId = model.OrganizationId,
             Code = model.Code,
             User = user,
             ResetPasswordKey = model.ResetPasswordKey,
@@ -885,6 +888,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var result = await _confirmOrganizationInviteLinkCommand.ConfirmAsync(new ConfirmOrganizationInviteLinkRequest
         {
+            OrganizationId = model.OrganizationId,
             Code = model.Code,
             User = user,
             OrgUserKey = model.OrgUserKey,

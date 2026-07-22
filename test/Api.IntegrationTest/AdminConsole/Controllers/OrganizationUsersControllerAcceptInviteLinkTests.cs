@@ -84,7 +84,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         var joinerLoginHelper = new LoginHelper(_factory, joinerClient);
         await joinerLoginHelper.LoginAsync(joinerEmail);
 
-        var acceptRequest = new AcceptOrganizationInviteLinkRequestModel { Code = created.Code };
+        var acceptRequest = new AcceptOrganizationInviteLinkRequestModel { OrganizationId = created.OrganizationId, Code = created.Code };
         var response = await joinerClient.PostAsJsonAsync(
             "/organizations/users/invite-link/accept", acceptRequest);
 

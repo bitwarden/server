@@ -13,10 +13,10 @@ public class GetOrganizationInviteLinkPoliciesQuery(
     IPolicyRepository policyRepository)
     : IGetOrganizationInviteLinkPoliciesQuery
 {
-    public async Task<CommandResult<ICollection<Policy>>> GetPoliciesAsync(Guid code)
+    public async Task<CommandResult<ICollection<Policy>>> GetPoliciesAsync(Guid organizationId, Guid code)
     {
-        var inviteLink = await organizationInviteLinkRepository.GetByCodeAsync(code);
-        if (inviteLink is null)
+        var inviteLink = await organizationInviteLinkRepository.GetByOrganizationIdAsync(organizationId);
+        if (inviteLink is null || !inviteLink.CodeMatches(code.ToString()))
         {
             return new InviteLinkNotFound();
         }
