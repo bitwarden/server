@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
@@ -38,8 +39,10 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal ILicensingService LicensingService { get; }
 
+    internal IAttachmentStorageService AttachmentStorageService { get; }
+
     internal SeederDependencies ToDependencies()
-        => new(Db, Mapper, PasswordHasher, Mangler, LicensingService);
+        => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService);
 
     private readonly ServiceProvider _provider;
 
@@ -55,6 +58,7 @@ internal sealed class SeederServiceScope : IDisposable
         PasswordHasher = sp.GetRequiredService<IPasswordHasher<User>>();
         Mangler = sp.GetRequiredService<IManglerService>();
         LicensingService = sp.GetRequiredService<ILicensingService>();
+        AttachmentStorageService = sp.GetRequiredService<IAttachmentStorageService>();
     }
 
     public void Dispose()

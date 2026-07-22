@@ -5,12 +5,12 @@ public record RefreshOrganizationInviteLinkRequest
     public required Guid OrganizationId { get; init; }
 
     /// <summary>
-    /// The invite link cryptographic blob.
+    /// The cryptographic invite link.
     /// </summary>
     public required string Invite { get; init; }
 
     /// <summary>
-    /// Indicates if the link supports user auto confirmation (not supported yet).
+    /// Whether this invite link can be used to confirm a user.
     /// </summary>
     public required bool SupportsConfirmation { get; init; }
 }

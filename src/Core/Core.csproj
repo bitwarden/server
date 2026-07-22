@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="Bitwarden.Server.Sdk" />
 
   <PropertyGroup>
     <GenerateUserSecretsAttribute>false</GenerateUserSecretsAttribute>
@@ -64,7 +65,6 @@
     <PackageReference Include="Otp.NET" Version="[1.4.0]" />
     <PackageReference Include="YubicoDotNetClient" Version="[1.2.0]" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="[10.0.8]" />
-    <PackageReference Include="LaunchDarkly.ServerSdk" Version="[8.11.0]" />
     <PackageReference Include="Quartz" Version="[3.15.1]" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="[3.15.1]" />
     <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="[3.15.1]" />
@@ -75,6 +75,10 @@
   </ItemGroup>
 
   <ItemGroup Label="Pinned transitive dependencies">
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Libraries\Data\Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

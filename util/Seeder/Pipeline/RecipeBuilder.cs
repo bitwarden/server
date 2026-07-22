@@ -9,7 +9,6 @@ namespace Bit.Seeder.Pipeline;
 /// <remarks>
 /// Wraps <see cref="IServiceCollection"/> and a recipe name, tracking step count for
 /// deterministic ordering and validation flags for dependency rules.
-/// <strong>Phase Order:</strong> Org → OrgApiKey → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
 /// </remarks>
 public class RecipeBuilder
 {
@@ -54,11 +53,6 @@ public class RecipeBuilder
     /// <summary>
     /// Registers a step as a keyed singleton service with preserved ordering.
     /// </summary>
-    /// <remarks>
-    /// Steps execute in the order they are registered. Callers must register steps
-    /// in the correct phase order: Org, OrgApiKey, Owner, Generator, Roster, Users, Groups,
-    /// Collections, Folders, Ciphers, CipherCollections, CipherFolders, CipherFavorites, PersonalCiphers.
-    /// </remarks>
     /// <param name="factory">Factory function that creates the step from an IServiceProvider</param>
     /// <returns>This builder for fluent chaining</returns>
     public RecipeBuilder AddStep(Func<IServiceProvider, IStep> factory)

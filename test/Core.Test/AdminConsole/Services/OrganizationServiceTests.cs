@@ -829,7 +829,7 @@ public class OrganizationServiceTests
         var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
 
         Assert.False(result);
-        Assert.Contains("Seat limit has been reached. Contact your provider to purchase additional seats.", failureMessage);
+        Assert.Contains($"Seat limit of {organization.Seats} has been reached. Contact your provider to purchase additional seats.", failureMessage);
     }
 
 

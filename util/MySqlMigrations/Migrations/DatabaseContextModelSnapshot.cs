@@ -390,8 +390,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<Guid>("Code")
-                        .HasColumnType("char(36)");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
@@ -410,10 +411,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()
@@ -1582,6 +1579,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("SecretId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("SendId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("ServiceAccountId")
                         .HasColumnType("char(36)");
 
@@ -1596,6 +1596,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("OrganizationId", "SendId", "Date")
+                        .HasDatabaseName("IX_Event_OrganizationIdSendIdDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
                         .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
