@@ -133,48 +133,59 @@ public class UpdateOrganizationSubscriptionCommand(
 
         if (activeSchedule is { Phases.Count: > 0 })
         {
-            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
-
-            // Stripe normalizes attached schedules into 3 phases when the subscription is mutated:
-            // an anchor phase covering current_period_start -> schedule.created becomes phases[0].
-            // Strict > on EndDate: a phase ending exactly at `now` has effectively ended, and Stripe
-            // rejects schedule updates that include past phases.
-            var migrationPhases = activeSchedule.Phases.Where(p => p.EndDate > now).ToList();
-
-            if (migrationPhases.Count == 0)
+            // PM-40537: only rewrite schedules we created — rewriting a schedule we didn't create
+            // (e.g. a Finance-built renewal) would corrupt its negotiated phases, so those fall through
+            // to the direct update. A schedule is ours if it maps to a cohort migration path, or if it is
+            // a PM-38333 annual-upgrade schedule (detected by content, since redemption deletes the cohort
+            // assignment). Accepted gap: a stale cohort assignment can mis-flag one.
+            var schedulePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, activeSchedule)
+                                ?? await ResolveCohortMigrationPhasePlansAsync(organization);
+            if (schedulePlans is { } plans)
             {
-                _logger.LogWarning(
-                    "{Command}: Schedule ({ScheduleId}) has no updatable phases remaining",
-                    CommandName, activeSchedule.Id);
-                return DefaultConflict;
-            }
+                var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
-            if (migrationPhases.Count > 2)
-            {
-                _logger.LogWarning(
-                    "{Command}: Schedule ({ScheduleId}) has {PhaseCount} active phases — expected at most 2. Only the first two will be updated.",
-                    CommandName, activeSchedule.Id, migrationPhases.Count);
+                // Stripe normalizes attached schedules into 3 phases when the subscription is mutated:
+                // an anchor phase covering current_period_start -> schedule.created becomes phases[0].
+                // Strict > on EndDate: a phase ending exactly at `now` has effectively ended, and Stripe
+                // rejects schedule updates that include past phases.
+                var migrationPhases = activeSchedule.Phases.Where(p => p.EndDate > now).ToList();
+
+                if (migrationPhases.Count == 0)
+                {
+                    _logger.LogWarning(
+                        "{Command}: Schedule ({ScheduleId}) has no updatable phases remaining",
+                        CommandName, activeSchedule.Id);
+                    return DefaultConflict;
+                }
+
+                if (migrationPhases.Count > 2)
+                {
+                    _logger.LogWarning(
+                        "{Command}: Schedule ({ScheduleId}) has {PhaseCount} active phases — expected at most 2. Only the first two will be updated.",
+                        CommandName, activeSchedule.Id, migrationPhases.Count);
+                }
+
+                _logger.LogInformation(
+                    "{Command}: Active migration schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating {PhaseCount} active phase(s)",
+                    CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
+
+                var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes,
+                    plans.source, plans.target, subscription.Customer?.Discount);
+
+                await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                    new SubscriptionScheduleUpdateOptions
+                    {
+                        EndBehavior = SubscriptionScheduleEndBehavior.Release,
+                        Phases = phases,
+                        ProrationBehavior = prorationBehavior
+                    });
+
+                return subscription;
             }
 
             _logger.LogInformation(
-                "{Command}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating {PhaseCount} active phase(s)",
-                CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
-
-            var annualUpgradePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, activeSchedule);
-            var (sourcePlan, targetPlan) = annualUpgradePlans
-                ?? await ResolveCohortMigrationPhasePlansAsync(organization);
-            var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes, sourcePlan, targetPlan,
-                subscription.Customer?.Discount);
-
-            await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
-                new SubscriptionScheduleUpdateOptions
-                {
-                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                    Phases = phases,
-                    ProrationBehavior = prorationBehavior
-                });
-
-            return subscription;
+                "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is not a Bitwarden migration schedule; leaving it untouched and updating the subscription directly",
+                CommandName, activeSchedule.Id, subscription.Id);
         }
 
         var options = new SubscriptionUpdateOptions { Items = items, ProrationBehavior = prorationBehavior };
@@ -267,13 +278,12 @@ public class UpdateOrganizationSubscriptionCommand(
         return (currentPlan, annualLatestPlan);
     }
 
-    private async Task<(Plan source, Plan target)> ResolveCohortMigrationPhasePlansAsync(Organization organization)
+    private async Task<(Plan source, Plan target)?> ResolveCohortMigrationPhasePlansAsync(Organization organization)
     {
         var migrationPath = await TryResolveMigrationPathAsync(organization.Id);
         if (migrationPath is null)
         {
-            var current = await pricingClient.GetPlanOrThrow(organization.PlanType);
-            return (current, current);
+            return null;
         }
 
         var source = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
@@ -391,7 +401,7 @@ public class UpdateOrganizationSubscriptionCommand(
         Discount? customerDiscount)
     {
         var phase1IsPostMigration = migrationPhases.Count == 1
-            && IsPostMigrationPhase(migrationPhases[0], sourcePlan, targetPlan);
+            && IsPostMigrationPhase(migrationPhases[0], targetPlan);
 
         var phases = new List<SubscriptionSchedulePhaseOptions>();
 
@@ -416,17 +426,11 @@ public class UpdateOrganizationSubscriptionCommand(
         return phases;
     }
 
-    // For non-migrations (source == target), a lone remaining phase always means Stripe has rolled
-    // past phase 1. For migrations, require the phase to actually use target-plan price IDs — a
-    // legacy source-priced single-phase schedule (cancelled without releasing) would otherwise have
-    // its still-valid migration discount wrongly suppressed.
-    private static bool IsPostMigrationPhase(SubscriptionSchedulePhase phase, Plan source, Plan target)
+    // A lone remaining phase counts as post-migration only when it actually uses target-plan price
+    // IDs. A legacy source-priced single-phase schedule (cancelled without releasing) would otherwise
+    // have its still-valid migration discount wrongly suppressed.
+    private static bool IsPostMigrationPhase(SubscriptionSchedulePhase phase, Plan target)
     {
-        if (ReferenceEquals(source, target))
-        {
-            return true;
-        }
-
         var targetIds = new HashSet<string>(StringComparer.Ordinal)
         {
             target.PasswordManager.StripeSeatPlanId,

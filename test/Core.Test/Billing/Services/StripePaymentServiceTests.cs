@@ -70,6 +70,7 @@ public class StripePaymentServiceTests
         Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(20m, result.CustomerDiscount.PercentOff);
         Assert.Equal(14.00m, result.CustomerDiscount.AmountOff); // Converted from cents
+        Assert.False(result.CustomerDiscount.IsFromSchedule); // Genuine customer discount, not schedule-derived
     }
 
     [Theory]
@@ -495,6 +496,7 @@ public class StripePaymentServiceTests
         Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(25m, result.CustomerDiscount.PercentOff);
         Assert.True(result.CustomerDiscount.Active);
+        Assert.True(result.CustomerDiscount.IsFromSchedule);
     }
 
     [Theory]

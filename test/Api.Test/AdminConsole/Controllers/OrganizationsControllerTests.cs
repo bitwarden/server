@@ -33,6 +33,7 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
@@ -362,5 +363,27 @@ public class OrganizationsControllerTests
 
         await sutProvider.GetDependency<IOrganizationDeleteCommand>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPrivateKey_WhenOrganizationExists_ReturnsPrivateKey(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        var result = await sutProvider.Sut.GetPrivateKey(organization.Id);
+
+        Assert.Equal(organization.PrivateKey, result.PrivateKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPrivateKey_WhenOrganizationNotFound_ThrowsNotFoundException(
+        SutProvider<OrganizationsController> sutProvider,
+        Guid orgId)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetPrivateKey(orgId));
     }
 }

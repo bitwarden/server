@@ -9,10 +9,10 @@ public class ValidateOrganizationInviteLinkEmailDomainQuery(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository)
     : IValidateOrganizationInviteLinkEmailDomainQuery
 {
-    public async Task<CommandResult<bool>> ValidateAsync(Guid code, string email)
+    public async Task<CommandResult<bool>> ValidateAsync(Guid organizationId, Guid code, string email)
     {
-        var link = await organizationInviteLinkRepository.GetByCodeAsync(code);
-        if (link is null)
+        var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(organizationId);
+        if (link is null || !link.CodeMatches(code.ToString()))
         {
             return new InviteLinkNotFound();
         }
