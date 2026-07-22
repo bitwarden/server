@@ -41,7 +41,8 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
 
     }
 
-    public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails, string? fromMarketing)
+    public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails, string? fromMarketing,
+        string? sealedOpenOrgInviteData = null)
     {
         if (_globalSettings.DisableUserRegistration)
         {
@@ -84,9 +85,14 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         if (!userExists)
         {
             // If the user doesn't exist, create a new EmailVerificationTokenable and send the user
-            // an email with a link to verify their email address
+            // an email with a link to verify their email address. The open-invite sealed data is
+            // *not* woven into the tokenable — the tokenable is a stateless data-protected payload
+            // with no server-side row to attach to. The value flows straight to the mail service
+            // and is appended to the URL fragment. On the existing-user short-circuit branch
+            // below, the sealed data is silently discarded, matching today's 200+null anti-
+            // enumeration behavior.
             var token = GenerateToken(email, name, receiveMarketingEmails);
-            await _mailService.SendRegistrationVerificationEmailAsync(email, token, fromMarketing);
+            await _mailService.SendRegistrationVerificationEmailAsync(email, token, fromMarketing, sealedOpenOrgInviteData);
         }
 
         // User exists but we will return a 200 regardless of whether the email was sent or not; so return null

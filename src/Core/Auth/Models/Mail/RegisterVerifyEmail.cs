@@ -15,13 +15,19 @@ public class RegisterVerifyEmail : BaseMailModel
     // so we must land on a redirect connector which will redirect to the finish signup page.
     // Note 3: The use of a fragment to indicate the redirect url is to prevent the query string from being logged by
     // proxies and servers. It also helps reduce open redirect vulnerabilities.
-    public string Url => string.Format("{0}/redirect-connector.html#finish-signup?token={1}&email={2}&fromEmail=true{3}",
+    // Note 4: SealedOpenOrgInviteData is an opaque wire artifact from the SDK's
+    // seal_open_org_invite_data (PM-40520); the server never parses it. It rides the fragment-
+    // scoped query so proxies and access logs don't see it, matching the same server-blindness
+    // argument that motivates keeping the inviteKey in the fragment.
+    public string Url => string.Format("{0}/redirect-connector.html#finish-signup?token={1}&email={2}&fromEmail=true{3}{4}",
         WebVaultUrl,
         Token,
         Email,
-        !string.IsNullOrEmpty(FromMarketing) ? $"&fromMarketing={FromMarketing}" : string.Empty);
+        !string.IsNullOrEmpty(FromMarketing) ? $"&fromMarketing={FromMarketing}" : string.Empty,
+        !string.IsNullOrEmpty(SealedOpenOrgInviteData) ? $"&sealedOpenOrgInviteData={SealedOpenOrgInviteData}" : string.Empty);
 
     public string Token { get; set; }
     public string Email { get; set; }
     public string FromMarketing { get; set; }
+    public string SealedOpenOrgInviteData { get; set; }
 }

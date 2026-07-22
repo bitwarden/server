@@ -26,7 +26,8 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendRegistrationVerificationEmailAsync(string email, string hint, string? fromMarketing)
+    public Task SendRegistrationVerificationEmailAsync(string email, string hint, string? fromMarketing,
+        string? sealedOpenOrgInviteData = null)
     {
         return Task.FromResult(0);
     }
