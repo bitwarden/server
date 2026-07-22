@@ -447,8 +447,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
                     userId,
                     await _currentContext.OrganizationOwner(organization.Id),
                     actingContext?.Type,
-                    actingContext?.Permissions),
-                model.DefaultUserCollectionName);
+                    actingContext?.Permissions));
 
             var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
             return Handle(result);

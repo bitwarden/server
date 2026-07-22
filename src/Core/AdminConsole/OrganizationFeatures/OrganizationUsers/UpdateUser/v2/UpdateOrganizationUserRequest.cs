@@ -16,7 +16,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUse
 /// <param name="NewEmail">The requested new email address; null or blank leaves the member's email unchanged.</param>
 /// <param name="NewName">The requested new account name; null leaves the member's name unchanged, blank clears it.</param>
 /// <param name="DefaultUserCollectionName">Default collection name used when applicable</param>
-/// <param name="PerformedByOrganizationUser">The actor's own membership; null when the actor is not an organization member (e.g. a provider).</param>
 /// <param name="UserToUpdate">The member's loaded account; populated by the command before validation, null when no email change is requested or the member has no account.</param>
 public record UpdateOrganizationUserRequest(
     OrganizationUser OrganizationUserToUpdate,
@@ -30,7 +29,6 @@ public record UpdateOrganizationUserRequest(
     string? NewName,
     string? DefaultUserCollectionName,
     IActingUser PerformedBy,
-    OrganizationUser? PerformedByOrganizationUser,
     User? UserToUpdate = null)
 {
     public bool IsDemotedFromPrivilegedRole() =>
@@ -39,6 +37,18 @@ public record UpdateOrganizationUserRequest(
 
     public bool IsEnablingSecretsManager() => !_existingAccessSecretsManager && NewAccessSecretsManager;
 
+    public bool IsEmailChanged() =>
+        !string.IsNullOrWhiteSpace(NewEmail)
+        && UserToUpdate is not null
+        && !string.Equals(UserToUpdate.Email, NewEmail, StringComparison.InvariantCultureIgnoreCase);
+
+    public bool IsNameChanged() =>
+        NewName is not null
+        && UserToUpdate is not null
+        && !string.Equals(NormalizedNewName, UserToUpdate.Name, StringComparison.Ordinal);
+
+    public string? NormalizedNewName => string.IsNullOrWhiteSpace(NewName) ? null : NewName;
+
     private readonly OrganizationUserType _existingOrganizationUserType = OrganizationUserToUpdate.Type;
     private readonly bool _existingAccessSecretsManager = OrganizationUserToUpdate.AccessSecretsManager;
-};
+}

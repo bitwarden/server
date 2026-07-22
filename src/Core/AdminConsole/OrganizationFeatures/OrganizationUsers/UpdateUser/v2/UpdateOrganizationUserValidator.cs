@@ -34,6 +34,7 @@ public class UpdateOrganizationUserValidator(
 
         var freeOrgAdminError = await organizationUserValidationService.ValidateFreeOrgAdminLimitAsync(
             organizationUser.UserId, request.Organization.PlanType, organizationUser.Type, request.NewType);
+
         if (freeOrgAdminError is not null)
         {
             return Invalid(request, freeOrgAdminError);

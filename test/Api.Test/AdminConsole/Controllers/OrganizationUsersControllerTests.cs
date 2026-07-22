@@ -848,10 +848,10 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Put_WhenFeatureFlagEnabled_PassesRequestedEmailToV2Request(
-        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId, OrganizationAbility organizationAbility,
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, organizationAbility, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
         model.Email = "new@claimed.example.com";
 
         V2_UpdateUserCommand.UpdateOrganizationUserRequest captured = null;

@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -431,7 +432,6 @@ public class UpdateOrganizationUserValidatorTests
             null,
             null,
             actingUser,
-            actingMembership,
             userToUpdate);
     }
 
