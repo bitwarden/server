@@ -20,8 +20,8 @@ dotnet run -- preset --name features.{name} --mangle
 
 | Preset            | Features Enabled                                            | Org Fixture      | Roster           | Ciphers          |
 | ----------------- | ----------------------------------------------------------- | ---------------- | ---------------- | ---------------- |
-| sso-enterprise    | SSO (OIDC, masterPassword) + requireSso policy              | verdant-health   | starter-team     | enterprise-basic |
-| tde-enterprise    | SSO (OIDC, trustedDevices/TDE) + requireSso policy          | obsidian-labs    | starter-team     | enterprise-basic |
+| sso-enterprise    | requireSso policy (OIDC SSO config is not seeded by the Seeder yet) | verdant-health   | starter-team     | enterprise-basic |
+| tde-enterprise    | requireSso policy (OIDC SSO config is not seeded by the Seeder yet) | obsidian-labs    | starter-team     | enterprise-basic |
 | local-sso         | SSO (SAML 2.0, masterPassword) — golden local-IdP login org | verdant-health   | enterprise-basic | enterprise-basic |
 | policy-enterprise | All policies except requireSso and require2fa               | pinnacle-designs | starter-team     | —                |
 
