@@ -75,7 +75,7 @@ public class ChangePasswordUriService : IChangePasswordUriService
     {
         // Transient failures are not caught here; they propagate to GetChangePasswordUri
         // to be distinguished from a definitive answer.
-        var url = new UriBuilder(urlDomain) {Path = "/.well-known/change-password"};
+        var url = new UriBuilder(urlDomain) { Path = "/.well-known/change-password" };
 
         var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
 

@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Bit.Icons.Services;
 using Bit.Test.Common.MockedHttpClient;
 using NSubstitute;

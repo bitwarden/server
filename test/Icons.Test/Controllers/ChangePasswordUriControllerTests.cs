@@ -1,4 +1,4 @@
-using Bit.Icons.Controllers;
+﻿using Bit.Icons.Controllers;
 using Bit.Icons.Models;
 using Bit.Icons.Services;
 using Microsoft.AspNetCore.Http;

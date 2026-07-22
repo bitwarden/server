@@ -1,4 +1,4 @@
-namespace Bit.Icons.Services;
+﻿namespace Bit.Icons.Services;
 
 /// <summary>
 /// The outcome of a well-known change-password lookup for a domain.
