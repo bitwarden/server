@@ -148,7 +148,6 @@ public class UpgradePremiumToOrganizationCommandTests
     private readonly IGetPaymentMethodQuery _getPaymentMethodQuery = Substitute.For<IGetPaymentMethodQuery>();
     private readonly IPushNotificationService _pushNotificationService = Substitute.For<IPushNotificationService>();
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = Substitute.For<ILogger<UpgradePremiumToOrganizationCommand>>();
-    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly UpgradePremiumToOrganizationCommand _command;
 
     public UpgradePremiumToOrganizationCommandTests()
@@ -180,8 +179,7 @@ public class UpgradePremiumToOrganizationCommandTests
             _braintreeService,
             _getPaymentMethodQuery,
             _organizationAbilityCacheService,
-            _pushNotificationService,
-            _featureService);
+            _pushNotificationService);
     }
 
     private static Core.Billing.Payment.Models.BillingAddress CreateTestBillingAddress() =>
@@ -1200,7 +1198,7 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithNoTaxId_SetsTaxExemptToNone_DoesNotCreateTaxId(User user)
+    public async Task Run_WithNoTaxId_DoesNotCreateTaxId(User user)
     {
         // Arrange
         user.Premium = true;
@@ -1246,15 +1244,11 @@ public class UpgradePremiumToOrganizationCommandTests
 
         // Assert
         Assert.True(result.Success);
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(options =>
-                options.TaxExempt == StripeConstants.TaxExempt.None));
         await _stripeAdapter.DidNotReceive().CreateTaxIdAsync(Arg.Any<string>(), Arg.Any<TaxIdCreateOptions>());
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithTaxId_SetsTaxExemptToReverse_CreatesOneTaxId(User user)
+    public async Task Run_WithTaxId_CreatesOneTaxId(User user)
     {
         // Arrange
         user.Premium = true;
@@ -1301,10 +1295,6 @@ public class UpgradePremiumToOrganizationCommandTests
 
         // Assert
         Assert.True(result.Success);
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(options =>
-                options.TaxExempt == StripeConstants.TaxExempt.Reverse));
         await _stripeAdapter.Received(1).CreateTaxIdAsync(
             "cus_123",
             Arg.Is<TaxIdCreateOptions>(options =>
@@ -1379,7 +1369,7 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithSpanishNIF_SetsTaxExemptToReverse_CreatesBothSpanishNIFAndEUVAT(User user)
+    public async Task Run_WithSpanishNIF_CreatesBothSpanishNIFAndEUVAT(User user)
     {
         // Arrange
         user.Premium = true;
@@ -1427,11 +1417,6 @@ public class UpgradePremiumToOrganizationCommandTests
         // Assert
         Assert.True(result.Success);
 
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(options =>
-                options.TaxExempt == StripeConstants.TaxExempt.Reverse));
-
         // Verify Spanish NIF was created
         await _stripeAdapter.Received(1).CreateTaxIdAsync(
             "cus_123",
@@ -1448,7 +1433,7 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithSwissCountry_SetsTaxExemptToNone(User user)
+    public async Task Run_DoesNotSetTaxExempt(User user)
     {
         user.Premium = true;
         user.GatewaySubscriptionId = "sub_123";
@@ -1498,7 +1483,7 @@ public class UpgradePremiumToOrganizationCommandTests
         await _stripeAdapter.Received(1).UpdateCustomerAsync(
             "cus_123",
             Arg.Is<CustomerUpdateOptions>(options =>
-                options.TaxExempt == StripeConstants.TaxExempt.None));
+                options.TaxExempt == null));
         await _stripeAdapter.DidNotReceive().CreateTaxIdAsync(Arg.Any<string>(), Arg.Any<TaxIdCreateOptions>());
     }
 

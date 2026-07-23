@@ -8,7 +8,6 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -66,8 +65,7 @@ public class UpgradePremiumToOrganizationCommand(
     IBraintreeService braintreeService,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IOrganizationAbilityCacheService organizationAbilityCacheService,
-    IPushNotificationService pushNotificationService,
-    IFeatureService featureService)
+    IPushNotificationService pushNotificationService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
@@ -138,11 +136,6 @@ public class UpgradePremiumToOrganizationCommand(
                 PostalCode = billingAddress.PostalCode
             }
         };
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            addressUpdateOptions.TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
-        }
 
         var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId, addressUpdateOptions);
 

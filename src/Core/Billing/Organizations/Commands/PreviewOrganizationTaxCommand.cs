@@ -8,10 +8,8 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -38,7 +36,6 @@ public interface IPreviewOrganizationTaxCommand
 }
 
 public class PreviewOrganizationTaxCommand(
-    IFeatureService featureService,
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
@@ -443,24 +440,6 @@ public class PreviewOrganizationTaxCommand(
                 Address = new AddressOptions { Country = country, PostalCode = postalCode },
             }
         };
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            switch (businessUse)
-            {
-                case true:
-                    var existingTaxExemptStatus = addressChoice.Match(
-                        customer => customer.TaxExempt,
-                        _ => null!);
-
-                    var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(country, existingTaxExemptStatus);
-                    options.CustomerDetails.TaxExempt = determinedTaxExemptStatus;
-                    break;
-                default:
-                    options.CustomerDetails.TaxExempt = TaxExempt.None;
-                    break;
-            }
-        }
 
         var taxId = addressChoice.Match(
             customer =>
