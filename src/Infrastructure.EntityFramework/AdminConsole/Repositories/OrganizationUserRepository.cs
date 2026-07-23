@@ -806,7 +806,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 .Select(e => new OrganizationUserUserDetails()
                 {
                     Id = e.Id,
-                    Email = e.Email ?? e.User.Email
+                    Email = e.Email ?? e.User.Email,
+                    UserId = e.UserId ?? e.User.Id
                 });
             return await query.ToListAsync();
         }
