@@ -53,9 +53,10 @@ public class StartTwoFactorWebAuthnRegistrationCommand : IStartTwoFactorWebAuthn
         var fidoUser = new Fido2User { DisplayName = user.Name, Name = user.Email, Id = user.Id.ToByteArray(), };
 
         var excludeCredentials = provider.MetaData
-            .Where(k => k.Key.StartsWith("Key"))
-            .Select(k => new TwoFactorProvider.WebAuthnData((dynamic)k.Value).Descriptor)
-            .ToList();
+                .Where(k => k.Key.StartsWith("Key", StringComparison.Ordinal))
+                .Select(k => new TwoFactorProvider.WebAuthnData((dynamic)k.Value).Descriptor)
+                .OfType<PublicKeyCredentialDescriptor>()
+                .ToList();
 
         var authenticatorSelection = new AuthenticatorSelection
         {
