@@ -207,11 +207,13 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IValidateOrganizationInviteLinkEmailDomainQuery, ValidateOrganizationInviteLinkEmailDomainQuery>();
         services.TryAddScoped<IGetOrganizationInviteLinkStatusQuery, GetOrganizationInviteLinkStatusQuery>();
         services.TryAddScoped<IUpdateOrganizationInviteLinkCommand, UpdateOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IUpdateInviteSupportConfirmCommand, UpdateInviteSupportConfirmCommand>();
         services.TryAddScoped<IDeleteOrganizationInviteLinkCommand, DeleteOrganizationInviteLinkCommand>();
         services.TryAddScoped<IRefreshOrganizationInviteLinkCommand, RefreshOrganizationInviteLinkCommand>();
         services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkCommand, ConfirmOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IGetOrganizationInviteCommand, GetOrganizationInviteCommand>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)

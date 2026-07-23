@@ -91,6 +91,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
     private readonly IAcceptOrganizationInviteLinkCommand _acceptOrganizationInviteLinkCommand;
     private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
+    private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -126,7 +127,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
         IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery,
         IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand,
-        IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand)
+        IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
+        IGetOrganizationInviteCommand getOrganizationInviteCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -163,6 +165,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
         _acceptOrganizationInviteLinkCommand = acceptOrganizationInviteLinkCommand;
         _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
+        _getOrganizationInviteCommand = getOrganizationInviteCommand;
     }
 
     [HttpGet("{id}")]
@@ -190,9 +193,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Returns a set of basic information about all members of the organization. This is available to all members of
-    /// the organization to manage collections. For this reason, it contains as little information as possible and no
-    /// cryptographic keys or other sensitive data.
+    /// Returns a set of basic information about all members of the organization. This is available to all members
+    /// of the organization, since a broad range of features across the app depend on basic member lookups
+    /// (collection management, group management, event logs, sponsorship, etc.) that are not specific to any one
+    /// permission. For this reason, it contains as little information as possible and no cryptographic keys or
+    /// other sensitive data.
     /// </summary>
     /// <param name="orgId">Organization identifier</param>
     /// <returns>List of users for the organization.</returns>
@@ -865,6 +870,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var result = await _acceptOrganizationInviteLinkCommand.AcceptAsync(new AcceptOrganizationInviteLinkRequest
         {
+            OrganizationId = model.OrganizationId,
             Code = model.Code,
             User = user,
             ResetPasswordKey = model.ResetPasswordKey,
@@ -885,6 +891,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var result = await _confirmOrganizationInviteLinkCommand.ConfirmAsync(new ConfirmOrganizationInviteLinkRequest
         {
+            OrganizationId = model.OrganizationId,
             Code = model.Code,
             User = user,
             OrgUserKey = model.OrgUserKey,
@@ -893,5 +900,25 @@ public class OrganizationUsersController : BaseAdminConsoleController
         });
 
         return Handle(result, _ => TypedResults.Ok());
+    }
+
+    [HttpPost("/organizations/users/invite-link/invite")]
+    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
+    public async Task<IResult> GetInvite([FromBody] GetOrganizationInviteRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _getOrganizationInviteCommand.GetInviteAsync(new GetOrganizationInviteRequest
+        {
+            OrganizationId = model.OrganizationId,
+            Code = model.Code,
+            User = user,
+        });
+
+        return Handle(result, invite => TypedResults.Ok(new OrganizationInviteResponseModel(invite)));
     }
 }

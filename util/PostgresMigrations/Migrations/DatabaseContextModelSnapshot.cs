@@ -393,8 +393,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("Code")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
@@ -413,10 +414,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()

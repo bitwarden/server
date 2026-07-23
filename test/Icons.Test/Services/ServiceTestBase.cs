@@ -20,6 +20,7 @@ public class ServiceTestBase
 
         _services.ConfigureHttpClients();
         _services.AddHtmlParsing();
+        _services.AddSingleton(new IconsSettings());
         _services.AddServices();
 
         _provider = _services.BuildServiceProvider();

@@ -10,12 +10,12 @@ namespace Bit.Seeder.Factories;
 
 internal static class OrganizationSeeder
 {
-    internal static Organization Create(string name, string domain, int seats, IManglerService manglerService, string? publicKey = null, string? privateKey = null, PlanType planType = PlanType.EnterpriseAnnually)
+    internal static Organization Create(string name, string domain, int seats, IManglerService manglerService, string? publicKey = null, string? privateKey = null, PlanType planType = PlanType.EnterpriseAnnually, Guid? id = null)
     {
         var billingHash = DeriveShortHash(domain);
         var org = new Organization
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = id ?? CombGuid.Generate(),
             Identifier = manglerService.Mangle(domain),
             Name = manglerService.Mangle(name),
             BillingEmail = $"billing{billingHash}@{billingHash}.{domain}",
@@ -28,6 +28,17 @@ internal static class OrganizationSeeder
         PlanFeatures.Apply(org, planType);
 
         return org;
+    }
+
+    /// <summary>
+    /// Applies billing gateway identity to an organization so it resembles a real billed org.
+    /// Only non-null values are set; nulls leave the field unchanged.
+    /// </summary>
+    internal static void ApplyBilling(Organization org, GatewayType? gateway, string? gatewayCustomerId, string? gatewaySubscriptionId)
+    {
+        org.Gateway = gateway ?? org.Gateway;
+        org.GatewayCustomerId = gatewayCustomerId ?? org.GatewayCustomerId;
+        org.GatewaySubscriptionId = gatewaySubscriptionId ?? org.GatewaySubscriptionId;
     }
 
     /// <summary>

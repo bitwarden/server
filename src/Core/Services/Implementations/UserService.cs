@@ -822,7 +822,9 @@ public class UserService : UserManager<User>, IUserService
         {
             user.Premium = true;
             user.PremiumExpirationDate = expirationDate;
-            user.RevisionDate = DateTime.UtcNow;
+            // Bump AccountRevisionDate so clients' revision-gated syncs pick up the
+            // premium change even when the one-time push notification is missed.
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
     }
@@ -839,7 +841,9 @@ public class UserService : UserManager<User>, IUserService
         {
             user.Premium = false;
             user.PremiumExpirationDate = expirationDate;
-            user.RevisionDate = DateTime.UtcNow;
+            // Bump AccountRevisionDate so clients' revision-gated syncs pick up the
+            // premium change even when the one-time push notification is missed.
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
     }

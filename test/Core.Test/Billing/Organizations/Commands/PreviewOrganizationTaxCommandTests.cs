@@ -1385,13 +1385,14 @@ public class PreviewOrganizationTaxCommandTests
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
         _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
 
-        // Mock existing subscription with items - using NEW plan IDs since command looks for new plan prices
+        // Mock existing subscription with items keyed by the CURRENT plan's price IDs, as a real
+        // subscription is. The command re-prices each to the new plan's IDs in the preview.
         var subscriptionItems = new List<SubscriptionItem>
         {
             new() { Price = new Price { Id = "2023-teams-org-seat-monthly" }, Quantity = 8 },
-            new() { Price = new Price { Id = "storage-gb-annually" }, Quantity = 3 },
-            new() { Price = new Price { Id = "secrets-manager-enterprise-seat-annually" }, Quantity = 5 },
-            new() { Price = new Price { Id = "secrets-manager-service-account-2024-annually" }, Quantity = 10 }
+            new() { Price = new Price { Id = "storage-gb-monthly" }, Quantity = 3 },
+            new() { Price = new Price { Id = "secrets-manager-teams-seat-monthly" }, Quantity = 5 },
+            new() { Price = new Price { Id = "secrets-manager-service-account-2024-monthly" }, Quantity = 10 }
         };
 
         var subscription = new Subscription
@@ -1494,6 +1495,132 @@ public class PreviewOrganizationTaxCommandTests
                 item.Price == plan.SecretsManager.StripeServiceAccountPlanId && item.Quantity == 20)));
     }
 
+    // Regression test: upgrading from a flat-rate, non-seat-based plan (e.g. Teams Starter) has no
+    // per-seat Password Manager line item on the subscription to read a quantity from, so the command
+    // must fall back to the organization's occupied seat count instead of throwing a KeyNotFoundException.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_TeamsStarterToTeams_UsesOrganizationSeats()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsStarter2023,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 10
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "10012"
+        };
+
+        var currentPlan = new TeamsStarterPlan2023();
+        var newPlan = new Teams2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        // The flat-rate plan's subscription only contains its single, non-seat-based line item -
+        // there is no per-seat price for the command to look up.
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = currentPlan.PasswordManager.StripePlanId }, Quantity = 1 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 900 }],
+            Total = 9900
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == newPlan.PasswordManager.StripeSeatPlanId &&
+            options.SubscriptionDetails.Items[0].Quantity == organization.Seats));
+    }
+
+    // Regression test: if the organization's current plan is seat-based but its subscription does not
+    // contain a line item matching that plan's price (a data discrepancy), the command should return a
+    // BadRequest rather than throwing a KeyNotFoundException from the dictionary lookup.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_SubscriptionMissingCurrentPlanPriceLineItem_ReturnsBadRequest()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsMonthly2023,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 5
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var currentPlan = new Teams2023Plan(false);
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        // The subscription does not contain a line item for the current plan's Password Manager price.
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "some-other-unrelated-price" }, Quantity = 5 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT1);
+        var badRequest = result.AsT1;
+        Assert.Equal(
+            "Your organization's subscription does not match its current plan. Please contact support for assistance.",
+            badRequest.Response);
+
+        await _stripeAdapter.DidNotReceive().CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>());
+    }
+
     [Fact]
     public async Task Run_OrganizationPlanChange_ExistingSubscriptionWithDiscount_PreservesCoupon()
     {
@@ -1574,6 +1701,145 @@ public class PreviewOrganizationTaxCommandTests
             options.Discounts[0].Coupon == "EXISTING_DISCOUNT_50"));
     }
 
+    // PM-40440: genuine org coupons (complimentary PM, SM-standalone) attach at the subscription level, not the
+    // customer. The preview must read subscription.Discounts too, or it over-quotes by dropping the coupon.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_ExistingSubscriptionWithSubscriptionLevelDiscount_PreservesCoupon()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "90210"
+        };
+
+        var currentPlan = new TeamsPlan(true);
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2023-teams-org-seat-annually" }, Quantity = 5 }
+        };
+
+        // A genuine complimentary/SM-standalone coupon lives at the subscription level, with no customer discount.
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null },
+            Discounts = [new Discount { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } }]
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        // The subscription-level coupon is applied to the preview so Stripe nets it out of the total.
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == "COMPLIMENTARY_PM_100"));
+    }
+
+    // PM-40440 guardrail: the schedule-derived migration coupon lives on the subscription SCHEDULE (Phase 2),
+    // never on the live subscription. A migrating org (schedule present, no live discount) must still preview the
+    // full target-plan price — reading only live discounts keeps the migration coupon out of the preview.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_MigratingOrgWithScheduleCoupon_DoesNotApplyMigrationDiscount()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsAnnually2020,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 10
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "90210"
+        };
+
+        var currentPlan = new Teams2020Plan(true);
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2020-teams-org-seat-annually" }, Quantity = 10 }
+        };
+
+        // Migrating org: the migration coupon is only on the subscription schedule's Phase 2; the live
+        // subscription (Phase 1) carries no discount at the customer or subscription level.
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            ScheduleId = "sub_sched_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null },
+            Discounts = []
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        // No discount is applied.
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts == null));
+
+        // The preview must never fetch the schedule — the only place the migration coupon lives — which is what
+        // keeps it out of the quote. Guards against a future regression that starts reading the schedule here.
+        await _stripeAdapter.DidNotReceive().GetSubscriptionScheduleAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionScheduleGetOptions>());
+    }
+
     [Fact]
     public async Task Run_OrganizationPlanChange_OrganizationWithoutGatewayIds_ReturnsBadRequest()
     {
@@ -1606,6 +1872,352 @@ public class PreviewOrganizationTaxCommandTests
         // Verify no Stripe API calls were made
         await _stripeAdapter.DidNotReceive().CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>());
         await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+    }
+
+    // PM-40440 regression: an SM-carrying Teams 2020 annual org upgrading to Enterprise annual must
+    // still be quoted for its Secrets Manager seats and service accounts. The SM items are looked up
+    // on the current subscription by the CURRENT plan's price IDs - which differ from the new plan's
+    // across the tier boundary and the service-account 2024 bump - then re-priced at the new plan.
+    // Before the fix these lookups used the new plan's IDs, missed, and dropped SM from the total.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_Teams2020AnnualWithSecretsManagerToEnterprise_IncludesSecretsManager()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsAnnually2020,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = true,
+            Seats = 10
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var currentPlan = new Teams2020Plan(true);
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        // A real Teams 2020 annual subscription with Secrets Manager: SM seats and (legacy) service
+        // accounts are keyed by the current plan's price IDs.
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2020-teams-org-seat-annually" }, Quantity = 10 },
+            new() { Price = new Price { Id = "secrets-manager-teams-seat-annually" }, Quantity = 10 },
+            new() { Price = new Price { Id = "secrets-manager-service-account-annually" }, Quantity = 5 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        // SM seats and service accounts are re-priced at the new (Enterprise annual) plan's IDs but keep
+        // the current subscription's quantities.
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Count == 3 &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "2023-enterprise-org-seat-annually" && item.Quantity == 10) &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "secrets-manager-enterprise-seat-annually" && item.Quantity == 10) &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "secrets-manager-service-account-2024-annually" && item.Quantity == 5)));
+    }
+
+    // PM-40440 null guard: a Families org's current plan has no Secrets Manager definition
+    // (Plan.SecretsManager is null), so the SM lookup must be guarded. Families -> Enterprise must not
+    // throw and must add no SM line.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_FamiliesToEnterprise_NoSecretsManagerLineOrThrow()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = true,
+            Seats = 6
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var currentPlan = new FamiliesPlan();
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2020-families-org-annually" }, Quantity = 1 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items.All(item => !item.Price.Contains("secrets-manager"))));
+    }
+
+    // PM-40440: the SM seat ID is per-tier, so the same drop happens on a monthly tier change. A
+    // Teams monthly -> Enterprise monthly upgrade must also carry SM through the preview.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_TeamsMonthlyWithSecretsManagerToEnterpriseMonthly_IncludesSecretsManager()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsMonthly,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = true
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Monthly
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var currentPlan = new TeamsPlan(false);
+        var newPlan = new EnterprisePlan(false);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2023-teams-org-seat-monthly" }, Quantity = 8 },
+            new() { Price = new Price { Id = "secrets-manager-teams-seat-monthly" }, Quantity = 4 },
+            new() { Price = new Price { Id = "secrets-manager-service-account-2024-monthly" }, Quantity = 6 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Count == 3 &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "2023-enterprise-seat-monthly" && item.Quantity == 8) &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "secrets-manager-enterprise-seat-monthly" && item.Quantity == 4) &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "secrets-manager-service-account-2024-monthly" && item.Quantity == 6)));
+    }
+
+    // PM-40440: an org with no Secrets Manager items on its subscription still previews without an SM
+    // line (behavior preserved for non-SM orgs).
+    [Fact]
+    public async Task Run_OrganizationPlanChange_TeamsAnnualWithoutSecretsManagerToEnterprise_NoSecretsManagerLine()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.TeamsAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var currentPlan = new TeamsPlan(true);
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2023-teams-org-seat-annually" }, Quantity = 5 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "2023-enterprise-org-seat-annually" && item.Quantity == 5) &&
+            options.SubscriptionDetails.Items.All(item => !item.Price.Contains("secrets-manager"))));
+    }
+
+    // PM-40440 (storage): storage ids are not shared across all plans - Families uses
+    // personal-storage-gb-* while org plans use storage-gb-*. Looking up existing storage by the NEW
+    // plan's id misses on a Families -> Enterprise upgrade and drops it from the preview. Matching by
+    // the CURRENT plan's id and re-pricing at the new plan carries the extra storage through.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_FamiliesWithStorageToEnterprise_IncludesStorage()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 6
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var currentPlan = new FamiliesPlan();
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        // A real Families subscription with extra storage: storage is keyed by the Families (personal)
+        // storage id, which differs from the org plan's storage id.
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2020-families-org-annually" }, Quantity = 1 },
+            new() { Price = new Price { Id = "personal-storage-gb-annually" }, Quantity = 5 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        // Storage is re-priced at the new (Enterprise) plan's id but keeps the current quantity; the
+        // Families personal-storage id must not leak into the preview.
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Count == 2 &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "storage-gb-annually" && item.Quantity == 5) &&
+            options.SubscriptionDetails.Items.All(item => item.Price != "personal-storage-gb-annually")));
     }
 
     #endregion
@@ -1967,6 +2579,62 @@ public class PreviewOrganizationTaxCommandTests
             options.Discounts != null &&
             options.Discounts.Count == 1 &&
             options.Discounts[0].Coupon == "ENTERPRISE_DISCOUNT_20"));
+    }
+
+    // PM-40440: the update-overload preview must also read subscription-level discounts, not just the customer
+    // discount — same over-quote bug as the plan-change path (the fix is applied to both overloads).
+    [Fact]
+    public async Task Run_OrganizationSubscriptionUpdate_SubscriptionLevelDiscount_PreservesCoupon()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123"
+        };
+
+        var update = new OrganizationSubscriptionUpdate
+        {
+            PasswordManager = new OrganizationSubscriptionUpdate.PasswordManagerSelections
+            {
+                Seats = 25
+            }
+        };
+
+        var plan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+
+        // A genuine coupon lives at the subscription level, with no customer-level discount.
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "US", PostalCode = "90210" },
+                Discount = null
+            },
+            Discounts = [new Discount { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } }]
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 0
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, update);
+
+        Assert.True(result.IsT0);
+
+        // The subscription-level coupon is applied to the preview so Stripe nets it out of the total.
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == "COMPLIMENTARY_PM_100"));
     }
 
     [Fact]
