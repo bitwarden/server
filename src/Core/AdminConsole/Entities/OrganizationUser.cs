@@ -94,6 +94,10 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// </summary>
     public bool AccessSecretsManager { get; set; }
     /// <summary>
+    /// True if the User has access to Privileged Access Management for this Organization, false otherwise.
+    /// </summary>
+    public bool AccessPam { get; set; }
+    /// <summary>
     /// The reason a user is revoked. Null if the user is not revoked, or was revoked before
     /// revocation reasons were tracked.
     /// </summary>

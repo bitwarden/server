@@ -815,6 +815,7 @@ public class StripePaymentService : IStripePaymentService
             if (phase2Discount?.Coupon != null)
             {
                 subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
+                subscriptionInfo.CustomerDiscount.IsFromSchedule = true;
             }
         }
         catch (StripeException ex)
