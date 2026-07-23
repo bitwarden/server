@@ -178,6 +178,80 @@ public class RelayPushRegistrationServiceTests
         _output.WriteLine("---");
     }
 
+    /// <summary>
+    /// Subscribes to <see cref="DiagnosticListener.AllListeners"/> and logs every outbound HTTP
+    /// request seen on <c>HttpHandlerDiagnosticListener</c>. Because <see cref="AllListeners"/>
+    /// replays already-active listeners on subscribe, this captures HTTP calls made by the identity
+    /// TestHost even though it started before the subscription was established.
+    /// </summary>
+    private sealed class DiagnosticAllObserver(ITestOutputHelper output, Stopwatch sw)
+        : IObserver<DiagnosticListener>, IDisposable
+    {
+        private readonly List<IDisposable> _subscriptions = [];
+
+        public void OnNext(DiagnosticListener listener)
+        {
+            output.WriteLine($"[+{sw.Elapsed.TotalSeconds:F2}s][DiagListener] {listener.Name}");
+            if (listener.Name is "HttpHandlerDiagnosticListener")
+            {
+                _subscriptions.Add(listener.Subscribe(new OutboundHttpObserver(output, sw)));
+            }
+        }
+
+        public void OnError(Exception error) { }
+        public void OnCompleted() { }
+
+        public void Dispose()
+        {
+            foreach (var s in _subscriptions) s.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Observes <c>HttpHandlerDiagnosticListener</c> events and logs each outbound HTTP
+    /// request, response, and exception with a timestamp relative to the test stopwatch.
+    /// </summary>
+    private sealed class OutboundHttpObserver(ITestOutputHelper output, Stopwatch sw)
+        : IObserver<KeyValuePair<string, object?>>
+    {
+        public void OnNext(KeyValuePair<string, object?> kv)
+        {
+            try
+            {
+                switch (kv.Key)
+                {
+                    case "System.Net.Http.HttpRequestOut.Start":
+                    {
+                        var req = GetProperty<HttpRequestMessage>(kv.Value, "Request");
+                        output.WriteLine($"[+{sw.Elapsed.TotalSeconds:F2}s][HTTP→] {req?.Method} {req?.RequestUri}");
+                        break;
+                    }
+                    case "System.Net.Http.HttpRequestOut.Stop":
+                    {
+                        var req = GetProperty<HttpRequestMessage>(kv.Value, "Request");
+                        var res = GetProperty<HttpResponseMessage>(kv.Value, "Response");
+                        output.WriteLine($"[+{sw.Elapsed.TotalSeconds:F2}s][HTTP←] {req?.Method} {req?.RequestUri} → {(int?)res?.StatusCode}");
+                        break;
+                    }
+                    case "System.Net.Http.Exception":
+                    {
+                        var req = GetProperty<HttpRequestMessage>(kv.Value, "Request");
+                        var ex = GetProperty<Exception>(kv.Value, "Exception");
+                        output.WriteLine($"[+{sw.Elapsed.TotalSeconds:F2}s][HTTP✗] {req?.Method} {req?.RequestUri}: {ex?.GetType().Name}: {ex?.Message}");
+                        break;
+                    }
+                }
+            }
+            catch { /* never throw in a diagnostic observer */ }
+        }
+
+        private static T? GetProperty<T>(object? obj, string name) where T : class
+            => obj?.GetType().GetProperty(name)?.GetValue(obj) as T;
+
+        public void OnError(Exception error) { }
+        public void OnCompleted() { }
+    }
+
     [Fact]
     public async Task MobileData_ShouldNotLogIssues()
     {
@@ -189,10 +263,46 @@ public class RelayPushRegistrationServiceTests
 
         ThreadPool.GetMaxThreads(out var maxWorkers, out var maxIo);
 
+        var sw = Stopwatch.StartNew();
+
+        // Subscribe to all active and future DiagnosticListeners. The replay-on-subscribe
+        // semantics mean we capture listeners that already exist (e.g. HttpHandlerDiagnosticListener,
+        // which was created during app startup). Because the identity TestHost runs in-process,
+        // outbound HttpClient calls made by the identity server during request processing appear here.
+        using var diagObserver = new DiagnosticAllObserver(_output, sw);
+        using var diagSub = DiagnosticListener.AllListeners.Subscribe(diagObserver);
+
+        // Subscribe to all ActivitySource spans. Together with the outbound-HTTP events above,
+        // this pinpoints which operation within the identity server pipeline stalls.
+        using var activityListener = new ActivityListener
+        {
+            ShouldListenTo = _ => true,
+            Sample = (ref ActivityCreationOptions<ActivityContext> options) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStarted = a =>
+            {
+                var url = a.GetTagItem("url.full")?.ToString()
+                       ?? a.GetTagItem("http.url")?.ToString()
+                       ?? a.GetTagItem("server.address")?.ToString();
+                _output.WriteLine(
+                    $"[+{sw.Elapsed.TotalSeconds:F2}s][Activity+] {a.Source.Name}/{a.OperationName}"
+                    + (url is not null ? $" {url}" : ""));
+            },
+            ActivityStopped = a =>
+            {
+                var url = a.GetTagItem("url.full")?.ToString()
+                       ?? a.GetTagItem("http.url")?.ToString();
+                _output.WriteLine(
+                    $"[+{sw.Elapsed.TotalSeconds:F2}s][Activity-] {a.Source.Name}/{a.OperationName}"
+                    + $" {a.Duration.TotalMilliseconds:F0}ms"
+                    + (url is not null ? $" {url}" : ""));
+            }
+        };
+        ActivitySource.AddActivityListener(activityListener);
+
         using var pollCts = new CancellationTokenSource();
         var pollTask = Task.Run(async () =>
         {
-            var sw = Stopwatch.StartNew();
             while (!pollCts.Token.IsCancellationRequested)
             {
                 ThreadPool.GetAvailableThreads(out var w, out var io);
