@@ -127,6 +127,26 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WithOversizedSealedOpenOrgInviteData_ReturnsBadRequest(string name, bool receiveMarketingEmails)
+    {
+        var email = $"test+register+oversize+{name}@email.com";
+        // Length cap in the request model is 4096; 4097+ must be rejected by model validation.
+        var oversized = new string('A', 4097);
+
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            SealedOpenOrgInviteData = oversized,
+        };
+
+        var context = await _factory.PostRegisterSendEmailVerificationAsync(model);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+    }
+
+    [Theory, BitAutoData]
     public async Task PostRegisterSendEmailVerification_WithSealedOpenOrgInviteData_ForExistingUser_SilentlyDiscardsSealedData(string name, bool receiveMarketingEmails)
     {
         // Anti-enumeration branch: existing user + sealed data provided → 204 + null, mail service
