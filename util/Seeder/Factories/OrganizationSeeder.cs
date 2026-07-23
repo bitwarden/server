@@ -10,12 +10,12 @@ namespace Bit.Seeder.Factories;
 
 internal static class OrganizationSeeder
 {
-    internal static Organization Create(string name, string domain, int seats, IManglerService manglerService, string? publicKey = null, string? privateKey = null, PlanType planType = PlanType.EnterpriseAnnually)
+    internal static Organization Create(string name, string domain, int seats, IManglerService manglerService, string? publicKey = null, string? privateKey = null, PlanType planType = PlanType.EnterpriseAnnually, Guid? id = null)
     {
         var billingHash = DeriveShortHash(domain);
         var org = new Organization
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = id ?? CombGuid.Generate(),
             Identifier = manglerService.Mangle(domain),
             Name = manglerService.Mangle(name),
             BillingEmail = $"billing{billingHash}@{billingHash}.{domain}",

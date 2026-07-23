@@ -1805,6 +1805,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AccessPam")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("boolean");
 
