@@ -25,6 +25,10 @@ public class PlayItemEntityTypeConfiguration : IEntityTypeConfiguration<PlayItem
             .IsClustered(false);
 
         builder
+            .HasIndex(pd => pd.ProviderId)
+            .IsClustered(false);
+
+        builder
             .HasOne(pd => pd.User)
             .WithMany()
             .HasForeignKey(pd => pd.UserId)
@@ -37,10 +41,16 @@ public class PlayItemEntityTypeConfiguration : IEntityTypeConfiguration<PlayItem
             .OnDelete(DeleteBehavior.Cascade);
 
         builder
+            .HasOne(pd => pd.Provider)
+            .WithMany()
+            .HasForeignKey(pd => pd.ProviderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
             .ToTable(nameof(PlayItem))
             .HasCheckConstraint(
-                "CK_PlayItem_UserOrOrganization",
-                "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)"
+                "CK_PlayItem_UserOrOrganizationOrProvider",
+                "((CASE WHEN \"UserId\" IS NOT NULL THEN 1 ELSE 0 END) + (CASE WHEN \"OrganizationId\" IS NOT NULL THEN 1 ELSE 0 END) + (CASE WHEN \"ProviderId\" IS NOT NULL THEN 1 ELSE 0 END)) = 1"
             );
     }
 }
