@@ -6,7 +6,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
@@ -81,6 +80,9 @@ public class SubscriberServiceTests
             .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
             UserId = userId,
@@ -127,6 +129,9 @@ public class SubscriberServiceTests
             .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
             UserId = userId,
@@ -170,8 +175,8 @@ public class SubscriberServiceTests
             .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
@@ -214,6 +219,8 @@ public class SubscriberServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
 
@@ -244,9 +251,8 @@ public class SubscriberServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
-
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
 
@@ -263,7 +269,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelImmediately_FlagOn_WithActiveSchedule_ReleasesScheduleBeforeCancelling(
+    public async Task CancelSubscription_CancelImmediately_WithActiveSchedule_ReleasesScheduleBeforeCancelling(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -293,9 +299,6 @@ public class SubscriberServiceTests
                 ]
             });
 
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
 
         await sutProvider.GetDependency<IPriceIncreaseScheduler>()
@@ -304,80 +307,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelImmediately_BothFlagsOff_DoesNotCheckOrReleaseSchedule(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        const string subscriptionId = "sub_1";
-
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = "active",
-            CustomerId = "cus_1"
-        };
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
-
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
-        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
-
-        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
-
-        await stripeAdapter.DidNotReceiveWithAnyArgs()
-            .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
-        await sutProvider.GetDependency<IPriceIncreaseScheduler>()
-            .DidNotReceiveWithAnyArgs().Release(Arg.Any<string>(), Arg.Any<string>());
-        await stripeAdapter.Received(1).CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelImmediately_PM35215FlagOn_WithActiveSchedule_ReleasesSchedule(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        const string subscriptionId = "sub_1";
-        const string scheduleId = "sched_1";
-
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = "active",
-            CustomerId = "cus_1",
-            Metadata = new Dictionary<string, string>()
-        };
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
-        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data =
-                [
-                    new SubscriptionSchedule
-                    {
-                        Id = scheduleId,
-                        SubscriptionId = subscriptionId,
-                        Status = StripeConstants.SubscriptionScheduleStatus.Active
-                    }
-                ]
-            });
-
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
-        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
-
-        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
-
-        await sutProvider.GetDependency<IPriceIncreaseScheduler>()
-            .Received(1).Release("cus_1", subscriptionId);
-        await stripeAdapter.Received(1).CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_PM35215FlagOn_PreservesMigrationCohortMetadataOnCancel(
+    public async Task CancelSubscription_PreservesMigrationCohortMetadataOnCancel(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -403,9 +333,6 @@ public class SubscriberServiceTests
         stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
-
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
             UserId = Guid.NewGuid(),
@@ -422,7 +349,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelImmediately_FlagOn_NoSchedule_ProceedsNormally(
+    public async Task CancelSubscription_CancelImmediately_NoSchedule_ProceedsNormally(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -440,9 +367,6 @@ public class SubscriberServiceTests
         stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
 
         await sutProvider.GetDependency<IPriceIncreaseScheduler>()
@@ -451,7 +375,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_TwoPhaseSchedule_ReleasesScheduleAndSetsCancelAtPeriodEnd(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_TwoPhaseSchedule_ReleasesScheduleAndSetsCancelAtPeriodEnd(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -497,9 +421,6 @@ public class SubscriberServiceTests
                 ]
             });
 
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
 
         await stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync(scheduleId);
@@ -515,7 +436,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_TwoPhaseSchedule_WithSurvey_ReleasesScheduleAndUpdatesCancellationDetails(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_TwoPhaseSchedule_WithSurvey_ReleasesScheduleAndUpdatesCancellationDetails(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -562,9 +483,6 @@ public class SubscriberServiceTests
                 ]
             });
 
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
             UserId = userId,
@@ -590,7 +508,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_NoSchedule_SetsCancelAtPeriodEnd(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_NoSchedule_SetsCancelAtPeriodEnd(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -608,42 +526,10 @@ public class SubscriberServiceTests
         stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
 
         await stripeAdapter.DidNotReceiveWithAnyArgs()
             .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
-
-        await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAtPeriodEnd == true));
-    }
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOff_SetsCancelAtPeriodEnd_NoScheduleCheck(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        const string subscriptionId = "sub_1";
-
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = "active",
-            CustomerId = "cus_1"
-        };
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
-
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
-
-        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
-
-        await stripeAdapter.DidNotReceiveWithAnyArgs()
-            .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
 
         await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAtPeriodEnd == true));

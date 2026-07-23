@@ -36,23 +36,8 @@ public class PriceIncreaseSchedulerTests
         new(_stripeAdapter, _featureService, _pricingClient, _organizationRepository, _assignmentRepository, _cohortRepository, _logger);
 
     [Fact]
-    public async Task SchedulePersonalPriceIncrease_FeatureFlagOff_DoesNothing()
-    {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
-
-        var sut = CreateSut();
-
-        await sut.SchedulePersonalPriceIncrease(CreateSubscription("sub_1", "cus_1"));
-
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
-    }
-
-    [Fact]
     public async Task SchedulePersonalPriceIncrease_ActiveScheduleAlreadyExists_Skips()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         var subscription = CreateSubscription("sub_1", "cus_1");
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -72,8 +57,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_PremiumSubscription_CreatesScheduleWithMilestone2Discount()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         var oldPremium = new PremiumPlan
         {
             Name = "Premium (Old)",
@@ -121,8 +104,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_PremiumSubscriptionWithExistingDiscount_PreservesDiscountAndAppendsMilestone2()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         var oldPremium = new PremiumPlan
         {
             Name = "Premium (Old)",
@@ -170,8 +151,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_PremiumSubscriptionWithMultipleExistingDiscounts_PreservesAllAndAppendsMilestone2()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         var oldPremium = new PremiumPlan
         {
             Name = "Premium (Old)",
@@ -221,8 +200,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_Premium_CarriesCustomerDiscountIntoPhase2_WithMilestone2()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         var oldPremium = new PremiumPlan
         {
             Name = "Premium (Old)",
@@ -272,8 +249,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_PremiumSubscriptionWithStorage_IncludesStorageInPhase2()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         var oldPremium = new PremiumPlan
         {
             Name = "Premium (Old)",
@@ -317,8 +292,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_Families2019Subscription_CreatesScheduleWithMilestone3Discount()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         // Return empty premium plans so it falls through to families logic
         _pricingClient.ListPremiumPlans().Returns([]);
 
@@ -360,8 +333,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_Families2019SubscriptionWithExistingDiscount_PreservesDiscountAndAppendsMilestone3()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _pricingClient.ListPremiumPlans().Returns([]);
 
         var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
@@ -402,8 +373,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_Families2019_CarriesCustomerDiscountIntoPhase2_WithMilestone3()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _pricingClient.ListPremiumPlans().Returns([]);
 
         var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
@@ -445,8 +414,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_Families2025_CarriesCustomerDiscountIntoPhase2_NoMilestone()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _pricingClient.ListPremiumPlans().Returns([]);
 
         var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
@@ -489,8 +456,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_Families2025Subscription_CreatesScheduleWithNoDiscount()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _pricingClient.ListPremiumPlans().Returns([]);
 
         var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
@@ -530,8 +495,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_Families2025SubscriptionWithExistingDiscount_PreservesDiscountWithoutMilestone()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _pricingClient.ListPremiumPlans().Returns([]);
 
         var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
@@ -572,8 +535,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_FamiliesSubscriptionWithStorage_IncludesStorageInPhase2()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _pricingClient.ListPremiumPlans().Returns([]);
 
         var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
@@ -610,8 +571,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_UpdateFails_ReleasesOrphanedScheduleAndRethrows()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _pricingClient.ListPremiumPlans().Returns([]);
 
         var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
@@ -647,8 +606,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_NoMatchingPlan_LogsWarningAndDoesNothing()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _pricingClient.ListPremiumPlans().Returns([]);
 
         var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
@@ -678,8 +635,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_SubscriptionLoadedWithoutDiscountsExpand_DoesNotCreateSchedule()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         // Construct the subscription via the same JSON path Stripe.NET uses on API responses.
         // Verified empirically against Stripe.net 48.5.0: when "discounts" is not in the request's Expand list,
         // the SDK populates DiscountIds with the IDs and Discounts with a same-length list of null entries.
@@ -712,8 +667,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_ProviderSubscription_DoesNotCreateSchedule()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
@@ -730,9 +683,8 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task Release_BothFeatureFlagsOff_StillReleasesWhenScheduleExists()
+    public async Task Release_PM35215FlagOff_StillReleasesWhenScheduleExists()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -751,7 +703,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task Release_PM35215EnabledOnly_StillReleases()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -770,8 +721,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task Release_ActiveScheduleExists_ReleasesIt()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
             {
@@ -788,8 +737,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task Release_NoActiveSchedule_DoesNotRelease()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
@@ -804,8 +751,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task Release_ScheduleForDifferentSubscription_DoesNotRelease()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
             {
@@ -823,8 +768,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task Release_ReleaseThrows_LogsErrorAndRethrows()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .ThrowsAsync(new StripeException("list failed"));
 
@@ -1173,8 +1116,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task SchedulePersonalPriceIncrease_DoesNotSetMetadataOnPhases()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         var oldPremium = new PremiumPlan
         {
             Name = "Premium (Old)",
@@ -1988,8 +1929,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task ScheduleForSubscription_UserSubscription_RoutesToPersonalPath_CreatesSchedule()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         var oldPremium = new PremiumPlan
         {
             Name = "Premium (Old)",
@@ -2691,8 +2630,6 @@ public class PriceIncreaseSchedulerTests
     [Fact]
     public async Task ScheduleForSubscription_NonTrackAOrg_FamiliesOrg_RoutesToPersonalPath()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-
         var orgId = Guid.NewGuid();
         var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
         var familiesTarget = MockPlans.Get(PlanType.FamiliesAnnually);

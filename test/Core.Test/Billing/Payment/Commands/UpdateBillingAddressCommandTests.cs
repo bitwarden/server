@@ -29,6 +29,9 @@ public class UpdateBillingAddressCommandTests
             Substitute.For<ILogger<UpdateBillingAddressCommand>>(),
             _subscriberService,
             _stripeAdapter);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
     }
 
     [Fact]
@@ -696,7 +699,7 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
-    public async Task Run_PersonalOrganization_FlagOn_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
+    public async Task Run_PersonalOrganization_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
     {
         var organization = new Organization
         {
@@ -739,8 +742,6 @@ public class UpdateBillingAddressCommandTests
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
@@ -795,7 +796,7 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
-    public async Task Run_PersonalOrganization_FlagOn_SchedulePresent_CarriesCustomerDiscountIntoFuturePhaseOnly()
+    public async Task Run_PersonalOrganization_SchedulePresent_CarriesCustomerDiscountIntoFuturePhaseOnly()
     {
         // C1: carry the customer discount into the FUTURE phase (StartDate > now) only — not the
         // active phase 0, even though its discountConsumed predicate is false.
@@ -842,8 +843,6 @@ public class UpdateBillingAddressCommandTests
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
@@ -897,7 +896,7 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
-    public async Task Run_PersonalOrganization_FlagOn_Phase2Consumed_DiscountsSuppressed_CustomerCouponNotReAdded()
+    public async Task Run_PersonalOrganization_Phase2Consumed_DiscountsSuppressed_CustomerCouponNotReAdded()
     {
         // When phase 1 has ended, phase 2 is active and its discounts are consumed → suppressed to [].
         // The customer coupon must NOT be re-added to the consumed phase.
@@ -942,8 +941,6 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
             .Returns(customer);
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
@@ -993,7 +990,7 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
-    public async Task Run_PersonalOrganization_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
+    public async Task Run_PersonalOrganization_NoSchedule_UpdatesSubscriptionDirectly()
     {
         var organization = new Organization
         {
@@ -1032,8 +1029,6 @@ public class UpdateBillingAddressCommandTests
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });

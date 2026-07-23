@@ -12,7 +12,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Braintree;
@@ -28,7 +27,6 @@ using static StripeConstants;
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
@@ -228,14 +226,10 @@ public class SubscriberService(
         SubscriptionCancellationDetailsOptions? cancellationDetails,
         Dictionary<string, string>? cancellingUserMetadata)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
-            featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        var activeSchedule = await GetActiveScheduleAsync(subscription);
+        if (activeSchedule != null)
         {
-            var activeSchedule = await GetActiveScheduleAsync(subscription);
-            if (activeSchedule != null)
-            {
-                await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
-            }
+            await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
         }
 
         if (cancellingUserMetadata != null && subscription.Metadata.ContainsKey(MetadataKeys.OrganizationId))
@@ -264,24 +258,20 @@ public class SubscriberService(
             Metadata = cancellingUserMetadata
         };
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
-            featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        var activeSchedule = await GetActiveScheduleAsync(subscription);
+
+        if (activeSchedule is { Phases.Count: > 0 })
         {
-            var activeSchedule = await GetActiveScheduleAsync(subscription);
+            logger.LogInformation(
+                "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), releasing schedule before cancellation",
+                GetType().Name, activeSchedule.Id, subscription.Id);
 
-            if (activeSchedule is { Phases.Count: > 0 })
+            await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
+
+            updateOptions.Metadata = new Dictionary<string, string>(cancellingUserMetadata ?? [])
             {
-                logger.LogInformation(
-                    "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), releasing schedule before cancellation",
-                    GetType().Name, activeSchedule.Id, subscription.Id);
-
-                await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
-
-                updateOptions.Metadata = new Dictionary<string, string>(cancellingUserMetadata ?? [])
-                {
-                    [MetadataKeys.CancelledDuringDeferredPriceIncrease] = "true"
-                };
-            }
+                [MetadataKeys.CancelledDuringDeferredPriceIncrease] = "true"
+            };
         }
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
