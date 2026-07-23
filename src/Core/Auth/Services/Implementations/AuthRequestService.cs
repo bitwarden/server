@@ -14,8 +14,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
-#nullable enable
-
 namespace Bit.Core.Auth.Services.Implementations;
 
 public class AuthRequestService : IAuthRequestService
@@ -29,7 +27,6 @@ public class AuthRequestService : IAuthRequestService
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
-    private readonly IFeatureService _featureService;
     private readonly ILogger<AuthRequestService> _logger;
 
     public AuthRequestService(
@@ -42,7 +39,6 @@ public class AuthRequestService : IAuthRequestService
         IEventService eventService,
         IOrganizationUserRepository organizationRepository,
         IMailService mailService,
-        IFeatureService featureService,
         ILogger<AuthRequestService> logger)
     {
         _authRequestRepository = authRequestRepository;
@@ -54,7 +50,6 @@ public class AuthRequestService : IAuthRequestService
         _eventService = eventService;
         _organizationUserRepository = organizationRepository;
         _mailService = mailService;
-        _featureService = featureService;
         _logger = logger;
     }
 
@@ -185,12 +180,17 @@ public class AuthRequestService : IAuthRequestService
             throw new DuplicateAuthRequestException();
         }
 
+        if (authRequest.UserId != currentUserId)
+        {
+            throw new NotFoundException();
+        }
+
         // Do type specific validation
         switch (authRequest.Type)
         {
             case AuthRequestType.AdminApproval:
-                // AdminApproval has a different expiration time, by default is 7 days compared to
-                // non-AdminApproval ones having a default of 15 minutes.
+                // AdminApproval has a default expiration of 7 days
+
                 if (IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.AdminRequestExpiration))
                 {
                     throw new NotFoundException();
@@ -198,22 +198,16 @@ public class AuthRequestService : IAuthRequestService
                 break;
             case AuthRequestType.AuthenticateAndUnlock:
             case AuthRequestType.Unlock:
+                // Non-AdminApproval has a default expiration of 15 minutes.
                 if (IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.UserRequestExpiration))
                 {
                     throw new NotFoundException();
                 }
+                // Non-AdminApproval responses are tied to a specific device, so we need to validate them
+                var device =
+                    await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, currentUserId)
+                        ?? throw new BadRequestException("Invalid device.");
 
-                if (authRequest.UserId != currentUserId)
-                {
-                    throw new NotFoundException();
-                }
-
-                // Admin approval responses are not tied to a specific device, but these types are so we need to validate them
-                var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, currentUserId);
-                if (device == null)
-                {
-                    throw new BadRequestException("Invalid device.");
-                }
                 authRequest.ResponseDeviceId = device.Id;
                 break;
         }

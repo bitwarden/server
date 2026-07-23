@@ -686,6 +686,7 @@ public class AuthRequestServiceTests
     [Theory]
     [BitAutoData(AuthRequestType.AuthenticateAndUnlock)]
     [BitAutoData(AuthRequestType.Unlock)]
+    [BitAutoData(AuthRequestType.AdminApproval)]
     public async Task UpdateAuthRequestAsync_InvalidUser_ThrowsNotFound(
         AuthRequestType authRequestType,
         SutProvider<AuthRequestService> sutProvider,
@@ -696,7 +697,7 @@ public class AuthRequestServiceTests
         authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
         // The request hasn't been Approved/Disapproved already
         authRequest.Approved = null;
-        // Has an type that needs the UserId property validated
+        // Set a type whose update path validates the UserId property
         authRequest.Type = authRequestType;
 
         // Auth request should not be null
