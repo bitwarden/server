@@ -440,12 +440,14 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 model.AccessSecretsManager,
                 collections,
                 groupsToSave,
+                model.Email,
+                model.Name,
+                model.DefaultUserCollectionName,
                 new StandardUser(
                     userId,
                     await _currentContext.OrganizationOwner(organization.Id),
                     actingContext?.Type,
-                    actingContext?.Permissions),
-                model.DefaultUserCollectionName);
+                    actingContext?.Permissions));
 
             var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
             return Handle(result);

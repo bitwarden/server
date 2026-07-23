@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -261,6 +262,131 @@ public class UpdateOrganizationUserValidatorTests
         Assert.True(result.IsValid);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenEmailUnchanged_ReturnsValidAndSkipsEmailChecks(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = orgUser.UserId!.Value, Email = "member@claimed.example.com" };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newEmail: "MEMBER@claimed.example.com", userToUpdate: userToUpdate);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetUsersOrganizationClaimedStatusAsync(default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenChangingEmailButUserNotLoaded_ReturnsMemberNotClaimed(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // No backing account was loaded (e.g. an invited-but-unconfirmed member), so the email cannot be changed.
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newEmail: "new@claimed.example.com", userToUpdate: null);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<MemberNotClaimedError>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenChangingEmailForMemberWithMasterPassword_ReturnsMemberHasMasterPassword(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User
+        {
+            Id = orgUser.UserId!.Value,
+            Email = "member@claimed.example.com",
+            MasterPassword = "hashed-master-password"
+        };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newEmail: "new@claimed.example.com", userToUpdate: userToUpdate);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<MemberHasMasterPasswordError>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenChangingEmailForUnclaimedMember_ReturnsMemberNotClaimed(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = orgUser.UserId!.Value, Email = "member@claimed.example.com" };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newEmail: "new@claimed.example.com", userToUpdate: userToUpdate);
+
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { [orgUser.Id] = false });
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<MemberNotClaimedError>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenNewEmailDomainNotVerified_ReturnsNewEmailDomainNotClaimed(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = orgUser.UserId!.Value, Email = "member@claimed.example.com" };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newEmail: "new@unclaimed.example.com", userToUpdate: userToUpdate);
+
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { [orgUser.Id] = true });
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<OrganizationDomain> { new() { DomainName = "claimed.example.com" } });
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<NewEmailDomainNotClaimedError>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenChangingEmailForClaimedNoMasterPasswordMemberOnVerifiedDomain_ReturnsValid(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = orgUser.UserId!.Value, Email = "member@claimed.example.com" };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newEmail: "new@claimed.example.com", userToUpdate: userToUpdate);
+
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { [orgUser.Id] = true });
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<OrganizationDomain> { new() { DomainName = "claimed.example.com" } });
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+    }
+
     private static UpdateOrganizationUserRequest CreateRequest(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         OrganizationUser organizationUser,
@@ -270,7 +396,9 @@ public class UpdateOrganizationUserValidatorTests
         List<CollectionAccessSelection> collectionAccessToSave = null,
         IEnumerable<Guid> groups = null,
         ICollection<Collection> collectionsToSave = null,
-        Permissions newPermissions = null)
+        Permissions newPermissions = null,
+        string newEmail = null,
+        User userToUpdate = null)
     {
         // IOrganizationUserValidationService is auto-mocked; an unstubbed CanManageRoleChange returns null
         // ("allowed"), so the escalation check passes by default. Its role rules have their own unit tests.
@@ -300,8 +428,11 @@ public class UpdateOrganizationUserValidatorTests
                 })
                 .ToList(), collectionAccessToSave ?? []),
             groups,
+            newEmail,
+            null,
+            null,
             actingUser,
-            null);
+            userToUpdate);
     }
 
     private static Organization CreateOrganization(Guid id, PlanType planType, bool useCustomPermissions = true) =>

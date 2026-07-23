@@ -8,6 +8,8 @@ using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
@@ -15,7 +17,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUse
 public class UpdateOrganizationUserValidator(
     IGroupRepository groupRepository,
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-    IOrganizationUserValidationService organizationUserValidationService)
+    IOrganizationUserValidationService organizationUserValidationService,
+    IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
+    IOrganizationDomainRepository organizationDomainRepository)
     : IUpdateOrganizationUserValidator
 {
     public async Task<ValidationResult<UpdateOrganizationUserRequest>> ValidateAsync(
@@ -30,6 +34,7 @@ public class UpdateOrganizationUserValidator(
 
         var freeOrgAdminError = await organizationUserValidationService.ValidateFreeOrgAdminLimitAsync(
             organizationUser.UserId, request.Organization.PlanType, organizationUser.Type, request.NewType);
+
         if (freeOrgAdminError is not null)
         {
             return Invalid(request, freeOrgAdminError);
@@ -83,7 +88,60 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new ManageMutuallyExclusive());
         }
 
+        var emailChangeError = await ValidateEmailChangeAsync(request);
+        if (emailChangeError is not null)
+        {
+            return Invalid(request, emailChangeError);
+        }
+
         return Valid(request);
+    }
+
+    /// <summary>
+    /// A member's email may only be changed when they are claimed by the organization, have no master
+    /// password, and the new email is on a domain the organization has verified. Returns null when no
+    /// email change is requested or the email is unchanged.
+    /// </summary>
+    private async Task<Error?> ValidateEmailChangeAsync(UpdateOrganizationUserRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.NewEmail))
+        {
+            return null;
+        }
+
+        var organizationUser = request.OrganizationUserToUpdate;
+
+        if (request.UserToUpdate is null || !organizationUser.UserId.HasValue)
+        {
+            return new MemberNotClaimedError();
+        }
+
+        if (string.Equals(request.UserToUpdate.Email, request.NewEmail, StringComparison.InvariantCultureIgnoreCase))
+        {
+            return null;
+        }
+
+        if (request.UserToUpdate.HasMasterPassword())
+        {
+            return new MemberHasMasterPasswordError();
+        }
+
+        var claimedStatus = await getOrganizationUsersClaimedStatusQuery
+            .GetUsersOrganizationClaimedStatusAsync(request.Organization.Id, [organizationUser.Id]);
+        if (!claimedStatus.TryGetValue(organizationUser.Id, out var isClaimed) || !isClaimed)
+        {
+            return new MemberNotClaimedError();
+        }
+
+        var newDomain = EmailValidation.GetDomain(request.NewEmail);
+        var verifiedDomains = await organizationDomainRepository
+            .GetVerifiedDomainsByOrganizationIdsAsync([request.Organization.Id]);
+        if (!verifiedDomains.Any(d => string.Equals(d.DomainName, newDomain, StringComparison.InvariantCultureIgnoreCase)))
+        {
+            return new NewEmailDomainNotClaimedError();
+        }
+
+        return null;
     }
 
     /// <summary>

@@ -21,6 +21,8 @@ public class ChangeEmailCommand(
     private readonly TimeProvider _timeProvider = timeProvider;
     private readonly ILogger<ChangeEmailCommand> _logger = logger;
 
+    public const string EmailAlreadyInUseError = "Email already in use.";
+
     /// <inheritdoc />
     public async Task ChangeEmailAsync(User user, string newEmail)
     {
@@ -29,7 +31,7 @@ public class ChangeEmailCommand(
         var existingUser = await _userRepository.GetByEmailAsync(newEmail);
         if (existingUser != null && existingUser.Id != user.Id)
         {
-            throw new BadRequestException("Email already in use.");
+            throw new BadRequestException(EmailAlreadyInUseError);
         }
 
         var previousEmail = user.Email;
