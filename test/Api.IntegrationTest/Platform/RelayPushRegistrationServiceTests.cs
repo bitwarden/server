@@ -50,14 +50,12 @@ public class RelayPushRegistrationServiceTests
             services.AddLogging(b => b.AddFakeLogging());
         });
 
-        // Null SDK key forces LaunchDarkly into offline mode (TestData.DataSource + NoEvents),
-        // eliminating all outbound network connections. Without this, LdClient tries to open
-        // a streaming connection to LaunchDarkly on the first request. In CI, outbound packets
-        // are dropped rather than refused, so the TCP handshake hangs for ~88 s (OS SYN-timeout)
-        // before the LdClient constructor can complete — which keeps the TestHost response-body
-        // pipe writer open, stalling the client's PipeReader for the same duration even though
-        // the server logged "Request finished 200" within ~1 s.
-        _cloudApi.Identity.UpdateConfiguration("globalSettings:launchDarkly:sdkKey", null);
+        // Substitute the SDK feature service so LaunchDarklyClientProvider is never instantiated
+        // and no outbound connections to LaunchDarkly are made. In CI, those connections hang
+        // because packets are dropped (TCP SYN-timeout ~2 min) rather than refused, stalling the
+        // TestHost response-body pipe writer even though the server logs "Request finished 200".
+        _cloudApi.Identity.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(
+            service => { });
 
         var cloudApiHttpClient = _cloudApi.CreateClient();
         // Access the identity server's in-process handler directly so we can wrap it with
