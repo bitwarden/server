@@ -238,7 +238,7 @@ public class UpdateOrganizationUserValidatorTests
 
         sutProvider.GetDependency<IOrganizationUserValidationService>()
             .CanManageRoleChangeAsync(Arg.Any<Guid>(), Arg.Any<IOrganizationUserRole>(), Arg.Any<IOrganizationUserRole>(),
-                Arg.Any<OrganizationUserType>(), Arg.Any<Permissions>())
+                Arg.Any<IOrganizationUserRole>())
             .Returns(new CustomUsersCannotManageAdminsOrOwners());
 
         var result = await sutProvider.Sut.ValidateAsync(request);

@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 
@@ -39,11 +38,10 @@ public interface IOrganizationUserValidationService
     /// <param name="actingUserId">The acting user's id, used to resolve provider authority.</param>
     /// <param name="actingUser">The acting user's role.</param>
     /// <param name="targetUser">The member being managed, with their current role.</param>
-    /// <param name="targetNewUserType">The role the target member is being changed to.</param>
-    /// <param name="targetNewPermissions">The custom permissions being granted, if any.</param>
+    /// <param name="newTargetUser">The updated member being managed (desired role and permissions).</param>
     /// <returns><c>null</c> when allowed, otherwise the error describing the denial.</returns>
     Task<Error?> CanManageRoleChangeAsync(Guid actingUserId, IOrganizationUserRole actingUser, IOrganizationUserRole targetUser,
-        OrganizationUserType targetNewUserType, Permissions? targetNewPermissions);
+        IOrganizationUserRole newTargetUser);
 
     /// <summary>
     /// On a Free plan, a user may only be an Admin or Owner of a single organization. Checks whether giving the user

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
@@ -46,6 +47,9 @@ public class OrganizationUserValidationServiceTests
 
     private static OrganizationUser TargetUser(OrganizationUserType role) =>
         new() { Type = role, OrganizationId = _organizationId };
+
+    private static OrganizationUserRole NewRole(OrganizationUserType type, Permissions? permissions = null) =>
+        new(type, _organizationId, permissions);
 
     [Theory]
     [InlineData(OrganizationUserType.Owner, OrganizationUserType.Owner)]
@@ -160,7 +164,7 @@ public class OrganizationUserValidationServiceTests
     {
         // An Admin promoting a User to Custom can manage both the current and new role.
         var result = await _sut.CanManageRoleChangeAsync(_actingUserId, ActingUser(OrganizationUserType.Admin)!,
-            TargetUser(OrganizationUserType.User), OrganizationUserType.Custom, targetNewPermissions: null);
+            TargetUser(OrganizationUserType.User), NewRole(OrganizationUserType.Custom));
 
         Assert.Null(result);
     }
@@ -174,7 +178,7 @@ public class OrganizationUserValidationServiceTests
             .Returns([]);
 
         var result = await _sut.CanManageRoleChangeAsync(_actingUserId, ActingUser(OrganizationUserType.Custom)!,
-            TargetUser(OrganizationUserType.User), OrganizationUserType.Admin, targetNewPermissions: null);
+            TargetUser(OrganizationUserType.User), NewRole(OrganizationUserType.Admin));
 
         Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(result);
     }
@@ -188,7 +192,7 @@ public class OrganizationUserValidationServiceTests
             .Returns([]);
 
         var result = await _sut.CanManageRoleChangeAsync(_actingUserId, ActingUser(OrganizationUserType.Admin)!,
-            TargetUser(OrganizationUserType.Owner), OrganizationUserType.User, targetNewPermissions: null);
+            TargetUser(OrganizationUserType.Owner), NewRole(OrganizationUserType.User));
 
         Assert.IsType<OnlyOwnersCanManageOwners>(result);
     }
@@ -202,7 +206,7 @@ public class OrganizationUserValidationServiceTests
             .Returns([]);
 
         var result = await _sut.CanManageRoleChangeAsync(_actingUserId, ActingUser(OrganizationUserType.Admin)!,
-            TargetUser(OrganizationUserType.User), OrganizationUserType.Owner, targetNewPermissions: null);
+            TargetUser(OrganizationUserType.User), NewRole(OrganizationUserType.Owner));
 
         Assert.IsType<OnlyOwnersCanManageOwners>(result);
     }
@@ -214,7 +218,7 @@ public class OrganizationUserValidationServiceTests
         var actingUser = CustomUser(new Permissions { ManageUsers = true });
 
         var result = await _sut.CanManageRoleChangeAsync(_actingUserId, actingUser, TargetUser(OrganizationUserType.Custom),
-            OrganizationUserType.Custom, new Permissions { ManageSso = true });
+            NewRole(OrganizationUserType.Custom, new Permissions { ManageSso = true }));
 
         Assert.IsType<CustomUsersCanOnlyGrantOwnPermissions>(result);
     }
@@ -225,7 +229,7 @@ public class OrganizationUserValidationServiceTests
         var actingUser = CustomUser(new Permissions { ManageUsers = true });
 
         var result = await _sut.CanManageRoleChangeAsync(_actingUserId, actingUser, TargetUser(OrganizationUserType.Custom),
-            OrganizationUserType.Custom, new Permissions { ManageUsers = true });
+            NewRole(OrganizationUserType.Custom, new Permissions { ManageUsers = true }));
 
         Assert.Null(result);
     }
@@ -235,8 +239,8 @@ public class OrganizationUserValidationServiceTests
     {
         // Owners are exempt from the grant-subset check.
         var result = await _sut.CanManageRoleChangeAsync(_actingUserId, ActingUser(OrganizationUserType.Owner)!,
-            TargetUser(OrganizationUserType.Custom), OrganizationUserType.Custom,
-            new Permissions { ManageScim = true, ManageSso = true });
+            TargetUser(OrganizationUserType.Custom),
+            NewRole(OrganizationUserType.Custom, new Permissions { ManageScim = true, ManageSso = true }));
 
         Assert.Null(result);
     }

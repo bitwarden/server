@@ -102,12 +102,16 @@ public class UpdateOrganizationUserValidator(
             request.OrganizationUserToUpdate.OrganizationId,
             standardUser.Permissions);
 
+        var newTargetUser = new OrganizationUserRole(
+            request.NewType,
+            request.OrganizationUserToUpdate.OrganizationId,
+            request.NewPermissions);
+
         return await organizationUserValidationService.CanManageRoleChangeAsync(
             standardUser.UserId!.Value,
             actingUser,
             request.OrganizationUserToUpdate,
-            request.NewType,
-            request.NewPermissions);
+            newTargetUser);
     }
 
     private static bool CollectionsAreValid(List<CollectionAccessSelection> collectionAccess,

@@ -25,21 +25,22 @@ public class OrganizationUserValidationService(
     }
 
     public async Task<Error?> CanManageRoleChangeAsync(Guid actingUserId, IOrganizationUserRole actingUser,
-        IOrganizationUserRole targetUser, OrganizationUserType targetNewUserType, Permissions? targetNewPermissions)
+        IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
     {
         // Must be able to manage both the current and requested role.
         var authorizedByRole = IsAuthorizedByRole(actingUser, targetUser.Type)
-                               && IsAuthorizedByRole(actingUser, targetNewUserType);
+                               && IsAuthorizedByRole(actingUser, newTargetUser.Type);
 
+        // TODO Extract this out to be used by both CanManages
         if (!authorizedByRole && !await IsProviderAsync(actingUserId, targetUser.OrganizationId))
         {
             // Only an Owner can manage an Owner; otherwise it's a Custom user reaching above their authority.
-            return targetUser.Type == OrganizationUserType.Owner || targetNewUserType == OrganizationUserType.Owner
+            return targetUser.Type == OrganizationUserType.Owner || newTargetUser.Type == OrganizationUserType.Owner
                 ? new OnlyOwnersCanManageOwners()
                 : new CustomUsersCannotManageAdminsOrOwners();
         }
 
-        return ValidateCustomPermissionsGrant(actingUser, targetNewUserType, targetNewPermissions);
+        return ValidateCustomPermissionsGrant(actingUser, newTargetUser);
     }
 
     public async Task<Error?> ValidateFreeOrgAdminLimitAsync(Guid? userId, PlanType planType,
@@ -61,11 +62,13 @@ public class OrganizationUserValidationService(
     }
 
     private static CustomUsersCanOnlyGrantOwnPermissions? ValidateCustomPermissionsGrant(
-        IOrganizationUserRole actingUser, OrganizationUserType targetNewUserType, Permissions? targetNewPermissions)
+        IOrganizationUserRole actingUser, IOrganizationUserRole newTargetUser)
     {
+        var newTargetPermissions = newTargetUser.GetPermissions();
+
         // Owners and Admins can grant any custom permission; the check only applies to a Custom grantor.
-        if (targetNewUserType != OrganizationUserType.Custom
-            || targetNewPermissions is null
+        if (newTargetUser.Type != OrganizationUserType.Custom
+            || newTargetPermissions is null
             || actingUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin)
         {
             return null;
@@ -75,7 +78,7 @@ public class OrganizationUserValidationService(
             .ClaimsMap.ToDictionary(c => c.ClaimName, c => c.Permission);
 
         // The acting user must also hold every granted permission.
-        return targetNewPermissions.ClaimsMap.Any(granted => granted.Permission && !actorClaims[granted.ClaimName])
+        return newTargetPermissions.ClaimsMap.Any(granted => granted.Permission && !actorClaims[granted.ClaimName])
             ? new CustomUsersCanOnlyGrantOwnPermissions()
             : null;
     }
