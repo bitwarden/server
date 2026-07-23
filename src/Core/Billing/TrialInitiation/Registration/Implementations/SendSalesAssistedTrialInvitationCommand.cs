@@ -26,6 +26,11 @@ public class SendSalesAssistedTrialInvitationCommand(
         int trialLength,
         bool paymentOptional)
     {
+        if (productTier == ProductTierType.TeamsStarter)
+        {
+            throw new BadRequestException("Teams Starter is no longer available for new trials.");
+        }
+
         if (trialLength is < 0 or > 30)
         {
             throw new BadRequestException("Trial length must be between 0 and 30 days.");

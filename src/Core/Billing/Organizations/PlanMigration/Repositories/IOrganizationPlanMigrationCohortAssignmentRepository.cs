@@ -41,4 +41,15 @@ public interface IOrganizationPlanMigrationCohortAssignmentRepository
     /// <param name="take">Maximum number of rows to return.</param>
     Task<IReadOnlyList<CohortAssignmentExportRow>> GetExportRowsByCohortIdAsync(
         Guid cohortId, DateTime? afterCreationDate, Guid? afterId, int take);
+
+    /// <summary>
+    /// Returns a list of assignments that are candidates for sending invoices,
+    /// based on the ExpirationDate of the organization's current plan.
+    /// This is used to identify which organizations should receive invoice notifications for their upcoming plan migrations.
+    /// </summary>
+    /// <param name="minDays">The minimum number of days from today for the ExpirationDate.</param>
+    /// <param name="maxDays">The maximum number of days from today for the ExpirationDate.</param>
+    /// <returns>A list of assignments that are eligible for sending invoices.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="minDays"/> is greater than <paramref name="maxDays"/>.</exception>
+    Task<IReadOnlyList<OrganizationPlanMigrationCohortAssignment>> GetSendInvoiceCandidatesInWindowAsync(int minDays, int maxDays);
 }
