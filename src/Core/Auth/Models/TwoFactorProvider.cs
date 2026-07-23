@@ -50,7 +50,11 @@ public class TwoFactorProvider
         public string? CredType { get; internal set; }
         public DateTime? RegDate { get; internal set; }
         public Guid? AaGuid { get; internal set; }
-        public bool? Migrated { get; internal set; }
+        /// <summary>
+        /// Migrated is used to track the transition between U2F and WebAuthn. 
+        /// It is set to `true` for credentials created as U2F and have been migrated to WebAuthn.
+        /// </summary>
+        public bool Migrated { get; internal set; } = default;
     }
 
     public static bool RequiresPremium(TwoFactorProviderType type)
