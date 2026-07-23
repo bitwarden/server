@@ -3443,7 +3443,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenBusinessMigrationCompleted_SuppressesStandardUpcomingInvoiceEmail()
+    public async Task HandleAsync_WhenBusinessMigrationCompleted_DoesNotSendStandardUpcomingInvoiceEmail()
     {
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
         var subscription = new Subscription
@@ -3482,7 +3482,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenBusinessMigrationCompletedWithoutNotification_SuppressesStandardEmailAndLogsError()
+    public async Task HandleAsync_WhenBusinessMigrationCompletedWithoutNotification_DoesNotSendStandardEmailAndLogsError()
     {
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
         var subscription = new Subscription
@@ -3721,5 +3721,85 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<string>(),
             Arg.Is<CustomerGetOptions>(options =>
                 options.Expand != null && options.Expand.All(path => path.Split('.').Length <= 4)));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenFreeTier_DoesNotInvokeCoordinator_AndSendsNoStandardEmail()
+    {
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Metadata = new Dictionary<string, string>(),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true }
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" }
+        };
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.Free
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(new Invoice { CustomerId = "cus_123" });
+        _stripeAdapter.GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.Free).Returns(new FreePlan());
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        await _sut.HandleAsync(parsedEvent);
+
+        await _businessPlanMigrationCoordinator.DidNotReceiveWithAnyArgs().ExecuteAsync(default!, default!);
+        await _mailService.DidNotReceive().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<decimal>(), Arg.Any<DateTime>(), Arg.Any<List<string>>(), Arg.Any<bool>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTeamsStarterTier_RoutesToBusinessMigration_AndDoesNotSendStandardEmail()
+    {
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Metadata = new Dictionary<string, string>(),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true }
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" }
+        };
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.TeamsStarter2023
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(new Invoice { CustomerId = "cus_123" });
+        _stripeAdapter.GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _businessPlanMigrationCoordinator.ExecuteAsync(organization, subscription)
+            .Returns(BusinessPlanMigrationResult.Completed);
+
+        await _sut.HandleAsync(parsedEvent);
+
+        await _businessPlanMigrationCoordinator.Received(1).ExecuteAsync(organization, subscription);
+        await _mailService.DidNotReceiveWithAnyArgs().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<decimal>(), Arg.Any<DateTime>(), Arg.Any<List<string>>(), Arg.Any<bool>());
     }
 }

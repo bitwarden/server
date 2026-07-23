@@ -47,7 +47,7 @@ public class BusinessPlanMigrationCoordinatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExecuteAsync_WhenSchedulerDeclines_ReturnsNotScheduled(
+    public async Task ExecuteAsync_WhenSchedulerReturnsFalse_ReturnsNotScheduled(
         SutProvider<BusinessPlanMigrationCoordinator> sutProvider, Organization organization,
         OrganizationPlanMigrationCohortAssignment assignment)
     {
@@ -98,7 +98,7 @@ public class BusinessPlanMigrationCoordinatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExecuteAsync_WhenNotifierDeclines_ReturnsCompletedWithoutNotification_AndDoesNotStamp(
+    public async Task ExecuteAsync_WhenNotifierReturnsFalse_ReturnsCompletedWithoutNotification_AndDoesNotStamp(
         SutProvider<BusinessPlanMigrationCoordinator> sutProvider, Organization organization,
         OrganizationPlanMigrationCohortAssignment assignment, OrganizationPlanMigrationCohort cohort)
     {
