@@ -51,11 +51,16 @@ public class RelayPushRegistrationServiceTests
         });
 
         var cloudApiHttpClient = _cloudApi.CreateClient();
-        var cloudIdentityHttpClient = _cloudApi.Identity.CreateClient();
-        // Default HttpClient.Timeout is 100 s. Lower it so that thread-pool starvation
-        // (the suspected flakiness cause) surfaces as a fast failure rather than a
-        // 100-second hang, making it easier to reproduce and cheaper to observe in CI.
-        cloudIdentityHttpClient.Timeout = TimeSpan.FromSeconds(10);
+        // Access the identity server's in-process handler directly so we can wrap it with
+        // a timing handler. _cloudApi.CreateClient() above already triggered identity server
+        // startup (ApiApplicationFactory wires the JWT backchannel to the identity TestServer),
+        // so Server is ready here without double-starting.
+        var identityBaseHandler = _cloudApi.Identity.Server.CreateHandler();
+        var identityTimingHandler = new IdentityTimingHandler(output) { InnerHandler = identityBaseHandler };
+        var cloudIdentityHttpClient = new HttpClient(identityTimingHandler)
+        {
+            Timeout = TimeSpan.FromSeconds(10)
+        };
 
         var httpClientFactory = Substitute.For<IHttpClientFactory>();
 
@@ -106,6 +111,43 @@ public class RelayPushRegistrationServiceTests
     {
         DumpCollector($"RelayPushRegistrationService logs ({context})", _logCollector);
         DumpCollector($"Identity server logs ({context})", _cloudApi.Identity.GetService<FakeLogCollector>());
+    }
+
+    /// <summary>
+    /// Wraps the identity server's in-process handler to log the timing of each HTTP phase.
+    /// <para>
+    /// When the identity server finishes writing the response, the server-side log shows
+    /// "Request finished … 200 … Xms". But the client can still hang reading the response
+    /// body from the TestHost pipe. This handler reveals which phase stalls:
+    /// <list type="bullet">
+    ///   <item>If "inner handler returned" never appears, the TestHost pipeline itself is stuck.</item>
+    ///   <item>If "inner handler returned" appears but the test still hangs, HttpClient is stuck
+    ///         buffering the response body (ResponseContentRead mode) from the pipe.</item>
+    /// </list>
+    /// </para>
+    /// </summary>
+    private sealed class IdentityTimingHandler(ITestOutputHelper output) : DelegatingHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var sw = Stopwatch.StartNew();
+            output.WriteLine($"[identity→] {request.Method} {request.RequestUri} (sending)");
+            try
+            {
+                var response = await base.SendAsync(request, cancellationToken);
+                output.WriteLine(
+                    $"[identity←] inner handler returned {(int)response.StatusCode} at {sw.ElapsedMilliseconds}ms " +
+                    $"(headers ready; HttpClient will now read body)");
+                return response;
+            }
+            catch (Exception ex)
+            {
+                output.WriteLine(
+                    $"[identity✗] {ex.GetType().Name} after {sw.ElapsedMilliseconds}ms: {ex.Message}");
+                throw;
+            }
+        }
     }
 
     private void DumpCollector(string label, FakeLogCollector collector)
