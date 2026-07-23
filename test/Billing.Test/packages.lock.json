@@ -750,14 +750,14 @@
       },
       "Microsoft.Extensions.Caching.Memory": {
         "type": "Transitive",
-        "resolved": "9.0.13",
-        "contentHash": "OdQmN8LYcUEu20Fxii9mk68nHJGL+JPXF3w0+hxenf0oDDdDBA+ZV/S92FmIgAWAElowIiFA/g0x+8YB1g80Hg==",
+        "resolved": "10.0.1",
+        "contentHash": "NxqSP0Ky4dZ5ybszdZCqs1X2C70s+dXflqhYBUh/vhcQVTIooNCXIYnLVbafoAFGZMs51d9+rHxveXs0ZC3SQQ==",
         "dependencies": {
-          "Microsoft.Extensions.Caching.Abstractions": "9.0.13",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.13",
-          "Microsoft.Extensions.Logging.Abstractions": "9.0.13",
-          "Microsoft.Extensions.Options": "9.0.13",
-          "Microsoft.Extensions.Primitives": "9.0.13"
+          "Microsoft.Extensions.Caching.Abstractions": "10.0.1",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.1",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.1",
+          "Microsoft.Extensions.Options": "10.0.1",
+          "Microsoft.Extensions.Primitives": "10.0.1"
         }
       },
       "Microsoft.Extensions.Caching.SqlServer": {
@@ -1468,11 +1468,12 @@
       },
       "StackExchange.Redis": {
         "type": "Transitive",
-        "resolved": "2.8.31",
-        "contentHash": "RCHVQa9Zke8k0oBgJn1Yl6BuYy8i6kv+sdMObiH60nOwD6QvWAjxdDwOm+LO78E8WsGiPqgOuItkz98fPS6haQ==",
+        "resolved": "2.10.1",
+        "contentHash": "se08WZvD42H3bV4XBW07pupTiE2/72qStKyi/lRqqcijksFWfRtwLTuhFtZ4OX19f4+we/2qruFZBXYJBFc8PQ==",
         "dependencies": {
-          "Microsoft.Extensions.Logging.Abstractions": "6.0.0",
-          "Pipelines.Sockets.Unofficial": "2.2.8"
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.0",
+          "Pipelines.Sockets.Unofficial": "2.2.8",
+          "System.IO.Hashing": "9.0.10"
         }
       },
       "starkbank-ecdsa": {
@@ -1560,8 +1561,8 @@
       },
       "System.IO.Hashing": {
         "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "ne1843evDugl0md7Fjzy6QjJrzsjh46ZKbhf8GwBXb5f/gw97J4bxMs0NQKifDuThh/f0bZ0e62NPl1jzTuRqA=="
+        "resolved": "9.0.10",
+        "contentHash": "9gv5z71xaWWmcGEs4bXdreIhKp2kYLK2fvPK5gQkgnWMYvZ8ieaxKofDjxL3scZiEYfi/yW2nJTiKV2awcWEdA=="
       },
       "System.Memory.Data": {
         "type": "Transitive",
@@ -1646,27 +1647,27 @@
       },
       "ZiggyCreatures.FusionCache": {
         "type": "Transitive",
-        "resolved": "2.0.2",
-        "contentHash": "nO6ysiVP/1S1zVZMzsK0xASeSUay27iIlK8GjeyTpIAmq5P4/0KOzV9AqlabZYFgzeQDAu5IcB39ela2w/HCwQ==",
+        "resolved": "2.6.0",
+        "contentHash": "BCe+/SkwQZfaMpq2ZGDZB2pyx6BdGnP+zxqjMM/5K+4PBuH6hljZeIqH4KVzQ26khSbPsQ7IiYZl0Fve4OZOog==",
         "dependencies": {
-          "Microsoft.Extensions.Caching.Memory": "8.0.1"
+          "Microsoft.Extensions.Caching.Memory": "10.0.1"
         }
       },
       "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": {
         "type": "Transitive",
-        "resolved": "2.0.2",
-        "contentHash": "E9KfGnhY+xcy8bmxoB/jJbfYwBlQwDD6c0v0P/Qr3IxGyJXyncza/45vFo5nI+5CggqczQ1GwQeEJqk0Lg8Q5g==",
+        "resolved": "2.6.0",
+        "contentHash": "GHzTt4OVBzVcajgFUJ8oHLmBZJPF+pi044LKG5rTS44ECcSxfzzvSnVZoTPrECbPl3tG96TyiLM+P4uIvzZWPQ==",
         "dependencies": {
-          "StackExchange.Redis": "2.8.31",
-          "ZiggyCreatures.FusionCache": "2.0.2"
+          "StackExchange.Redis": "2.10.1",
+          "ZiggyCreatures.FusionCache": "2.6.0"
         }
       },
       "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": {
         "type": "Transitive",
-        "resolved": "2.0.2",
-        "contentHash": "gt5ia5PHpCxhnI0hr51Y6L/acrrU17OuBqiU3vJPFXZxS3R1pIj2hr6WGB5fzW64VZDVdHTYsD5gTr2Pu8I+QQ==",
+        "resolved": "2.6.0",
+        "contentHash": "A00mNC7xrkC8LUAQMkeB3OtVTfGzyTyHxTgAOwfqaFdazO/54d3fT8LFoekpgSslkvDjKAIPlyafqsFBPLgQIw==",
         "dependencies": {
-          "ZiggyCreatures.FusionCache": "2.0.2"
+          "ZiggyCreatures.FusionCache": "2.6.0"
         }
       },
       "billing": {
@@ -1724,6 +1725,7 @@
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
           "Braintree": "[5.36.0, 5.36.0]",
           "CsvHelper": "[33.1.0, 33.1.0]",
+          "Data": "[2026.7.0, )",
           "DnsClient": "[1.8.0, 1.8.0]",
           "Duende.IdentityServer": "[7.4.6, 7.4.6]",
           "DuoUniversal": "[1.3.1, 1.3.1]",
@@ -1762,9 +1764,9 @@
           "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]",
           "Stripe.net": "[48.5.0, 48.5.0]",
           "YubicoDotNetClient": "[1.2.0, 1.2.0]",
-          "ZiggyCreatures.FusionCache": "[2.0.2, 2.0.2]",
-          "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.0.2, 2.0.2]",
-          "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
+          "ZiggyCreatures.FusionCache": "[2.6.0, 2.6.0]",
+          "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.6.0, 2.6.0]",
+          "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.6.0, 2.6.0]"
         }
       },
       "core.test": {
@@ -1780,6 +1782,9 @@
           "NSubstitute": "[5.1.0, )",
           "xunit": "[2.6.6, )"
         }
+      },
+      "data": {
+        "type": "Project"
       },
       "infrastructure.dapper": {
         "type": "Project",
