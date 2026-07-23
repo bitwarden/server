@@ -48,7 +48,7 @@ public class BusinessPlanMigrationCoordinator(
             {
                 logger.LogError(
                     exception,
-                    "Business plan migration was scheduled for Organization ({OrganizationId}) subscription ({SubscriptionId}), but reloading the cohort assignment failed; the schedule is committed, so this will retry on a later run",
+                    "Business plan migration scheduled for Organization ({OrganizationId}) subscription ({SubscriptionId}) but reloading the cohort assignment failed; renewal notification not sent, manual notification may be required",
                     organization.Id, subscription.Id);
                 return BusinessPlanMigrationResult.CompletedWithoutNotification;
             }
@@ -61,8 +61,8 @@ public class BusinessPlanMigrationCoordinator(
             }
         }
 
-        // Notify phase: the schedule is committed, so failures here are caught (never fall back to the
-        // standard-email path) and leave the stamp null so a later run retries.
+        // Notify phase: the schedule is committed, so failures here are caught (never propagate) and leave
+        // the stamp null so the notification retries if this flow runs again for the organization.
         if (assignment.RenewalNotificationSentDate is null)
         {
             try
@@ -81,7 +81,7 @@ public class BusinessPlanMigrationCoordinator(
             {
                 logger.LogError(
                     exception,
-                    "Business renewal email failed for Organization ({OrganizationId}) subscription ({SubscriptionId}); the schedule is committed, so this will retry on a later run",
+                    "Business plan migration scheduled for Organization ({OrganizationId}) subscription ({SubscriptionId}) but the renewal notification did not complete; manual notification may be required",
                     organization.Id, subscription.Id);
                 return BusinessPlanMigrationResult.CompletedWithoutNotification;
             }
