@@ -1,7 +1,9 @@
 ﻿using System.Globalization;
 using System.Text;
 using Bit.Billing.Controllers;
+using Bit.Billing.Services;
 using Bit.Billing.Test.Utilities;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
@@ -34,6 +36,8 @@ public class PayPalControllerTests(ITestOutputHelper testOutputHelper)
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
     private readonly IPremiumUserBillingService _premiumUserBillingService = Substitute.For<IPremiumUserBillingService>();
+    private readonly IPayPalIPNClient _payPalIPNClient = Substitute.For<IPayPalIPNClient>();
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
 
     private const string _defaultWebhookKey = "webhook-key";
 
@@ -505,6 +509,170 @@ public class PayPalControllerTests(ITestOutputHelper testOutputHelper)
             transaction.Type == TransactionType.Refund));
     }
 
+    [Fact]
+    public async Task PostIpn_VerificationEnabled_Invalid_DoesNotProcess_Ok()
+    {
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
+
+        _billingSettings.Value.Returns(new BillingSettings
+        {
+            PayPal =
+            {
+                WebhookKey = _defaultWebhookKey,
+                BusinessId = "NHDYKLQ3L4LWL"
+            }
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM36079_PayPalIpnVerification).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(PayPalIPNVerificationResult.Invalid);
+
+        var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
+
+        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+
+        var result = await controller.PostIpn();
+
+        HasStatusCode(result, 200);
+
+        await _payPalIPNClient.Received(1).VerifyIPN("2PK15573S8089712Y", Arg.Any<string>());
+        await _transactionRepository.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<Transaction>());
+        await _paymentService.DidNotReceiveWithAnyArgs().CreditAccountAsync(Arg.Any<ISubscriber>(), Arg.Any<decimal>());
+
+        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): Verification returned INVALID; skipping processing");
+    }
+
+    [Fact]
+    public async Task PostIpn_VerificationEnabled_Unverified_StillProcesses_Ok()
+    {
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
+
+        _billingSettings.Value.Returns(new BillingSettings
+        {
+            PayPal =
+            {
+                WebhookKey = _defaultWebhookKey,
+                BusinessId = "NHDYKLQ3L4LWL"
+            }
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM36079_PayPalIpnVerification).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(PayPalIPNVerificationResult.Unverified);
+
+        var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
+
+        _transactionRepository.GetByGatewayIdAsync(
+            GatewayType.PayPal,
+            "2PK15573S8089712Y").ReturnsNull();
+
+        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+
+        var result = await controller.PostIpn();
+
+        HasStatusCode(result, 200);
+
+        await _payPalIPNClient.Received(1).VerifyIPN("2PK15573S8089712Y", Arg.Any<string>());
+        await _transactionRepository.Received().CreateAsync(Arg.Any<Transaction>());
+    }
+
+    [Fact]
+    public async Task PostIpn_VerificationEnabled_Verified_Processes_Ok()
+    {
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
+
+        _billingSettings.Value.Returns(new BillingSettings
+        {
+            PayPal =
+            {
+                WebhookKey = _defaultWebhookKey,
+                BusinessId = "NHDYKLQ3L4LWL"
+            }
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM36079_PayPalIpnVerification).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(PayPalIPNVerificationResult.Verified);
+
+        var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
+
+        _transactionRepository.GetByGatewayIdAsync(
+            GatewayType.PayPal,
+            "2PK15573S8089712Y").ReturnsNull();
+
+        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+
+        var result = await controller.PostIpn();
+
+        HasStatusCode(result, 200);
+
+        await _payPalIPNClient.Received(1).VerifyIPN("2PK15573S8089712Y", Arg.Any<string>());
+        await _transactionRepository.Received().CreateAsync(Arg.Any<Transaction>());
+    }
+
+    [Fact]
+    public async Task PostIpn_VerificationDisabled_DoesNotVerify_Ok()
+    {
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
+
+        _billingSettings.Value.Returns(new BillingSettings
+        {
+            PayPal =
+            {
+                WebhookKey = _defaultWebhookKey,
+                BusinessId = "NHDYKLQ3L4LWL"
+            }
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM36079_PayPalIpnVerification).Returns(false);
+
+        var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
+
+        _transactionRepository.GetByGatewayIdAsync(
+            GatewayType.PayPal,
+            "2PK15573S8089712Y").ReturnsNull();
+
+        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+
+        var result = await controller.PostIpn();
+
+        HasStatusCode(result, 200);
+
+        await _payPalIPNClient.DidNotReceiveWithAnyArgs().VerifyIPN(Arg.Any<string>(), Arg.Any<string>());
+        await _transactionRepository.Received().CreateAsync(Arg.Any<Transaction>());
+    }
+
+    [Fact]
+    public async Task PostIpn_VerificationEnabled_Invalid_DoesNotProcessRefund_Ok()
+    {
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
+
+        _billingSettings.Value.Returns(new BillingSettings
+        {
+            PayPal =
+            {
+                WebhookKey = _defaultWebhookKey,
+                BusinessId = "NHDYKLQ3L4LWL"
+            }
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM36079_PayPalIpnVerification).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(PayPalIPNVerificationResult.Invalid);
+
+        var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
+
+        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+
+        var result = await controller.PostIpn();
+
+        HasStatusCode(result, 200);
+
+        await _payPalIPNClient.Received(1).VerifyIPN("2PK15573S8089712Y", Arg.Any<string>());
+        await _transactionRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<Transaction>());
+        await _transactionRepository.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<Transaction>());
+    }
+
     private PayPalController ConfigureControllerContextWith(
         ILogger<PayPalController> logger,
         string? webhookKey,
@@ -519,7 +687,9 @@ public class PayPalControllerTests(ITestOutputHelper testOutputHelper)
             _transactionRepository,
             _userRepository,
             _providerRepository,
-            _premiumUserBillingService);
+            _premiumUserBillingService,
+            _payPalIPNClient,
+            _featureService);
 
         var httpContext = new DefaultHttpContext();
 
