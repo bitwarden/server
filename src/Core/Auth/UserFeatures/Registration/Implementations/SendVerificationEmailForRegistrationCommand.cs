@@ -89,8 +89,8 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
             // *not* woven into the tokenable — the tokenable is a stateless data-protected payload
             // with no server-side row to attach to. The value flows straight to the mail service
             // and is appended to the URL fragment. On the existing-user short-circuit branch
-            // below, the sealed data is silently discarded, matching today's 200+null anti-
-            // enumeration behavior.
+            // below, the sealed data is silently discarded so that the response is
+            // indistinguishable from this branch (anti-enumeration).
             var token = GenerateToken(email, name, receiveMarketingEmails);
             await _mailService.SendRegistrationVerificationEmailAsync(email, token, fromMarketing, sealedOpenOrgInviteData);
         }
