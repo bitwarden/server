@@ -19,6 +19,8 @@
     <WarningsNotAsErrors>$(WarningsNotAsErrors);BWA0001;BWA0002</WarningsNotAsErrors>
     <NuGetAuditLevel>critical</NuGetAuditLevel>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(MSBuildProjectName)' != 'AppHost'">true</RestoreLockedMode>
+    <RuntimeIdentifiers>linux-musl-x64;linux-musl-arm64;linux-musl-arm</RuntimeIdentifiers>
   </PropertyGroup>
 
   <PropertyGroup>

@@ -33,7 +33,7 @@ COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/src/Admin
-RUN . /tmp/rid.txt && dotnet restore -r $RID
+RUN dotnet restore
 
 # Build project
 RUN . /tmp/rid.txt && dotnet publish \
