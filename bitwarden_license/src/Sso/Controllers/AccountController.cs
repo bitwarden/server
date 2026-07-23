@@ -340,6 +340,24 @@ public class AccountController : Controller
 
                 return Redirect(redirectUrl);
             }
+            catch (SsoAuthnRequiresPreexistingMembershipException ex)
+            {
+                // JIT provisioning is disabled for this org and the login has no pre-existing
+                // membership to attach to. Same cleanup + redirect contract as the catches above;
+                // emits the JitProvisioningDisabled errorCode so the client can prompt the user to
+                // contact their administrator to be provisioned first.
+                await HttpContext.SignOutAsync(
+                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+
+                var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+                    _globalSettings.BaseServiceUri.VaultWithHash,
+                    ex.UserEmail,
+                    ex.OrganizationId,
+                    ex.OrganizationDisplayName,
+                    SsoRedirectUrlBuilder.ErrorCodes.JitProvisioningDisabled);
+
+                return Redirect(redirectUrl);
+            }
 #nullable restore
         }
 
@@ -623,6 +641,19 @@ public class AccountController : Controller
             await CreateSsoUserRecordAsync(providerUserId, guaranteedExistingUser.Id, organization.Id, guaranteedOrgUser);
 
             return (guaranteedExistingUser, organization, guaranteedOrgUser);
+        }
+
+        // If JIT provisioning is disabled for this organization, refuse to create a brand-new account
+        // for a login that has no existing Bitwarden user (possibleExistingUser is null here) and no
+        // existing organization membership. Admin-invited and SCIM-provisioned users arrive with a
+        // pre-existing OrganizationUser (possibleOrgUser != null) and are unaffected — only truly
+        // net-new logins are blocked. This closes the SSO email-fallback JIT provisioning vector.
+        if (ssoConfigData.DisableJitProvisioning && possibleOrgUser == null)
+        {
+            throw new SsoAuthnRequiresPreexistingMembershipException(
+                organization.Id,
+                organization.DisplayName(),
+                email ?? string.Empty);
         }
 
         // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
