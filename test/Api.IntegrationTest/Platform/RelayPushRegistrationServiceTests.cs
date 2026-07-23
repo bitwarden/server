@@ -57,6 +57,12 @@ public class RelayPushRegistrationServiceTests
         _cloudApi.Identity.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(
             service => { });
 
+        // Disable OpenTelemetry OTLP exporters. The SDK registers OTLP metric and trace exporters
+        // by default when not self-hosted. In CI those exporters attempt outbound TCP connections
+        // to a collector endpoint that drops packets (SYN-timeout ~95 s), stalling the TestHost
+        // pipeline in the same way as the LaunchDarkly connection above.
+        _cloudApi.Identity.UpdateConfiguration("OpenTelemetry:Enabled", "false");
+
         var cloudApiHttpClient = _cloudApi.CreateClient();
         // Access the identity server's in-process handler directly so we can wrap it with
         // a timing handler. _cloudApi.CreateClient() above already triggered identity server
