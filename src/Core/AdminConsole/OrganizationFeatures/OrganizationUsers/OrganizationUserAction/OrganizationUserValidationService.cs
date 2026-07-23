@@ -43,7 +43,7 @@ public class OrganizationUserValidationService(
         OrganizationUserType currentUserType, OrganizationUserType newUserType)
     {
         if (planType != PlanType.Free
-            || !userId.HasValue
+            || !userId.HasValue // OrgUser is not linked to a User yet, so we can't evaluate their other memberships; this will be enforced on accept/confirm flows instead.
             || newUserType is not (OrganizationUserType.Admin or OrganizationUserType.Owner))
         {
             return null;
