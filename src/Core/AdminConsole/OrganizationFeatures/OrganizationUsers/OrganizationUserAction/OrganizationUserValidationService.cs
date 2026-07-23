@@ -21,7 +21,7 @@ public class OrganizationUserValidationService(
             return null;
         }
 
-        return new CannotManageTargetUser();
+        return CannotManageError(targetUser.Type);
     }
 
     public async Task<Error?> CanManageRoleChangeAsync(Guid actingUserId, IOrganizationUserRole actingUser,
@@ -31,13 +31,9 @@ public class OrganizationUserValidationService(
         var authorizedByRole = IsAuthorizedByRole(actingUser, targetUser.Type)
                                && IsAuthorizedByRole(actingUser, newTargetUser.Type);
 
-        // TODO Extract this out to be used by both CanManages
         if (!authorizedByRole && !await IsProviderAsync(actingUserId, targetUser.OrganizationId))
         {
-            // Only an Owner can manage an Owner; otherwise it's a Custom user reaching above their authority.
-            return targetUser.Type == OrganizationUserType.Owner || newTargetUser.Type == OrganizationUserType.Owner
-                ? new OnlyOwnersCanManageOwners()
-                : new CustomUsersCannotManageAdminsOrOwners();
+            return CannotManageError(targetUser.Type, newTargetUser.Type);
         }
 
         return ValidateCustomPermissionsGrant(actingUser, newTargetUser);
@@ -82,6 +78,11 @@ public class OrganizationUserValidationService(
             ? new CustomUsersCanOnlyGrantOwnPermissions()
             : null;
     }
+
+    private static BadRequestError CannotManageError(params OrganizationUserType[] targetTypes) =>
+        targetTypes.Contains(OrganizationUserType.Owner)
+            ? new OnlyOwnersCanManageOwners()
+            : new CustomUsersCannotManageAdminsOrOwners();
 
     private static bool IsAuthorizedByRole(IOrganizationUserRole? actingUser, OrganizationUserType targetType) =>
         actingUser switch

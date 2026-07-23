@@ -4,7 +4,7 @@ using Bit.Core.Models.Data;
 namespace Bit.Core.AdminConsole.Models.Data;
 
 /// <summary>
-/// The minimal role information needed to authorize whether one member can manage another.
+/// Minimal role information for a user.
 /// </summary>
 public interface IOrganizationUserRole
 {

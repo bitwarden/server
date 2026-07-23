@@ -27,7 +27,7 @@ public interface IOrganizationUserValidationService
     /// <param name="actingUserId">The acting user's id, used to resolve provider authority.</param>
     /// <param name="actingUser">The acting user's role, or <c>null</c> if not a confirmed member.</param>
     /// <param name="targetUser">The member being managed.</param>
-    /// <returns><c>null</c> when allowed, otherwise a <see cref="CannotManageTargetUser"/>.</returns>
+    /// <returns><c>null</c> when allowed, otherwise the error explaining why.</returns>
     Task<Error?> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser);
 
     /// <summary>

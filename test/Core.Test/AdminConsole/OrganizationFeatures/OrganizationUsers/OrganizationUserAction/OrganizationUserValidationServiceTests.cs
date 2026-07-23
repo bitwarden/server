@@ -71,12 +71,13 @@ public class OrganizationUserValidationServiceTests
     }
 
     [Theory]
-    [InlineData(OrganizationUserType.Admin, OrganizationUserType.Owner)]
-    [InlineData(OrganizationUserType.Custom, OrganizationUserType.Owner)]
-    [InlineData(OrganizationUserType.Custom, OrganizationUserType.Admin)]
-    public async Task CanManageAsync_WhenTargetRoleOutranksActingUser_ReturnsCannotManageTargetUser(
+    [InlineData(OrganizationUserType.Admin, OrganizationUserType.Owner, typeof(OnlyOwnersCanManageOwners))]
+    [InlineData(OrganizationUserType.Custom, OrganizationUserType.Owner, typeof(OnlyOwnersCanManageOwners))]
+    [InlineData(OrganizationUserType.Custom, OrganizationUserType.Admin, typeof(CustomUsersCannotManageAdminsOrOwners))]
+    public async Task CanManageAsync_WhenTargetRoleOutranksActingUser_ReturnsGranularError(
         OrganizationUserType actingRole,
-        OrganizationUserType targetRole)
+        OrganizationUserType targetRole,
+        Type expectedError)
     {
         _providerUserRepository
             .GetManyOrganizationDetailsByUserAsync(_actingUserId, ProviderUserStatusType.Confirmed)
@@ -84,17 +85,18 @@ public class OrganizationUserValidationServiceTests
 
         var result = await _sut.CanManageAsync(_actingUserId, ActingUser(actingRole), TargetUser(targetRole));
 
-        Assert.IsType<CannotManageTargetUser>(result);
+        Assert.IsType(expectedError, result);
     }
 
     [Theory]
     // A regular User has no management authority over any role.
-    [InlineData(OrganizationUserType.Owner)]
-    [InlineData(OrganizationUserType.Admin)]
-    [InlineData(OrganizationUserType.User)]
-    [InlineData(OrganizationUserType.Custom)]
-    public async Task CanManageAsync_WhenActingUserIsRegularUser_ReturnsCannotManageTargetUser(
-        OrganizationUserType targetRole)
+    [InlineData(OrganizationUserType.Owner, typeof(OnlyOwnersCanManageOwners))]
+    [InlineData(OrganizationUserType.Admin, typeof(CustomUsersCannotManageAdminsOrOwners))]
+    [InlineData(OrganizationUserType.User, typeof(CustomUsersCannotManageAdminsOrOwners))]
+    [InlineData(OrganizationUserType.Custom, typeof(CustomUsersCannotManageAdminsOrOwners))]
+    public async Task CanManageAsync_WhenActingUserIsRegularUser_ReturnsGranularError(
+        OrganizationUserType targetRole,
+        Type expectedError)
     {
         _providerUserRepository
             .GetManyOrganizationDetailsByUserAsync(_actingUserId, ProviderUserStatusType.Confirmed)
@@ -102,7 +104,7 @@ public class OrganizationUserValidationServiceTests
 
         var result = await _sut.CanManageAsync(_actingUserId, ActingUser(OrganizationUserType.User), TargetUser(targetRole));
 
-        Assert.IsType<CannotManageTargetUser>(result);
+        Assert.IsType(expectedError, result);
     }
 
     [Theory]
@@ -129,7 +131,7 @@ public class OrganizationUserValidationServiceTests
     // otherwise act on by rank.
     [InlineData(OrganizationUserType.User)]
     [InlineData(OrganizationUserType.Custom)]
-    public async Task CanManageAsync_WhenCustomUserLacksManageUsers_ReturnsCannotManageTargetUser(
+    public async Task CanManageAsync_WhenCustomUserLacksManageUsers_ReturnsCustomUsersCannotManageAdminsOrOwners(
         OrganizationUserType targetRole)
     {
         _providerUserRepository
@@ -139,7 +141,7 @@ public class OrganizationUserValidationServiceTests
 
         var result = await _sut.CanManageAsync(_actingUserId, actingUser, TargetUser(targetRole));
 
-        Assert.IsType<CannotManageTargetUser>(result);
+        Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(result);
     }
 
     [Fact]
@@ -155,7 +157,7 @@ public class OrganizationUserValidationServiceTests
         var currentRoleResult = await _sut.CanManageAsync(_actingUserId, admin, TargetUser(OrganizationUserType.Owner));
         var newRoleResult = await _sut.CanManageAsync(_actingUserId, admin, TargetUser(OrganizationUserType.User));
 
-        Assert.IsType<CannotManageTargetUser>(currentRoleResult);
+        Assert.IsType<OnlyOwnersCanManageOwners>(currentRoleResult);
         Assert.Null(newRoleResult);
     }
 
