@@ -6,6 +6,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -560,6 +561,120 @@ public class AccountControllerTest
         Assert.Equal(1, orgGet);
         Assert.Equal(0, orgUserGetByOrg);
         Assert.Equal(1, orgUserGetByEmail);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_JitProvision_NewUserAndOrgUserCreated_DoesNotMarkEmailVerified(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange - Scenario 2: no existing User, no existing OrganizationUser. The JIT
+        // flow creates both a new User and a new OrganizationUser. The controller must
+        // not flip EmailVerified on the newly-created User: the flag reflects proof of
+        // inbox ownership, and JIT does not establish that.
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-jit-new-user";
+        var email = "user@example.com";
+        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
+
+        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, email);
+        SetupHttpContextWithAuth(sutProvider, authResult);
+
+        var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var registerUserCommand = sutProvider.GetDependency<IRegisterUserCommand>();
+
+        var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
+        var ssoData = new SsoConfigurationData();
+        ssoConfig.SetData(ssoData);
+        ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+
+        userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns((User?)null);
+        userRepository.GetByEmailAsync(email).Returns((User?)null);
+        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        organizationUserRepository.GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
+
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+
+        // Act
+        try
+        {
+            _ = await sutProvider.Sut.ExternalCallback();
+        }
+        catch
+        {
+            // ExternalCallback's post-provision sign-in path may throw in the SutProvider
+            // harness; the RegisterSSOAutoProvisionedUserAsync call under test fires
+            // before that point.
+        }
+
+        // Assert
+        await registerUserCommand.Received(1).RegisterSSOAutoProvisionedUserAsync(
+            Arg.Is<User>(u => u.Email == email && u.EmailVerified == false),
+            Arg.Is<Organization>(o => o.Id == orgId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_JitProvision_ExistingInvitedOrgUser_DoesNotMarkEmailVerified(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange - Scenario 3: no existing User, but there IS an existing OrganizationUser
+        // row invited by email. The JIT flow creates a new User and links it. The controller
+        // must not flip EmailVerified on the newly-created User: the flag reflects proof of
+        // inbox ownership, and JIT does not establish that.
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-jit-invited-orguser";
+        var email = "invited@example.com";
+        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
+        var existingOrgUser = new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            Email = email,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.User
+        };
+
+        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, email);
+        SetupHttpContextWithAuth(sutProvider, authResult);
+
+        var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var registerUserCommand = sutProvider.GetDependency<IRegisterUserCommand>();
+
+        var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
+        var ssoData = new SsoConfigurationData();
+        ssoConfig.SetData(ssoData);
+        ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+
+        userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns((User?)null);
+        userRepository.GetByEmailAsync(email).Returns((User?)null);
+        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        organizationUserRepository.GetByOrganizationEmailAsync(orgId, email).Returns(existingOrgUser);
+
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+
+        // Act
+        try
+        {
+            _ = await sutProvider.Sut.ExternalCallback();
+        }
+        catch
+        {
+            // ExternalCallback's post-provision sign-in path may throw in the SutProvider
+            // harness; the RegisterSSOAutoProvisionedUserAsync call under test fires
+            // before that point.
+        }
+
+        // Assert
+        await registerUserCommand.Received(1).RegisterSSOAutoProvisionedUserAsync(
+            Arg.Is<User>(u => u.Email == email && u.EmailVerified == false),
+            Arg.Is<Organization>(o => o.Id == orgId));
     }
 
     [Theory, BitAutoData]
