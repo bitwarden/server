@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260714085019_AddPamOrganizationUser")]
-    partial class AddPamOrganizationUser
+    [Migration("20260723180301_AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment")]
+    partial class AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -396,8 +396,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("Code")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
@@ -416,10 +417,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()
@@ -1051,6 +1048,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("RenewalNotificationSentDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");

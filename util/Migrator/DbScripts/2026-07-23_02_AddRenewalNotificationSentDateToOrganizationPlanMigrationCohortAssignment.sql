@@ -105,9 +105,9 @@ BEGIN
         CMA.*
     FROM
         [dbo].[OrganizationPlanMigrationCohortAssignment] CMA
-        INNER JOIN
+    INNER JOIN
         [dbo].[OrganizationPlanMigrationCohort] C ON C.[Id] = CMA.[CohortId]
-        INNER JOIN
+    INNER JOIN
         [dbo].[Organization] O ON O.[Id] = CMA.[OrganizationId]
     WHERE
         C.[IsActive] = 1

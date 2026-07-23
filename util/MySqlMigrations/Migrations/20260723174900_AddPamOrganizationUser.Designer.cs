@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260721211929_AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment")]
-    partial class AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment
+    [Migration("20260723174900_AddPamOrganizationUser")]
+    partial class AddPamOrganizationUser
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -393,9 +393,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("longtext");
+                    b.Property<Guid>("Code")
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
@@ -414,6 +413,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()
@@ -1043,9 +1046,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("RenewalNotificationSentDate")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
@@ -1805,6 +1805,9 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
+
+                    b.Property<bool>("AccessPam")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("tinyint(1)");
