@@ -16,7 +16,7 @@
     <mj-wrapper padding="5px 20px 8px 20px">
       <mj-section background-color="#fff" padding="10px 10px 0px 10px">
         <mj-column>
-          <mj-text padding="15px 15px 8px 15px">
+          <mj-text padding="15px 15px 24px 15px">
             Your Bitwarden contact, <b>{{SenderEmail}}</b>, has arranged this trial for you.
           </mj-text>
           <mj-raw>{{#if Features}}</mj-raw>
