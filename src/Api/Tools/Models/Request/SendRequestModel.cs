@@ -90,8 +90,7 @@ public class SendRequestModel
     /// <summary>
     /// Encrypted string containing secret Send data
     /// </summary>
-    [EncryptedString]
-    [EncryptedStringLength(500000)]
+    [StringLength(500000)]
     public string? Data { get; set; }
 
     /// <summary>
