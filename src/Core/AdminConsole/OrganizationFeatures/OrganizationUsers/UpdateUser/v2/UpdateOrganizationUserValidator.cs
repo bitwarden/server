@@ -35,15 +35,15 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, freeOrgAdminError);
         }
 
-        var collectionsToSave = request.CollectionsToSave ?? [];
-        if (collectionsToSave.Count != 0)
+        var collectionAccessToSave = request.Collections.collectionAccessToSave ?? [];
+        if (collectionAccessToSave.Count != 0)
         {
-            if (!CollectionsAreValid(collectionsToSave, request.ReferencedCollections, organizationUser.OrganizationId))
+            if (!CollectionsAreValid(collectionAccessToSave, request.Collections.collectionsToSave, organizationUser.OrganizationId))
             {
                 return Invalid(request, new CollectionNotFound());
             }
 
-            if (ContainsDefaultUserCollection(collectionsToSave, request.ReferencedCollections))
+            if (ContainsDefaultUserCollection(collectionAccessToSave, request.Collections.collectionsToSave))
             {
                 return Invalid(request, new CannotAssignDefaultCollection());
             }
@@ -78,7 +78,7 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new MustHaveConfirmedOwner());
         }
 
-        if (collectionsToSave.Count > 0 && collectionsToSave.Any(cas => !cas.Valid()))
+        if (collectionAccessToSave.Count > 0 && collectionAccessToSave.Any(cas => !cas.Valid()))
         {
             return Invalid(request, new ManageMutuallyExclusive());
         }
@@ -114,20 +114,20 @@ public class UpdateOrganizationUserValidator(
             newTargetUser);
     }
 
-    private static bool CollectionsAreValid(List<CollectionAccessSelection> collectionAccess,
-        ICollection<Collection> collections, Guid organizationId)
+    private static bool CollectionsAreValid(List<CollectionAccessSelection> collectionAccessToSave,
+        ICollection<Collection> collectionsToSave, Guid organizationId)
     {
-        var collectionIds = collections.Select(c => c.Id);
+        var collectionIds = collectionsToSave.Select(c => c.Id);
 
-        var missingCollection = collectionAccess.FirstOrDefault(cas => !collectionIds.Contains(cas.Id));
+        var missingCollection = collectionAccessToSave.FirstOrDefault(cas => !collectionIds.Contains(cas.Id));
 
-        return missingCollection == null && collections.All(c => c.OrganizationId == organizationId);
+        return missingCollection == null && collectionsToSave.All(c => c.OrganizationId == organizationId);
     }
 
     private static bool ContainsDefaultUserCollection(
-        List<CollectionAccessSelection> collectionAccess, ICollection<Collection> collections) =>
-        collectionAccess
-            .Any(cas => collections.Any(c => c.Id == cas.Id && c.Type == CollectionType.DefaultUserCollection));
+        List<CollectionAccessSelection> collectionAccessToSave, ICollection<Collection> collectionsToSave) =>
+        collectionAccessToSave
+            .Any(cas => collectionsToSave.Any(c => c.Id == cas.Id && c.Type == CollectionType.DefaultUserCollection));
 
     private static bool GroupsAreValid(ICollection<Guid> groupAccess, ICollection<Group> groups, Guid organizationId)
     {

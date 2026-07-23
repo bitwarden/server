@@ -77,8 +77,8 @@ public class UpdateOrganizationUserValidatorTests
         Guid missingCollectionId)
     {
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            collections: [new CollectionAccessSelection { Id = missingCollectionId }],
-            postedCollections: []);
+            collectionAccessToSave: [new CollectionAccessSelection { Id = missingCollectionId }],
+            collectionsToSave: []);
 
         var result = await sutProvider.Sut.ValidateAsync(request);
 
@@ -96,8 +96,8 @@ public class UpdateOrganizationUserValidatorTests
     {
         // The collection exists but belongs to a different organization; it must be rejected rather than leaked.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            collections: [new CollectionAccessSelection { Id = collectionId }],
-            postedCollections:
+            collectionAccessToSave: [new CollectionAccessSelection { Id = collectionId }],
+            collectionsToSave:
             [
                 new Collection { Id = collectionId, OrganizationId = otherOrganizationId, Type = CollectionType.SharedCollection }
             ]);
@@ -191,7 +191,7 @@ public class UpdateOrganizationUserValidatorTests
         Guid collectionId)
     {
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            collections: [new CollectionAccessSelection { Id = collectionId, Manage = true, ReadOnly = true }]);
+            collectionAccessToSave: [new CollectionAccessSelection { Id = collectionId, Manage = true, ReadOnly = true }]);
 
         var result = await sutProvider.Sut.ValidateAsync(request);
 
@@ -208,12 +208,12 @@ public class UpdateOrganizationUserValidatorTests
         Guid defaultCollectionId)
     {
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            collections:
+            collectionAccessToSave:
             [
                 new CollectionAccessSelection { Id = sharedCollectionId },
                 new CollectionAccessSelection { Id = defaultCollectionId }
             ],
-            postedCollections:
+            collectionsToSave:
             [
                 new Collection { Id = sharedCollectionId, OrganizationId = orgUser.OrganizationId, Type = CollectionType.SharedCollection },
                 new Collection { Id = defaultCollectionId, OrganizationId = orgUser.OrganizationId, Type = CollectionType.DefaultUserCollection }
@@ -267,9 +267,9 @@ public class UpdateOrganizationUserValidatorTests
         OrganizationUserType newType,
         IActingUser performedBy = null,
         Organization organization = null,
-        List<CollectionAccessSelection> collections = null,
+        List<CollectionAccessSelection> collectionAccessToSave = null,
         IEnumerable<Guid> groups = null,
-        ICollection<Collection> postedCollections = null,
+        ICollection<Collection> collectionsToSave = null,
         Permissions newPermissions = null)
     {
         // IOrganizationUserValidationService is auto-mocked; an unstubbed CanManageRoleChange returns null
@@ -287,20 +287,18 @@ public class UpdateOrganizationUserValidatorTests
         return new UpdateOrganizationUserRequest(
             organizationUser,
             organization ?? CreateOrganization(organizationUser.OrganizationId, PlanType.EnterpriseAnnually),
-            // By default, treat every posted collection as an existing shared collection in the org so
-            // validation passes; tests override this to exercise missing or default collections.
-            postedCollections ?? (collections ?? [])
+            newType,
+            newPermissions,
+            false,
+            // Default every access selection to an existing shared collection so validation passes; tests override collectionsToSave.
+            (collectionsToSave ?? (collectionAccessToSave ?? [])
                 .Select(c => new Collection
                 {
                     Id = c.Id,
                     OrganizationId = organizationUser.OrganizationId,
                     Type = CollectionType.SharedCollection
                 })
-                .ToList(),
-            newType,
-            newPermissions,
-            false,
-            collections ?? [],
+                .ToList(), collectionAccessToSave ?? []),
             groups,
             actingUser,
             null);

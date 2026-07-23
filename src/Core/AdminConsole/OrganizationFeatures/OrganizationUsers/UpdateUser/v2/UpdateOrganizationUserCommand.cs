@@ -51,7 +51,7 @@ public class UpdateOrganizationUserCommand(
             }
         }
 
-        await organizationUserRepository.ReplaceAsync(organizationUser, request.CollectionsToSave?.ToList() ?? []);
+        await organizationUserRepository.ReplaceAsync(organizationUser, request.Collections.collectionAccessToSave?.ToList() ?? []);
 
         if (request.NewGroups != null)
         {
