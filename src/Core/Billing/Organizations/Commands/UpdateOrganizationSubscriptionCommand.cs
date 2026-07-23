@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -132,11 +133,14 @@ public class UpdateOrganizationSubscriptionCommand(
 
         if (activeSchedule is { Phases.Count: > 0 })
         {
-            // PM-40537: only rewrite schedules we created for a migration — rewriting a schedule we
-            // didn't create (e.g. a Finance-built renewal) would corrupt its negotiated phases, so those
-            // fall through to the direct update. Accepted gap: a stale cohort assignment can mis-flag one.
-            var migrationPlans = await ResolvePhasePlansAsync(organization);
-            if (migrationPlans is { } plans)
+            // PM-40537: only rewrite schedules we created — rewriting a schedule we didn't create
+            // (e.g. a Finance-built renewal) would corrupt its negotiated phases, so those fall through
+            // to the direct update. A schedule is ours if it maps to a cohort migration path, or if it is
+            // a PM-38333 annual-upgrade schedule (detected by content, since redemption deletes the cohort
+            // assignment). Accepted gap: a stale cohort assignment can mis-flag one.
+            var schedulePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, activeSchedule)
+                                ?? await ResolveCohortMigrationPhasePlansAsync(organization);
+            if (schedulePlans is { } plans)
             {
                 var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
@@ -246,7 +250,35 @@ public class UpdateOrganizationSubscriptionCommand(
         }
     }
 
-    private async Task<(Plan source, Plan target)?> ResolvePhasePlansAsync(Organization organization)
+    // An annual-upgrade schedule (PM-38333) has no cohort assignment because redemption deletes it,
+    // so it is detected by its contents: a phase carrying the annual-latest seat price, the same
+    // marker GetPendingAnnualUpgradeQuery uses. When detected, source is the current monthly plan and
+    // target is the annual-latest plan, so phase 1 stays monthly (identity) and phase 2 maps to
+    // annual-latest. Returns null when this is not an annual-upgrade schedule, letting the caller fall
+    // back to cohort-migration resolution.
+    private async Task<(Plan source, Plan target)?> ResolveAnnualUpgradePhasePlansAsync(
+        Organization organization, SubscriptionSchedule activeSchedule)
+    {
+        var annualLatestPlanType = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(organization.PlanType);
+        if (annualLatestPlanType is null)
+        {
+            return null;
+        }
+
+        var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
+
+        var isAnnualUpgradeSchedule = activeSchedule.Phases.Any(phase =>
+            phase.Items.Any(item => item.PriceId == annualLatestPlan.PasswordManager.StripeSeatPlanId));
+        if (!isAnnualUpgradeSchedule)
+        {
+            return null;
+        }
+
+        var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+        return (currentPlan, annualLatestPlan);
+    }
+
+    private async Task<(Plan source, Plan target)?> ResolveCohortMigrationPhasePlansAsync(Organization organization)
     {
         var migrationPath = await TryResolveMigrationPathAsync(organization.Id);
         if (migrationPath is null)

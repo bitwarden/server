@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 using Bit.Core.Billing.Organizations.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -150,6 +151,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     }
 
                     await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
+                    await HandleScheduleTriggeredAnnualUpgradeOfferAsync(parsedEvent, subscription, organization.Id);
 
                     await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
 
@@ -733,6 +735,79 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 exception,
                 "Failed to handle schedule-triggered business migration for organization ({OrganizationId})",
                 organizationId);
+        }
+    }
+
+    private async Task HandleScheduleTriggeredAnnualUpgradeOfferAsync(
+        Event parsedEvent,
+        Subscription subscription,
+        Guid organizationId)
+    {
+        try
+        {
+            if (subscription.ScheduleId == null)
+            {
+                return;
+            }
+
+            var previousSubscription = parsedEvent.Data.PreviousAttributes?.ToObject<Subscription>() as Subscription;
+            if (previousSubscription?.Items?.Data == null)
+            {
+                return;
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization == null)
+            {
+                return;
+            }
+
+            // organization.PlanType has not been updated yet at this point -- it still reflects
+            // whatever monthly plan the org was on when the annual-upgrade schedule was created.
+            var targetPlanType = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(organization.PlanType);
+            if (targetPlanType is null)
+            {
+                return;
+            }
+
+            var sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+            var sourcePriceId = sourcePlan.PasswordManager.StripeSeatPlanId;
+            if (string.IsNullOrEmpty(sourcePriceId) ||
+                !previousSubscription.Items.Data.Any(item => item.Price?.Id == sourcePriceId))
+            {
+                return;
+            }
+
+            var targetPlan = await _pricingClient.GetPlanOrThrow(targetPlanType.Value);
+            var targetPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
+            if (string.IsNullOrEmpty(targetPriceId) ||
+                !subscription.Items.Any(item => item.Price?.Id == targetPriceId))
+            {
+                return;
+            }
+
+            organization.ChangePlan(targetPlan);
+            await _organizationRepository.ReplaceAsync(organization);
+
+            _logger.LogInformation(
+                "Schedule-triggered annual upgrade applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}",
+                organizationId,
+                sourcePlan.Type,
+                targetPlan.Type);
+        }
+        catch (Exception exception)
+        {
+            // Rethrow every failure so the webhook returns non-200 and Stripe retries.
+            // The monthly-to-annual price transition appears on exactly one
+            // subscription.updated event, so a swallowed failure here would leave the
+            // organization's PlanType monthly forever while Stripe bills annually. The
+            // flip is idempotent on retry: once PlanType is annual, ResolveAnnualLatestPlanType
+            // returns null and the handler returns early before re-applying the change.
+            _logger.LogError(
+                exception,
+                "Failed to handle schedule-triggered annual upgrade for organization ({OrganizationId})",
+                organizationId);
+            throw;
         }
     }
 

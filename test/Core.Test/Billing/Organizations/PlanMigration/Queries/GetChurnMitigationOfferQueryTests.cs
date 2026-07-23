@@ -27,9 +27,9 @@ public class GetChurnMitigationOfferQueryTests
 
     public GetChurnMitigationOfferQueryTests()
     {
+        var membershipQuery = new GetChurnOfferCohortMembershipQuery(_assignmentRepository, _cohortRepository);
         _query = new GetChurnMitigationOfferQuery(
-            _assignmentRepository,
-            _cohortRepository,
+            membershipQuery,
             _stripeAdapter,
             Substitute.For<ILogger<GetChurnMitigationOfferQuery>>());
     }
@@ -229,8 +229,8 @@ public class GetChurnMitigationOfferQueryTests
     public async Task Run_MigrationCohort_CouponsGetThrows_ReturnsNullAndLogsWarning()
     {
         var logger = Substitute.For<ILogger<GetChurnMitigationOfferQuery>>();
-        var query = new GetChurnMitigationOfferQuery(
-            _assignmentRepository, _cohortRepository, _stripeAdapter, logger);
+        var membershipQuery = new GetChurnOfferCohortMembershipQuery(_assignmentRepository, _cohortRepository);
+        var query = new GetChurnMitigationOfferQuery(membershipQuery, _stripeAdapter, logger);
 
         var organization = CreateOrganization();
         SetupMigrationCohort(organization);
@@ -252,8 +252,8 @@ public class GetChurnMitigationOfferQueryTests
     public async Task Run_MigrationCohort_CouponsGet404_ReturnsNullAndLogsWarning()
     {
         var logger = Substitute.For<ILogger<GetChurnMitigationOfferQuery>>();
-        var query = new GetChurnMitigationOfferQuery(
-            _assignmentRepository, _cohortRepository, _stripeAdapter, logger);
+        var membershipQuery = new GetChurnOfferCohortMembershipQuery(_assignmentRepository, _cohortRepository);
+        var query = new GetChurnMitigationOfferQuery(membershipQuery, _stripeAdapter, logger);
 
         var organization = CreateOrganization();
         SetupMigrationCohort(organization);

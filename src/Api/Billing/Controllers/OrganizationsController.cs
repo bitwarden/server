@@ -11,6 +11,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Entities;
 using Bit.Core.Billing.Organizations.Models;
@@ -51,7 +52,8 @@ public class OrganizationsController(
     IOrganizationInstallationRepository organizationInstallationRepository,
     IPricingClient pricingClient,
     IFeatureService featureService,
-    IReinstateSubscriptionCommand reinstateSubscriptionCommand)
+    IReinstateSubscriptionCommand reinstateSubscriptionCommand,
+    IGetPendingAnnualUpgradeQuery getPendingAnnualUpgradeQuery)
     : Controller
 {
     [HttpGet("{id:guid}/subscription")]
@@ -90,7 +92,10 @@ public class OrganizationsController(
 
         var hideSensitiveData = !await currentContext.EditSubscription(id);
 
-        return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, plan, hideSensitiveData);
+        var pendingAnnualUpgrade = await getPendingAnnualUpgradeQuery.Run(organization);
+
+        return new OrganizationSubscriptionResponseModel(
+            organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade);
     }
 
     [HttpGet("{id:guid}/license")]
