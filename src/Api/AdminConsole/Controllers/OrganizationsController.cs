@@ -153,8 +153,23 @@ public class OrganizationsController : Controller
         return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
     }
 
+    // Deprecated: the org identifier is admin-chosen and may contain reserved URL characters
+    // (e.g. '/'), which break path-segment routing. Use the query-parameter route below instead.
+    [Obsolete("Path is deprecated due to encoding issues with identifiers containing reserved URL " +
+              "characters (e.g. '/'). Use GET /organizations/auto-enroll-status?identifier=... instead.")]
     [HttpGet("{identifier}/auto-enroll-status")]
-    public async Task<OrganizationAutoEnrollStatusResponseModel> GetAutoEnrollStatus(string identifier)
+    public Task<OrganizationAutoEnrollStatusResponseModel> GetAutoEnrollStatus(string identifier)
+    {
+        return GetAutoEnrollStatusByIdentifierAsync(identifier);
+    }
+
+    [HttpGet("auto-enroll-status")]
+    public Task<OrganizationAutoEnrollStatusResponseModel> GetAutoEnrollStatusByQuery([FromQuery] string identifier)
+    {
+        return GetAutoEnrollStatusByIdentifierAsync(identifier);
+    }
+
+    private async Task<OrganizationAutoEnrollStatusResponseModel> GetAutoEnrollStatusByIdentifierAsync(string identifier)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
