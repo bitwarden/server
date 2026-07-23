@@ -98,6 +98,27 @@ public class BusinessPlanMigrationCoordinatorTests
     }
 
     [Theory, BitAutoData]
+    public async Task ExecuteAsync_WhenReloadAfterSchedulingThrows_ReturnsCompletedWithoutNotification_AndDoesNotStamp(
+        SutProvider<BusinessPlanMigrationCoordinator> sutProvider, Organization organization,
+        OrganizationPlanMigrationCohortAssignment assignment)
+    {
+        assignment.MigratedDate = null;
+        assignment.ScheduledDate = null;                     // triggers scheduling
+        var assignmentRepository = sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id)
+            .Returns(_ => assignment, _ => throw new Exception("db blip")); // first load ok, post-schedule reload fails
+        sutProvider.GetDependency<IPriceIncreaseScheduler>()
+            .ScheduleForSubscription(Arg.Any<Subscription>()).Returns(true);
+
+        var outcome = await sutProvider.Sut.ExecuteAsync(organization, new Subscription());
+
+        Assert.Equal(BusinessPlanMigrationResult.CompletedWithoutNotification, outcome);
+        await sutProvider.GetDependency<IBusinessPlanRenewalNotificationService>()
+            .DidNotReceiveWithAnyArgs().SendRenewalEmailAsync(default!, default!, default);
+        await assignmentRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
     public async Task ExecuteAsync_WhenNotifierReturnsFalse_ReturnsCompletedWithoutNotification_AndDoesNotStamp(
         SutProvider<BusinessPlanMigrationCoordinator> sutProvider, Organization organization,
         OrganizationPlanMigrationCohortAssignment assignment, OrganizationPlanMigrationCohort cohort)

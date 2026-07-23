@@ -38,9 +38,21 @@ public class BusinessPlanMigrationCoordinator(
                 return BusinessPlanMigrationResult.NotScheduled;
             }
 
-            // The scheduler stamps ScheduledDate on its own loaded copy, so re-load before stamping
-            // RenewalNotificationSentDate below — otherwise ReplaceAsync would clobber ScheduledDate back to null.
-            assignment = await cohortAssignmentRepository.GetByOrganizationIdAsync(organization.Id);
+            // Re-load so ReplaceAsync stamps the scheduler's committed copy instead of nulling ScheduledDate.
+            // The schedule is committed, so a reload failure resolves to CompletedWithoutNotification, not a throw.
+            try
+            {
+                assignment = await cohortAssignmentRepository.GetByOrganizationIdAsync(organization.Id);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Business plan migration was scheduled for Organization ({OrganizationId}) subscription ({SubscriptionId}), but reloading the cohort assignment failed; the schedule is committed, so this will retry on a later run",
+                    organization.Id, subscription.Id);
+                return BusinessPlanMigrationResult.CompletedWithoutNotification;
+            }
+
             if (assignment is null)
             {
                 // Schedule is committed but the assignment row is gone (drift, logged by the scheduler).
