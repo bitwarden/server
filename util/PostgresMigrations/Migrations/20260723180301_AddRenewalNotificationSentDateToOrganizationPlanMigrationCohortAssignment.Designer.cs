@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260721211850_AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment")]
+    [Migration("20260723180301_AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment")]
     partial class AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment
     {
         /// <inheritdoc />
@@ -1810,6 +1810,9 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("AccessPam")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("boolean");

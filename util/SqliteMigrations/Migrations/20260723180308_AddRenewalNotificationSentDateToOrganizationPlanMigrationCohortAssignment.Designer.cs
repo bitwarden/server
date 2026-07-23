@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260721211856_AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment")]
+    [Migration("20260723180308_AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment")]
     partial class AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment
     {
         /// <inheritdoc />
@@ -1794,6 +1794,9 @@ namespace Bit.SqliteMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("AccessPam")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("INTEGER");

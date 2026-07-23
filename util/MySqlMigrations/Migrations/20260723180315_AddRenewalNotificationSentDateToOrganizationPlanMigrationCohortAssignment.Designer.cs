@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260721211929_AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment")]
+    [Migration("20260723180315_AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment")]
     partial class AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment
     {
         /// <inheritdoc />
@@ -1805,6 +1805,9 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
+
+                    b.Property<bool>("AccessPam")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("tinyint(1)");
