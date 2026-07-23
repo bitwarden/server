@@ -1,10 +1,13 @@
-﻿using Bit.Core.Billing.Extensions;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Stripe;
 
 #nullable enable
 
 namespace Bit.Core.Models.Business;
+
+using static StripeConstants;
 
 public class SubscriptionInfo
 {
@@ -130,7 +133,7 @@ public class SubscriptionInfo
 
     public class BillingSubscription
     {
-        public BillingSubscription(Subscription sub)
+        public BillingSubscription(Subscription sub, bool treatUnpaidAsCancelled = true)
         {
             Status = sub?.Status;
             TrialStartDate = sub?.TrialStart;
@@ -145,7 +148,10 @@ public class SubscriptionInfo
             CancelledDate = sub?.CanceledAt;
             CancelAtEndDate = sub?.CancelAtPeriodEnd ?? false;
             var status = sub?.Status;
-            Cancelled = status == "canceled" || status == "unpaid" || status == "incomplete_expired";
+            // "unpaid" reports as cancelled by default so clients block subscription management;
+            // callers pass treatUnpaidAsCancelled: false to keep an unpaid subscription manageable.
+            Cancelled = status is SubscriptionStatus.Canceled or SubscriptionStatus.IncompleteExpired ||
+                (treatUnpaidAsCancelled && status is SubscriptionStatus.Unpaid);
             if (sub?.Items?.Data != null)
             {
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));

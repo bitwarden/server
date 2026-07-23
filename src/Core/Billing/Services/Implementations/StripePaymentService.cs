@@ -654,7 +654,10 @@ public class StripePaymentService : IStripePaymentService
             return subscriptionInfo;
         }
 
-        subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(subscription);
+        // Organizations exempt from billing automation retain service while unpaid, so their unpaid
+        // subscriptions stay manageable instead of reporting as cancelled (PM-40015).
+        var treatUnpaidAsCancelled = subscriber is not Organization { ExemptFromBillingAutomation: true };
+        subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(subscription, treatUnpaidAsCancelled);
 
         // Discount selection priority:
         // 1. Customer-level discount (applies to all subscriptions for the customer)

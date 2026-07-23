@@ -254,5 +254,44 @@ public class SubscriptionInfoTests
         Assert.Equal(6, result.DurationInMonths);
         Assert.False(result.Active);
     }
+
+    [Theory]
+    [InlineData("unpaid", true)] // Default: unpaid blocks subscription management for non-exempt subscribers (PM-40015)
+    [InlineData("canceled", true)]
+    [InlineData("incomplete_expired", true)]
+    [InlineData("past_due", false)]
+    [InlineData("active", false)]
+    [InlineData("trialing", false)]
+    [InlineData("incomplete", false)]
+    [InlineData("paused", false)]
+    [InlineData(null, false)]
+    public void BillingSubscription_Cancelled_DerivedFromStatus(string? status, bool expectedCancelled)
+    {
+        // Act
+        var result = new SubscriptionInfo.BillingSubscription(new Subscription { Status = status });
+
+        // Assert
+        Assert.Equal(status, result.Status);
+        Assert.Equal(expectedCancelled, result.Cancelled);
+    }
+
+    [Theory]
+    [InlineData("unpaid", false)] // Exempt organizations may keep managing an unpaid subscription (PM-40015)
+    [InlineData("canceled", true)]
+    [InlineData("incomplete_expired", true)]
+    [InlineData("past_due", false)]
+    [InlineData("active", false)]
+    [InlineData(null, false)]
+    public void BillingSubscription_Cancelled_UnpaidNotTreatedAsCancelled(string? status, bool expectedCancelled)
+    {
+        // Act
+        var result = new SubscriptionInfo.BillingSubscription(
+            new Subscription { Status = status },
+            treatUnpaidAsCancelled: false);
+
+        // Assert
+        Assert.Equal(status, result.Status);
+        Assert.Equal(expectedCancelled, result.Cancelled);
+    }
 }
 
