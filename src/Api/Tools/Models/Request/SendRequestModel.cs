@@ -88,6 +88,12 @@ public class SendRequestModel
     public SendTextModel? Text { get; set; }
 
     /// <summary>
+    /// String containing secret Send data
+    /// </summary>
+    [StringLength(500000)]
+    public string? Data { get; set; }
+
+    /// <summary>
     /// Base64-encoded byte array of a password hash that grants access to the send.
     /// Mutually exclusive with <see cref="Emails"/>.
     /// </summary>
@@ -164,6 +170,9 @@ public class SendRequestModel
                 break;
             case SendType.Text:
                 existingSend.Data = JsonSerializer.Serialize(ToSendTextData(), JsonHelpers.IgnoreWritingNull);
+                break;
+            case SendType.Item:
+                existingSend.Data = Data ?? throw new ArgumentNullException(nameof(Data), "Data is required for Sends of type Item");
                 break;
             default:
                 throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");

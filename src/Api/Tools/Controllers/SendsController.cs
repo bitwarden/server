@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Azure.Messaging.EventGrid;
-using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
 using Bit.Api.Utilities;
@@ -21,6 +20,7 @@ using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -298,13 +298,13 @@ public class SendsController : Controller
         }
 
         /*
-         * AccessCount is incremented differently for File and Text Send types:
-         * - Text Sends are incremented at every access
+         * AccessCount is incremented differently depending on Send type:
+         * - Text and Item Sends are incremented at every access
          * - File Sends are incremented only when the file is downloaded
          *
          * Note that this endpoint is initially called for all Send types
          */
-        if (send.Type == SendType.Text)
+        if (send.Type == SendType.Text || send.Type == SendType.Item)
         {
             send.AccessCount++;
             await _sendRepository.ReplaceAsync(send);
