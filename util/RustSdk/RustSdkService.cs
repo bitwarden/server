@@ -128,6 +128,27 @@ public class RustSdkService
     }
 
     /// <summary>
+    /// Wraps a symmetric key with another symmetric key, returning an EncString in format
+    /// "2.{iv}|{data}|{mac}" whose plaintext is the raw key bytes (so it unwraps back into a
+    /// symmetric key). Use this for keys a client unwraps via <c>unwrap_symmetric_key</c> — e.g. a
+    /// <c>ProviderOrganization.Key</c> (an organization key wrapped with the provider's symmetric key).
+    /// Unlike <see cref="EncryptString"/>, this encrypts the key bytes, not the base64 text.
+    /// </summary>
+    public static unsafe string WrapSymmetricKey(string keyToWrapBase64, string wrappingKeyBase64)
+    {
+        var keyToWrapBytes = StringToRustString(keyToWrapBase64);
+        var wrappingKeyBytes = StringToRustString(wrappingKeyBase64);
+
+        fixed (byte* keyToWrapPtr = keyToWrapBytes)
+        fixed (byte* wrappingKeyPtr = wrappingKeyBytes)
+        {
+            var resultPtr = NativeMethods.wrap_symmetric_key(keyToWrapPtr, wrappingKeyPtr);
+
+            return ParseResponse(resultPtr);
+        }
+    }
+
+    /// <summary>
     /// Decrypts an EncString using the provided symmetric key.
     /// </summary>
     public static unsafe string DecryptString(string encString, string symmetricKeyBase64)
