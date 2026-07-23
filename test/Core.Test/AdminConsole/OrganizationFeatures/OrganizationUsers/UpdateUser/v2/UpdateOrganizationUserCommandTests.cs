@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.Models.Mail.Mailer.MemberEmailChanged;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
@@ -8,6 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -58,6 +60,31 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task UpdateUserAsync_WhenEmailChanged_NotifiesMemberAtPreviousEmail(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = organizationUser.UserId!.Value, Email = "old@claimed.example.com" };
+        var request = Setup(sutProvider, organization, organizationUser, newEmail: "new@claimed.example.com");
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(organizationUser.UserId!.Value)
+            .Returns(userToUpdate);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Is<MemberEmailChangedNotificationMail>(mail =>
+                mail.ToEmails.Contains("old@claimed.example.com")
+                && mail.View.NewEmail == "new@claimed.example.com"));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task UpdateUserAsync_WhenNoEmailRequested_DoesNotLoadUserOrChangeEmail(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
@@ -103,6 +130,9 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
             .PushSyncSettingsAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail<MemberEmailChangedNotificationView>(default);
     }
 
     [Theory]
@@ -143,6 +173,9 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
             .PushSyncSettingsAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail<MemberEmailChangedNotificationView>(default);
     }
 
     [Theory]
@@ -174,6 +207,9 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IChangeEmailCommand>()
             .DidNotReceiveWithAnyArgs()
             .ChangeEmailAsync(Arg.Any<User>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail<MemberEmailChangedNotificationView>(default);
     }
 
     [Theory]
@@ -276,6 +312,11 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
             .PushSyncSettingsAsync(userToUpdate.Id);
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Is<MemberEmailChangedNotificationMail>(mail =>
+                mail.ToEmails.Contains("old@claimed.example.com")
+                && mail.View.NewEmail == "new@claimed.example.com"));
     }
 
     [Theory]
@@ -327,12 +368,10 @@ public class UpdateOrganizationUserCommandTests
         return new UpdateOrganizationUserRequest(
             organizationUser,
             organization,
-            [],
-            [],
             type,
             null,
             targetAccessSecretsManager,
-            collections,
+            (new List<Collection>(), collections),
             groups,
             newEmail,
             newName,
