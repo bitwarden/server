@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260714085019_AddPamOrganizationUser")]
+    [Migration("20260723174900_AddPamOrganizationUser")]
     partial class AddPamOrganizationUser
     {
         /// <inheritdoc />

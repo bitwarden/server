@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260714085000_AddPamOrganizationUser")]
+    [Migration("20260723174900_AddPamOrganizationUser")]
     partial class AddPamOrganizationUser
     {
         /// <inheritdoc />
