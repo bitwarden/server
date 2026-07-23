@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260723180301_AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment")]
+    partial class AddRenewalNotificationSentDateToOrganizationPlanMigrationCohortAssignment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1882,9 +1885,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<Guid?>("ProviderId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
@@ -1896,15 +1896,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("PlayId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.HasIndex("ProviderId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("PlayItem", null, t =>
                         {
-                            t.HasCheckConstraint("CK_PlayItem_UserOrOrganizationOrProvider", "((CASE WHEN \"UserId\" IS NOT NULL THEN 1 ELSE 0 END) + (CASE WHEN \"OrganizationId\" IS NOT NULL THEN 1 ELSE 0 END) + (CASE WHEN \"ProviderId\" IS NOT NULL THEN 1 ELSE 0 END)) = 1");
+                            t.HasCheckConstraint("CK_PlayItem_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
                         });
                 });
 
@@ -3338,19 +3335,12 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
-                        .WithMany()
-                        .HasForeignKey("ProviderId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Organization");
-
-                    b.Navigation("Provider");
 
                     b.Navigation("User");
                 });

@@ -3,6 +3,7 @@ fn main() {
         .input_extern_file("src/lib.rs")
         .input_extern_file("src/cipher.rs")
         .input_extern_file("src/attachment.rs")
+        .input_extern_file("src/provider.rs")
         .csharp_dll_name("libsdk")
         .csharp_namespace("Bit.RustSDK")
         .csharp_class_accessibility("public")

@@ -3,6 +3,7 @@
 mod attachment;
 mod cipher;
 mod crypto_util;
+mod provider;
 mod rsa_keys;
 
 use std::{

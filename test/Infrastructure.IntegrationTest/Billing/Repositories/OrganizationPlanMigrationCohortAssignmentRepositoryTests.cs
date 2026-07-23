@@ -11,12 +11,12 @@ namespace Bit.Infrastructure.IntegrationTest.Billing.Repositories;
 
 public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
 {
-    private static OrganizationPlanMigrationCohort CreateTestCohort() =>
+    private static OrganizationPlanMigrationCohort CreateTestCohort(bool isActive = true) =>
         new()
         {
             Name = $"cohort-{Guid.NewGuid()}",
             MigrationPathId = MigrationPaths.Enterprise2020AnnualToCurrent.Id,
-            IsActive = true,
+            IsActive = isActive,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         };
@@ -26,7 +26,8 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
         OrganizationPlanMigrationCohort cohort,
         DateTime? scheduledAt = null,
         DateTime? migratedAt = null,
-        DateTime? churnDiscountAppliedAt = null) =>
+        DateTime? churnDiscountAppliedAt = null,
+        DateTime? renewalNotificationSentAt = null) =>
         new()
         {
             OrganizationId = organization.Id,
@@ -34,9 +35,32 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
             ScheduledDate = scheduledAt,
             MigratedDate = migratedAt,
             ChurnDiscountAppliedDate = churnDiscountAppliedAt,
+            RenewalNotificationSentDate = renewalNotificationSentAt,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         };
+
+    /// <summary>
+    /// Creates a test organization, overriding the billing fields that
+    /// <c>GetSendInvoiceCandidatesInWindowAsync</c> filters on so the caller can arrange a specific
+    /// eligibility scenario.
+    /// </summary>
+    /// <param name="expirationDate">Places the organization inside or outside the requested day window.</param>
+    /// <param name="hasGatewayCustomerId">When false, clears the gateway customer id the query requires.</param>
+    /// <param name="hasGatewaySubscriptionId">When false, clears the gateway subscription id the query requires.</param>
+    private static async Task<Organization> CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+        IOrganizationRepository organizationRepository,
+        DateTime? expirationDate,
+        bool hasGatewayCustomerId = true,
+        bool hasGatewaySubscriptionId = true)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        organization.ExpirationDate = expirationDate;
+        organization.GatewayCustomerId = hasGatewayCustomerId ? organization.GatewayCustomerId : null;
+        organization.GatewaySubscriptionId = hasGatewaySubscriptionId ? organization.GatewaySubscriptionId : null;
+        await organizationRepository.ReplaceAsync(organization);
+        return organization;
+    }
 
     [Theory, DatabaseData]
     public async Task CreateAsync_GetByIdAsync_RoundTrip(
@@ -277,5 +301,170 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
         Assert.Equal(2, count);
 
         await cohortRepository.DeleteAsync(cohort);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetSendInvoiceCandidatesInWindowAsync_AllEligibilityCriteriaMet_IsReturned(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var cohort = await cohortRepository.CreateAsync(CreateTestCohort());
+        var organization = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(15));
+        // Baseline eligible candidate: active cohort, gateway identifiers set, expiration inside the
+        // window, not migrated, and never scheduled or notified (so it reads as not-yet-complete).
+        var assignment = await assignmentRepository.CreateAsync(CreateTestAssignment(organization, cohort));
+
+        var results = await assignmentRepository.GetSendInvoiceCandidatesInWindowAsync(minDays: 0, maxDays: 30);
+
+        Assert.Contains(results, a => a.Id == assignment.Id);
+
+        await cohortRepository.DeleteAsync(cohort);
+        await organizationRepository.DeleteAsync(organization);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetSendInvoiceCandidatesInWindowAsync_InactiveCohort_IsExcluded(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var cohort = await cohortRepository.CreateAsync(CreateTestCohort(isActive: false));
+        var organization = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(15));
+        var assignment = await assignmentRepository.CreateAsync(CreateTestAssignment(organization, cohort));
+
+        var results = await assignmentRepository.GetSendInvoiceCandidatesInWindowAsync(minDays: 0, maxDays: 30);
+
+        Assert.DoesNotContain(results, a => a.Id == assignment.Id);
+
+        await cohortRepository.DeleteAsync(cohort);
+        await organizationRepository.DeleteAsync(organization);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetSendInvoiceCandidatesInWindowAsync_MigratedAssignment_IsExcluded(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var cohort = await cohortRepository.CreateAsync(CreateTestCohort());
+        var organization = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(15));
+        var assignment = await assignmentRepository.CreateAsync(CreateTestAssignment(
+            organization, cohort, scheduledAt: DateTime.UtcNow, migratedAt: DateTime.UtcNow));
+
+        var results = await assignmentRepository.GetSendInvoiceCandidatesInWindowAsync(minDays: 0, maxDays: 30);
+
+        Assert.DoesNotContain(results, a => a.Id == assignment.Id);
+
+        await cohortRepository.DeleteAsync(cohort);
+        await organizationRepository.DeleteAsync(organization);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetSendInvoiceCandidatesInWindowAsync_ScheduledButNotNotified_IsReturned(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var cohort = await cohortRepository.CreateAsync(CreateTestCohort());
+        var organization = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(15));
+        // Scheduled but no renewal notification yet: still incomplete, so it must be returned.
+        var assignment = await assignmentRepository.CreateAsync(CreateTestAssignment(
+            organization, cohort, scheduledAt: DateTime.UtcNow, renewalNotificationSentAt: null));
+
+        var results = await assignmentRepository.GetSendInvoiceCandidatesInWindowAsync(minDays: 0, maxDays: 30);
+
+        Assert.Contains(results, a => a.Id == assignment.Id);
+
+        await cohortRepository.DeleteAsync(cohort);
+        await organizationRepository.DeleteAsync(organization);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetSendInvoiceCandidatesInWindowAsync_ScheduledAndNotified_IsExcluded(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var cohort = await cohortRepository.CreateAsync(CreateTestCohort());
+        var organization = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(15));
+        // Both scheduled and notified: complete, so it must be excluded.
+        var assignment = await assignmentRepository.CreateAsync(CreateTestAssignment(
+            organization, cohort, scheduledAt: DateTime.UtcNow, renewalNotificationSentAt: DateTime.UtcNow));
+
+        var results = await assignmentRepository.GetSendInvoiceCandidatesInWindowAsync(minDays: 0, maxDays: 30);
+
+        Assert.DoesNotContain(results, a => a.Id == assignment.Id);
+
+        await cohortRepository.DeleteAsync(cohort);
+        await organizationRepository.DeleteAsync(organization);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetSendInvoiceCandidatesInWindowAsync_MissingGatewayIdentifiers_AreExcluded(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var cohort = await cohortRepository.CreateAsync(CreateTestCohort());
+        var noCustomerOrg = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(15),
+            hasGatewayCustomerId: false);
+        var noSubscriptionOrg = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(15),
+            hasGatewaySubscriptionId: false);
+        var noCustomerAssignment = await assignmentRepository.CreateAsync(CreateTestAssignment(noCustomerOrg, cohort));
+        var noSubscriptionAssignment = await assignmentRepository.CreateAsync(CreateTestAssignment(noSubscriptionOrg, cohort));
+
+        var results = await assignmentRepository.GetSendInvoiceCandidatesInWindowAsync(minDays: 0, maxDays: 30);
+
+        Assert.DoesNotContain(results, a => a.Id == noCustomerAssignment.Id);
+        Assert.DoesNotContain(results, a => a.Id == noSubscriptionAssignment.Id);
+
+        await cohortRepository.DeleteAsync(cohort);
+        await organizationRepository.DeleteAsync(noCustomerOrg);
+        await organizationRepository.DeleteAsync(noSubscriptionOrg);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetSendInvoiceCandidatesInWindowAsync_ExpirationOutsideWindow_IsExcluded(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var cohort = await cohortRepository.CreateAsync(CreateTestCohort());
+        var expiredOrg = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(-5));
+        var farFutureOrg = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+            organizationRepository, expirationDate: DateTime.UtcNow.AddDays(60));
+        var nullExpirationOrg = await CreateOrganizationWithSendInvoiceEligibilityFieldsAsync(
+            organizationRepository, expirationDate: null);
+        var expiredAssignment = await assignmentRepository.CreateAsync(CreateTestAssignment(expiredOrg, cohort));
+        var farFutureAssignment = await assignmentRepository.CreateAsync(CreateTestAssignment(farFutureOrg, cohort));
+        var nullExpirationAssignment = await assignmentRepository.CreateAsync(CreateTestAssignment(nullExpirationOrg, cohort));
+
+        var results = await assignmentRepository.GetSendInvoiceCandidatesInWindowAsync(minDays: 0, maxDays: 30);
+
+        Assert.DoesNotContain(results, a => a.Id == expiredAssignment.Id);
+        Assert.DoesNotContain(results, a => a.Id == farFutureAssignment.Id);
+        Assert.DoesNotContain(results, a => a.Id == nullExpirationAssignment.Id);
+
+        await cohortRepository.DeleteAsync(cohort);
+        await organizationRepository.DeleteAsync(expiredOrg);
+        await organizationRepository.DeleteAsync(farFutureOrg);
+        await organizationRepository.DeleteAsync(nullExpirationOrg);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetSendInvoiceCandidatesInWindowAsync_MinDaysGreaterThanMaxDays_Throws(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository)
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            assignmentRepository.GetSendInvoiceCandidatesInWindowAsync(minDays: 30, maxDays: 0));
     }
 }
