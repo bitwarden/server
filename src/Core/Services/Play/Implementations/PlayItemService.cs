@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
+using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.Core.Services;
 
@@ -21,6 +22,14 @@ public class PlayItemService(IPlayIdService playIdService, IPlayItemRepository p
         {
             logger.LogInformation("Associating organization {OrganizationId} with Play ID {PlayId}", organization.Id, playId);
             await playItemRepository.CreateAsync(PlayItem.Create(organization, playId));
+        }
+    }
+    public async Task Record(Provider provider)
+    {
+        if (playIdService.InPlay(out var playId))
+        {
+            logger.LogInformation("Associating provider {ProviderId} with Play ID {PlayId}", provider.Id, playId);
+            await playItemRepository.CreateAsync(PlayItem.Create(provider, playId));
         }
     }
 }

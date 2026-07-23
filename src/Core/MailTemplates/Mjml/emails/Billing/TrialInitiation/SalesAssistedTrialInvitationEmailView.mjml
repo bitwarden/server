@@ -1,0 +1,91 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../../components/head.mjml" />
+  </mj-head>
+
+  <mj-body css-class="border-fix">
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
+      <mj-bw-ac-hero
+        img-src="{{{SpotImageUrl}}}"
+        title="{{{HeroTitle}}}"
+      />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="5px 20px 8px 20px">
+      <mj-section background-color="#fff" padding="10px 10px 0px 10px">
+        <mj-column>
+          <mj-text padding="15px 15px 24px 15px">
+            Your Bitwarden contact, <b>{{SenderEmail}}</b>, has arranged this trial for you.
+          </mj-text>
+          <mj-raw>{{#if Features}}</mj-raw>
+          <mj-text padding="0px 15px 8px 15px">
+            {{#if TrialLength}}During your {{TrialLength}}-day free trial of {{ProductName}}, your team can:{{else}}With your {{ProductName}} plan, your team can:{{/if}}
+          </mj-text>
+          <mj-text padding="0px 15px 16px 15px">
+            <ul style="margin: 0; padding-left: 20px; list-style-type: disc;">{{#each Features}}<li style="margin-bottom: 8px; line-height: 24px;">{{this}}</li>
+{{/each}}</ul>
+          </mj-text>
+          <mj-raw>{{/if}}</mj-raw>
+        </mj-column>
+      </mj-section>
+
+      <mj-section background-color="#fff" padding="0px 10px 0px 10px">
+        <mj-column>
+          <mj-button
+            href="{{{Url}}}"
+            align="center"
+            border-radius="4px"
+            inner-padding="12px 24px"
+          >
+            Start your free trial
+          </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section background-color="#fff" padding="0px 10px 16px 10px">
+        <mj-column>
+          <mj-text
+            font-size="12px"
+            line-height="16px"
+            color="#1B2029"
+            padding="8px 15px 15px 15px"
+          >
+            This invitation expires in <b>{{ExpiryDays}} days</b>. Have questions? Reach out to <b>{{SenderEmail}}</b>.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Help Footer -->
+    <mj-wrapper padding="8px 20px 10px 20px">
+      <mj-section border-radius="0px 0px 4px 4px" background-color="#F3F6F9" padding="14px 10px 14px 10px">
+        <mj-column width="70%">
+          <mj-text padding="10px 15px 10px 15px">
+            <p style="font-size: 18px; line-height: 28px; font-weight: 500; margin: 0 0 8px 0;">
+              We're here for you!
+            </p>
+            <p style="font-size: 16px; line-height: 24px; margin: 0;">
+              If you have any questions, search the Bitwarden
+              <a href="https://bitwarden.com/help/" class="link"> Help</a> site or
+              <a href="https://bitwarden.com/contact/" class="link">contact us</a>.
+            </p>
+          </mj-text>
+        </mj-column>
+        <mj-column width="30%" vertical-align="bottom">
+          <mj-image
+            src="https://assets.bitwarden.com/email/v1/spot-community.png"
+            css-class="mj-bw-ac-learn-more-footer-responsive-img"
+            width="94px"
+            padding="0px 15px 0px 0px"
+            align="right"
+          />
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-include path="../../../components/footer.mjml" />
+  </mj-body>
+</mjml>

@@ -112,6 +112,7 @@ public class ProviderBillingService(
         organization.UsersGetPremium = plan.UsersGetPremium;
         organization.UseCustomPermissions = plan.HasCustomPermissions;
         organization.UseScim = plan.HasScim;
+        organization.UseRiskInsights = plan.HasRiskInsights;
         organization.UseKeyConnector = plan.HasKeyConnector;
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
         organization.BillingEmail = provider.BillingEmail!;
@@ -293,11 +294,12 @@ public class ProviderBillingService(
     }
 
     public async Task<byte[]> GenerateClientInvoiceReport(
+        Guid providerId,
         string invoiceId)
     {
         ArgumentException.ThrowIfNullOrEmpty(invoiceId);
 
-        var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoiceId);
+        var invoiceItems = await providerInvoiceItemRepository.GetByProviderIdAndInvoiceId(providerId, invoiceId);
 
         if (invoiceItems.Count == 0)
         {

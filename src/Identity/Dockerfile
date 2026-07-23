@@ -47,7 +47,7 @@ ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
-RUN apk add --no-cache curl \
+RUN apk add --no-cache \
     krb5 \
     icu-libs \
     shadow \
@@ -58,6 +58,6 @@ WORKDIR /app
 COPY --from=build /source/src/Identity/out /app
 COPY ./src/Identity/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-HEALTHCHECK CMD curl -f http://localhost:5000/.well-known/openid-configuration || exit 1
+HEALTHCHECK CMD wget --quiet --tries=1 --output-document=/dev/null http://localhost:5000/.well-known/openid-configuration || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

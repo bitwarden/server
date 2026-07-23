@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -828,7 +829,7 @@ public class OrganizationServiceTests
         var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
 
         Assert.False(result);
-        Assert.Contains("Seat limit has been reached. Contact your provider to purchase additional seats.", failureMessage);
+        Assert.Contains($"Seat limit of {organization.Seats} has been reached. Contact your provider to purchase additional seats.", failureMessage);
     }
 
 
@@ -1111,7 +1112,7 @@ public class OrganizationServiceTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
@@ -1154,7 +1155,7 @@ public class OrganizationServiceTests
         await organizationRepository
             .Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
-        await applicationCacheService
+        await organizationAbilityCacheService
             .Received(1)
             .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(org => org == organization));
         await eventService
@@ -1168,7 +1169,7 @@ public class OrganizationServiceTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
@@ -1189,7 +1190,7 @@ public class OrganizationServiceTests
         await organizationRepository
             .Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
-        await applicationCacheService
+        await organizationAbilityCacheService
             .Received(1)
             .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(org => org == organization));
         await eventService

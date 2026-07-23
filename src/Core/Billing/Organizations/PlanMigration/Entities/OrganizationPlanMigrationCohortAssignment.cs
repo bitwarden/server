@@ -33,6 +33,12 @@ public class OrganizationPlanMigrationCohortAssignment : ITableObject<Guid>
     public DateTime? MigratedDate { get; set; }
 
     /// <summary>
+    /// The date the renewal notification was sent to the organization. Null until the
+    /// notification is sent.
+    /// </summary>
+    public DateTime? RenewalNotificationSentDate { get; set; }
+
+    /// <summary>
     /// The date a churn-mitigation discount was applied. Null when no mitigation has
     /// occurred.
     /// </summary>

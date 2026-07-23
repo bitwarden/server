@@ -112,6 +112,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         UsePhishingBlocker = org.UsePhishingBlocker;
         UseMyItems = org.UseMyItems;
         UseInviteLinks = org.UseInviteLinks;
+        UsePam = org.UsePam;
         ExemptFromBillingAutomation = org.ExemptFromBillingAutomation;
 
         _plans = plans;
@@ -210,6 +211,8 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool UseMyItems { get; set; }
     [Display(Name = "Invite Links")]
     public bool UseInviteLinks { get; set; }
+    [Display(Name = "Use PAM")]
+    public bool UsePam { get; set; }
     [Display(Name = "Exempt From Billing Automation")]
     public bool ExemptFromBillingAutomation { get; set; }
 
@@ -225,6 +228,10 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool MigrationCohortLocked { get; set; }
 
     public string MigrationCohortLockReason { get; set; }
+
+    public bool MigrationCohortMismatch { get; set; }
+
+    public bool MigrationCohortOrphaned { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
@@ -261,6 +268,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
                     HasCustomPermissions = p.HasCustomPermissions,
                     HasMyItems = p.HasMyItems,
                     HasInviteLinks = p.HasInviteLinks,
+                    HasRiskInsights = p.HasRiskInsights,
                     UpgradeSortOrder = p.UpgradeSortOrder,
                     DisplaySortOrder = p.DisplaySortOrder,
                     LegacyYear = p.LegacyYear,
@@ -362,6 +370,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
         existingOrganization.UseMyItems = UseMyItems;
         existingOrganization.UseInviteLinks = UseInviteLinks;
+        existingOrganization.UsePam = UsePam;
         existingOrganization.ExemptFromBillingAutomation = ExemptFromBillingAutomation;
         return existingOrganization;
     }

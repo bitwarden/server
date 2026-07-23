@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Context;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
@@ -34,7 +35,7 @@ public class EventServiceTests
         {
             { group.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -68,7 +69,7 @@ public class EventServiceTests
         {
             { group.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -147,7 +148,7 @@ public class EventServiceTests
         {
             {orgUser.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -181,7 +182,7 @@ public class EventServiceTests
         {
             {orgUser.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
@@ -214,7 +215,7 @@ public class EventServiceTests
         {
             {providerUser.ProviderId, new ProviderAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(providerAbilities);
+        sutProvider.GetDependency<IProviderAbilityCacheService>().GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(providerAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -248,7 +249,7 @@ public class EventServiceTests
         {
             { collection.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -281,7 +282,7 @@ public class EventServiceTests
         DateTime date, SutProvider<EventService> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>());
 
@@ -297,7 +298,7 @@ public class EventServiceTests
         Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(policy.OrganizationId)
             .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
@@ -323,7 +324,7 @@ public class EventServiceTests
         DateTime date, SutProvider<EventService> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(policy.OrganizationId)
             .Returns(new OrganizationAbility { UseEvents = false, Enabled = true });
 
@@ -347,7 +348,7 @@ public class EventServiceTests
         {
             { provider.Id, new ProviderAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(providerAbilities);
+        sutProvider.GetDependency<IProviderAbilityCacheService>().GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(providerAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -382,10 +383,10 @@ public class EventServiceTests
             { orgUser.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } }
         };
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(orgAbilities);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -406,6 +407,192 @@ public class EventServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task LogSendAccessEvent_AppliesPerOrgContext_BaseRowKeepsOwner(
+        Guid ownerUserId, Guid accessorUserId, Guid sendId,
+        Guid memberOrgId, Guid claimedOrgId, Guid externalOrgId, SutProvider<EventService> sutProvider)
+    {
+        var type = EventType.Send_Accessed_Text;
+
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { memberOrgId, new OrganizationAbility { UseEvents = true, Enabled = true } },
+                { claimedOrgId, new OrganizationAbility { UseEvents = true, Enabled = true } },
+                { externalOrgId, new OrganizationAbility { UseEvents = true, Enabled = true } },
+            });
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization>
+            {
+                new() { Id = memberOrgId },
+                new() { Id = claimedOrgId },
+                new() { Id = externalOrgId },
+            });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider>());
+
+        var context = new Dictionary<Guid, SendAccessEventOrgContext>
+        {
+            { memberOrgId, new SendAccessEventOrgContext(accessorUserId, null) },
+            { claimedOrgId, new SendAccessEventOrgContext(null, "example.com") },
+            // externalOrgId intentionally has no entry -> External.
+        };
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, type, context);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 4
+                && events.All(e => e.Type == type && e.SendId == sendId)
+                // Base user-only row: owner is the actor, no domain.
+                && events.Any(e => e.OrganizationId == null && e.ActingUserId == ownerUserId && e.DomainName == null)
+                // Member accessor org row.
+                && events.Any(e => e.OrganizationId == memberOrgId && e.ActingUserId == accessorUserId && e.DomainName == null)
+                // Claimed-domain org row.
+                && events.Any(e => e.OrganizationId == claimedOrgId && e.ActingUserId == null && e.DomainName == "example.com")
+                // External org row (no context entry): no accessor, no domain.
+                && events.Any(e => e.OrganizationId == externalOrgId && e.ActingUserId == null && e.DomainName == null)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendAccessEvent_EmptyContext_RecordsSendIdAndRendersExternal(
+        Guid ownerUserId, Guid sendId, Guid orgId, SutProvider<EventService> sutProvider)
+    {
+        var type = EventType.Send_Accessed_File;
+
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization> { new() { Id = orgId } });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, type,
+            new Dictionary<Guid, SendAccessEventOrgContext>());
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.Type == type && e.SendId == sendId)
+                && events.Any(e => e.OrganizationId == null && e.ActingUserId == ownerUserId)
+                && events.Any(e => e.OrganizationId == orgId && e.ActingUserId == null && e.DomainName == null)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEvent_NoContext_AttributesOrgRowsToOwner(
+        Guid ownerUserId, Guid sendId, Guid orgId, SutProvider<EventService> sutProvider)
+    {
+        // Create/edit/delete Send events pass no org context -> the owner is the actor on every row
+        // (Member column shows the owner), and the Send id is still recorded.
+        var type = EventType.Send_Created_Text_WithEmailVerification;
+
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization> { new() { Id = orgId } });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, type);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.Type == type && e.SendId == sendId && e.ActingUserId == ownerUserId && e.DomainName == null)
+                && events.Any(e => e.OrganizationId == null)
+                && events.Any(e => e.OrganizationId == orgId)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEvent_AccessEvent_ProviderRowIsExternalNotOwner(
+        Guid ownerUserId, Guid sendId, Guid providerId, SutProvider<EventService> sutProvider)
+    {
+        // The provider's event log must not credit the owner for a Send access (the owner did not
+        // access it). With access context present, the provider row is External (no attribution).
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>());
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>
+            {
+                { providerId, new ProviderAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider> { new() { Id = providerId } });
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, EventType.Send_Accessed_Text,
+            new Dictionary<Guid, SendAccessEventOrgContext>());
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.SendId == sendId)
+                && events.Any(e => e.OrganizationId == null && e.ProviderId == null && e.ActingUserId == ownerUserId)
+                && events.Any(e => e.ProviderId == providerId && e.ActingUserId == null)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEvent_NoContext_ProviderRowKeepsOwner(
+        Guid ownerUserId, Guid sendId, Guid providerId, SutProvider<EventService> sutProvider)
+    {
+        // Create/edit/delete (no context): the owner did perform the action, so the provider row keeps them.
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>());
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>
+            {
+                { providerId, new ProviderAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider> { new() { Id = providerId } });
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, EventType.Send_Deleted_Text);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Any(e => e.ProviderId == providerId && e.ActingUserId == ownerUserId)));
+    }
+
+    [Theory, BitAutoData]
     public async Task LogUserEvent_IncludeAcceptedStatusOrgs_InvitedOrgUser_DoesNotCreateOrgScopedEvent(
         Guid userId, EventType eventType, OrganizationUser orgUser, SutProvider<EventService> sutProvider)
     {
@@ -417,10 +604,10 @@ public class EventServiceTests
             { orgUser.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } }
         };
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(orgAbilities);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -457,7 +644,7 @@ public class EventServiceTests
         {
             { provider.Id, new ProviderAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(providerAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
@@ -495,7 +682,7 @@ public class EventServiceTests
             providerUser.ProviderId = provider.Id;
         }
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>
             {
@@ -516,7 +703,7 @@ public class EventServiceTests
         SutProvider<EventService> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
 
@@ -525,7 +712,7 @@ public class EventServiceTests
 
         // Assert
         var expectedIds = providerUsers.Select(pu => pu.ProviderId).Distinct();
-        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
+        await sutProvider.GetDependency<IProviderAbilityCacheService>().Received(1)
             .GetProviderAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(expectedIds.OrderBy(x => x))));
     }
 
@@ -540,7 +727,7 @@ public class EventServiceTests
             providerOrganization.ProviderId = provider.Id;
         }
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>
             {
@@ -562,7 +749,7 @@ public class EventServiceTests
         SutProvider<EventService> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
 
@@ -572,7 +759,7 @@ public class EventServiceTests
 
         // Assert
         var expectedIds = providerOrganizations.Select(po => po.ProviderId).Distinct();
-        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
+        await sutProvider.GetDependency<IProviderAbilityCacheService>().Received(1)
             .GetProviderAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(expectedIds.OrderBy(x => x))));
     }
 
@@ -587,10 +774,10 @@ public class EventServiceTests
             { provider.Id, new ProviderAbility() { UseEvents = true, Enabled = true } }
         };
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>());
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(providerAbilities);
         sutProvider.GetDependency<ICurrentContext>()
@@ -615,10 +802,10 @@ public class EventServiceTests
         SutProvider<EventService> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>());
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
         sutProvider.GetDependency<ICurrentContext>()
@@ -633,7 +820,7 @@ public class EventServiceTests
 
         // Assert
         var expectedIds = providers.Select(provider => provider.Id);
-        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
+        await sutProvider.GetDependency<IProviderAbilityCacheService>().Received(1)
             .GetProviderAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(expectedIds.OrderBy(x => x))));
     }
 }

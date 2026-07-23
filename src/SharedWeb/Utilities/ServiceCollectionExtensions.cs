@@ -4,7 +4,6 @@
 using System.Net;
 using System.Reflection;
 using System.Security.Claims;
-using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
@@ -48,7 +47,6 @@ using Bit.Core.Resources;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
-using Bit.Core.Services.Implementations;
 using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -63,8 +61,6 @@ using Bit.Infrastructure.EntityFramework;
 using Bit.SharedWeb.Play;
 using DnsClient;
 using Duende.IdentityModel;
-using LaunchDarkly.Sdk.Server;
-using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -77,7 +73,6 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -259,6 +254,22 @@ public static class ServiceCollectionExtensions
                 TwoFactorAuthenticatorUserVerificationTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
+        services.AddSingleton<ITwoFactorUserVerificationTokenableFactory, TwoFactorUserVerificationTokenableFactory>();
+        services.AddSingleton<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<TwoFactorUserVerificationTokenable>(
+                TwoFactorUserVerificationTokenable.ClearTextPrefix,
+                TwoFactorUserVerificationTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>>()));
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<ISalesAssistedRegistrationTokenableFactory, SalesAssistedRegistrationTokenableFactory>();
+        services.AddSingleton<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<SalesAssistedRegistrationTokenable>(
+                SalesAssistedRegistrationTokenable.ClearTextPrefix,
+                SalesAssistedRegistrationTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>>()));
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -295,21 +306,10 @@ public static class ServiceCollectionExtensions
             return new LookupClient(options);
         });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
-        services.AddOptionality();
+        services.ApplyServerCompatibilityLayer();
         services.AddTokenizers();
-        services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
-
-        if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
-            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
-        {
-            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
-        }
-        else
-        {
-            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
-        }
 
         var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
         if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))
@@ -492,56 +492,7 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    public static void AddCustomDataProtectionServices(
-        this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
-    {
-        var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
 
-        if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
-        {
-            builder.PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
-        }
-
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
-        {
-            X509Certificate2 dataProtectionCert = null;
-            if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
-            {
-                dataProtectionCert = CoreHelpers.GetCertificate(
-                    globalSettings.DataProtection.CertificateThumbprint);
-            }
-            else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
-            {
-                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(
-                    globalSettings.Storage.ConnectionString,
-                    "certificates",
-                    globalSettings.DataProtection.BlobName,
-                    globalSettings.DataProtection.CertificatePassword)
-                    .GetAwaiter().GetResult();
-            }
-
-            if (!env.IsDevelopment())
-            {
-                builder
-                    .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
-                    .ProtectKeysWithCertificate(dataProtectionCert);
-
-                if (globalSettings.DataProtection.UnprotectCertificates.Length > 0)
-                {
-                    var unprotectCertificates = Task.WhenAll(globalSettings.DataProtection.UnprotectCertificates
-                        .Select(ci => CoreHelpers.GetBlobCertificateAsync(
-                            globalSettings.Storage.ConnectionString,
-                            "certificates",
-                            ci.FileName,
-                            ci.Password
-                        ))
-                    ).GetAwaiter().GetResult();
-
-                    builder.UnprotectKeysWithAnyCertificate(unprotectCertificates);
-                }
-            }
-        }
-    }
 
     public static IIdentityServerBuilder AddIdentityServerCertificate(
         this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
@@ -565,23 +516,6 @@ public static class ServiceCollectionExtensions
             throw new Exception("No identity certificate to use.");
         }
         return identityServerBuilder;
-    }
-
-    public static GlobalSettings AddGlobalSettingsServices(this IServiceCollection services,
-        IConfiguration configuration, IHostEnvironment environment)
-    {
-        var globalSettings = new GlobalSettings();
-        ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
-
-        if (environment.IsDevelopment() && configuration.GetValue<bool>("developSelfHosted"))
-        {
-            // Override settings with selfHostedOverride settings
-            ConfigurationBinder.Bind(configuration.GetSection("Dev:SelfHostOverride:GlobalSettings"), globalSettings);
-        }
-
-        services.AddSingleton(s => globalSettings);
-        services.AddSingleton<IGlobalSettings, GlobalSettings>(s => globalSettings);
-        return globalSettings;
     }
 
     public static void UseDefaultMiddleware(this IApplicationBuilder app,
@@ -799,19 +733,6 @@ public static class ServiceCollectionExtensions
         {
             services.AddKeyedSingleton("persistent", (s, _) => s.GetRequiredService<IDistributedCache>());
         }
-    }
-
-    public static IServiceCollection AddOptionality(this IServiceCollection services)
-    {
-        services.AddSingleton<ILdClient>(s =>
-        {
-            return new LdClient(LaunchDarklyFeatureService.GetConfiguredClient(
-                s.GetRequiredService<GlobalSettings>()));
-        });
-
-        services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
-
-        return services;
     }
 
     private static (SupportedDatabaseProviders provider, string connectionString)

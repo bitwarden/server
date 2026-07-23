@@ -19,6 +19,7 @@ public class OrganizationInviteLinksController(
     IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
     IGetOrganizationInviteLinkStatusQuery getOrganizationInviteLinkStatusQuery,
     IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
+    IUpdateInviteSupportConfirmCommand updateInviteSupportConfirmCommand,
     IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
     IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand,
     IValidateOrganizationInviteLinkEmailDomainQuery validateOrganizationInviteLinkEmailDomainQuery,
@@ -29,12 +30,14 @@ public class OrganizationInviteLinksController(
     [HttpPost("/organizations/invite-link/status")]
     public async Task<IResult> GetStatus([FromBody] GetOrganizationInviteLinkStatusRequestModel model)
     {
-        var result = await getOrganizationInviteLinkStatusQuery.GetStatusAsync(model.Code);
+        var result = await getOrganizationInviteLinkStatusQuery.GetStatusAsync(model.OrganizationId, model.Code);
 
         return Handle(result, status =>
             TypedResults.Ok(new OrganizationInviteLinkStatusResponseModel(
                 status.OrganizationName,
+                status.LinksEnabled,
                 status.SeatsAvailable,
+                status.SupportsConfirmation,
                 status.Sso is null
                     ? null
                     : new OrganizationInviteLinkSsoResponseModel(status.Sso.OrgSsoId, status.Sso.Required))));
@@ -44,7 +47,7 @@ public class OrganizationInviteLinksController(
     [HttpPost("/organizations/invite-link/policies")]
     public async Task<IResult> GetPolicies([FromBody] GetOrganizationInviteLinkPoliciesRequestModel model)
     {
-        var result = await getOrganizationInviteLinkPoliciesQuery.GetPoliciesAsync(model.Code);
+        var result = await getOrganizationInviteLinkPoliciesQuery.GetPoliciesAsync(model.OrganizationId, model.Code);
         return Handle(result, policies =>
             TypedResults.Ok(new ListResponseModel<PolicyResponseModel>(
                 policies.Select(p => new PolicyResponseModel(p)))));
@@ -55,7 +58,7 @@ public class OrganizationInviteLinksController(
     public async Task<IResult> ValidateEmailDomain(
         [FromBody] OrganizationInviteLinkValidateEmailDomainRequestModel model)
     {
-        var result = await validateOrganizationInviteLinkEmailDomainQuery.ValidateAsync(model.Code, model.Email);
+        var result = await validateOrganizationInviteLinkEmailDomainQuery.ValidateAsync(model.OrganizationId, model.Code, model.Email);
 
         return Handle(result, isAllowed =>
             TypedResults.Ok(new OrganizationInviteLinkValidateEmailDomainResponseModel(isAllowed)));
@@ -89,6 +92,17 @@ public class OrganizationInviteLinksController(
     public async Task<IResult> Update(Guid orgId, [FromBody] UpdateOrganizationInviteLinkRequestModel model)
     {
         var result = await updateOrganizationInviteLinkCommand.UpdateAsync(
+            model.ToCommandRequest(orgId));
+
+        return Handle(result, link =>
+            TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
+    }
+
+    [HttpPut("support-confirm")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> UpdateInviteSupportConfirm(Guid orgId, [FromBody] UpdateInviteSupportConfirmRequestModel model)
+    {
+        var result = await updateInviteSupportConfirmCommand.UpdateAsync(
             model.ToCommandRequest(orgId));
 
         return Handle(result, link =>

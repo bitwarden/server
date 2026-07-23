@@ -1,6 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -10,15 +8,14 @@ namespace Bit.Seeder.Factories;
 
 internal static class OrganizationSeeder
 {
-    internal static Organization Create(string name, string domain, int seats, IManglerService manglerService, string? publicKey = null, string? privateKey = null, PlanType planType = PlanType.EnterpriseAnnually)
+    internal static Organization Create(string name, string domain, int seats, IManglerService manglerService, string? publicKey = null, string? privateKey = null, PlanType planType = PlanType.EnterpriseAnnually, Guid? id = null)
     {
-        var billingHash = DeriveShortHash(domain);
         var org = new Organization
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = id ?? CombGuid.Generate(),
             Identifier = manglerService.Mangle(domain),
             Name = manglerService.Mangle(name),
-            BillingEmail = $"billing{billingHash}@{billingHash}.{domain}",
+            BillingEmail = BillingEmailSeeder.DeriveBillingEmail(domain),
             Seats = seats,
             Status = OrganizationStatusType.Created,
             PublicKey = publicKey,
@@ -31,13 +28,14 @@ internal static class OrganizationSeeder
     }
 
     /// <summary>
-    /// Derives a deterministic 8-char hex string from a domain for safe billing email generation.
-    /// Always applied regardless of mangle flag — billing emails must never be deliverable.
+    /// Applies billing gateway identity to an organization so it resembles a real billed org.
+    /// Only non-null values are set; nulls leave the field unchanged.
     /// </summary>
-    private static string DeriveShortHash(string domain)
+    internal static void ApplyBilling(Organization org, GatewayType? gateway, string? gatewayCustomerId, string? gatewaySubscriptionId)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(domain));
-        return Convert.ToHexString(bytes, 0, 4).ToLowerInvariant();
+        org.Gateway = gateway ?? org.Gateway;
+        org.GatewayCustomerId = gatewayCustomerId ?? org.GatewayCustomerId;
+        org.GatewaySubscriptionId = gatewaySubscriptionId ?? org.GatewaySubscriptionId;
     }
 }
 

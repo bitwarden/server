@@ -46,7 +46,7 @@ public class PresetCommand
         Console.Error.WriteLine($"Seeding organization from preset '{args.Name}'...");
         var result = ConsoleProgressReporter.RunWithProgress(
             deps.ToDependencies(),
-            d => new OrganizationRecipe(d).Seed(args.Name!, args.Password, args.KdfIterations));
+            d => new OrganizationRecipe(d).Seed(args.Name!, args.Password, args.KdfIterations, args.OrgName, args.OwnerEmail));
 
         ConsoleOutput.PrintRow("Organization", result.OrganizationId);
         if (result.OwnerEmail is not null)
@@ -64,6 +64,11 @@ public class PresetCommand
         ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
         ConsoleOutput.PrintMangleMap(deps);
+
+        if (result.SsoIdentifier is not null)
+        {
+            ConsoleOutput.PrintSsoWiring(result.OrganizationId, result.SsoIdentifier, args.OwnerEmail);
+        }
     }
 
     private static void RunIndividualPreset(PresetArgs args)
