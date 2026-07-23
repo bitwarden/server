@@ -37,12 +37,13 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
 
         var result = await service.GetChangePasswordUri(domain);
 
-        Assert.Equal(expectedUrl, result);
+        Assert.Equal(ChangePasswordUriResultType.Found, result.Type);
+        Assert.Equal(expectedUrl, result.Uri);
     }
 
     [Theory]
     [InlineData("https://example.com")]
-    public async Task GetChangePasswordUri_WhenResourceThatShouldNotExistReturns200_ReturnsNull(string domain)
+    public async Task GetChangePasswordUri_WhenResourceThatShouldNotExistReturns200_ReturnsNotSupported(string domain)
     {
         var mockHttpFactory = Substitute.For<IHttpClientFactory>();
         var mockedHandler = new MockedHttpMessageHandler();
@@ -64,12 +65,13 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
 
         var result = await service.GetChangePasswordUri(domain);
 
-        Assert.Null(result);
+        Assert.Equal(ChangePasswordUriResultType.NotSupported, result.Type);
+        Assert.Null(result.Uri);
     }
 
     [Theory]
     [InlineData("https://example.com")]
-    public async Task GetChangePasswordUri_WhenChangePasswordUrlNotFound_ReturnsNull(string domain)
+    public async Task GetChangePasswordUri_WhenChangePasswordUrlNotFound_ReturnsNotSupported(string domain)
     {
         var mockHttpFactory = Substitute.For<IHttpClientFactory>();
         var mockedHandler = new MockedHttpMessageHandler();
@@ -91,18 +93,50 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
 
         var result = await service.GetChangePasswordUri(domain);
 
-        Assert.Null(result);
+        Assert.Equal(ChangePasswordUriResultType.NotSupported, result.Type);
+        Assert.Null(result.Uri);
+    }
+
+    [Theory]
+    [InlineData("https://example.com")]
+    public async Task GetChangePasswordUri_WhenProbeThrows_ReturnsLookupFailed(string domain)
+    {
+        // A transient failure must not be reported as a definitive "not supported" answer.
+        var mockHttpFactory = Substitute.For<IHttpClientFactory>();
+        using var httpClient = new HttpClient(new ThrowingHttpMessageHandler());
+        mockHttpFactory.CreateClient("ChangePasswordUri").Returns(httpClient);
+
+        var service = new ChangePasswordUriService(mockHttpFactory);
+
+        var result = await service.GetChangePasswordUri(domain);
+
+        Assert.Equal(ChangePasswordUriResultType.LookupFailed, result.Type);
+        Assert.Null(result.Uri);
     }
 
     [Theory]
     [InlineData("")]
-    public async Task GetChangePasswordUri_WhenDomainIsNullOrEmpty_ReturnsNull(string domain)
+    public async Task GetChangePasswordUri_WhenDomainIsNullOrEmpty_ReturnsNotSupported(string domain)
     {
         var mockHttpFactory = Substitute.For<IHttpClientFactory>();
         var service = new ChangePasswordUriService(mockHttpFactory);
 
         var result = await service.GetChangePasswordUri(domain);
 
-        Assert.Null(result);
+        Assert.Equal(ChangePasswordUriResultType.NotSupported, result.Type);
+        Assert.Null(result.Uri);
+    }
+
+    /// <summary>
+    /// An inner handler that simulates a transient network failure by throwing on every request.
+    /// </summary>
+    private class ThrowingHttpMessageHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            throw new HttpRequestException("Simulated transient failure");
+        }
     }
 }

@@ -117,7 +117,7 @@ public class SsrfProtectionHandler : DelegatingHandler
         var host = uri.Host;
 
         // Resolve the host to IP addresses
-        var resolvedAddresses = await ResolveHostAsync(host).ConfigureAwait(false);
+        var resolvedAddresses = await ResolveHostAsync(host, cancellationToken).ConfigureAwait(false);
 
         if (resolvedAddresses.Length == 0)
         {
@@ -192,7 +192,7 @@ public class SsrfProtectionHandler : DelegatingHandler
     /// Resolves a hostname to its IP addresses. If the host is already an IP address,
     /// returns it directly after validation.
     /// </summary>
-    private static async Task<IPAddress[]> ResolveHostAsync(string host)
+    private static async Task<IPAddress[]> ResolveHostAsync(string host, CancellationToken cancellationToken)
     {
         // If the host is already an IP address, validate and return it directly
         if (IPAddress.TryParse(host, out var directIp))
@@ -202,8 +202,7 @@ public class SsrfProtectionHandler : DelegatingHandler
 
         try
         {
-            var hostEntry = await Dns.GetHostEntryAsync(host).ConfigureAwait(false);
-            return hostEntry.AddressList;
+            return await Dns.GetHostAddressesAsync(host, cancellationToken).ConfigureAwait(false);
         }
         catch (SocketException)
         {

@@ -115,6 +115,20 @@ public class SsrfProtectionHandlerTests
     }
 
     [Fact]
+    public async Task SendAsync_CancellationRequestedBeforeResolution_ThrowsOperationCanceled()
+    {
+        // Regression: DNS resolution must honor the cancellation token. A hostname forces the
+        // resolution path; an already-cancelled token must abort before the inner handler runs.
+        var (client, inner) = CreateClient();
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.GetAsync("http://example.com/test", cts.Token));
+        Assert.Empty(inner.AllRequests);
+    }
+
+    [Fact]
     public async Task SendAsync_HostnameResolvingToInternalIp_ThrowsSsrfProtectionException()
     {
         // "localhost" should always resolve to 127.0.0.1 or ::1
