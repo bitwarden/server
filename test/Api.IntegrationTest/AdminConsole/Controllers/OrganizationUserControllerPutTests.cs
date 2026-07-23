@@ -100,8 +100,7 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         };
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{admin.Id}", request);
 
-        // v1 blocks self-add first (400); v2 authorizes posted collections before the self-add check (404).
-        Assert.Equal(flagOn ? HttpStatusCode.NotFound : HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         await AssertDoesNotHaveCollectionAsync(admin, collection.Id);
     }
 

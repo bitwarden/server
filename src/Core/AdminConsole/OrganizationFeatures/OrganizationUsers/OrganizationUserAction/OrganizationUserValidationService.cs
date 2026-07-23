@@ -10,9 +10,9 @@ using Bit.Core.Repositories;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 
 /// <inheritdoc />
-public class ManageOrganizationUserValidationService(
+public class OrganizationUserValidationService(
     IProviderUserRepository providerUserRepository,
-    IOrganizationUserRepository organizationUserRepository) : IManageOrganizationUserValidationService
+    IOrganizationUserRepository organizationUserRepository) : IOrganizationUserValidationService
 {
     public async Task<Error?> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser)
     {

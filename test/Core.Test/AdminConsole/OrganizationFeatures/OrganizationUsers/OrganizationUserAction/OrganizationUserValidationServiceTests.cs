@@ -12,18 +12,18 @@ using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 
-public class ManageOrganizationUserValidationServiceTests
+public class OrganizationUserValidationServiceTests
 {
     private static readonly Guid _actingUserId = Guid.NewGuid();
     private static readonly Guid _organizationId = Guid.NewGuid();
 
     private readonly IProviderUserRepository _providerUserRepository = Substitute.For<IProviderUserRepository>();
     private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-    private readonly ManageOrganizationUserValidationService _sut;
+    private readonly OrganizationUserValidationService _sut;
 
-    public ManageOrganizationUserValidationServiceTests()
+    public OrganizationUserValidationServiceTests()
     {
-        _sut = new ManageOrganizationUserValidationService(_providerUserRepository, _organizationUserRepository);
+        _sut = new OrganizationUserValidationService(_providerUserRepository, _organizationUserRepository);
     }
 
     // NOTE: A null `actingUser` represents a non-member (provider-only user). Custom users are granted the

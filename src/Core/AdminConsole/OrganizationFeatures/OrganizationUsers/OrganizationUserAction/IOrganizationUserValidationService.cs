@@ -9,7 +9,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Organizat
 /// <summary>
 /// Reusable organization-user authorization rules shared by command-specific validators.
 /// </summary>
-public interface IManageOrganizationUserValidationService
+public interface IOrganizationUserValidationService
 {
     /// <summary>
     /// Checks whether the acting user can manage the target user without escalating privileges:

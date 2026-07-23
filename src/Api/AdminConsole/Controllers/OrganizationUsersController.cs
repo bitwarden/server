@@ -424,19 +424,20 @@ public class OrganizationUsersController : BaseAdminConsoleController
             ? null
             : model.Groups;
 
-        var currentAccessIds = currentAccess.Select(c => c.Id).ToHashSet();
         var existingUserType = organizationUser.Type;
 
         if (_featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp))
         {
-            var (collectionsToSave, postedCollections) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess);
+            var (collectionsToSave, postedCollections) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
 
             var actingContext = _currentContext.GetOrganization(organization.Id);
+
+            // TODO fix naming between these collections
+            // TODO -> Just pass through read-only plus posted
 
             var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
                 organizationUser,
                 organization,
-                currentAccessIds,
                 postedCollections,
                 model.Type.Value,
                 model.Permissions,
@@ -454,17 +455,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return Handle(result);
         }
 
-        // Authorization check:
-        // If admins are not allowed access to all collections, you cannot add yourself to collections.
-        // This is not caught by the requirement below that you can ModifyUserAccess and must be checked separately
-        if (editingSelf &&
-            !organization.AllowAdminAccessToAllCollectionItems &&
-            model.Collections.Any(c => !currentAccessIds.Contains(c.Id)))
-        {
-            throw new BadRequestException("You cannot add yourself to a collection.");
-        }
-
-        var (collectionsToSaveV1, _) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess);
+        var (collectionsToSaveV1, _) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
 
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
             collectionsToSaveV1, groupsToSave, model.DefaultUserCollectionName);
@@ -473,12 +464,21 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Resolves the collection access to persist for an organization user update. Collections the saving user
-    /// cannot <see cref="BulkCollectionOperations.ModifyUserAccess"/> are validated and the user's current
-    /// access to them is preserved so it is not accidentally overwritten.
+    /// Resolves the collection access to persist for an organization user update, enforcing the saving user's
+    /// authorization over the affected collections.
     /// </summary>
-    private async Task<(List<CollectionAccessSelection> CollectionsToSave, ICollection<Collection> Collections)> GetAuthorizedCollectionsToSaveAsync(OrganizationUserUpdateRequestModel model, ICollection<CollectionAccessSelection> currentAccess)
+    private async Task<(List<CollectionAccessSelection> CollectionsToSave, ICollection<Collection> Collections)> GetAuthorizedCollectionsToSaveAsync(OrganizationUserUpdateRequestModel model, ICollection<CollectionAccessSelection> currentAccess, bool editingSelf, Organization organization)
     {
+        // A self-editing user can't add themselves to collections they don't already have access to,
+        // unless admins can access all collections.
+        var currentAccessIds = currentAccess.Select(c => c.Id).ToHashSet();
+        if (editingSelf &&
+            !organization.AllowAdminAccessToAllCollectionItems &&
+            model.Collections.Any(c => !currentAccessIds.Contains(c.Id)))
+        {
+            throw new BadRequestException("You cannot add yourself to a collection.");
+        }
+
         // Authorization check:
         // You must have authorization to ModifyUserAccess for all collections being saved.
         var postedCollections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
@@ -488,9 +488,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new NotFoundException();
         }
 
-        // The client only sends collections that the saving user has permissions to edit.
-        // We need to combine these with collections that the user doesn't have permissions for, so that we don't
-        // accidentally overwrite those
+        // Preserve the target's current collections the saving user can't edit, so they aren't overwritten.
         var currentCollections = await _collectionRepository.GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
 
         var readonlyCollectionIds = new HashSet<Guid>();
@@ -503,8 +501,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
             }
         }
 
-        // Default user collections ("My Items") are never managed through this flow. Exclude any current-access
-        // defaults from the preserved set so they are not re-saved; posted defaults are rejected downstream.
+        // Default collections ("My Items") aren't managed here: drop current-access defaults from the
+        // preserved set (posted defaults are rejected downstream).
         var defaultCollectionIds = postedCollections
             .Concat(currentCollections)
             .Where(c => c.Type == CollectionType.DefaultUserCollection)

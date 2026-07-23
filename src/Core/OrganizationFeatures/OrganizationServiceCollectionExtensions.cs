@@ -151,7 +151,7 @@ public static class OrganizationServiceCollectionExtensions
 
     private static void AddOrganizationUserCommands(this IServiceCollection services)
     {
-        services.TryAddScoped<IManageOrganizationUserValidationService, ManageOrganizationUserValidationService>();
+        services.TryAddScoped<IOrganizationUserValidationService, OrganizationUserValidationService>();
         services.AddScoped<IRemoveOrganizationUserCommand, RemoveOrganizationUserCommand>();
         services.AddScoped<IRevokeNonCompliantOrganizationUserCommand, RevokeNonCompliantOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();

@@ -15,7 +15,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUse
 public class UpdateOrganizationUserValidator(
     IGroupRepository groupRepository,
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-    IManageOrganizationUserValidationService manageOrganizationUserValidationService)
+    IOrganizationUserValidationService organizationUserValidationService)
     : IUpdateOrganizationUserValidator
 {
     public async Task<ValidationResult<UpdateOrganizationUserRequest>> ValidateAsync(
@@ -28,21 +28,14 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new InviteUserFirst());
         }
 
-        var freeOrgAdminError = await manageOrganizationUserValidationService.ValidateFreeOrgAdminLimitAsync(
+        var freeOrgAdminError = await organizationUserValidationService.ValidateFreeOrgAdminLimitAsync(
             organizationUser.UserId, request.Organization.PlanType, organizationUser.Type, request.NewType);
         if (freeOrgAdminError is not null)
         {
             return Invalid(request, freeOrgAdminError);
         }
 
-        // When admins are not allowed access to all collections, a user editing themselves cannot add
-        // themselves to collections they don't already have access to.
-        if (IsAddingSelfToCollection(request))
-        {
-            return Invalid(request, new CannotAddSelfToCollection());
-        }
-
-        var collectionsToSave = request.NewCollections ?? [];
+        var collectionsToSave = request.CollectionsToSave ?? [];
         if (collectionsToSave.Count != 0)
         {
             if (!CollectionsAreValid(collectionsToSave, request.ReferencedCollections, organizationUser.OrganizationId))
@@ -95,7 +88,7 @@ public class UpdateOrganizationUserValidator(
 
     /// <summary>
     /// Delegates the role-change authority decision to
-    /// <see cref="IManageOrganizationUserValidationService.CanManageRoleChangeAsync"/>. System users skip the check.
+    /// <see cref="IOrganizationUserValidationService.CanManageRoleChangeAsync"/>. System users skip the check.
     /// </summary>
     private async Task<Error?> ValidateRoleChangeAsync(UpdateOrganizationUserRequest request)
     {
@@ -109,23 +102,12 @@ public class UpdateOrganizationUserValidator(
             request.OrganizationUserToUpdate.OrganizationId,
             standardUser.Permissions);
 
-        return await manageOrganizationUserValidationService.CanManageRoleChangeAsync(
+        return await organizationUserValidationService.CanManageRoleChangeAsync(
             standardUser.UserId!.Value,
             actingUser,
             request.OrganizationUserToUpdate,
             request.NewType,
             request.NewPermissions);
-    }
-
-    private static bool IsAddingSelfToCollection(UpdateOrganizationUserRequest request)
-    {
-        var editingSelf = request.PerformedBy is not SystemUser
-                          && request.OrganizationUserToUpdate.UserId.HasValue
-                          && request.OrganizationUserToUpdate.UserId == request.PerformedBy.UserId;
-
-        return editingSelf
-               && !request.Organization.AllowAdminAccessToAllCollectionItems
-               && (request.NewCollections ?? []).Any(c => !request.CurrentCollectionsIds.Contains(c.Id));
     }
 
     private static bool CollectionsAreValid(List<CollectionAccessSelection> collectionAccess,

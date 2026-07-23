@@ -58,7 +58,7 @@ public class UpdateOrganizationUserValidatorTests
         // The free-org admin limit lives in the validation service; the validator just forwards its error.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin);
 
-        sutProvider.GetDependency<IManageOrganizationUserValidationService>()
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
             .ValidateFreeOrgAdminLimitAsync(Arg.Any<Guid?>(), Arg.Any<PlanType>(), Arg.Any<OrganizationUserType>(),
                 Arg.Any<OrganizationUserType>())
             .Returns(new CannotBeAdminOfMultipleFreeOrganizations());
@@ -67,27 +67,6 @@ public class UpdateOrganizationUserValidatorTests
 
         Assert.True(result.IsError);
         Assert.IsType<CannotBeAdminOfMultipleFreeOrganizations>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WhenEditingSelfAndAddingNewCollection_ReturnsCannotAddSelfToCollection(
-        SutProvider<UpdateOrganizationUserValidator> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
-        Guid newCollectionId)
-    {
-        orgUser.UserId = Guid.NewGuid();
-        var performedBy = new StandardUser(orgUser.UserId!.Value, false);
-
-        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            performedBy: performedBy,
-            collections: [new CollectionAccessSelection { Id = newCollectionId }],
-            currentAccessIds: []);
-
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<CannotAddSelfToCollection>(result.AsError);
     }
 
     [Theory]
@@ -257,7 +236,7 @@ public class UpdateOrganizationUserValidatorTests
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin,
             performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom));
 
-        sutProvider.GetDependency<IManageOrganizationUserValidationService>()
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
             .CanManageRoleChangeAsync(Arg.Any<Guid>(), Arg.Any<IOrganizationUserRole>(), Arg.Any<IOrganizationUserRole>(),
                 Arg.Any<OrganizationUserType>(), Arg.Any<Permissions>())
             .Returns(new CustomUsersCannotManageAdminsOrOwners());
@@ -290,11 +269,10 @@ public class UpdateOrganizationUserValidatorTests
         Organization organization = null,
         List<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> groups = null,
-        HashSet<Guid> currentAccessIds = null,
         ICollection<Collection> postedCollections = null,
         Permissions newPermissions = null)
     {
-        // IManageOrganizationUserValidationService is auto-mocked; an unstubbed CanManageRoleChange returns null
+        // IOrganizationUserValidationService is auto-mocked; an unstubbed CanManageRoleChange returns null
         // ("allowed"), so the escalation check passes by default. Its role rules have their own unit tests.
 
         // Default to a state where validation passes unless a test overrides it.
@@ -309,7 +287,6 @@ public class UpdateOrganizationUserValidatorTests
         return new UpdateOrganizationUserRequest(
             organizationUser,
             organization ?? CreateOrganization(organizationUser.OrganizationId, PlanType.EnterpriseAnnually),
-            currentAccessIds ?? [],
             // By default, treat every posted collection as an existing shared collection in the org so
             // validation passes; tests override this to exercise missing or default collections.
             postedCollections ?? (collections ?? [])
