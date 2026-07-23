@@ -492,7 +492,13 @@ public static class CoreHelpers
         return val.ToString();
     }
 
-    public static string SanitizeForEmail(string value, bool htmlEncode = true)
+    /// <summary>
+    /// Sanitizes a value for display in an email by neutralizing anything that looks like an
+    /// address or link (e.g. "@" and "scheme://"). It deliberately does NOT HTML-encode the
+    /// result: the mail templates are rendered by Handlebars, which HTML-encodes interpolated
+    /// values ({{ }}) by default. Encoding here as well produced double-encoded output.
+    /// </summary>
+    public static string SanitizeForEmail(string value)
     {
         var cleanedValue = value.Replace("@", "[at]");
         var regexOptions = RegexOptions.CultureInvariant |
@@ -505,7 +511,7 @@ public static class CoreHelpers
             cleanedValue = Regex.Replace(cleanedValue, @"((^|\b)(\w*)://)",
                 string.Empty, regexOptions);
         }
-        return htmlEncode ? HttpUtility.HtmlEncode(cleanedValue) : cleanedValue;
+        return cleanedValue;
     }
 
     public static string DateTimeToTableStorageKey(DateTime? date = null)

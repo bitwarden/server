@@ -453,4 +453,29 @@ public class CoreHelpersTests
     {
         Assert.Equal("helloworld", CoreHelpers.ReplaceWhiteSpace(email, string.Empty));
     }
+
+    [Theory]
+    [InlineData("user@example.com", "user[at]example[dot]com")]
+    [InlineData("https://bitwarden.com", "bitwarden[dot]com")]
+    [InlineData("ftp://files.example.org", "files[dot]example[dot]org")]
+    public void SanitizeForEmail_NeutralizesAddressesAndLinks(string value, string expected)
+    {
+        Assert.Equal(expected, CoreHelpers.SanitizeForEmail(value));
+    }
+
+    [Theory]
+    [InlineData("<script>alert('x')</script>")]
+    [InlineData("Org & Co \"quoted\"")]
+    [InlineData("Tom & Jerry <tag>")]
+    public void SanitizeForEmail_DoesNotHtmlEncode(string value)
+    {
+        // Handlebars HTML-encodes interpolated values by default, so this method must not
+        // encode as well; otherwise the output is double-encoded in rendered emails.
+        var result = CoreHelpers.SanitizeForEmail(value);
+
+        Assert.DoesNotContain("&lt;", result);
+        Assert.DoesNotContain("&gt;", result);
+        Assert.DoesNotContain("&amp;", result);
+        Assert.DoesNotContain("&quot;", result);
+    }
 }
