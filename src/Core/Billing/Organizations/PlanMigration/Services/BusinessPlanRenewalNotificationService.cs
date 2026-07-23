@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
