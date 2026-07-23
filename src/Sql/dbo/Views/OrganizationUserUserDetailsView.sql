@@ -19,7 +19,8 @@ SELECT
     U.[UsesKeyConnector],
     CASE WHEN U.[MasterPassword] IS NOT NULL THEN 1 ELSE 0 END AS HasMasterPassword,
     OU.[RevocationReason],
-    OU.[CreationDate]
+    OU.[CreationDate],
+    OU.[AccessPam]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

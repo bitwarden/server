@@ -1792,6 +1792,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AccessPam")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("INTEGER");
 

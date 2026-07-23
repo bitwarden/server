@@ -100,7 +100,9 @@ public class ImportOrganizationUsersAndGroupsCommandTests
     {
         SetupOrganizationConfigForImport(sutProvider, org, existingUsers, []);
 
-        // Existing user does not have a master password
+        // The removed user must be a non-owner without a master password. Owners are never included in
+        // the removal set, so the user's type has to be pinned (AutoFixture may otherwise generate an owner).
+        existingUsers.First().Type = OrganizationUserType.User;
         existingUsers.First().HasMasterPassword = false;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
