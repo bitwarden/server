@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -237,14 +237,14 @@ public class PreviewOrganizationTaxCommand(
 
                 var items = new List<InvoiceSubscriptionDetailsItemOptions>();
 
-                long quantity;
+                long seatQuantity;
 
-                if (currentPlan.HasNonSeatBasedPasswordManagerPlan() && !newPlan.HasNonSeatBasedPasswordManagerPlan())
+                if (!string.IsNullOrEmpty(currentPlan.PasswordManager.StripePlanId) && !newPlan.HasNonSeatBasedPasswordManagerPlan())
                 {
                     // The current plan doesn't have a per-seat subscription item to read a quantity from
                     // (e.g. upgrading from a flat-rate plan like Teams Starter), so fall back to the
                     // organization's occupied seat count instead of looking it up on the subscription.
-                    quantity = (long)organization.Seats!;
+                    seatQuantity = (long)organization.Seats!;
                 }
                 else
                 {
@@ -263,7 +263,7 @@ public class PreviewOrganizationTaxCommand(
                             "Your organization's subscription does not match its current plan. Please contact support for assistance.");
                     }
 
-                    quantity = passwordManagerSeats.Quantity;
+                    seatQuantity = passwordManagerSeats.Quantity;
                 }
 
                 items.Add(new InvoiceSubscriptionDetailsItemOptions
@@ -271,7 +271,7 @@ public class PreviewOrganizationTaxCommand(
                     Price = newPlan.HasNonSeatBasedPasswordManagerPlan()
                         ? newPlan.PasswordManager.StripePlanId
                         : newPlan.PasswordManager.StripeSeatPlanId,
-                    Quantity = quantity
+                    Quantity = seatQuantity
                 });
 
                 // Match existing storage by the CURRENT plan's id (as PM seats/SM do), then re-price at the
