@@ -8,7 +8,6 @@ using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -21,7 +20,6 @@ using static StripeConstants;
 
 public class UpdateOrganizationSubscriptionCommandTests
 {
-    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _assignmentRepository =
@@ -40,7 +38,6 @@ public class UpdateOrganizationSubscriptionCommandTests
             .Returns((OrganizationPlanMigrationCohortAssignment?)null);
 
         _command = new UpdateOrganizationSubscriptionCommand(
-            _featureService,
             Substitute.For<ILogger<UpdateOrganizationSubscriptionCommand>>(),
             _assignmentRepository,
             _cohortRepository,
@@ -745,200 +742,8 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_NonUSCustomer_NotReverseExempt_UpdatesTaxExemption()
+    public async Task Run_MismatchedTaxExempt_DoesNotReconcile()
     {
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Address = new Address { Country = "DE" },
-            TaxExempt = TaxExempt.None
-        };
-
-        var organization = CreateOrganization();
-        var subscription = CreateSubscription(customer: customer, items: [("price_seats", "si_1", 5)]);
-
-        SetupGetSubscription(organization, subscription);
-        SetupUpdateSubscription(subscription);
-
-        var changeSet = new OrganizationSubscriptionChangeSet
-        {
-            Changes = [new UpdateItemQuantity("price_seats", 10)]
-        };
-
-        await _command.Run(organization, changeSet);
-
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id,
-            Arg.Is<CustomerUpdateOptions>(options =>
-                options.TaxExempt == TaxExempt.Reverse));
-    }
-
-    [Fact]
-    public async Task Run_NonUSCustomer_AlreadyReverseExempt_DoesNotUpdateTaxExemption()
-    {
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Address = new Address { Country = "DE" },
-            TaxExempt = TaxExempt.Reverse
-        };
-
-        var organization = CreateOrganization();
-        var subscription = CreateSubscription(customer: customer, items: [("price_seats", "si_1", 5)]);
-
-        SetupGetSubscription(organization, subscription);
-        SetupUpdateSubscription(subscription);
-
-        var changeSet = new OrganizationSubscriptionChangeSet
-        {
-            Changes = [new UpdateItemQuantity("price_seats", 10)]
-        };
-
-        await _command.Run(organization, changeSet);
-
-        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
-            Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
-    }
-
-    [Fact]
-    public async Task Run_USCustomer_DoesNotUpdateTaxExemption()
-    {
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Address = new Address { Country = "US" },
-            TaxExempt = TaxExempt.None
-        };
-
-        var organization = CreateOrganization();
-        var subscription = CreateSubscription(customer: customer, items: [("price_seats", "si_1", 5)]);
-
-        SetupGetSubscription(organization, subscription);
-        SetupUpdateSubscription(subscription);
-
-        var changeSet = new OrganizationSubscriptionChangeSet
-        {
-            Changes = [new UpdateItemQuantity("price_seats", 10)]
-        };
-
-        await _command.Run(organization, changeSet);
-
-        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
-            Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
-    }
-
-    [Fact]
-    public async Task Run_SwissCustomer_WithNone_DoesNotUpdateTaxExemption()
-    {
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Address = new Address { Country = "CH" },
-            TaxExempt = TaxExempt.None
-        };
-
-        var organization = CreateOrganization();
-        var subscription = CreateSubscription(customer: customer, items: [("price_seats", "si_1", 5)]);
-
-        SetupGetSubscription(organization, subscription);
-        SetupUpdateSubscription(subscription);
-
-        var changeSet = new OrganizationSubscriptionChangeSet
-        {
-            Changes = [new UpdateItemQuantity("price_seats", 10)]
-        };
-
-        await _command.Run(organization, changeSet);
-
-        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
-            Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
-    }
-
-    [Fact]
-    public async Task Run_SwissCustomer_WithReverse_UpdatesTaxExemptToNone()
-    {
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Address = new Address { Country = "CH" },
-            TaxExempt = TaxExempt.Reverse
-        };
-
-        var organization = CreateOrganization();
-        var subscription = CreateSubscription(customer: customer, items: [("price_seats", "si_1", 5)]);
-
-        SetupGetSubscription(organization, subscription);
-        SetupUpdateSubscription(subscription);
-
-        var changeSet = new OrganizationSubscriptionChangeSet
-        {
-            Changes = [new UpdateItemQuantity("price_seats", 10)]
-        };
-
-        await _command.Run(organization, changeSet);
-
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id,
-            Arg.Is<CustomerUpdateOptions>(options =>
-                options.TaxExempt == TaxExempt.None));
-    }
-
-    [Theory]
-    [InlineData("CH")]
-    [InlineData("US")]
-    [InlineData("DE")]
-    public async Task Run_CustomerWithExemptStatus_DoesNotUpdateTaxExemption(string country)
-    {
-        // "exempt" is a manual designation (e.g. non-profit) and must never be overwritten automatically.
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Address = new Address { Country = country },
-            TaxExempt = TaxExempt.Exempt
-        };
-
-        var organization = CreateOrganization();
-        var subscription = CreateSubscription(customer: customer, items: [("price_seats", "si_1", 5)]);
-
-        SetupGetSubscription(organization, subscription);
-        SetupUpdateSubscription(subscription);
-
-        var changeSet = new OrganizationSubscriptionChangeSet
-        {
-            Changes = [new UpdateItemQuantity("price_seats", 10)]
-        };
-
-        await _command.Run(organization, changeSet);
-
-        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
-            Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
-    }
-
-    [Fact]
-    public async Task Run_CustomerWithNullAddress_DoesNotUpdateTaxExemption()
-    {
-        var customer = new Customer { Id = "cus_123", Address = null };
-
-        var organization = CreateOrganization();
-        var subscription = CreateSubscription(customer: customer, items: [("price_seats", "si_1", 5)]);
-
-        SetupGetSubscription(organization, subscription);
-        SetupUpdateSubscription(subscription);
-
-        var changeSet = new OrganizationSubscriptionChangeSet
-        {
-            Changes = [new UpdateItemQuantity("price_seats", 10)]
-        };
-
-        await _command.Run(organization, changeSet);
-
-        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
-            Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
-    }
-
-    [Fact]
-    public async Task Run_FlagOn_MismatchedTaxExempt_DoesNotReconcile()
-    {
-        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
-
         var customer = new Customer
         {
             Id = "cus_123",
