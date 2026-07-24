@@ -11,7 +11,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUse
 /// and the acting user. Collection and group access are trusted as already-authorized by the API layer.
 /// </summary>
 /// <param name="NewPermissions">The requested custom permissions (used when <paramref name="NewType"/> is Custom).</param>
-/// <param name="Collections"><c>collectionsToSave</c>: posted plus currently-held collection entities for validation lookups. <c>collectionAccessToSave</c>: the access to persist; null removes all.</param>
+/// <param name="CollectionsToSave">The collection access to persist; null removes all collection access.</param>
 /// <param name="NewGroups">The updated group access; null leaves groups unchanged.</param>
 /// <param name="DefaultUserCollectionName">Default collection name used when applicable</param>
 public record UpdateOrganizationUserRequest(
@@ -20,7 +20,7 @@ public record UpdateOrganizationUserRequest(
     OrganizationUserType NewType,
     Permissions? NewPermissions,
     bool NewAccessSecretsManager,
-    (ICollection<Collection> collectionsToSave, List<CollectionAccessSelection>? collectionAccessToSave) Collections,
+    List<CollectionAccessSelection>? CollectionsToSave,
     IEnumerable<Guid>? NewGroups,
     IActingUser PerformedBy,
     string? DefaultUserCollectionName)

@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -272,17 +273,26 @@ public class UpdateOrganizationUserValidatorTests
         ICollection<Collection> collectionsToSave = null,
         Permissions newPermissions = null)
     {
-        // IOrganizationUserValidationService is auto-mocked; an unstubbed CanManageRoleChange returns null
-        // ("allowed"), so the escalation check passes by default. Its role rules have their own unit tests.
-
-        // Default to a state where validation passes unless a test overrides it.
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
 
-        // When a test doesn't specify an actor, default to an authorized owner member so unrelated rules can
-        // be exercised. The actor's role and permissions travel on the acting user itself.
         var actingUser = performedBy ?? new StandardUser(Guid.NewGuid(), true, OrganizationUserType.Owner);
+
+        var collectionAccess = collectionAccessToSave ?? [];
+
+        var collections = collectionsToSave ?? collectionAccess
+            .Select(c => new Collection
+            {
+                Id = c.Id,
+                OrganizationId = organizationUser.OrganizationId,
+                Type = CollectionType.SharedCollection
+            })
+            .ToList();
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(collections);
 
         return new UpdateOrganizationUserRequest(
             organizationUser,
@@ -290,15 +300,7 @@ public class UpdateOrganizationUserValidatorTests
             newType,
             newPermissions,
             false,
-            // Default every access selection to an existing shared collection so validation passes; tests override collectionsToSave.
-            (collectionsToSave ?? (collectionAccessToSave ?? [])
-                .Select(c => new Collection
-                {
-                    Id = c.Id,
-                    OrganizationId = organizationUser.OrganizationId,
-                    Type = CollectionType.SharedCollection
-                })
-                .ToList(), collectionAccessToSave ?? []),
+            collectionAccess,
             groups,
             actingUser,
             null);

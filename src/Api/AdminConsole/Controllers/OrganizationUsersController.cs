@@ -426,9 +426,10 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var existingUserType = organizationUser.Type;
 
+        var collectionAccessToSave = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
+
         if (_featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp))
         {
-            var collections = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
 
             var actingContext = _currentContext.GetOrganization(organization.Id);
 
@@ -438,7 +439,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 model.Type.Value,
                 model.Permissions,
                 model.AccessSecretsManager,
-                collections,
+                collectionAccessToSave,
                 groupsToSave,
                 new StandardUser(
                     userId,
@@ -451,10 +452,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return Handle(result);
         }
 
-        var (_, collectionAccessToSaveV1) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
-
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
-            collectionAccessToSaveV1, groupsToSave, model.DefaultUserCollectionName);
+            collectionAccessToSave, groupsToSave, model.DefaultUserCollectionName);
 
         return TypedResults.Ok();
     }
@@ -463,7 +462,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     /// Resolves the collection access to persist for an organization user update, enforcing the saving user's
     /// authorization over the affected collections.
     /// </summary>
-    private async Task<(ICollection<Collection> collectionsToSave, List<CollectionAccessSelection> collectionAccessToSave)> GetAuthorizedCollectionsToSaveAsync(OrganizationUserUpdateRequestModel model, ICollection<CollectionAccessSelection> currentAccess, bool editingSelf, Organization organization)
+    private async Task<List<CollectionAccessSelection>> GetAuthorizedCollectionsToSaveAsync(OrganizationUserUpdateRequestModel model, ICollection<CollectionAccessSelection> currentAccess, bool editingSelf, Organization organization)
     {
         // A self-editing user can't add themselves to collections they don't already have access to,
         // unless admins can access all collections.
@@ -497,8 +496,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
             }
         }
 
-        // Default collections ("My Items") aren't managed here: drop current-access defaults from the
-        // preserved set (posted defaults are rejected downstream).
         var defaultCollectionIds = postedCollections
             .Concat(currentCollections)
             .Where(c => c.Type == CollectionType.DefaultUserCollection)
@@ -506,18 +503,15 @@ public class OrganizationUsersController : BaseAdminConsoleController
             .ToHashSet();
 
         var editedCollectionAccess = model.Collections.Select(c => c.ToSelectionReadOnly());
-        var readonlyCollectionAccess = currentAccess
-            .Where(ca => readonlyCollectionIds.Contains(ca.Id) && !defaultCollectionIds.Contains(ca.Id));
+
+        var readonlyCollectionAccess = currentAccess.Where(ca => readonlyCollectionIds.Contains(ca.Id));
+
         var collectionAccessToSave = editedCollectionAccess
             .Concat(readonlyCollectionAccess)
+            .Where(ac => !defaultCollectionIds.Contains(ac.Id)) // Remove default collections
             .ToList();
 
-        var collectionsToSave = postedCollections
-            .Concat(currentCollections)
-            .DistinctBy(c => c.Id)
-            .ToList();
-
-        return (collectionsToSave, collectionAccessToSave);
+        return collectionAccessToSave;
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]

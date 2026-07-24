@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
@@ -15,7 +16,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUse
 public class UpdateOrganizationUserValidator(
     IGroupRepository groupRepository,
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-    IOrganizationUserValidationService organizationUserValidationService)
+    IOrganizationUserValidationService organizationUserValidationService,
+    ICollectionRepository collectionRepository)
     : IUpdateOrganizationUserValidator
 {
     public async Task<ValidationResult<UpdateOrganizationUserRequest>> ValidateAsync(
@@ -35,15 +37,17 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, freeOrgAdminError);
         }
 
-        var collectionAccessToSave = request.Collections.collectionAccessToSave ?? [];
+        var collectionAccessToSave = request.CollectionsToSave ?? [];
         if (collectionAccessToSave.Count != 0)
         {
-            if (!CollectionsAreValid(collectionAccessToSave, request.Collections.collectionsToSave, organizationUser.OrganizationId))
+            var collectionsToSave = await collectionRepository.GetManyByManyIdsAsync(collectionAccessToSave.Select(cas => cas.Id));
+
+            if (!CollectionsAreValid(collectionAccessToSave, collectionsToSave, organizationUser.OrganizationId))
             {
                 return Invalid(request, new CollectionNotFound());
             }
 
-            if (ContainsDefaultUserCollection(collectionAccessToSave, request.Collections.collectionsToSave))
+            if (ContainsDefaultUserCollection(collectionAccessToSave, collectionsToSave))
             {
                 return Invalid(request, new CannotAssignDefaultCollection());
             }

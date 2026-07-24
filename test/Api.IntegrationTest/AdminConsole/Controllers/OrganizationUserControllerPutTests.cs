@@ -286,7 +286,7 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Put_PostingDefaultCollection_v1IgnoresV2Rejects(bool flagOn)
+    public async Task Put_PostingDefaultCollection_IsIgnored(bool flagOn)
     {
         _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetAllowAdminAccessToAllCollectionItemsAsync(true);
@@ -305,8 +305,7 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         };
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}", request);
 
-        // v1 silently drops the default collection; v2 rejects it.
-        Assert.Equal(flagOn ? HttpStatusCode.BadRequest : HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
         await AssertDoesNotHaveCollectionAsync(member, defaultCollection.Id);
     }
 
