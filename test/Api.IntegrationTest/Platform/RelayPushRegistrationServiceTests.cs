@@ -124,6 +124,27 @@ public class RelayPushRegistrationServiceTests
         Assert.DoesNotContain(logs, l => l.Level >= LogLevel.Warning);
     }
 
+    /// <summary>
+    /// Returns a truncated snippet of the <c>db.statement</c> tag for EF Core activities,
+    /// or <see langword="null"/> for all other activity sources.
+    /// </summary>
+    private static string? DbStatementSnippet(Activity a)
+    {
+        if (!a.Source.Name.Contains("EntityFrameworkCore"))
+        {
+            return null;
+        }
+
+        var stmt = a.GetTagItem("db.statement")?.ToString();
+        if (stmt is null)
+        {
+            return null;
+        }
+
+        const int maxLen = 120;
+        return stmt.Length <= maxLen ? stmt : stmt[..maxLen] + "…";
+    }
+
     private void DumpLogs(string context)
     {
         DumpCollector($"RelayPushRegistrationService logs ({context})", _logCollector);
@@ -288,18 +309,24 @@ public class RelayPushRegistrationServiceTests
                 var url = a.GetTagItem("url.full")?.ToString()
                        ?? a.GetTagItem("http.url")?.ToString()
                        ?? a.GetTagItem("server.address")?.ToString();
+                // db.statement may already be set as an initial tag on EF Core activities.
+                var dbSnippet = DbStatementSnippet(a);
                 _output.WriteLine(
                     $"[+{sw.Elapsed.TotalSeconds:F2}s][Activity+] {a.Source.Name}/{a.OperationName}"
-                    + (url is not null ? $" {url}" : ""));
+                    + (url is not null ? $" {url}" : "")
+                    + (dbSnippet is not null ? $" sql={dbSnippet}" : ""));
             },
             ActivityStopped = a =>
             {
                 var url = a.GetTagItem("url.full")?.ToString()
                        ?? a.GetTagItem("http.url")?.ToString();
+                // db.statement is guaranteed to be set by the time the activity stops.
+                var dbSnippet = DbStatementSnippet(a);
                 _output.WriteLine(
                     $"[+{sw.Elapsed.TotalSeconds:F2}s][Activity-] {a.Source.Name}/{a.OperationName}"
                     + $" {a.Duration.TotalMilliseconds:F0}ms"
-                    + (url is not null ? $" {url}" : ""));
+                    + (url is not null ? $" {url}" : "")
+                    + (dbSnippet is not null ? $" sql={dbSnippet}" : ""));
             }
         };
         ActivitySource.AddActivityListener(activityListener);
