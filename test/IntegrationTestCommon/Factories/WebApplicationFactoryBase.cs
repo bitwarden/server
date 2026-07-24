@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -52,6 +53,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
     protected readonly List<Action<IServiceCollection>> _configureTestServices = new();
     private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
+    private readonly List<Action<IConfigurationBuilder>> _configureHostAppConfiguration = new();
 
     public void SubstituteService<TService>(Action<TService> mockService)
         where TService : class
@@ -123,6 +125,36 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     }
 
     /// <summary>
+    /// Overrides a host-level configuration setting. Unlike <see cref="UpdateConfiguration"/>,
+    /// which adds to the web-host configuration read by <c>Startup.ConfigureServices</c>, this
+    /// method adds to the <see cref="IHostBuilder.ConfigureAppConfiguration"/> pipeline, which
+    /// is what services registered via <c>IHostBuilder.ConfigureServices</c> — such as the
+    /// Bitwarden SDK's <c>UseBitwardenSdk()</c> — read at service-registration time.
+    /// </summary>
+    /// <remarks>This needs to be called BEFORE making any calls through the factory to take effect.</remarks>
+    public void UpdateHostConfiguration(string key, string? value)
+    {
+        _configureHostAppConfiguration.Add(builder =>
+        {
+            builder.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { key, value },
+            });
+        });
+    }
+
+    protected override IHostBuilder? CreateHostBuilder()
+    {
+        var builder = base.CreateHostBuilder();
+        foreach (var configure in _configureHostAppConfiguration)
+        {
+            var captured = configure;
+            builder?.ConfigureAppConfiguration((_, config) => captured(config));
+        }
+        return builder;
+    }
+
+    /// <summary>
     /// Configure the web host to use a SQLite in memory database
     /// </summary>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -168,8 +200,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             c.SetBasePath(AppContext.BaseDirectory)
                 .AddJsonFile("appsettings.json")
                 .AddJsonFile("appsettings.Development.json");
-
-            c.AddUserSecrets(typeof(Identity.Startup).Assembly, optional: true);
 
             c.AddInMemoryCollection(config);
         });
