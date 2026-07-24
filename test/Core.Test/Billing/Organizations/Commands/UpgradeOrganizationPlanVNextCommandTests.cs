@@ -196,6 +196,57 @@ public class UpgradeOrganizationPlanVNextCommandTests
         Assert.Equal(targetPlan.Type, organization.PlanType);
     }
 
+    // Regression (PM-40866): a Teams 2019 org at/under its 5 included seats has only the base bundle
+    // line, so the base line is repointed to the Enterprise seat price at the org's seat count with no
+    // overage removal
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Run_Teams2019ToEnterprise_AtBaseSeats_ChangesBasePriceWithoutRemovingOverage(bool isAnnual)
+    {
+        var currentPlan = MockPlans.Get(isAnnual ? PlanType.TeamsAnnually2019 : PlanType.TeamsMonthly2019);
+        var targetPlan = MockPlans.Get(isAnnual ? PlanType.EnterpriseAnnually : PlanType.EnterpriseMonthly);
+        var organization = CreateOrganization(
+            isAnnual ? PlanType.TeamsAnnually2019 : PlanType.TeamsMonthly2019, seats: 5);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(
+            organization,
+            Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Any(c => c.IsT1
+                    && c.AsT1.CurrentPriceId == currentPlan.PasswordManager.StripePlanId
+                    && c.AsT1.UpdatedPriceId == targetPlan.PasswordManager.StripeSeatPlanId
+                    && c.AsT1.Quantity == organization.Seats)
+                && cs.Changes.All(c => !c.IsT2)));
+    }
+
+    // Regression (PM-40866): a Teams 2019 org above its 5 included seats also carries a per-seat overage
+    // line, which is removed so base + overage collapse onto the single Enterprise seat line.
+    [Fact]
+    public async Task Run_Teams2019ToEnterprise_AboveBaseSeats_RemovesOverage()
+    {
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually2019);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        var organization = CreateOrganization(PlanType.TeamsAnnually2019, seats: 10);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(
+            organization,
+            Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Any(c => c.IsT1
+                    && c.AsT1.CurrentPriceId == currentPlan.PasswordManager.StripePlanId
+                    && c.AsT1.Quantity == organization.Seats)
+                && cs.Changes.Any(c => c.IsT2 && c.AsT2.PriceId == currentPlan.PasswordManager.StripeSeatPlanId)));
+    }
+
     [Fact]
     public async Task Run_PaidUpgrade_WithExtraStorage_ChangesStoragePrice()
     {

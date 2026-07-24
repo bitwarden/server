@@ -112,7 +112,12 @@ public class UpgradeOrganizationPlanVNextCommand(
 
         var builder = OrganizationSubscriptionChangeSet.Builder(currentPlan);
 
-        builder.ChangePasswordManagerPrice(plan);
+        // Teams 2019 has both a base price and a seat price, so we need to handle it differently.
+        // We can remove this when we have migrated all Teams 2019 organizations to the new plans.
+        var isPackagedWithOverage = !currentPlan.HasNonSeatBasedPasswordManagerPlan() && currentPlan.PasswordManager.BaseSeats > 0;
+        builder = isPackagedWithOverage
+            ? builder.ChangePackagedPasswordManagerPrice(plan, organization.Seats!.Value)
+            : builder.ChangePasswordManagerPrice(plan);
 
         if (organization.MaxStorageGb > currentPlan.PasswordManager.BaseStorageGb)
         {
