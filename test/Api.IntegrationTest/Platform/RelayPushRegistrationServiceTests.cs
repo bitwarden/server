@@ -26,11 +26,19 @@ public sealed class RelayPushRegistrationServiceFixture : IDisposable
     public ApiApplicationFactory CloudApi { get; }
     public Guid FakeInstallationId { get; }
 
+    /// <summary>The in-process TestHost handler for the API server.</summary>
+    /// <remarks>
+    /// Tests create a fresh <see cref="HttpClient"/> wrapping this handler per test instance.
+    /// A shared <see cref="HttpClient"/> cannot be reused because <see cref="BaseIdentityClientService"/>
+    /// sets <see cref="HttpClient.BaseAddress"/> in its constructor, which is forbidden after the
+    /// first request has been sent.
+    /// </remarks>
+    public HttpMessageHandler CloudApiHandler { get; }
+
     /// <summary>The in-process TestHost handler for the identity server.</summary>
     /// <remarks>Tests wrap this in a per-test <see cref="RelayPushRegistrationServiceTests.IdentityTimingHandler"/>.</remarks>
     public HttpMessageHandler IdentityBaseHandler { get; }
 
-    public HttpClient CloudApiHttpClient { get; }
     public GlobalSettings GlobalSettings { get; }
 
     public RelayPushRegistrationServiceFixture()
@@ -58,28 +66,32 @@ public sealed class RelayPushRegistrationServiceFixture : IDisposable
             services.AddLogging(b => b.AddFakeLogging());
         });
 
-        // Substitute the SDK feature service so LaunchDarklyClientProvider is never instantiated
-        // and no outbound connections to LaunchDarkly are made. In CI, those connections hang
-        // because packets are dropped (TCP SYN-timeout ~2 min) rather than refused, stalling the
-        // TestHost response-body pipe writer even though the server logs "Request finished 200".
+        // Both the API and identity servers call UseBitwardenSdk() on IHostBuilder, which
+        // registers LaunchDarklyClientProvider (makes outbound TCP connections) and OTLP
+        // exporters (gRPC channel with exponential-backoff retries). In CI both endpoints are
+        // unreachable, causing startup / first-request delays of up to ~136 s each.
+        // Apply the same two suppressions to both servers.
+
+        // Substitute the SDK feature service so LaunchDarklyClientProvider is never resolved
+        // and no outbound connections to LaunchDarkly are made.
+        CloudApi.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(service => { });
         CloudApi.Identity.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(
             service => { });
 
-        // Disable OpenTelemetry OTLP exporters. The Bitwarden SDK registers OTLP metric and trace
-        // exporters by default when not self-hosted. It does this from IHostBuilder.ConfigureServices,
-        // reading IHostBuilder.ConfigureAppConfiguration (HostBuilderContext.Configuration) — NOT
-        // the web-host configuration that UpdateConfiguration() adds to. UpdateHostConfiguration()
-        // adds an in-memory source directly to IHostBuilder.ConfigureAppConfiguration, which is what
-        // AddMetrics() actually reads when deciding whether to call tracing.AddOtlpExporter().
-        // In CI the OTLP gRPC channel retries connecting to the unreachable endpoint with exponential
-        // backoff (1 s → 2 s → 4 s → … → ~120 s), stalling the TestHost pipeline for ~136 s.
+        // Disable OTLP exporters. UpdateHostConfiguration() adds to IHostBuilder.ConfigureAppConfiguration
+        // (HostBuilderContext.Configuration), which is what UseBitwardenSdk()'s AddMetrics() reads
+        // when deciding whether to call tracing.AddOtlpExporter(). UpdateConfiguration() would
+        // add to the web-host config pipeline instead, which AddMetrics() does NOT read.
+        CloudApi.UpdateHostConfiguration("OpenTelemetry:Enabled", "false");
         CloudApi.Identity.UpdateHostConfiguration("OpenTelemetry:Enabled", "false");
 
-        CloudApiHttpClient = CloudApi.CreateClient();
-        // Access the identity server's in-process handler directly so tests can wrap it with a
-        // timing handler. CloudApi.CreateClient() above already triggered identity server startup
-        // (ApiApplicationFactory wires the JWT backchannel to the identity TestServer), so the
-        // server is ready here without double-starting.
+        // Trigger startup of both servers. CreateClient() starts the API TestHost, which in turn
+        // starts the identity TestHost via the JWT backchannel wired up in ApiApplicationFactory.
+        // Discard the returned HttpClient — tests must create their own fresh instances because
+        // BaseIdentityClientService sets HttpClient.BaseAddress in its constructor, which throws
+        // if the client has already sent a request.
+        CloudApi.CreateClient();
+        CloudApiHandler = CloudApi.Server.CreateHandler();
         IdentityBaseHandler = CloudApi.Identity.Server.CreateHandler();
 
         GlobalSettings = new GlobalSettings
@@ -108,6 +120,10 @@ public class RelayPushRegistrationServiceTests : IClassFixture<RelayPushRegistra
         _fixture = fixture;
         _output = output;
 
+        // Fresh HttpClient instances per test: BaseIdentityClientService sets .BaseAddress in its
+        // constructor, which HttpClient forbids after the first request has been sent. Wrapping the
+        // shared handlers in new HttpClient instances each time avoids the InvalidOperationException.
+        var cloudApiHttpClient = new HttpClient(fixture.CloudApiHandler);
         var identityTimingHandler = new IdentityTimingHandler(output)
         {
             InnerHandler = fixture.IdentityBaseHandler
@@ -115,7 +131,7 @@ public class RelayPushRegistrationServiceTests : IClassFixture<RelayPushRegistra
         var cloudIdentityHttpClient = new HttpClient(identityTimingHandler);
 
         var httpClientFactory = Substitute.For<IHttpClientFactory>();
-        httpClientFactory.CreateClient("client").Returns(fixture.CloudApiHttpClient);
+        httpClientFactory.CreateClient("client").Returns(cloudApiHttpClient);
         httpClientFactory.CreateClient("identity").Returns(cloudIdentityHttpClient);
 
         var logger = new FakeLogger<RelayPushRegistrationService>();
