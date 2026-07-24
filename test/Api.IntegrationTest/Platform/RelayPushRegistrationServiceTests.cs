@@ -72,9 +72,12 @@ public sealed class RelayPushRegistrationServiceFixture : IDisposable
         // unreachable, causing startup / first-request delays of up to ~136 s each.
         // Apply the same two suppressions to both servers.
 
-        // Substitute the SDK feature service so LaunchDarklyClientProvider is never resolved
-        // and no outbound connections to LaunchDarkly are made.
-        CloudApi.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(service => { });
+        // Substitute the SDK feature service on the identity server so LaunchDarklyClientProvider
+        // is never resolved and no outbound connections to LaunchDarkly are made. The API server
+        // does not need this substitution: the LaunchDarkly SDK key is blank in test appsettings,
+        // so its client runs in offline/no-connection mode. Substituting IFeatureService on the
+        // API server would break the push registration endpoint because NSubstitute returns false
+        // for all feature flag checks, causing the API to reject the relay's registration request.
         CloudApi.Identity.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(
             service => { });
 
