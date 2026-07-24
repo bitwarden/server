@@ -92,25 +92,22 @@ public class CompleteTwoFactorWebAuthnRegistrationCommandTests
 
         var mockFido2 = sutProvider.GetDependency<IFido2>();
         mockFido2.MakeNewCredentialAsync(
-                Arg.Any<AuthenticatorAttestationRawResponse>(),
-                Arg.Any<CredentialCreateOptions>(),
-                Arg.Any<IsCredentialIdUniqueToUserAsyncDelegate>())
-            .Returns(new Fido2.CredentialMakeResult("ok", "",
-                new AttestationVerificationSuccess
+                Arg.Any<MakeNewCredentialParams>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new RegisteredPublicKeyCredential
+            {
+                AaGuid = Guid.NewGuid(),
+                SignCount = 0,
+                Id = [1, 2, 3],
+                AttestationFormat = "public-key",
+                PublicKey = [4, 5, 6],
+                User = new Fido2User
                 {
-                    Aaguid = Guid.NewGuid(),
-                    Counter = 0,
-                    CredentialId = [1, 2, 3],
-                    CredType = "public-key",
-                    PublicKey = [4, 5, 6],
-                    Status = "ok",
-                    User = new Fido2User
-                    {
-                        Id = user.Id.ToByteArray(),
-                        Name = user.Email ?? "test@example.com",
-                        DisplayName = user.Name ?? "Test User"
-                    }
-                }));
+                    Id = user.Id.ToByteArray(),
+                    Name = user.Email ?? "test@example.com",
+                    DisplayName = user.Name ?? "Test User"
+                }
+            });
 
         // Act
         var result =

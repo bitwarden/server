@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using System.Globalization;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 
@@ -29,12 +30,15 @@ public class TwoFactorWebAuthnDetails
         public KeyModel(string id, TwoFactorProvider.WebAuthnData data)
         {
             Name = data.Name;
-            Id = Convert.ToInt32(id.Replace("Key", string.Empty));
+            Id = Convert.ToInt32(id.Replace("Key", string.Empty), CultureInfo.InvariantCulture);
             Migrated = data.Migrated;
         }
 
         public string? Name { get; set; }
         public int Id { get; set; }
+        /// <summary>
+        /// <see cref="TwoFactorProvider.WebAuthnData.Migrated"/>
+        /// </summary>
         public bool Migrated { get; set; }
     }
 }
