@@ -15,7 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MarkDig" Version="[1.3.2]" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="[10.1.7]" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="[10.2.3]" />
   </ItemGroup>
 
 </Project>
