@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
 
-    <Version>2026.6.0</Version>
+    <Version>2026.7.1</Version>
 
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -11,13 +11,18 @@
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' == 'true'">annotations</Nullable>
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' != 'true'">enable</Nullable>
     <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
+    <!--
+        BWA0001: soft-deprecation of the (Bit.Core.Models.Api.ResponseModel and Bit.Api.Models.Response.ListResponseModel)
+         in favor Bit.HttpExtensions. Keep it a warning (not an error) so existing consumers build while we migrate them.
+        BWA0002: soft-deprecation of the legacy IFeatureService and this exclusion will go way once everyone migrates to the SDK one
+    -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);BWA0001;BWA0002</WarningsNotAsErrors>
     <NuGetAuditLevel>critical</NuGetAuditLevel>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <PropertyGroup>
     <BitIncludeAuthentication>false</BitIncludeAuthentication>
-    <BitIncludeFeatures>false</BitIncludeFeatures>
   </PropertyGroup>
 
   <PropertyGroup>

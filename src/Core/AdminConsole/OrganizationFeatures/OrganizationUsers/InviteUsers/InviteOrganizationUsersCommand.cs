@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Interfaces;
@@ -28,7 +29,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IOrganizationUserRepository organizationUserRepository,
     IInviteUsersValidator inviteUsersValidator,
     IOrganizationRepository organizationRepository,
-    IApplicationCacheService applicationCacheService,
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
     IMailService mailService,
     ILogger<InviteOrganizationUsersCommand> logger,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
@@ -207,7 +208,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats;
 
             await organizationRepository.ReplaceAsync(organization);
-            await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            await organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
         }
     }
 
@@ -316,7 +317,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             organization.Seats = validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
             organization.SyncSeats = true;
 
-            await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            await organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
         }
     }
 }

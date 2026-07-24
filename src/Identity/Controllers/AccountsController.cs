@@ -180,6 +180,13 @@ public class AccountsController : Controller
                     (Guid)model.ProviderUserId!);
                 return ProcessRegistrationResult(identityResult, user);
 
+            case RegisterFinishTokenType.SalesAssisted:
+                identityResult = await _registerUserCommand.RegisterUserViaSalesAssistedToken(
+                    user,
+                    registerFinishData,
+                    model.SalesAssistedToken!);
+                return ProcessRegistrationResult(identityResult, user);
+
             default:
                 throw new BadRequestException("Invalid registration finish request");
         }

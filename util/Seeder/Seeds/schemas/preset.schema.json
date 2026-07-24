@@ -18,6 +18,11 @@
       "description": "Organization configuration. Use 'fixture' for a named fixture, or 'name'+'domain' for inline creation.",
       "additionalProperties": false,
       "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional fixed organization GUID (omit to auto-generate). Lets canonical presets pin downstream wiring such as dev/.env."
+        },
         "fixture": {
           "type": "string",
           "description": "Name of an organization fixture file (e.g., 'dunder-mifflin')."
@@ -223,8 +228,8 @@
         },
         "encryptionType": {
           "type": "string",
-          "enum": ["masterPassword", "trustedDevices"],
-          "description": "How member keys are protected. 'masterPassword' = standard SSO, 'trustedDevices' = TDE (no master password)."
+          "enum": ["masterPassword", "trustedDevices", "keyConnector"],
+          "description": "How member keys are protected. 'masterPassword' = standard SSO, 'trustedDevices' = TDE (no master password), 'keyConnector' = Key Connector."
         },
         "provider": {
           "type": "string",
@@ -395,6 +400,34 @@
               "minimum": 1,
               "maximum": 10,
               "description": "Maximum number of collections a multi-collection cipher can belong to. Default: 2."
+            },
+            "archivedRate": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Fraction of ciphers that get an archived state. Applies independently to both the personal-vault and org cipher pools, each against its own size and maxArchivedCiphers cap. Default: 0."
+            },
+            "deletedRate": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Fraction of personal-vault and org ciphers that get a deleted (DeletedDate) state, computed independently per pool. Default: 0."
+            },
+            "archivedAndDeletedOverlapRate": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Fraction of the eligible cipher pool (personal or org, computed independently per pool) deliberately made both archived and deleted. Drawn from the archived set. Default: 0."
+            },
+            "maxArchivedCiphers": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Absolute cap on archived ciphers produced in one run. Default: 50."
+            },
+            "maxDeletedCiphers": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Absolute cap on deleted ciphers produced in one run. Default: 25."
             }
           }
         },

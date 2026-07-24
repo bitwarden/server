@@ -1,9 +1,12 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -17,29 +20,28 @@ public class UpdateOrganizationInviteLinkCommandTests
 {
     [Theory, BitAutoData]
     public async Task UpdateAsync_WithValidInput_Success(
-        Guid organizationId,
+        Organization organization,
+        OrganizationInviteLink existingLink,
         SutProvider<UpdateOrganizationInviteLinkCommand> sutProvider)
     {
-        SetupAbility(sutProvider, organizationId);
-
-        var originalCreationDate = DateTime.UtcNow.AddDays(-5);
-        var existingLink = new OrganizationInviteLink
-        {
-            Id = Guid.NewGuid(),
-            Code = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            EncryptedInviteKey = "encrypted-key",
-            EncryptedOrgKey = "encrypted-org-key",
-            CreationDate = originalCreationDate,
-            RevisionDate = originalCreationDate,
-        };
+        organization.Enabled = true;
+        organization.UseEvents = true;
+        existingLink.OrganizationId = organization.Id;
+        existingLink.CreationDate = DateTime.UtcNow.AddDays(-5);
+        existingLink.RevisionDate = existingLink.CreationDate;
         existingLink.SetAllowedDomains(["old.com"]);
 
+        SetupAbility(sutProvider, organization.Id);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByOrganizationIdAsync(organizationId)
+            .GetByOrganizationIdAsync(organization.Id)
             .Returns(existingLink);
 
-        var request = CreateRequest(organizationId, [" New.com ", "Example.COM", " "]);
+        var request = CreateRequest(organization.Id, [" New.com ", "Example.COM", " "]);
 
         var result = await sutProvider.Sut.UpdateAsync(request);
 
@@ -48,10 +50,10 @@ public class UpdateOrganizationInviteLinkCommandTests
         Assert.Same(existingLink, link);
         Assert.Equal(existingLink.Id, link.Id);
         Assert.Equal(existingLink.Code, link.Code);
-        Assert.Equal("encrypted-key", link.EncryptedInviteKey);
-        Assert.Equal("encrypted-org-key", link.EncryptedOrgKey);
-        Assert.Equal(originalCreationDate, link.CreationDate);
-        Assert.True(link.RevisionDate > originalCreationDate);
+        Assert.Equal(existingLink.Invite, link.Invite);
+        Assert.Equal(existingLink.SupportsConfirmation, link.SupportsConfirmation);
+        Assert.Equal(existingLink.CreationDate, link.CreationDate);
+        Assert.True(link.RevisionDate > existingLink.CreationDate);
 
         var deserializedDomains = JsonSerializer.Deserialize<List<string>>(link.AllowedDomains);
         Assert.NotNull(deserializedDomains);
@@ -60,6 +62,10 @@ public class UpdateOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .Received(1)
             .ReplaceAsync(existingLink);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationEventAsync(organization, EventType.Organization_InviteLinkDomainsEdited);
     }
 
     [Theory, BitAutoData]
@@ -82,6 +88,10 @@ public class UpdateOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(default!);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationEventAsync(Arg.Any<Organization>(), Arg.Any<EventType>());
     }
 
     [Theory, BitAutoData]
@@ -146,7 +156,7 @@ public class UpdateOrganizationInviteLinkCommandTests
         Guid organizationId,
         SutProvider<UpdateOrganizationInviteLinkCommand> sutProvider)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns((OrganizationAbility?)null);
 
@@ -163,7 +173,7 @@ public class UpdateOrganizationInviteLinkCommandTests
         Guid organizationId,
         bool useInviteLinks = true)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { UseInviteLinks = useInviteLinks });
     }

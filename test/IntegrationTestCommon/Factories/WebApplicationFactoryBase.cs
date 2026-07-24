@@ -48,6 +48,8 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// </remarks>
     public bool ManagesDatabase { get; set; } = true;
 
+    public bool StripeEnabled { get; set; } = false;
+
     protected readonly List<Action<IServiceCollection>> _configureTestServices = new();
     private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
 
@@ -232,9 +234,12 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
 
             // Noop StripePaymentService - this could be changed to integrate with our Stripe test account
-            Replace(services, Substitute.For<IStripePaymentService>());
+            if (!StripeEnabled)
+            {
+                Replace(services, Substitute.For<IStripePaymentService>());
 
-            Replace(services, Substitute.For<IOrganizationBillingService>());
+                Replace(services, Substitute.For<IOrganizationBillingService>());
+            }
         });
 
         foreach (var configureTestService in _configureTestServices)

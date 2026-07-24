@@ -16,12 +16,7 @@ public class OrganizationInviteLink : ITableObject<Guid>
     /// <summary>
     /// A random, secret code embedded in the invite link to ensure it cannot be guessed.
     /// </summary>
-    /// <remarks>
-    /// Uses <see cref="Guid.NewGuid"/> rather than a sequential/comb GUID because this is not
-    /// a table identifier and therefore does not need index-friendly ordering. A comb GUID's embedded
-    /// timestamp would also make the code partially predictable.
-    /// </remarks>
-    public Guid Code { get; set; } = Guid.NewGuid();
+    public string Code { get; set; } = null!;
     /// <summary>
     /// The ID of the <see cref="Organization"/> this invite link belongs to.
     /// </summary>
@@ -32,20 +27,18 @@ public class OrganizationInviteLink : ITableObject<Guid>
     /// </summary>
     public string AllowedDomains { get; set; } = null!;
     /// <summary>
-    /// The invite link key encrypted with the organization's symmetric key.
+    /// An opaque cryptographic blob.
     /// </summary>
     /// <remarks>
-    /// This is decrypted client-side and used to reconstruct the invite link for display to the admin.
+    /// The server only stores and transports this value; it never inspects the contents, which are
+    /// decrypted client-side to reconstruct the invite link and, when <see cref="SupportsConfirmation"/>
+    /// is set, to confirm a user.
     /// </remarks>
-    public string EncryptedInviteKey { get; set; } = null!;
+    public string Invite { get; set; } = null!;
     /// <summary>
-    /// The organization's symmetric key, encrypted with the invite link key.
+    /// Whether this invite link can be used to confirm a user.
     /// </summary>
-    /// <remarks>
-    /// This is used to support automatic confirmation of invited users by allowing a user who clicks the link
-    /// to decrypt a copy of the organization symmetric key.
-    /// </remarks>
-    public string? EncryptedOrgKey { get; set; }
+    public bool SupportsConfirmation { get; set; }
     /// <summary>
     /// The date the invite link was created.
     /// </summary>
@@ -76,5 +69,35 @@ public class OrganizationInviteLink : ITableObject<Guid>
         {
             Id = CoreHelpers.GenerateComb();
         }
+    }
+
+    /// <summary>
+    /// Initializes <see cref="Code"/> to a new random GUID string.
+    /// </summary>
+    /// <remarks>
+    /// Uses <see cref="Guid.NewGuid"/> rather than a sequential/comb GUID because this is a
+    /// bearer secret — not a table identifier — and does not need index-friendly ordering.
+    /// A comb GUID's embedded timestamp would also make the code partially predictable.
+    /// </remarks>
+    public void SetNewCode()
+    {
+        if (string.IsNullOrEmpty(Code))
+        {
+            Code = Guid.NewGuid().ToString();
+        }
+    }
+
+    /// <summary>
+    /// Constant-time comparison of <paramref name="providedCode"/> against <see cref="Code"/>;
+    /// returns false for null or empty input.
+    /// </summary>
+    public bool CodeMatches(string? providedCode)
+    {
+        if (string.IsNullOrEmpty(providedCode) || string.IsNullOrEmpty(Code))
+        {
+            return false;
+        }
+
+        return CoreHelpers.FixedTimeEquals(providedCode, Code);
     }
 }
