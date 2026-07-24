@@ -170,6 +170,38 @@ public class OrganizationSubscriptionChangeSetBuilder(Plan currentPlan)
     }
 
     /// <summary>
+    /// Collapses a packaged base+overage current plan (e.g. Teams 2019) onto <paramref name="targetPlan"/>'s
+    /// single seat line at <paramref name="seatCount"/>, dropping the overage line once past the included
+    /// seats. Only valid when the current plan has both a base and a seat price.
+    /// </summary>
+    /// <param name="targetPlan">The plan to which the subscription is being changed.</param>
+    /// <param name="seatCount">The organization's seat count, applied to the target seat line.</param>
+    /// <exception cref="InvalidOperationException">The current plan is not a packaged base+overage plan.</exception>
+    public OrganizationSubscriptionChangeSetBuilder ChangePackagedPasswordManagerPrice(Plan targetPlan, int seatCount)
+    {
+        if (string.IsNullOrEmpty(currentPlan.PasswordManager.StripePlanId) ||
+            string.IsNullOrEmpty(currentPlan.PasswordManager.StripeSeatPlanId))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(ChangePackagedPasswordManagerPrice)} requires a packaged base+overage current plan; use {nameof(ChangePasswordManagerPrice)} instead.");
+        }
+
+        _changes.Add(new ChangeItemPrice(
+            currentPlan.PasswordManager.StripePlanId,
+            GetPasswordManagerPriceId(targetPlan),
+            seatCount));
+
+        // The overage line exists only once the org has scaled past its included seats.
+        if (seatCount > currentPlan.PasswordManager.BaseSeats)
+        {
+            _changes.Add(new RemoveItem(currentPlan.PasswordManager.StripeSeatPlanId));
+        }
+
+        _chargeImmediately = true;
+        return this;
+    }
+
+    /// <summary>
     /// Swaps the storage price from the current plan to <paramref name="targetPlan"/>.
     /// </summary>
     public OrganizationSubscriptionChangeSetBuilder ChangeStoragePrice(Plan targetPlan)
