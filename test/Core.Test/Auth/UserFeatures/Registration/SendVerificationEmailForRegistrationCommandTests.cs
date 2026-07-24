@@ -349,8 +349,7 @@ public class SendVerificationEmailForRegistrationCommandTests
         SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
         string name, bool receiveMarketingEmails)
     {
-        // Existing-user anti-enumeration branch: 200 + null with the sealed data silently
-        // discarded. The tasks.md breakdown flags this as expected behavior (§Known Limitations).
+        // Existing-user branch: response mirrors the new-user path with the sealed data dropped (anti-enumeration).
         // Arrange
         var email = $"test+{Guid.NewGuid()}@example.com";
         var sealedOpenOrgInviteData = "opaque-base64url-sealed-data";

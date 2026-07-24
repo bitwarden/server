@@ -85,12 +85,7 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         if (!userExists)
         {
             // If the user doesn't exist, create a new EmailVerificationTokenable and send the user
-            // an email with a link to verify their email address. The open-invite sealed data is
-            // *not* woven into the tokenable — the tokenable is a stateless data-protected payload
-            // with no server-side row to attach to. The value flows straight to the mail service
-            // and is appended to the URL fragment. On the existing-user short-circuit branch
-            // below, the sealed data is silently discarded so that the response is
-            // indistinguishable from this branch (anti-enumeration).
+            // an email with a link to verify their email address
             var token = GenerateToken(email, name, receiveMarketingEmails);
             await _mailService.SendRegistrationVerificationEmailAsync(email, token, fromMarketing, sealedOpenOrgInviteData);
         }

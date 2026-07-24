@@ -149,8 +149,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData]
     public async Task PostRegisterSendEmailVerification_WithSealedOpenOrgInviteData_ForExistingUser_SilentlyDiscardsSealedData(string name, bool receiveMarketingEmails)
     {
-        // Anti-enumeration branch: existing user + sealed data provided → 204 + null, mail service
-        // not called. The tasks.md breakdown treats this as an accepted known limitation.
+        // Existing user + sealed data → 204 with no mail sent (anti-enumeration).
         var localFactory = new IdentityApplicationFactory();
 
         var email = $"test+register+existing+{name}@email.com";

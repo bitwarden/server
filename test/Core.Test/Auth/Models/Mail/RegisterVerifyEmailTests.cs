@@ -19,7 +19,6 @@ public class RegisterVerifyEmailTests
     [Fact]
     public void Url_WithoutSealedOpenOrgInviteData_MatchesTodaysBaseline()
     {
-        // Regression guard for the standard (non-open-invite) registration flow.
         var model = BuildBaseModel();
 
         var expected =
@@ -45,9 +44,6 @@ public class RegisterVerifyEmailTests
 
         var url = model.Url;
 
-        // The passthrough must sit inside the fragment-scoped query, after the existing
-        // fromEmail arg, so proxies and access logs never see it (matching the same
-        // server-blindness argument that keeps the inviteKey in the fragment).
         var expected =
             "https://vault.example.com/redirect-connector.html#finish-signup?token=test-token&email=test%40example.com&fromEmail=true&sealedOpenOrgInviteData=opaque-base64url-blob";
         Assert.Equal(expected, url);
@@ -62,9 +58,6 @@ public class RegisterVerifyEmailTests
 
         var url = model.Url;
 
-        // Order: token → email → fromEmail → fromMarketing → sealedOpenOrgInviteData. Order is
-        // load-bearing only for future client parsing consistency; both are URL query params so
-        // any correct parser can read them regardless of position.
         var expected =
             "https://vault.example.com/redirect-connector.html#finish-signup?token=test-token&email=test%40example.com&fromEmail=true&fromMarketing=Premium&sealedOpenOrgInviteData=opaque-base64url-blob";
         Assert.Equal(expected, url);
