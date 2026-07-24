@@ -1,6 +1,10 @@
 ﻿using Bit.HttpExtensions;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
+using Bit.Services.Pam.OrganizationFeatures.Commands;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Services.Pam.Utilities;
 
@@ -12,6 +16,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<LeaseEndpointsHandler>();
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
+
+        // AccessRule write path.
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
+        services.AddScoped<ICreateAccessRuleCommand, CreateAccessRuleCommand>();
+        services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
+        services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
 
         services.AddPamOpenApiEndpointDataSource();
 

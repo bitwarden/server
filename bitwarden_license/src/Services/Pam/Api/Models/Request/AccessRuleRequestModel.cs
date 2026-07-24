@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using Bit.Pam.Entities;
 
 namespace Bit.Services.Pam.Api.Models.Request;
 
@@ -23,9 +25,10 @@ public class AccessRuleRequestModel
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// The condition tree that decides how access is granted under this rule — for example requiring human
-    /// approval, or restricting to certain times of day or source IPs. Sent as a JSON object and stored verbatim;
-    /// an empty or null value means the rule imposes no conditions.
+    /// The conditions that decide how access is granted under this rule — for example requiring human
+    /// approval, or restricting to certain times of day or source IPs. Sent as a JSON array of condition
+    /// objects and stored verbatim. Required — a null or omitted value is rejected; an empty array means
+    /// the rule imposes no conditions, so requests under it resolve automatically.
     /// </summary>
     [Required]
     public object Conditions { get; set; } = null!;
@@ -65,4 +68,24 @@ public class AccessRuleRequestModel
     /// </summary>
     [Required]
     public IEnumerable<Guid> Collections { get; set; } = null!;
+
+    public AccessRule ToAccessRule(Guid organizationId) => new()
+    {
+        OrganizationId = organizationId,
+        Name = Name,
+        Description = Description,
+        Conditions = SerializeConditions(Conditions),
+        SingleActiveLease = SingleActiveLease,
+        DefaultLeaseDurationSeconds = DefaultLeaseDurationSeconds,
+        MaxLeaseDurationSeconds = MaxLeaseDurationSeconds,
+        Enabled = Enabled,
+        AllowsExtensions = AllowsExtensions,
+        MaxExtensionDurationSeconds = MaxExtensionDurationSeconds,
+    };
+
+    private static string SerializeConditions(object conditions) => conditions switch
+    {
+        JsonElement je => je.GetRawText(),
+        _ => JsonSerializer.Serialize(conditions),
+    };
 }
