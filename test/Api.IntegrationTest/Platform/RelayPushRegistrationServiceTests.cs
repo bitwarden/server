@@ -1,4 +1,4 @@
-﻿using Bit.Api.IntegrationTest.Factories;
+using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.Enums;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Platform.Push;
@@ -16,35 +16,43 @@ using Xunit.Abstractions;
 
 namespace Bit.Api.IntegrationTest.Platform;
 
-public class RelayPushRegistrationServiceTests
+/// <summary>
+/// Shared test fixture that starts the API and identity servers once for the entire
+/// <see cref="RelayPushRegistrationServiceTests"/> class. Starting both servers takes ~40 s
+/// in CI; without this fixture each test method would pay that cost independently.
+/// </summary>
+public sealed class RelayPushRegistrationServiceFixture : IDisposable
 {
-    private readonly ApiApplicationFactory _cloudApi;
-    private readonly Guid _fakeInstallationId;
-    private readonly FakeLogCollector _logCollector;
-    private readonly RelayPushRegistrationService _sut;
-    private readonly ITestOutputHelper _output;
+    public ApiApplicationFactory CloudApi { get; }
+    public Guid FakeInstallationId { get; }
 
-    public RelayPushRegistrationServiceTests(ITestOutputHelper output)
+    /// <summary>The in-process TestHost handler for the identity server.</summary>
+    /// <remarks>Tests wrap this in a per-test <see cref="RelayPushRegistrationServiceTests.IdentityTimingHandler"/>.</remarks>
+    public HttpMessageHandler IdentityBaseHandler { get; }
+
+    public HttpClient CloudApiHttpClient { get; }
+    public GlobalSettings GlobalSettings { get; }
+
+    public RelayPushRegistrationServiceFixture()
     {
-        _output = output;
-        _cloudApi = new ApiApplicationFactory();
-        _cloudApi.SubstituteService<IPushRegistrationService>(service => { });
+        CloudApi = new ApiApplicationFactory();
+        CloudApi.SubstituteService<IPushRegistrationService>(service => { });
 
-        _fakeInstallationId = Guid.NewGuid();
+        FakeInstallationId = Guid.NewGuid();
 
-        _cloudApi.Identity.SubstituteService<IInstallationRepository>(service =>
+        CloudApi.Identity.SubstituteService<IInstallationRepository>(service =>
         {
-            service.GetByIdAsync(_fakeInstallationId)
+            service.GetByIdAsync(FakeInstallationId)
                 .Returns(new Installation
                 {
-                    Id = _fakeInstallationId,
+                    Id = FakeInstallationId,
                     Key = "test_key",
                     Enabled = true,
                 });
         });
 
         // Replace the NullLoggerFactory so we can capture identity server logs for diagnostics.
-        _cloudApi.Identity.ConfigureServices(services =>
+        CloudApi.Identity.ConfigureServices(services =>
         {
             services.RemoveAll<ILoggerFactory>();
             services.AddLogging(b => b.AddFakeLogging());
@@ -54,7 +62,7 @@ public class RelayPushRegistrationServiceTests
         // and no outbound connections to LaunchDarkly are made. In CI, those connections hang
         // because packets are dropped (TCP SYN-timeout ~2 min) rather than refused, stalling the
         // TestHost response-body pipe writer even though the server logs "Request finished 200".
-        _cloudApi.Identity.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(
+        CloudApi.Identity.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(
             service => { });
 
         // Disable OpenTelemetry OTLP exporters. The Bitwarden SDK registers OTLP metric and trace
@@ -65,43 +73,57 @@ public class RelayPushRegistrationServiceTests
         // AddMetrics() actually reads when deciding whether to call tracing.AddOtlpExporter().
         // In CI the OTLP gRPC channel retries connecting to the unreachable endpoint with exponential
         // backoff (1 s → 2 s → 4 s → … → ~120 s), stalling the TestHost pipeline for ~136 s.
-        _cloudApi.Identity.UpdateHostConfiguration("OpenTelemetry:Enabled", "false");
+        CloudApi.Identity.UpdateHostConfiguration("OpenTelemetry:Enabled", "false");
 
-        var cloudApiHttpClient = _cloudApi.CreateClient();
-        // Access the identity server's in-process handler directly so we can wrap it with
-        // a timing handler. _cloudApi.CreateClient() above already triggered identity server
-        // startup (ApiApplicationFactory wires the JWT backchannel to the identity TestServer),
-        // so Server is ready here without double-starting.
-        var identityBaseHandler = _cloudApi.Identity.Server.CreateHandler();
-        var identityTimingHandler = new IdentityTimingHandler(output) { InnerHandler = identityBaseHandler };
-        var cloudIdentityHttpClient = new HttpClient(identityTimingHandler)
-        {
-            Timeout = TimeSpan.FromSeconds(10)
-        };
+        CloudApiHttpClient = CloudApi.CreateClient();
+        // Access the identity server's in-process handler directly so tests can wrap it with a
+        // timing handler. CloudApi.CreateClient() above already triggered identity server startup
+        // (ApiApplicationFactory wires the JWT backchannel to the identity TestServer), so the
+        // server is ready here without double-starting.
+        IdentityBaseHandler = CloudApi.Identity.Server.CreateHandler();
 
-        var httpClientFactory = Substitute.For<IHttpClientFactory>();
-
-        httpClientFactory.CreateClient("client")
-            .Returns(cloudApiHttpClient);
-
-        httpClientFactory.CreateClient("identity")
-            .Returns(cloudIdentityHttpClient);
-
-        var globalSettings = new GlobalSettings
+        GlobalSettings = new GlobalSettings
         {
             PushRelayBaseUri = "http://api.localhost"
         };
-        globalSettings.Installation.IdentityUri = "http://identity.localhost";
-        globalSettings.Installation.Id = _fakeInstallationId;
-        globalSettings.Installation.Key = "test_key";
+        GlobalSettings.Installation.IdentityUri = "http://identity.localhost";
+        GlobalSettings.Installation.Id = FakeInstallationId;
+        GlobalSettings.Installation.Key = "test_key";
+    }
+
+    public void Dispose() => CloudApi.Dispose();
+}
+
+public class RelayPushRegistrationServiceTests : IClassFixture<RelayPushRegistrationServiceFixture>
+{
+    private readonly RelayPushRegistrationServiceFixture _fixture;
+    private readonly FakeLogCollector _logCollector;
+    private readonly RelayPushRegistrationService _sut;
+    private readonly ITestOutputHelper _output;
+
+    public RelayPushRegistrationServiceTests(
+        RelayPushRegistrationServiceFixture fixture,
+        ITestOutputHelper output)
+    {
+        _fixture = fixture;
+        _output = output;
+
+        var identityTimingHandler = new IdentityTimingHandler(output)
+        {
+            InnerHandler = fixture.IdentityBaseHandler
+        };
+        var cloudIdentityHttpClient = new HttpClient(identityTimingHandler);
+
+        var httpClientFactory = Substitute.For<IHttpClientFactory>();
+        httpClientFactory.CreateClient("client").Returns(fixture.CloudApiHttpClient);
+        httpClientFactory.CreateClient("identity").Returns(cloudIdentityHttpClient);
 
         var logger = new FakeLogger<RelayPushRegistrationService>();
-
         _logCollector = logger.Collector;
 
         _sut = new RelayPushRegistrationService(
             httpClientFactory,
-            globalSettings,
+            fixture.GlobalSettings,
             logger
         );
     }
@@ -148,7 +170,7 @@ public class RelayPushRegistrationServiceTests
     private void DumpLogs(string context)
     {
         DumpCollector($"RelayPushRegistrationService logs ({context})", _logCollector);
-        DumpCollector($"Identity server logs ({context})", _cloudApi.Identity.GetService<FakeLogCollector>());
+        DumpCollector($"Identity server logs ({context})", _fixture.CloudApi.Identity.GetService<FakeLogCollector>());
     }
 
     /// <summary>
@@ -164,7 +186,7 @@ public class RelayPushRegistrationServiceTests
     /// </list>
     /// </para>
     /// </summary>
-    private sealed class IdentityTimingHandler(ITestOutputHelper output) : DelegatingHandler
+    internal sealed class IdentityTimingHandler(ITestOutputHelper output) : DelegatingHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
@@ -205,7 +227,7 @@ public class RelayPushRegistrationServiceTests
 
     /// <summary>
     /// Subscribes to <see cref="DiagnosticListener.AllListeners"/> and logs every outbound HTTP
-    /// request seen on <c>HttpHandlerDiagnosticListener</c>. Because <see cref="AllListeners"/>
+    /// request seen on <c>HttpHandlerDiagnosticListener</c>. Because <see cref="DiagnosticListener.AllListeners"/>
     /// replays already-active listeners on subscribe, this captures HTTP calls made by the identity
     /// TestHost even though it started before the subscription was established.
     /// </summary>
@@ -363,16 +385,16 @@ public class RelayPushRegistrationServiceTests
 
         // Mobile should also actually successfully make it to the cloud push registration service
         // with all of its data prefixed with the self host installation id.
-        var mockPushRegistrationService = _cloudApi.GetService<IPushRegistrationService>();
+        var mockPushRegistrationService = _fixture.CloudApi.GetService<IPushRegistrationService>();
         await mockPushRegistrationService
             .Received(1)
             .CreateOrUpdateRegistrationAsync(
                 new PushRegistrationData("PushToken"),
-                deviceId: $"{_fakeInstallationId}_{deviceId}",
-                userId: $"{_fakeInstallationId}_{userId}",
-                identifier: $"{_fakeInstallationId}_{identifier}",
+                deviceId: $"{_fixture.FakeInstallationId}_{deviceId}",
+                userId: $"{_fixture.FakeInstallationId}_{userId}",
+                identifier: $"{_fixture.FakeInstallationId}_{identifier}",
                 type: DeviceType.iOS,
-                Arg.Is<IEnumerable<string>>(v => v.Single() == $"{_fakeInstallationId}_{organizationId}"),
+                Arg.Is<IEnumerable<string>>(v => v.Single() == $"{_fixture.FakeInstallationId}_{organizationId}"),
                 installationId
             );
     }
