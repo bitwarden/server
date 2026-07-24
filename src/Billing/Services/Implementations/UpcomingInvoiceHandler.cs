@@ -20,6 +20,7 @@ using Bit.Core.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Premium;
+using Bit.Core.Models.Mail.Provider.ProviderInvoiceUpcoming;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
@@ -916,14 +917,21 @@ public class UpcomingInvoiceHandler(
                 payPal => $"PayPal account {payPal.Email}"
             );
 
-            await mailService.SendProviderInvoiceUpcoming(
-                validEmails,
-                invoice.AmountDue / 100M,
-                invoice.NextPaymentAttempt.Value,
-                items,
-                collectionMethod,
-                hasPaymentMethod,
-                paymentMethodDescription);
+            var mail = new ProviderInvoiceUpcomingMail
+            {
+                ToEmails = validEmails,
+                View = new ProviderInvoiceUpcomingMailView
+                {
+                    AmountDue = invoice.AmountDue / 100M,
+                    DueDate = invoice.NextPaymentAttempt.Value,
+                    Items = items,
+                    CollectionMethod = collectionMethod,
+                    HasPaymentMethod = hasPaymentMethod,
+                    PaymentMethodDescription = paymentMethodDescription
+                }
+            };
+
+            await mailer.SendEmail(mail);
         }
     }
 
