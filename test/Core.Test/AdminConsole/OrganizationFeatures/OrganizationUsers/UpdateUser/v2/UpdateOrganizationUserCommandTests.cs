@@ -327,8 +327,6 @@ public class UpdateOrganizationUserCommandTests
         return new UpdateOrganizationUserRequest(
             organizationUser,
             organization,
-            [],
-            [],
             type,
             null,
             targetAccessSecretsManager,
