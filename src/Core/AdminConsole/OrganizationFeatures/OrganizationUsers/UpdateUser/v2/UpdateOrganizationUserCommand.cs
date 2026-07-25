@@ -15,6 +15,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using CommandError = Bit.Core.AdminConsole.Utilities.v2.Error;
 
@@ -34,7 +35,8 @@ public class UpdateOrganizationUserCommand(
     IChangeEmailCommand changeEmailCommand,
     IPushNotificationService pushNotificationService,
     IMailer mailer,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILogger<UpdateOrganizationUserCommand> logger)
     : IUpdateOrganizationUserCommand
 {
     public async Task<CommandResult> UpdateUserAsync(UpdateOrganizationUserRequest request)
@@ -115,7 +117,7 @@ public class UpdateOrganizationUserCommand(
                 // ChangeEmailAsync persists the account (including any name change above) and syncs Stripe.
                 await changeEmailCommand.ChangeEmailAsync(request.UserToUpdate, request.NewEmail!);
 
-                await SendEmailChangedNotificationAsync(previousEmail, request.NewEmail!);
+                await TrySendEmailChangedNotificationAsync(previousEmail, request);
             }
             else
             {
@@ -142,12 +144,21 @@ public class UpdateOrganizationUserCommand(
         _ => new EmailChangeFailedError(ex.Message)
     };
 
-    private async Task SendEmailChangedNotificationAsync(string previousEmail, string newEmail) =>
-        await mailer.SendEmail(new MemberEmailChangedNotificationMail
+    private async Task TrySendEmailChangedNotificationAsync(string previousEmail, UpdateOrganizationUserRequest request)
+    {
+        try
         {
-            ToEmails = [previousEmail],
-            View = new MemberEmailChangedNotificationView { NewEmail = newEmail }
-        });
+            await mailer.SendEmail(new MemberEmailChangedNotificationMail
+            {
+                ToEmails = [previousEmail],
+                View = new MemberEmailChangedNotificationView { NewEmail = request.NewEmail! }
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to send member email-change notification for organization user {OrganizationUserId}.", request.OrganizationUserToUpdate.Id);
+        }
+    }
 
     private async Task<CommandError?> TryEnablingSecretsManagerAsync(UpdateOrganizationUserRequest request)
     {
