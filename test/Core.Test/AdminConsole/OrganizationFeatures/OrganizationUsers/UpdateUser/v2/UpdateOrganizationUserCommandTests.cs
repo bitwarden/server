@@ -106,13 +106,14 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory]
-    [BitAutoData(ChangeEmailCommand.EmailAlreadyInUseError, typeof(EmailAlreadyInUseError))]
-    [BitAutoData(OrganizationDomainAllowEmailChangeQuery.EmailClaimedByOrganizationError, typeof(EmailClaimedByAnotherOrganizationError))]
-    [BitAutoData(OrganizationDomainAllowEmailChangeQuery.EmailNotOnVerifiedDomainError, typeof(NewEmailDomainNotClaimedError))]
-    [BitAutoData("Something unexpected went wrong.", typeof(EmailChangeFailedError))]
+    [BitAutoData(ChangeEmailCommand.EmailAlreadyInUseError, typeof(EmailAlreadyInUseError), "email_already_in_use")]
+    [BitAutoData(OrganizationDomainAllowEmailChangeQuery.EmailClaimedByOrganizationError, typeof(EmailClaimedByAnotherOrganizationError), "email_claimed_by_another_organization")]
+    [BitAutoData(OrganizationDomainAllowEmailChangeQuery.EmailNotOnVerifiedDomainError, typeof(NewEmailDomainNotClaimedError), "new_email_domain_not_claimed")]
+    [BitAutoData("Something unexpected went wrong.", typeof(EmailChangeFailedError), "email_change_failed")]
     public async Task UpdateUserAsync_WhenChangeEmailThrowsBadRequest_MapsToTypedErrorAndDoesNotPersist(
         string thrownMessage,
         Type expectedError,
+        string expectedType,
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
@@ -132,6 +133,8 @@ public class UpdateOrganizationUserCommandTests
 
         Assert.True(result.IsError);
         Assert.IsType(expectedError, result.AsError);
+        var validationError = Assert.IsAssignableFrom<IValidationError>(result.AsError);
+        Assert.Equal(expectedType, validationError.Type);
 
         // The email change fails before any role/collection changes are persisted.
         await sutProvider.GetDependency<IOrganizationUserRepository>()

@@ -294,7 +294,8 @@ public class UpdateOrganizationUserValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<MemberNotClaimedError>(result.AsError);
+        var error = Assert.IsType<MemberNotClaimedError>(result.AsError);
+        Assert.Equal("member_not_claimed", error.Type);
     }
 
     [Theory]
@@ -316,7 +317,8 @@ public class UpdateOrganizationUserValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<MemberHasMasterPasswordError>(result.AsError);
+        var error = Assert.IsType<MemberHasMasterPasswordError>(result.AsError);
+        Assert.Equal("member_has_master_password", error.Type);
     }
 
     [Theory]
@@ -337,7 +339,8 @@ public class UpdateOrganizationUserValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<MemberNotClaimedError>(result.AsError);
+        var error = Assert.IsType<MemberNotClaimedError>(result.AsError);
+        Assert.Equal("member_not_claimed", error.Type);
     }
 
     [Theory]
@@ -361,7 +364,8 @@ public class UpdateOrganizationUserValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<NewEmailDomainNotClaimedError>(result.AsError);
+        var error = Assert.IsType<NewEmailDomainNotClaimedError>(result.AsError);
+        Assert.Equal("new_email_domain_not_claimed", error.Type);
     }
 
     [Theory]
@@ -425,7 +429,8 @@ public class UpdateOrganizationUserValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<NameChangeMemberNotClaimedError>(result.AsError);
+        var error = Assert.IsType<NameChangeMemberNotClaimedError>(result.AsError);
+        Assert.Equal("name_member_not_claimed", error.Type);
     }
 
     [Theory]
