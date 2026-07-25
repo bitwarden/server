@@ -278,7 +278,7 @@ public class UpdateOrganizationUserValidatorTests
         Assert.True(result.IsValid);
         await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .DidNotReceiveWithAnyArgs()
-            .GetUsersOrganizationClaimedStatusAsync(default, default);
+            .GetUsersOrganizationClaimedStatusAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>());
     }
 
     [Theory]
@@ -387,6 +387,97 @@ public class UpdateOrganizationUserValidatorTests
         Assert.True(result.IsValid);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenChangingNameForClaimedMember_ReturnsValid(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = orgUser.UserId!.Value, Name = "Old Name" };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newName: "New Name", userToUpdate: userToUpdate);
+
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { [orgUser.Id] = true });
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenChangingNameForUnclaimedMember_ReturnsMemberNotClaimed(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = orgUser.UserId!.Value, Name = "Old Name" };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newName: "New Name", userToUpdate: userToUpdate);
+
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { [orgUser.Id] = false });
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<NameChangeMemberNotClaimedError>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenNameUnchanged_ReturnsValidAndSkipsClaimedCheck(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = orgUser.UserId!.Value, Name = "Same Name" };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newName: "Same Name", userToUpdate: userToUpdate);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetUsersOrganizationClaimedStatusAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenChangingEmailAndName_ChecksClaimedStatusOnce(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User
+        {
+            Id = orgUser.UserId!.Value,
+            Email = "member@claimed.example.com",
+            Name = "Old Name"
+        };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newEmail: "new@claimed.example.com", newName: "New Name", userToUpdate: userToUpdate);
+
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { [orgUser.Id] = true });
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<OrganizationDomain> { new() { DomainName = "claimed.example.com" } });
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .Received(1)
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>());
+    }
+
     private static UpdateOrganizationUserRequest CreateRequest(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         OrganizationUser organizationUser,
@@ -398,6 +489,7 @@ public class UpdateOrganizationUserValidatorTests
         ICollection<Collection> collectionsToSave = null,
         Permissions newPermissions = null,
         string newEmail = null,
+        string newName = null,
         User userToUpdate = null)
     {
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
@@ -430,7 +522,7 @@ public class UpdateOrganizationUserValidatorTests
             collectionAccess,
             groups,
             newEmail,
-            null,
+            newName,
             null,
             actingUser,
             userToUpdate);

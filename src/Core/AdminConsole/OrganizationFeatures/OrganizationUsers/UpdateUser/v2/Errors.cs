@@ -31,3 +31,11 @@ public record EmailClaimedByAnotherOrganizationError()
     : EmailValidationError("This email address is claimed by an organization using Bitwarden.", "email_claimed_by_another_organization");
 public record EmailChangeFailedError(string Message)
     : EmailValidationError(Message, "email_change_failed");
+
+public abstract record NameValidationError(string Message, string Type) : BadRequestError(Message), IValidationError
+{
+    public string PropertyName => "name";
+}
+
+public record NameChangeMemberNotClaimedError()
+    : NameValidationError("Cannot change the name of a member who is not claimed by the organization.", "name_member_not_claimed");

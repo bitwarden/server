@@ -91,57 +91,58 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new ManageMutuallyExclusive());
         }
 
-        var emailChangeError = await ValidateEmailChangeAsync(request);
-        if (emailChangeError is not null)
+        var accountChangeError = await ValidateAccountChangeAsync(request);
+        if (accountChangeError is not null)
         {
-            return Invalid(request, emailChangeError);
+            return Invalid(request, accountChangeError);
         }
 
         return Valid(request);
     }
 
     /// <summary>
-    /// A member's email may only be changed when they are claimed by the organization, have no master
-    /// password, and the new email is on a domain the organization has verified. Returns null when no
-    /// email change is requested or the email is unchanged.
+    /// A member must be claimed by the organization to change their name; changing their email additionally
+    /// requires no master password and a new address on an org-verified domain.
     /// </summary>
-    private async Task<Error?> ValidateEmailChangeAsync(UpdateOrganizationUserRequest request)
+    private async Task<Error?> ValidateAccountChangeAsync(UpdateOrganizationUserRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.NewEmail))
-        {
-            return null;
-        }
-
         var organizationUser = request.OrganizationUserToUpdate;
 
-        if (request.UserToUpdate is null || !organizationUser.UserId.HasValue)
+        // A member with no linked account cannot be claimed, so their email cannot be changed.
+        if (!string.IsNullOrWhiteSpace(request.NewEmail) && (request.UserToUpdate is null || !organizationUser.UserId.HasValue))
         {
             return new MemberNotClaimedError();
         }
 
-        if (string.Equals(request.UserToUpdate.Email, request.NewEmail, StringComparison.InvariantCultureIgnoreCase))
+        var isEmailChanging = request.IsEmailChanged();
+        var isNameChanging = request.IsNameChanged();
+
+        if (!isEmailChanging && !isNameChanging)
         {
             return null;
         }
 
-        if (request.UserToUpdate.HasMasterPassword())
+        if (isEmailChanging && request.UserToUpdate!.HasMasterPassword())
         {
             return new MemberHasMasterPasswordError();
         }
 
         var claimedStatus = await getOrganizationUsersClaimedStatusQuery
             .GetUsersOrganizationClaimedStatusAsync(request.Organization.Id, [organizationUser.Id]);
-        if (!claimedStatus.TryGetValue(organizationUser.Id, out var isClaimed) || !isClaimed)
+        if (!(claimedStatus.TryGetValue(organizationUser.Id, out var isClaimed) && isClaimed))
         {
-            return new MemberNotClaimedError();
+            return isEmailChanging ? new MemberNotClaimedError() : new NameChangeMemberNotClaimedError();
         }
 
-        var newDomain = EmailValidation.GetDomain(request.NewEmail);
-        var verifiedDomains = await organizationDomainRepository
-            .GetVerifiedDomainsByOrganizationIdsAsync([request.Organization.Id]);
-        if (!verifiedDomains.Any(d => string.Equals(d.DomainName, newDomain, StringComparison.InvariantCultureIgnoreCase)))
+        if (isEmailChanging)
         {
-            return new NewEmailDomainNotClaimedError();
+            var newDomain = EmailValidation.GetDomain(request.NewEmail!);
+            var verifiedDomains = await organizationDomainRepository
+                .GetVerifiedDomainsByOrganizationIdsAsync([request.Organization.Id]);
+            if (!verifiedDomains.Any(d => string.Equals(d.DomainName, newDomain, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                return new NewEmailDomainNotClaimedError();
+            }
         }
 
         return null;

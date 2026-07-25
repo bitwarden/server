@@ -311,13 +311,11 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     }
 
     [Fact]
-    public async Task Put_WhenChangingRoleAndName_ReturnsNoContentAndPersistsBoth()
+    public async Task Put_WhenChangingRoleAndNameForClaimedMember_ReturnsNoContentAndPersistsBoth()
     {
         _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
         await _loginHelper.LoginAsync(_ownerEmail);
-
-        var (_, organizationUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
-            _factory, _organization.Id, OrganizationUserType.User);
+        var (member, _) = await CreateClaimedMemberWithoutMasterPasswordAsync();
 
         var request = new OrganizationUserUpdateRequestModel
         {
@@ -329,15 +327,15 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         };
 
         var response = await _client.PutAsJsonAsync(
-            $"organizations/{_organization.Id}/users/{organizationUser.Id}", request);
+            $"organizations/{_organization.Id}/users/{member.Id}", request);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        var updatedOrgUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id);
+        var updatedOrgUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(member.Id);
         Assert.NotNull(updatedOrgUser);
         Assert.Equal(OrganizationUserType.Admin, updatedOrgUser.Type);
 
-        var updatedUser = await _factory.GetService<IUserRepository>().GetByIdAsync(organizationUser.UserId!.Value);
+        var updatedUser = await _factory.GetService<IUserRepository>().GetByIdAsync(member.UserId!.Value);
         Assert.NotNull(updatedUser);
         Assert.Equal("Updated Name", updatedUser.Name);
     }
@@ -395,8 +393,26 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
             $"organizations/{_organization.Id}/users/{member.Id}",
             UpdateRequest(email: $"new-{Guid.NewGuid()}@bitwarden.com"));
 
-        await AssertEmailValidationProblemAsync(response, "member_not_claimed",
+        await AssertValidationProblemAsync(response, "email", "member_not_claimed",
             "Cannot change the email of a member who is not claimed by the organization.");
+    }
+
+    [Fact]
+    public async Task Put_WhenChangingNameForUnclaimedMember_ReturnsNotClaimedProblemDetails()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        // No verified domain is created, so the member is not claimed by the organization.
+        var memberEmail = $"unclaimed-{Guid.NewGuid()}@bitwarden.com";
+        var (_, member) = await OrganizationTestHelpers.CreateUserWithoutMasterPasswordAsync(
+            _factory, memberEmail, _organization.Id);
+
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{member.Id}", UpdateRequest(name: "Updated Name"));
+
+        await AssertValidationProblemAsync(response, "name", "name_member_not_claimed",
+            "Cannot change the name of a member who is not claimed by the organization.");
     }
 
     [Fact]
@@ -413,7 +429,7 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
             $"organizations/{_organization.Id}/users/{member.Id}",
             UpdateRequest(email: $"new-{Guid.NewGuid()}@bitwarden.com"));
 
-        await AssertEmailValidationProblemAsync(response, "member_has_master_password",
+        await AssertValidationProblemAsync(response, "email", "member_has_master_password",
             "Cannot change the email of a member who has a master password.");
     }
 
@@ -429,7 +445,7 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
             $"organizations/{_organization.Id}/users/{member.Id}",
             UpdateRequest(email: $"new-{Guid.NewGuid()}@{unverifiedDomain}"));
 
-        await AssertEmailValidationProblemAsync(response, "new_email_domain_not_claimed",
+        await AssertValidationProblemAsync(response, "email", "new_email_domain_not_claimed",
             "The new email address must be on a domain claimed by the organization.");
     }
 
@@ -447,7 +463,7 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         var response = await _client.PutAsJsonAsync(
             $"organizations/{_organization.Id}/users/{member.Id}", UpdateRequest(email: takenEmail));
 
-        await AssertEmailValidationProblemAsync(response, "email_already_in_use", "Email already in use.");
+        await AssertValidationProblemAsync(response, "email", "email_already_in_use", "Email already in use.");
     }
 
     private static HttpStatusCode ExpectedSuccess(bool flagOn) =>
@@ -561,8 +577,8 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
             Name = name
         };
 
-    private static async Task AssertEmailValidationProblemAsync(
-        HttpResponseMessage response, string expectedType, string expectedDetail)
+    private static async Task AssertValidationProblemAsync(
+        HttpResponseMessage response, string propertyName, string expectedType, string expectedDetail)
     {
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -572,9 +588,9 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         Assert.Equal("One or more validation errors occurred.", root.GetProperty("title").GetString());
         Assert.Equal(400, root.GetProperty("status").GetInt32());
 
-        var emailErrors = root.GetProperty("errors").GetProperty("email");
-        Assert.Equal(1, emailErrors.GetArrayLength());
-        Assert.Equal(expectedType, emailErrors[0].GetProperty("type").GetString());
-        Assert.Equal(expectedDetail, emailErrors[0].GetProperty("detail").GetString());
+        var errors = root.GetProperty("errors").GetProperty(propertyName);
+        Assert.Equal(1, errors.GetArrayLength());
+        Assert.Equal(expectedType, errors[0].GetProperty("type").GetString());
+        Assert.Equal(expectedDetail, errors[0].GetProperty("detail").GetString());
     }
 }
