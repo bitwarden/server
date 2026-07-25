@@ -102,7 +102,7 @@ public class UpdateOrganizationUserCommand(
 
             if (request.IsNameChanged())
             {
-                userToUpdate.Name = request.NormalizedNewName;
+                userToUpdate.Name = request.NewName;
             }
 
             if (request.IsEmailChanged())
@@ -165,7 +165,7 @@ public class UpdateOrganizationUserCommand(
 
     private async Task<UpdateOrganizationUserRequest> LoadUserToUpdateAsync(UpdateOrganizationUserRequest request)
     {
-        var wantsAccountChange = !string.IsNullOrWhiteSpace(request.NewEmail) || request.NewName is not null;
+        var wantsAccountChange = !string.IsNullOrWhiteSpace(request.NewEmail) || request.NameChangeRequested;
         if (!wantsAccountChange || !request.OrganizationUserToUpdate.UserId.HasValue)
         {
             return request;

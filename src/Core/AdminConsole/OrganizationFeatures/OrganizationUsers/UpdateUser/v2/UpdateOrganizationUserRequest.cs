@@ -43,11 +43,14 @@ public record UpdateOrganizationUserRequest(
         && !string.Equals(UserToUpdate.Email, NewEmail, StringComparison.InvariantCultureIgnoreCase);
 
     public bool IsNameChanged() =>
-        NewName is not null
+        NameChangeRequested
         && UserToUpdate is not null
-        && !string.Equals(NormalizedNewName, UserToUpdate.Name, StringComparison.Ordinal);
+        && !string.Equals(NewName, UserToUpdate.Name, StringComparison.Ordinal);
 
-    public string? NormalizedNewName => string.IsNullOrWhiteSpace(NewName) ? null : NewName;
+    // Distinguishes a blank NewName (clear the name) from an unset one (leave it)
+    public bool NameChangeRequested { get; } = NewName is not null;
+
+    public string? NewName { get; } = string.IsNullOrWhiteSpace(NewName) ? null : NewName;
 
     private readonly OrganizationUserType _existingOrganizationUserType = OrganizationUserToUpdate.Type;
     private readonly bool _existingAccessSecretsManager = OrganizationUserToUpdate.AccessSecretsManager;
