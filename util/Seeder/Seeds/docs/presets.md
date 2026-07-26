@@ -18,16 +18,16 @@ Test specific Bitwarden features. Fixture-based data for deterministic results.
 dotnet run -- preset --name features.{name} --mangle
 ```
 
-| Preset            | Features Enabled                                            | Org Fixture      | Roster           | Ciphers          |
-| ----------------- | ----------------------------------------------------------- | ---------------- | ---------------- | ---------------- |
+| Preset            | Features Enabled                                                    | Org Fixture      | Roster           | Ciphers          |
+| ----------------- | ------------------------------------------------------------------- | ---------------- | ---------------- | ---------------- |
 | sso-enterprise    | requireSso policy (OIDC SSO config is not seeded by the Seeder yet) | verdant-health   | starter-team     | enterprise-basic |
 | tde-enterprise    | requireSso policy (OIDC SSO config is not seeded by the Seeder yet) | obsidian-labs    | starter-team     | enterprise-basic |
-| local-sso         | SSO (SAML 2.0, masterPassword) — golden local-IdP login org | verdant-health   | enterprise-basic | enterprise-basic |
-| policy-enterprise | All policies except requireSso and require2fa               | pinnacle-designs | starter-team     | —                |
+| local-sso         | SSO (SAML 2.0, masterPassword) — local-IdP login org                | verdant-health   | enterprise-basic | enterprise-basic |
+| policy-enterprise | All policies except requireSso and require2fa                       | pinnacle-designs | starter-team     | —                |
 
 `policy-enterprise` has no ciphers — it exists purely for testing policy enforcement.
 
-`local-sso` is the golden clean-slate SAML 2.0 SSO org (fixed GUID; seed **without** `--mangle`). Log in via the bundled SimpleSAMLphp IdP as `owner` / `password` → `dana.whitfield@verdant.example`, who owns the department collections so the vault is populated on first login. Because the `enterprise-basic` cipher fixture carries attachments, Azurite (or a local attachment dir) must be configured to seed it. Wiring: `dev/authsources.php.example`, `dev/.env.example`.
+`local-sso` is a clean-slate SAML 2.0 SSO org wired to the bundled SimpleSAMLphp IdP. Each seed generates a **fresh org GUID**, which the CLI prints in an "SSO wiring" block — relay its `IDP_SP_ENTITY_ID` / `IDP_SP_ACS_URL` values into `dev/.env` and restart the IdP (`docker compose --profile idp up -d`). Add `--mangle` to seed multiple SSO orgs without collisions; `--org-name` overrides the org display name and `--owner-email` overrides the owner login email (both compose with `--mangle`). Log in via the IdP as `owner` / `password` → `dana.whitfield@verdant.example` (the roster owner), who owns the department collections so the vault is populated on first login. A single no-mangle seed still matches the default `dana.whitfield@verdant.example` entry in `dev/authsources.php.example`, so only the GUID must be relayed; a mangled seed (or `--owner-email` override) prints its own authsources snippet to paste. Because the `enterprise-basic` cipher fixture carries attachments, Azurite (or a local attachment dir) must be configured to seed it. Wiring: `dev/authsources.php.example`, `dev/.env.example`.
 
 ## QA
 
