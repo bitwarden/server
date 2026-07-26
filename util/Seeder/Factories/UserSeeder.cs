@@ -31,7 +31,7 @@ internal static class UserSeeder
 
         var user = new User
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             Name = name ?? mangledEmail.Split('@')[0],
             Email = mangledEmail,
             EmailVerified = emailVerified,
