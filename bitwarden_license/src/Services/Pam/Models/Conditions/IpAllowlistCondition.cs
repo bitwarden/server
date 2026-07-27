@@ -46,14 +46,16 @@ public sealed class IpAllowlistCondition : AccessCondition
             return AccessRuleValidationResult.Invalid("ip_allowlist requires at least one CIDR.");
         }
 
-        foreach (var cidr in Cidrs)
-        {
-            if (string.IsNullOrWhiteSpace(cidr) || !IPNetwork.TryParse(cidr, out _))
-            {
-                return AccessRuleValidationResult.Invalid($"Invalid CIDR: '{cidr}'.");
-            }
-        }
+        // Take(1) preserves the short-circuit on the first bad entry without materialising an unbounded list.
+        // FirstOrDefault is unsuitable here: a null entry is itself invalid, so a null result could not be
+        // distinguished from "every entry parsed".
+        var invalidCidrs = Cidrs
+            .Where(cidr => string.IsNullOrWhiteSpace(cidr) || !IPNetwork.TryParse(cidr, out _))
+            .Take(1)
+            .ToList();
 
-        return AccessRuleValidationResult.Valid;
+        return invalidCidrs.Count > 0
+            ? AccessRuleValidationResult.Invalid($"Invalid CIDR: '{invalidCidrs[0]}'.")
+            : AccessRuleValidationResult.Valid;
     }
 }
