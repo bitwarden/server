@@ -9,5 +9,4 @@ namespace Bit.Services.Pam.Models.Conditions;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind", UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
 [JsonDerivedType(typeof(HumanApprovalCondition), "human_approval")]
 [JsonDerivedType(typeof(IpAllowlistCondition), "ip_allowlist")]
-[JsonDerivedType(typeof(TimeOfDayCondition), "time_of_day")]
 public abstract class AccessCondition;

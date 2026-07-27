@@ -92,39 +92,6 @@ public class AccessRuleValidatorTests
     }
 
     [Fact]
-    public void Validate_TimeOfDay_Valid_IsValid()
-    {
-        var result = _sut.Validate("""
-            [
-              {
-                "kind": "time_of_day",
-                "tz": "UTC",
-                "windows": [
-                  { "days": ["mon","tue","wed","thu","fri"], "from": "09:00", "to": "18:00" }
-                ]
-              }
-            ]
-            """);
-
-        Assert.True(result.IsValid);
-    }
-
-    [Theory]
-    [InlineData("""[{"kind":"time_of_day","tz":"Invalid/Zone","windows":[{"days":["mon"],"from":"09:00","to":"17:00"}]}]""", "timezone")]
-    [InlineData("""[{"kind":"time_of_day","tz":"UTC","windows":[]}]""", "at least one window")]
-    [InlineData("""[{"kind":"time_of_day","tz":"UTC","windows":[{"days":[],"from":"09:00","to":"17:00"}]}]""", "at least one day")]
-    [InlineData("""[{"kind":"time_of_day","tz":"UTC","windows":[{"days":["funday"],"from":"09:00","to":"17:00"}]}]""", "day")]
-    [InlineData("""[{"kind":"time_of_day","tz":"UTC","windows":[{"days":["mon"],"from":"9am","to":"5pm"}]}]""", "Expected HH:mm")]
-    [InlineData("""[{"kind":"time_of_day","tz":"UTC","windows":[{"days":["mon"],"from":"25:00","to":"26:00"}]}]""", "Expected HH:mm")]
-    public void Validate_TimeOfDay_Invalid_IsInvalid(string conditionsJson, string expectedMessageFragment)
-    {
-        var result = _sut.Validate(conditionsJson);
-
-        Assert.False(result.IsValid);
-        Assert.Contains(expectedMessageFragment, result.Error);
-    }
-
-    [Fact]
     public void Validate_MultipleConditions_IsValid()
     {
         var result = _sut.Validate("""
