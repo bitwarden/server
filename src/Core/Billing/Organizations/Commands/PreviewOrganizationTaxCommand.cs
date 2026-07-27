@@ -271,7 +271,7 @@ public class PreviewOrganizationTaxCommand(
                     Price = newPlan.HasNonSeatBasedPasswordManagerPlan()
                         ? newPlan.PasswordManager.StripePlanId
                         : newPlan.PasswordManager.StripeSeatPlanId,
-                    Quantity = seatQuantity
+                    Quantity = quantity
                 });
 
                 // Match existing storage by the CURRENT plan's id (as PM seats/SM do), then re-price at the
