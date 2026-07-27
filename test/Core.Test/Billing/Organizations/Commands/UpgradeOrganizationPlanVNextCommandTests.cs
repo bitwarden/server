@@ -224,27 +224,41 @@ public class UpgradeOrganizationPlanVNextCommandTests
                 && cs.Changes.All(c => !c.IsT2)));
     }
 
-    // Regression (PM-40866): a Teams 2019 org above its 5 included seats also carries a per-seat overage
-    // line, which is removed so base + overage collapse onto the single Enterprise seat line.
+    // Regression (PM-40866): a Teams 2019 org above its 5 included seats carries a per-seat overage line
+    // on top of the base bundle. The upgrade must collapse both onto one Enterprise seat line - repoint
+    // the base line to the Enterprise seat price at the org's seat count, AND remove the overage line so
+    // it doesn't linger next to the new line and double-bill.
     [Fact]
     public async Task Run_Teams2019ToEnterprise_AboveBaseSeats_RemovesOverage()
     {
-        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually2019);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually2019);           // base + overage, BaseSeats = 5
         var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
-        var organization = CreateOrganization(PlanType.TeamsAnnually2019, seats: 10);
+        var organization = CreateOrganization(PlanType.TeamsAnnually2019, seats: 10);   // 10 > 5 => has an overage line
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
-        SetupSubscriptionCommandSuccess();
+
+        // Capture the change set handed to the update command so we can assert on its individual changes.
+        OrganizationSubscriptionChangeSet changeSet = null;
+        BillingCommandResult<Subscription> success = new Subscription();
+        _updateOrganizationSubscriptionCommand
+            .Run(Arg.Any<Organization>(), Arg.Do<OrganizationSubscriptionChangeSet>(cs => changeSet = cs))
+            .Returns(success);
 
         var result = await _command.Run(organization, targetPlan, null);
 
         Assert.True(result.IsT0);
-        await _updateOrganizationSubscriptionCommand.Received(1).Run(
-            organization,
-            Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
-                cs.Changes.Any(c => c.IsT1
-                    && c.AsT1.CurrentPriceId == currentPlan.PasswordManager.StripePlanId
-                    && c.AsT1.Quantity == organization.Seats)
-                && cs.Changes.Any(c => c.IsT2 && c.AsT2.PriceId == currentPlan.PasswordManager.StripeSeatPlanId)));
+        Assert.NotNull(changeSet);
+
+        // ChangeItemPrice (the T1 case of the OrganizationSubscriptionChange union): the base bundle line
+        // is repointed to the Enterprise seat price, quantity set to the org's total seats.
+        var priceChange = Assert.Single(changeSet.Changes.Where(c => c.IsT1)).AsT1;
+        Assert.Equal(currentPlan.PasswordManager.StripePlanId, priceChange.CurrentPriceId);   // from: base bundle
+        Assert.Equal(targetPlan.PasswordManager.StripeSeatPlanId, priceChange.UpdatedPriceId); // to: Enterprise seat
+        Assert.Equal(organization.Seats, priceChange.Quantity);
+
+        // RemoveItem (the T2 case): the current plan's per-seat overage line is dropped, so it collapses
+        // into the single Enterprise seat line instead of remaining as a separate charge.
+        var removal = Assert.Single(changeSet.Changes.Where(c => c.IsT2)).AsT2;
+        Assert.Equal(currentPlan.PasswordManager.StripeSeatPlanId, removal.PriceId);
     }
 
     [Fact]

@@ -112,9 +112,13 @@ public class UpgradeOrganizationPlanVNextCommand(
 
         var builder = OrganizationSubscriptionChangeSet.Builder(currentPlan);
 
-        // Teams 2019 has both a base price and a seat price, so we need to handle it differently.
-        // We can remove this when we have migrated all Teams 2019 organizations to the new plans.
-        var isPackagedWithOverage = !currentPlan.HasNonSeatBasedPasswordManagerPlan() && currentPlan.PasswordManager.BaseSeats > 0;
+        // Teams 2019 is the only packaged base+overage plan (both a base and a seat price); route it
+        // through the collapse. Anything else — incl. Free, which has no base price — takes the standard
+        // path. Remove this branch (and ChangePackagedPasswordManagerPrice) once all Teams 2019 orgs are
+        // migrated off the packaged plan.
+        var isPackagedWithOverage = !string.IsNullOrEmpty(currentPlan.PasswordManager.StripePlanId) &&
+                                    !string.IsNullOrEmpty(currentPlan.PasswordManager.StripeSeatPlanId) &&
+                                    organization.Seats.HasValue;
         builder = isPackagedWithOverage
             ? builder.ChangePackagedPasswordManagerPrice(plan, organization.Seats!.Value)
             : builder.ChangePasswordManagerPrice(plan);
