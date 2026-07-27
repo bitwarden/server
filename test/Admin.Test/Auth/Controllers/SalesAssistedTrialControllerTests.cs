@@ -27,8 +27,7 @@ public class SalesAssistedTrialControllerTests
         Name = "Prospect Company",
         ProductTier = ProductTierType.Enterprise,
         Products = new[] { ProductType.PasswordManager },
-        TrialLength = 14,
-        PaymentOptional = false
+        TrialLength = 14
     };
 
     private static void SetUpAuthenticatedSender(
@@ -55,7 +54,6 @@ public class SalesAssistedTrialControllerTests
         Assert.Equal(ProductTierType.Enterprise, model.ProductTier);
         Assert.Equal(new[] { ProductType.PasswordManager }, model.Products);
         Assert.Equal(30, model.TrialLength);
-        Assert.True(model.PaymentOptional);
     }
 
     [Theory, BitAutoData]
@@ -79,8 +77,7 @@ public class SalesAssistedTrialControllerTests
                 SenderEmail,
                 model.ProductTier,
                 model.Products,
-                model.TrialLength,
-                model.PaymentOptional);
+                model.TrialLength);
     }
 
     [Theory, BitAutoData]
@@ -101,8 +98,7 @@ public class SalesAssistedTrialControllerTests
                 identityEmail,
                 Arg.Any<ProductTierType>(),
                 Arg.Any<IEnumerable<ProductType>>(),
-                Arg.Any<int>(),
-                Arg.Any<bool>());
+                Arg.Any<int>());
     }
 
     [Theory, BitAutoData]
@@ -117,15 +113,14 @@ public class SalesAssistedTrialControllerTests
         var result = await sutProvider.Sut.Index(model);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        // The redisplayed model must carry exactly what the user submitted — including their
-        // Products selection — so the view can re-render checkbox state faithfully rather than
-        // silently resetting it (see Index.cshtml's `checked` binding on the Products checkboxes).
+        // Ensure when a model is returned to the view for validation errors (POST round-trip)
+        // that user's choices are persisted; the defaults do not change their prior selections.
         var redisplayedModel = Assert.IsType<SalesTrialInviteModel>(viewResult.Model);
         Assert.Equal(model.Products, redisplayedModel.Products);
 
         await sutProvider.GetDependency<ISendSalesAssistedTrialInvitationCommand>()
             .DidNotReceiveWithAnyArgs()
-            .HandleAsync(default!, default, default!, default, default!, default, default);
+            .HandleAsync(default!, default, default!, default, default!, default);
     }
 
     [Theory, BitAutoData]
@@ -138,7 +133,7 @@ public class SalesAssistedTrialControllerTests
         sutProvider.GetDependency<ISendSalesAssistedTrialInvitationCommand>()
             .HandleAsync(
                 Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string>(), Arg.Any<ProductTierType>(),
-                Arg.Any<IEnumerable<ProductType>>(), Arg.Any<int>(), Arg.Any<bool>())
+                Arg.Any<IEnumerable<ProductType>>(), Arg.Any<int>())
             .ThrowsAsync(new BadRequestException(
                 "A Bitwarden account already exists with this email address."));
 
@@ -171,7 +166,7 @@ public class SalesAssistedTrialControllerTests
         sutProvider.GetDependency<ISendSalesAssistedTrialInvitationCommand>()
             .HandleAsync(
                 Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string>(), Arg.Any<ProductTierType>(),
-                Arg.Any<IEnumerable<ProductType>>(), Arg.Any<int>(), Arg.Any<bool>())
+                Arg.Any<IEnumerable<ProductType>>(), Arg.Any<int>())
             .ThrowsAsync(new Exception("Unexpected failure"));
 
         var result = await sutProvider.Sut.Index(model);
@@ -191,53 +186,5 @@ public class SalesAssistedTrialControllerTests
                     !state.ToString()!.Contains("Unexpected failure")),
                 Arg.Any<Exception?>(),
                 Arg.Any<Func<object, Exception?, string>>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task Index_Post_ZeroTrialLengthPaymentNotOptional_ReachesCommand(
-        SutProvider<SalesAssistedTrialController> sutProvider)
-    {
-        var model = BuildValidModel();
-        model.TrialLength = 0;
-        model.PaymentOptional = false;
-        SetUpAuthenticatedSender(sutProvider);
-
-        var result = await sutProvider.Sut.Index(model);
-
-        Assert.IsType<RedirectToActionResult>(result);
-        await sutProvider.GetDependency<ISendSalesAssistedTrialInvitationCommand>()
-            .Received(1)
-            .HandleAsync(
-                model.Email,
-                model.Name,
-                SenderEmail,
-                model.ProductTier,
-                model.Products,
-                0,
-                false);
-    }
-
-    [Theory, BitAutoData]
-    public async Task Index_Post_CommandThrowsBadRequestForBusinessRuleViolation_AddsModelError(
-        SutProvider<SalesAssistedTrialController> sutProvider)
-    {
-        var model = BuildValidModel();
-        model.TrialLength = 0;
-        model.PaymentOptional = true;
-        SetUpAuthenticatedSender(sutProvider);
-
-        sutProvider.GetDependency<ISendSalesAssistedTrialInvitationCommand>()
-            .HandleAsync(
-                Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string>(), Arg.Any<ProductTierType>(),
-                Arg.Any<IEnumerable<ProductType>>(), 0, true)
-            .ThrowsAsync(new BadRequestException(
-                "Payment cannot be optional when there is no trial period."));
-
-        var result = await sutProvider.Sut.Index(model);
-
-        Assert.IsType<ViewResult>(result);
-        Assert.False(sutProvider.Sut.ModelState.IsValid);
-        Assert.Contains("Payment cannot be optional",
-            sutProvider.Sut.ModelState[string.Empty]!.Errors[0].ErrorMessage);
     }
 }
