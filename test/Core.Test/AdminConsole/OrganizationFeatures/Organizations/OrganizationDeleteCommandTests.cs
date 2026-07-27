@@ -9,7 +9,6 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Services;
@@ -61,62 +60,27 @@ public class OrganizationDeleteCommandTests
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task Delete_WhenFlagEnabled_CallsSubscriberService(
+    public async Task Delete_CallsSubscriberService(
         Organization organization,
         SutProvider<OrganizationDeleteCommand> sutProvider)
     {
         organization.GatewaySubscriptionId = "sub_123";
         organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
 
         await sutProvider.Sut.DeleteAsync(organization);
 
         await sutProvider.GetDependency<ISubscriberService>()
             .Received(1)
             .CancelSubscription(organization, cancelImmediately: false);
-
-        await sutProvider.GetDependency<IStripePaymentService>()
-            .DidNotReceiveWithAnyArgs()
-            .CancelSubscriptionAsync(default, default);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task Delete_WhenFlagDisabled_CallsLegacyPaymentService(
+    public async Task Delete_HandlesBillingException(
         Organization organization,
         SutProvider<OrganizationDeleteCommand> sutProvider)
     {
         organization.GatewaySubscriptionId = "sub_123";
         organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(false);
-
-        await sutProvider.Sut.DeleteAsync(organization);
-
-        await sutProvider.GetDependency<IStripePaymentService>()
-            .Received(1)
-            .CancelSubscriptionAsync(organization, true);
-
-        await sutProvider.GetDependency<ISubscriberService>()
-            .DidNotReceiveWithAnyArgs()
-            .CancelSubscription(default, default, default);
-    }
-
-    [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task Delete_WhenFlagEnabled_HandlesBillingException(
-        Organization organization,
-        SutProvider<OrganizationDeleteCommand> sutProvider)
-    {
-        organization.GatewaySubscriptionId = "sub_123";
-        organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
 
         var billingException = new BillingException();
         sutProvider.GetDependency<ISubscriberService>()
@@ -127,28 +91,6 @@ public class OrganizationDeleteCommandTests
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).DeleteAsync(organization);
 
-    }
-
-    [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task Delete_WhenFlagDisabled_HandlesBillingException(
-        Organization organization,
-        SutProvider<OrganizationDeleteCommand> sutProvider)
-    {
-        organization.GatewaySubscriptionId = "sub_123";
-        organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(false);
-
-        var billingException = new BillingException();
-        sutProvider.GetDependency<IStripePaymentService>()
-            .CancelSubscriptionAsync(organization, Arg.Any<bool>())
-            .ThrowsAsync(billingException);
-
-        await sutProvider.Sut.DeleteAsync(organization);
-
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).DeleteAsync(organization);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
