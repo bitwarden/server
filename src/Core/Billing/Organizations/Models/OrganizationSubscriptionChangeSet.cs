@@ -177,6 +177,7 @@ public class OrganizationSubscriptionChangeSetBuilder(Plan currentPlan)
     /// <param name="targetPlan">The plan to which the subscription is being changed.</param>
     /// <param name="seatCount">The organization's seat count, applied to the target seat line.</param>
     /// <exception cref="InvalidOperationException">The current plan is not a packaged base+overage plan.</exception>
+    // TODO: Remove once all Teams 2019 orgs are migrated off the packaged plan.
     public OrganizationSubscriptionChangeSetBuilder ChangePackagedPasswordManagerPrice(Plan targetPlan, int seatCount)
     {
         if (string.IsNullOrEmpty(currentPlan.PasswordManager.StripePlanId) ||

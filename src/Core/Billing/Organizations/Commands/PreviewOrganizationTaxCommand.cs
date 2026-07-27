@@ -241,9 +241,10 @@ public class PreviewOrganizationTaxCommand(
 
                 if (!string.IsNullOrEmpty(currentPlan.PasswordManager.StripePlanId) && !newPlan.HasNonSeatBasedPasswordManagerPlan())
                 {
-                    // The current plan doesn't have a per-seat subscription item to read a quantity from
-                    // (e.g. upgrading from a flat-rate plan like Teams Starter), so fall back to the
-                    // organization's occupied seat count instead of looking it up on the subscription.
+                    // Bill the new seat-based plan at the org's occupied seats rather than reading a
+                    // quantity off the subscription: the current plan either has no per-seat item (flat
+                    // plans like Teams Starter) or a packaged overage line that holds only the seats past
+                    // the base (Teams 2019), so the subscription quantity would be missing or an undercount.
                     quantity = (long)organization.Seats!;
                 }
                 else
