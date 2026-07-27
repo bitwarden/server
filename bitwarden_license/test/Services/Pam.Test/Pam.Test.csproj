@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <RootNamespace>Bit.Services.Pam.Test</RootNamespace>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
