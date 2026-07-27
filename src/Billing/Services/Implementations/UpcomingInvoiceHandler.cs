@@ -11,7 +11,6 @@ using Bit.Core.Billing.Organizations.PlanMigration.Services;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
@@ -171,34 +170,6 @@ public class UpcomingInvoiceHandler(
         Customer customer,
         string eventId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            var isBusinessUse = organization.PlanType.GetProductTier() != ProductTierType.Families;
-            if (isBusinessUse)
-            {
-                var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
-                switch (customer)
-                {
-                    case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                        when determinedTaxExemptStatus != customerTaxExemptStatus:
-                        try
-                        {
-                            await stripeAdapter.UpdateCustomerAsync(subscription.CustomerId,
-                                new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                        }
-                        catch (Exception exception)
-                        {
-                            logger.LogError(
-                                exception,
-                                "Failed to set organization's ({OrganizationID}) to the required tax exemption while processing event with ID {EventID}",
-                                organization.Id,
-                                eventId);
-                        }
-                        break;
-                }
-            }
-        }
-
         if (!subscription.AutomaticTax.Enabled)
         {
             try
@@ -553,30 +524,6 @@ public class UpcomingInvoiceHandler(
         Customer customer,
         string eventId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
-            switch (customer)
-            {
-                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                    when determinedTaxExemptStatus != customerTaxExemptStatus:
-                    try
-                    {
-                        await stripeAdapter.UpdateCustomerAsync(subscription.CustomerId,
-                            new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                    }
-                    catch (Exception exception)
-                    {
-                        logger.LogError(
-                            exception,
-                            "Failed to set provider's ({ProviderID}) to the required tax exemption while processing event with ID {EventID}",
-                            provider.Id,
-                            eventId);
-                    }
-                    break;
-            }
-        }
-
         if (!subscription.AutomaticTax.Enabled)
         {
             try

@@ -2,6 +2,7 @@
 // NOTE: This file is partially migrated to nullable reference types. Remove inline #nullable directives when addressing the FIXME.
 #nullable disable
 
+using System.Net;
 using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
@@ -903,6 +904,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("/organizations/users/invite-link/invite")]
+    [ProducesResponseType(typeof(OrganizationInviteResponseModel), (int)HttpStatusCode.OK)]
     [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     public async Task<IResult> GetInvite([FromBody] GetOrganizationInviteRequestModel model)
     {
