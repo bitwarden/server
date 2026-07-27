@@ -1,5 +1,6 @@
-﻿#nullable enable
+#nullable enable
 
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -37,14 +38,13 @@ public static class HttpClientBuilderSsrfExtensions
         // follows redirects internally, bypassing SSRF checks on redirect targets.
         builder.ConfigurePrimaryHttpMessageHandler((handler, _) =>
         {
-            switch (handler)
+            if (handler is SocketsHttpHandler socketsHttpHandler)
             {
-                case HttpClientHandler httpClientHandler:
-                    httpClientHandler.AllowAutoRedirect = false;
-                    break;
-                case SocketsHttpHandler socketsHttpHandler:
-                    socketsHttpHandler.AllowAutoRedirect = false;
-                    break;
+                socketsHttpHandler.AllowAutoRedirect = false;
+            }
+            else
+            {
+                Debug.Fail($"Expected SocketsHttpHandler but got {handler.GetType().Name}. Only SocketsHttpHandler is supported.");
             }
         });
 

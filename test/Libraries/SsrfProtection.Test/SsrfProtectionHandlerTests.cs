@@ -1,20 +1,20 @@
-﻿using System.Net;
+using System.Net;
 using Bit.Core.Utilities;
-using Microsoft.Extensions.Logging;
-using NSubstitute;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Bit.Core.Test.Utilities;
+namespace Bit.SsrfProtection.Test;
 
 public class SsrfProtectionHandlerTests
 {
-    private readonly ILogger<SsrfProtectionHandler> _logger = Substitute.For<ILogger<SsrfProtectionHandler>>();
-
     /// <summary>
-    /// A test handler that captures the request and returns a canned response.
-    /// Used as the inner handler for <see cref="SsrfProtectionHandler"/>.
+    /// A test delegating handler that captures requests and returns canned responses.
+    /// Registered after <see cref="HttpClientBuilderSsrfExtensions.AddSsrfProtection"/> so that
+    /// the default <see cref="SocketsHttpHandler"/> remains as the primary handler (allowing
+    /// <c>AllowAutoRedirect = false</c> to be set correctly), while this handler intercepts
+    /// requests before they reach the network.
     /// </summary>
-    private class TestInnerHandler : HttpMessageHandler
+    private class TestInnerHandler : DelegatingHandler
     {
         public HttpRequestMessage? LastRequest { get; private set; }
         public List<HttpRequestMessage> AllRequests { get; } = [];
@@ -39,18 +39,20 @@ public class SsrfProtectionHandlerTests
     }
 
     /// <summary>
-    /// Creates an SsrfProtectionHandler wrapping a TestInnerHandler for testing purposes.
+    /// Creates an HttpClient with SSRF protection wired up via the public
+    /// <see cref="HttpClientBuilderSsrfExtensions.AddSsrfProtection"/> extension.
     /// </summary>
-    private (HttpClient client, TestInnerHandler inner) CreateClient(bool followRedirects = true)
+    private static (HttpClient client, TestInnerHandler inner) CreateClient(bool followRedirects = true)
     {
         var inner = new TestInnerHandler();
-        var handler = new SsrfProtectionHandler(_logger)
-        {
-            InnerHandler = inner,
-            FollowRedirects = followRedirects
-        };
-        var client = new HttpClient(handler);
-        return (client, inner);
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddHttpClient("test")
+            .AddSsrfProtection(followRedirects)
+            .AddHttpMessageHandler(() => inner);
+        var provider = services.BuildServiceProvider();
+        var factory = provider.GetRequiredService<IHttpClientFactory>();
+        return (factory.CreateClient("test"), inner);
     }
 
     [Fact]

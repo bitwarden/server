@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 
@@ -17,7 +17,7 @@ namespace Bit.Core.Utilities;
 /// against SSRF rules. Callers should ensure AllowAutoRedirect is disabled on the
 /// primary handler to prevent the inner handler from following redirects without validation.
 /// </summary>
-public class SsrfProtectionHandler : DelegatingHandler
+internal class SsrfProtectionHandler : DelegatingHandler
 {
     private const int _maxRedirects = 10;
 
@@ -210,13 +210,4 @@ public class SsrfProtectionHandler : DelegatingHandler
             return [];
         }
     }
-}
-
-/// <summary>
-/// Exception thrown when an SSRF protection check fails.
-/// </summary>
-public class SsrfProtectionException : Exception
-{
-    public SsrfProtectionException(string message) : base(message) { }
-    public SsrfProtectionException(string message, Exception innerException) : base(message, innerException) { }
 }
