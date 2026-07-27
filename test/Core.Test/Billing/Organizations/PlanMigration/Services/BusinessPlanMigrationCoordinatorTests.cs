@@ -119,12 +119,39 @@ public class BusinessPlanMigrationCoordinatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExecuteAsync_WhenNotifierReturnsFalse_ReturnsCompletedWithoutNotification_AndDoesNotStamp(
+    public async Task ExecuteAsync_WhenNotYetNotified_SendsBeforeStamping_ReturnsCompleted(
         SutProvider<BusinessPlanMigrationCoordinator> sutProvider, Organization organization,
         OrganizationPlanMigrationCohortAssignment assignment, OrganizationPlanMigrationCohort cohort)
     {
         assignment.MigratedDate = null;
         assignment.ScheduledDate = DateTime.UtcNow;          // already scheduled — skip scheduling
+        assignment.RenewalNotificationSentDate = null;
+        assignment.CohortId = cohort.Id;
+        var assignmentRepository = sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(assignment);
+        var notifier = sutProvider.GetDependency<IBusinessPlanRenewalNotificationService>();
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        notifier.SendRenewalEmailAsync(organization, Arg.Any<Subscription>(), cohort).Returns(true);
+
+        var outcome = await sutProvider.Sut.ExecuteAsync(organization, new Subscription());
+
+        Assert.Equal(BusinessPlanMigrationResult.Completed, outcome);
+        Assert.NotNull(assignment.RenewalNotificationSentDate);
+        Received.InOrder(() =>
+        {
+            notifier.SendRenewalEmailAsync(organization, Arg.Any<Subscription>(), cohort); // email goes out first
+            assignmentRepository.ReplaceAsync(assignment);                                 // then the stamp is persisted
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExecuteAsync_WhenNotifierReturnsFalse_ReturnsCompletedWithoutNotification_AndDoesNotStamp(
+        SutProvider<BusinessPlanMigrationCoordinator> sutProvider, Organization organization,
+        OrganizationPlanMigrationCohortAssignment assignment, OrganizationPlanMigrationCohort cohort)
+    {
+        assignment.MigratedDate = null;
+        assignment.ScheduledDate = DateTime.UtcNow;
         assignment.RenewalNotificationSentDate = null;
         assignment.CohortId = cohort.Id;
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
@@ -136,6 +163,7 @@ public class BusinessPlanMigrationCoordinatorTests
 
         var outcome = await sutProvider.Sut.ExecuteAsync(organization, new Subscription());
 
+        // Nothing went out, so the stamp stays null and the sweep can re-drive on a later run.
         Assert.Equal(BusinessPlanMigrationResult.CompletedWithoutNotification, outcome);
         Assert.Null(assignment.RenewalNotificationSentDate);
         await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
@@ -161,8 +189,35 @@ public class BusinessPlanMigrationCoordinatorTests
 
         var outcome = await sutProvider.Sut.ExecuteAsync(organization, new Subscription());
 
+        // The send threw, so nothing was stamped and the sweep can re-drive on a later run.
         Assert.Equal(BusinessPlanMigrationResult.CompletedWithoutNotification, outcome);
         Assert.Null(assignment.RenewalNotificationSentDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExecuteAsync_WhenNotifierSucceedsButStampWriteThrows_ReturnsCompleted(
+        SutProvider<BusinessPlanMigrationCoordinator> sutProvider, Organization organization,
+        OrganizationPlanMigrationCohortAssignment assignment, OrganizationPlanMigrationCohort cohort)
+    {
+        assignment.MigratedDate = null;
+        assignment.ScheduledDate = DateTime.UtcNow;
+        assignment.RenewalNotificationSentDate = null;
+        assignment.CohortId = cohort.Id;
+        var assignmentRepository = sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(assignment);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IBusinessPlanRenewalNotificationService>()
+            .SendRenewalEmailAsync(organization, Arg.Any<Subscription>(), cohort).Returns(true);
+        assignmentRepository.ReplaceAsync(assignment).ThrowsAsync(new Exception("db blip"));
+
+        var outcome = await sutProvider.Sut.ExecuteAsync(organization, new Subscription());
+
+        // Email is out; a failed stamp is swallowed and reported as Completed (the sweep may resend later).
+        Assert.Equal(BusinessPlanMigrationResult.Completed, outcome);
+        await sutProvider.GetDependency<IBusinessPlanRenewalNotificationService>()
+            .Received(1).SendRenewalEmailAsync(organization, Arg.Any<Subscription>(), cohort);
+        await assignmentRepository.Received(1).ReplaceAsync(assignment);
     }
 
     [Theory, BitAutoData]
