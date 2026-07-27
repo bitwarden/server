@@ -28,15 +28,9 @@ public sealed class IpAllowlistCondition : AccessCondition
             return AccessEvaluation.Deny(DenyReason.NotWithinIpRange);
         }
 
-        foreach (var cidr in Cidrs)
-        {
-            if (IPNetwork.TryParse(cidr, out var network) && network.Contains(signals.IpAddress))
-            {
-                return AccessEvaluation.Allow;
-            }
-        }
-
-        return AccessEvaluation.Deny(DenyReason.NotWithinIpRange);
+        return Cidrs.Any(cidr => IPNetwork.TryParse(cidr, out var network) && network.Contains(signals.IpAddress))
+            ? AccessEvaluation.Allow
+            : AccessEvaluation.Deny(DenyReason.NotWithinIpRange);
     }
 
     public override AccessRuleValidationResult Validate()
