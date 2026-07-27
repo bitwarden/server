@@ -237,14 +237,14 @@ public class PreviewOrganizationTaxCommand(
 
                 var items = new List<InvoiceSubscriptionDetailsItemOptions>();
 
-                long seatQuantity;
+                long quantity;
 
                 if (!string.IsNullOrEmpty(currentPlan.PasswordManager.StripePlanId) && !newPlan.HasNonSeatBasedPasswordManagerPlan())
                 {
                     // The current plan doesn't have a per-seat subscription item to read a quantity from
                     // (e.g. upgrading from a flat-rate plan like Teams Starter), so fall back to the
                     // organization's occupied seat count instead of looking it up on the subscription.
-                    seatQuantity = (long)organization.Seats!;
+                    quantity = (long)organization.Seats!;
                 }
                 else
                 {
@@ -263,7 +263,7 @@ public class PreviewOrganizationTaxCommand(
                             "Your organization's subscription does not match its current plan. Please contact support for assistance.");
                     }
 
-                    seatQuantity = passwordManagerSeats.Quantity;
+                    quantity = passwordManagerSeats.Quantity;
                 }
 
                 items.Add(new InvoiceSubscriptionDetailsItemOptions
