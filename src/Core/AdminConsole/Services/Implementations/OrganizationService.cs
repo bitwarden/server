@@ -106,17 +106,6 @@ public class OrganizationService : IOrganizationService
         _timeProvider = timeProvider;
     }
 
-    public async Task ReinstateSubscriptionAsync(Guid organizationId)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        await _paymentService.ReinstateSubscriptionAsync(organization);
-    }
-
     public async Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
     {
         var organization = await GetOrgById(organizationId);
@@ -733,7 +722,7 @@ public class OrganizationService : IOrganizationService
 
             if (provider.Type == ProviderType.Reseller)
             {
-                return (false, $"Seat limit of {organization.Seats} has been reached. Contact your provider to purchase additional seats.");
+                return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
             }
         }
 

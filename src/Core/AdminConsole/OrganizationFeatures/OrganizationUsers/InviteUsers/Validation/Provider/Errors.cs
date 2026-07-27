@@ -7,10 +7,7 @@ public record ProviderBillableSeatLimitError(InviteOrganizationProvider InvalidR
     public const string Code = "Seat limit has been reached. Please contact your provider to add more seats.";
 }
 
-public record ProviderResellerSeatLimitError : Error<InviteOrganizationProvider>
+public record ProviderResellerSeatLimitError(InviteOrganizationProvider InvalidRequest) : Error<InviteOrganizationProvider>(Code, InvalidRequest)
 {
-    public ProviderResellerSeatLimitError(InviteOrganizationProvider invalidRequest, int? seats)
-        : base($"Seat limit of {seats} has been reached. Contact your provider to purchase additional seats.", invalidRequest)
-    {
-    }
+    public const string Code = "Seat limit has been reached. Contact your provider to purchase additional seats.";
 }
