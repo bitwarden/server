@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -120,6 +121,22 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { key, value },
             });
         });
+    }
+
+    protected override IHostBuilder? CreateHostBuilder()
+    {
+        var builder = base.CreateHostBuilder();
+        // Disable OTel in all test factories. UseBitwardenSdk() registers OTLP exporters that
+        // open gRPC channels with exponential-backoff retries; when the endpoint is unreachable
+        // (e.g. CI) the retry loop stalls response-body completion for ~136 s per request.
+        builder?.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "OpenTelemetry:Enabled", "false" },
+            });
+        });
+        return builder;
     }
 
     /// <summary>
