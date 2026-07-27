@@ -39,9 +39,7 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     // Distinct from TrialLength: this is the token lifetime from GlobalSettings, not the trial period.
     public required int ExpiryDays { get; set; }
 
-    public string HeroTitle => TrialLength > 0
-        ? $"You're invited to start a <b>{TrialLength}-day<br/>free trial</b> of {ProductName}"
-        : $"You're invited to try <b>{ProductName}</b>";
+    public string HeroTitle => $"You're invited to start a <b>{TrialLength}-day<br/>free trial</b> of {ProductName}";
 
     public string ProductName => ProductTier switch
     {
