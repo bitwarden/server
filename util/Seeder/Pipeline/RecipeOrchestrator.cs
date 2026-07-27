@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Models;
+﻿using Bit.Seeder.Guards;
+using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,6 +37,9 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         // Read preset to extract kdfIterations before building services.
         // CLI --kdf-iterations takes precedence over the preset value.
         var preset = reader.Read<Models.SeedPreset>($"presets.{presetName}");
+
+        FixedOrganizationIdGuard.EnsureAvailable(preset.Organization, id => deps.Db.Organizations.Any(o => o.Id == id));
+
         var effectiveKdf = kdfIterations ?? preset.KdfIterations ?? 5_000;
 
         var services = new ServiceCollection();

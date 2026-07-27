@@ -13,7 +13,8 @@
     @ResetPasswordKey VARCHAR(MAX),
     @AccessSecretsManager BIT = 0,
     @RevocationReason TINYINT = NULL,
-    @StatusNew SMALLINT = NULL
+    @StatusNew SMALLINT = NULL,
+    @AccessPam BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -34,7 +35,8 @@ BEGIN
         [ResetPasswordKey] = @ResetPasswordKey,
         [AccessSecretsManager] = @AccessSecretsManager,
         [RevocationReason] = @RevocationReason,
-        [StatusNew] = @StatusNew
+        [StatusNew] = @StatusNew,
+        [AccessPam] = @AccessPam
     WHERE
         [Id] = @Id
 

@@ -30,6 +30,7 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
             ResetPasswordKey = x.ou.ResetPasswordKey,
             UsesKeyConnector = x.u != null && x.u.UsesKeyConnector,
             AccessSecretsManager = x.ou.AccessSecretsManager,
+            AccessPam = x.ou.AccessPam,
             HasMasterPassword = x.u != null && !string.IsNullOrWhiteSpace(x.u.MasterPassword),
             RevocationReason = x.ou.RevocationReason,
             CreationDate = x.ou.CreationDate

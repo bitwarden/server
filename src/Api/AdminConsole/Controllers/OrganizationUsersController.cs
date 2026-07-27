@@ -2,6 +2,7 @@
 // NOTE: This file is partially migrated to nullable reference types. Remove inline #nullable directives when addressing the FIXME.
 #nullable disable
 
+using System.Net;
 using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
@@ -91,6 +92,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
     private readonly IAcceptOrganizationInviteLinkCommand _acceptOrganizationInviteLinkCommand;
     private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
+    private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -126,7 +128,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
         IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery,
         IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand,
-        IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand)
+        IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
+        IGetOrganizationInviteCommand getOrganizationInviteCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -163,6 +166,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
         _acceptOrganizationInviteLinkCommand = acceptOrganizationInviteLinkCommand;
         _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
+        _getOrganizationInviteCommand = getOrganizationInviteCommand;
     }
 
     [HttpGet("{id}")]
@@ -897,5 +901,26 @@ public class OrganizationUsersController : BaseAdminConsoleController
         });
 
         return Handle(result, _ => TypedResults.Ok());
+    }
+
+    [HttpPost("/organizations/users/invite-link/invite")]
+    [ProducesResponseType(typeof(OrganizationInviteResponseModel), (int)HttpStatusCode.OK)]
+    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
+    public async Task<IResult> GetInvite([FromBody] GetOrganizationInviteRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _getOrganizationInviteCommand.GetInviteAsync(new GetOrganizationInviteRequest
+        {
+            OrganizationId = model.OrganizationId,
+            Code = model.Code,
+            User = user,
+        });
+
+        return Handle(result, invite => TypedResults.Ok(new OrganizationInviteResponseModel(invite)));
     }
 }
