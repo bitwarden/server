@@ -99,6 +99,26 @@ public class IpAllowlistConditionTests
     }
 
     [Fact]
+    public void Validate_NullCidr_IsInvalid()
+    {
+        // A JSON null deserialises into the list as a null element, so validation must reject it rather than
+        // mistake it for "no invalid entry found".
+        var result = new IpAllowlistCondition { Cidrs = [null!] }.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("Invalid CIDR", result.Error);
+    }
+
+    [Fact]
+    public void Validate_ValidCidrAfterInvalid_ReportsTheInvalidOne()
+    {
+        var result = new IpAllowlistCondition { Cidrs = ["not-a-cidr", "10.0.0.0/8"] }.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("not-a-cidr", result.Error);
+    }
+
+    [Fact]
     public void Validate_ValidCidrs_IsValid()
     {
         var result = new IpAllowlistCondition { Cidrs = ["10.0.0.0/8", "2001:db8::/32"] }.Validate();
