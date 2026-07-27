@@ -414,56 +414,6 @@ public class GetOrganizationWarningsQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_USCustomer_NoTaxIdWarning(
-        Organization organization,
-        SutProvider<GetOrganizationWarningsQuery> sutProvider)
-    {
-        var subscription = new Subscription
-        {
-            Customer = new Customer
-            {
-                Address = new Address { Country = "US" },
-                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
-                InvoiceSettings = new CustomerInvoiceSettings(),
-                Metadata = new Dictionary<string, string>()
-            }
-        };
-
-        sutProvider.GetDependency<ISubscriberService>()
-            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
-
-        var response = await sutProvider.Sut.Run(organization);
-
-        Assert.Null(response.TaxId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_CHCustomer_NoTaxIdWarning(
-        Organization organization,
-        SutProvider<GetOrganizationWarningsQuery> sutProvider)
-    {
-        var subscription = new Subscription
-        {
-            Customer = new Customer
-            {
-                Address = new Address { Country = "CH" },
-                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
-                InvoiceSettings = new CustomerInvoiceSettings(),
-                Metadata = new Dictionary<string, string>()
-            }
-        };
-
-        sutProvider.GetDependency<ISubscriberService>()
-            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
-
-        var response = await sutProvider.Sut.Run(organization);
-
-        Assert.Null(response.TaxId);
-    }
-
-    [Theory, BitAutoData]
     public async Task Run_FreeCustomer_NoTaxIdWarning(
         Organization organization,
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
@@ -475,6 +425,7 @@ public class GetOrganizationWarningsQueryTests
             Customer = new Customer
             {
                 Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
                 TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
                 InvoiceSettings = new CustomerInvoiceSettings(),
                 Metadata = new Dictionary<string, string>()
@@ -502,6 +453,7 @@ public class GetOrganizationWarningsQueryTests
             Customer = new Customer
             {
                 Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
                 TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
                 InvoiceSettings = new CustomerInvoiceSettings(),
                 Metadata = new Dictionary<string, string>()
@@ -533,6 +485,7 @@ public class GetOrganizationWarningsQueryTests
             Customer = new Customer
             {
                 Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
                 TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
                 InvoiceSettings = new CustomerInvoiceSettings(),
                 Metadata = new Dictionary<string, string>()
@@ -568,6 +521,7 @@ public class GetOrganizationWarningsQueryTests
             Customer = new Customer
             {
                 Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
                 TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
                 InvoiceSettings = new CustomerInvoiceSettings(),
                 Metadata = new Dictionary<string, string>()
@@ -609,6 +563,7 @@ public class GetOrganizationWarningsQueryTests
             Customer = new Customer
             {
                 Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
                 TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
                 InvoiceSettings = new CustomerInvoiceSettings(),
                 Metadata = new Dictionary<string, string>()
@@ -661,6 +616,7 @@ public class GetOrganizationWarningsQueryTests
             Customer = new Customer
             {
                 Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
                 TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
                 InvoiceSettings = new CustomerInvoiceSettings(),
                 Metadata = new Dictionary<string, string>()
@@ -713,6 +669,7 @@ public class GetOrganizationWarningsQueryTests
             Customer = new Customer
             {
                 Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
                 TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
                 InvoiceSettings = new CustomerInvoiceSettings(),
                 Metadata = new Dictionary<string, string>()
@@ -765,6 +722,7 @@ public class GetOrganizationWarningsQueryTests
             Customer = new Customer
             {
                 Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
                 TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
                 InvoiceSettings = new CustomerInvoiceSettings(),
                 Metadata = new Dictionary<string, string>()
@@ -811,6 +769,7 @@ public class GetOrganizationWarningsQueryTests
             Customer = new Customer
             {
                 Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
                 TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
                 InvoiceSettings = new CustomerInvoiceSettings(),
                 Metadata = new Dictionary<string, string>()
@@ -888,10 +847,6 @@ public class GetOrganizationWarningsQueryTests
             .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
-            .Returns(true);
-
         var response = await sutProvider.Sut.Run(organization);
 
         Assert.Null(response.TaxId);
@@ -919,10 +874,6 @@ public class GetOrganizationWarningsQueryTests
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
-            .Returns(true);
 
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(organization.Id)
@@ -969,10 +920,6 @@ public class GetOrganizationWarningsQueryTests
             .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
-            .Returns(true);
-
         var response = await sutProvider.Sut.Run(organization);
 
         Assert.Null(response.TaxId);
@@ -1001,10 +948,6 @@ public class GetOrganizationWarningsQueryTests
             .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
-            .Returns(true);
-
         var response = await sutProvider.Sut.Run(organization);
 
         Assert.Null(response.TaxId);
@@ -1032,10 +975,6 @@ public class GetOrganizationWarningsQueryTests
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
-            .Returns(true);
 
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(organization.Id)
@@ -1086,10 +1025,6 @@ public class GetOrganizationWarningsQueryTests
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
-            .Returns(true);
 
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(organization.Id)
@@ -1144,10 +1079,6 @@ public class GetOrganizationWarningsQueryTests
             .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
-            .Returns(true);
-
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(organization.Id)
             .Returns(true);
@@ -1200,10 +1131,6 @@ public class GetOrganizationWarningsQueryTests
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
-            .Returns(true);
 
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(organization.Id)

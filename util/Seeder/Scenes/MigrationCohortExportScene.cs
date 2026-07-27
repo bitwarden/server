@@ -176,7 +176,7 @@ public class MigrationCohortExportScene(
 
             organizations.Add(new CoreOrganization
             {
-                Id = CoreHelpers.GenerateComb(),
+                Id = CombGuid.Generate(),
                 Name = $"{request.NamePrefix}{suffix}",
                 BillingEmail = $"{request.NamePrefix}{n}@example.com",
                 Plan = "Enterprise (Annually)",

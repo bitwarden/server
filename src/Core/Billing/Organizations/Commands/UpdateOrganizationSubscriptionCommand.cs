@@ -9,8 +9,6 @@ using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Utilities;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -48,7 +46,6 @@ public interface IUpdateOrganizationSubscriptionCommand
 }
 
 public class UpdateOrganizationSubscriptionCommand(
-    IFeatureService featureService,
     ILogger<UpdateOrganizationSubscriptionCommand> logger,
     IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
     IOrganizationPlanMigrationCohortRepository cohortRepository,
@@ -93,11 +90,6 @@ public class UpdateOrganizationSubscriptionCommand(
                 "{Command}: Change set for organization ({OrganizationId}) subscription ({SubscriptionId}) contained zero changes",
                 CommandName, organization.Id, subscription.Id);
             return new Conflict("No changes were provided for the organization subscription update");
-        }
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            await ReconcileTaxExemptionAsync(subscription.Customer);
         }
 
         var hasStructuralChanges = changeSet.ChargeImmediately;
@@ -306,20 +298,6 @@ public class UpdateOrganizationSubscriptionCommand(
         }
 
         return MigrationPaths.FromId(cohort.MigrationPathId.Value);
-    }
-
-    private async Task ReconcileTaxExemptionAsync(Customer customer)
-    {
-        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
-        switch (customer)
-        {
-            case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                when determinedTaxExemptStatus != customerTaxExemptStatus:
-                await stripeAdapter.UpdateCustomerAsync(customer.Id,
-                    new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                break;
-        }
-
     }
 
     private static OneOf<SubscriptionItemOptions, BadRequest> ValidateItemAddition(

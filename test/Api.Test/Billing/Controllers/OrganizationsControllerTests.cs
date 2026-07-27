@@ -3,7 +3,6 @@ using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -59,7 +58,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IOrganizationInstallationRepository _organizationInstallationRepository;
     private readonly IPricingClient _pricingClient;
-    private readonly IFeatureService _featureService;
     private readonly IReinstateSubscriptionCommand _reinstateSubscriptionCommand;
     private readonly IGetPendingAnnualUpgradeQuery _getPendingAnnualUpgradeQuery;
 
@@ -86,7 +84,6 @@ public class OrganizationsControllerTests : IDisposable
         _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
         _organizationInstallationRepository = Substitute.For<IOrganizationInstallationRepository>();
         _pricingClient = Substitute.For<IPricingClient>();
-        _featureService = Substitute.For<IFeatureService>();
         _reinstateSubscriptionCommand = Substitute.For<IReinstateSubscriptionCommand>();
         _getPendingAnnualUpgradeQuery = Substitute.For<IGetPendingAnnualUpgradeQuery>();
 
@@ -106,7 +103,6 @@ public class OrganizationsControllerTests : IDisposable
             _subscriberService,
             _organizationInstallationRepository,
             _pricingClient,
-            _featureService,
             _reinstateSubscriptionCommand,
             _getPendingAnnualUpgradeQuery);
     }
@@ -307,14 +303,11 @@ public class OrganizationsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task PostReinstate_WhenFlagEnabled_CallsReinstateCommand(Guid organizationId)
+    public async Task PostReinstate_CallsReinstateCommand(Guid organizationId)
     {
         var organization = new Organization { Id = organizationId, GatewaySubscriptionId = "sub_123" };
 
         _currentContext.EditSubscription(organizationId).Returns(true);
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _reinstateSubscriptionCommand
             .Run(organization)
@@ -323,30 +316,12 @@ public class OrganizationsControllerTests : IDisposable
         await _sut.PostReinstate(organizationId);
 
         await _reinstateSubscriptionCommand.Received(1).Run(organization);
-        await _organizationService.DidNotReceiveWithAnyArgs().ReinstateSubscriptionAsync(default);
     }
 
     [Theory, AutoData]
-    public async Task PostReinstate_WhenFlagDisabled_CallsLegacyOrganizationService(Guid organizationId)
+    public async Task PostReinstate_AndOrgNotFound_ThrowsNotFoundException(Guid organizationId)
     {
         _currentContext.EditSubscription(organizationId).Returns(true);
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(false);
-
-        await _sut.PostReinstate(organizationId);
-
-        await _organizationService.Received(1).ReinstateSubscriptionAsync(organizationId);
-        await _reinstateSubscriptionCommand.DidNotReceiveWithAnyArgs().Run(default);
-    }
-
-    [Theory, AutoData]
-    public async Task PostReinstate_WhenFlagEnabled_AndOrgNotFound_ThrowsNotFoundException(Guid organizationId)
-    {
-        _currentContext.EditSubscription(organizationId).Returns(true);
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
         _organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
 
         await Assert.ThrowsAsync<NotFoundException>(() => _sut.PostReinstate(organizationId));

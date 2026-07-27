@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -181,5 +182,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         public Guid? UserId => Guid.Empty;
         public bool IsOrganizationOwnerOrProvider => false;
         public EventSystemUser? SystemUserType => null;
+        public Permissions? Permissions => null;
+        public OrganizationUserType? OrganizationUserType => null;
     }
 }

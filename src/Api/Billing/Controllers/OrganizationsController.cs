@@ -7,7 +7,6 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
@@ -51,7 +50,6 @@ public class OrganizationsController(
     ISubscriberService subscriberService,
     IOrganizationInstallationRepository organizationInstallationRepository,
     IPricingClient pricingClient,
-    IFeatureService featureService,
     IReinstateSubscriptionCommand reinstateSubscriptionCommand,
     IGetPendingAnnualUpgradeQuery getPendingAnnualUpgradeQuery)
     : Controller
@@ -255,20 +253,13 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        var organization = await organizationRepository.GetByIdAsync(id);
+        if (organization == null)
         {
-            var organization = await organizationRepository.GetByIdAsync(id);
-            if (organization == null)
-            {
-                throw new NotFoundException();
-            }
+            throw new NotFoundException();
+        }
 
-            (await reinstateSubscriptionCommand.Run(organization)).GetValueOrThrow();
-        }
-        else
-        {
-            await organizationService.ReinstateSubscriptionAsync(id);
-        }
+        (await reinstateSubscriptionCommand.Run(organization)).GetValueOrThrow();
     }
 
     /// <summary>
