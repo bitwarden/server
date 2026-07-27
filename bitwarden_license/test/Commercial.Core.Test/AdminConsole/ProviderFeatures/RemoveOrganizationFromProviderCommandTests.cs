@@ -11,6 +11,8 @@ using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Mail.Provider.ProviderUpdatePaymentMethod;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
@@ -123,12 +125,9 @@ public class RemoveOrganizationFromProviderCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
 
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendProviderUpdatePaymentMethod(
-                organization.Id,
-                organization.Name,
-                provider.Name,
-                Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
+        await sutProvider.GetDependency<IMailer>().Received(1)
+            .SendEmail(Arg.Is<ProviderUpdatePaymentMethodMail>(mail =>
+                mail.ToEmails.FirstOrDefault() == "a@example.com"));
 
         await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
             .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
@@ -186,12 +185,9 @@ public class RemoveOrganizationFromProviderCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
 
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendProviderUpdatePaymentMethod(
-                organization.Id,
-                organization.Name,
-                provider.Name,
-                Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
+        await sutProvider.GetDependency<IMailer>().Received(1)
+            .SendEmail(Arg.Is<ProviderUpdatePaymentMethodMail>(mail =>
+                mail.ToEmails.FirstOrDefault() == "a@example.com"));
     }
 
     [Theory, BitAutoData]
@@ -275,12 +271,9 @@ public class RemoveOrganizationFromProviderCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
 
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendProviderUpdatePaymentMethod(
-                organization.Id,
-                organization.Name,
-                provider.Name,
-                Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
+        await sutProvider.GetDependency<IMailer>().Received(1)
+            .SendEmail(Arg.Is<ProviderUpdatePaymentMethodMail>(mail =>
+                mail.ToEmails.FirstOrDefault() == "a@example.com"));
     }
 
     [Theory, BitAutoData]
@@ -364,12 +357,9 @@ public class RemoveOrganizationFromProviderCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
 
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendProviderUpdatePaymentMethod(
-                organization.Id,
-                organization.Name,
-                provider.Name,
-                Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
+        await sutProvider.GetDependency<IMailer>().Received(1)
+            .SendEmail(Arg.Is<ProviderUpdatePaymentMethodMail>(mail =>
+                mail.ToEmails.FirstOrDefault() == "a@example.com"));
     }
 
     private static Subscription GetSubscription(string subscriptionId, string customerId) =>
