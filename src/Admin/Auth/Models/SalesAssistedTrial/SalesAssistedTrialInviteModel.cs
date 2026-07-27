@@ -3,7 +3,7 @@ using Bit.Core.Billing.Enums;
 
 namespace Bit.Admin.Auth.Models.SalesAssistedTrial;
 
-public class SalesTrialInviteModel : IValidatableObject
+public class SalesAssistedTrialInviteModel : IValidatableObject
 {
     [Required]
     [EmailAddress]

@@ -21,7 +21,7 @@ public class SalesAssistedTrialControllerTests
 {
     private const string SenderEmail = "sales.rep@bitwarden.com";
 
-    private static SalesTrialInviteModel BuildValidModel() => new()
+    private static SalesAssistedTrialInviteModel BuildValidModel() => new()
     {
         Email = "prospect@example.com",
         Name = "Prospect Company",
@@ -50,7 +50,7 @@ public class SalesAssistedTrialControllerTests
         var result = sutProvider.Sut.Index();
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<SalesTrialInviteModel>(viewResult.Model);
+        var model = Assert.IsType<SalesAssistedTrialInviteModel>(viewResult.Model);
         Assert.Equal(ProductTierType.Enterprise, model.ProductTier);
         Assert.Equal(new[] { ProductType.PasswordManager }, model.Products);
         Assert.Equal(30, model.TrialLength);
@@ -115,7 +115,7 @@ public class SalesAssistedTrialControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         // Ensure when a model is returned to the view for validation errors (POST round-trip)
         // that user's choices are persisted; the defaults do not change their prior selections.
-        var redisplayedModel = Assert.IsType<SalesTrialInviteModel>(viewResult.Model);
+        var redisplayedModel = Assert.IsType<SalesAssistedTrialInviteModel>(viewResult.Model);
         Assert.Equal(model.Products, redisplayedModel.Products);
 
         await sutProvider.GetDependency<ISendSalesAssistedTrialInvitationCommand>()
