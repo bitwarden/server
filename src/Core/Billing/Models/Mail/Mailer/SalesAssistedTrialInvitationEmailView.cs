@@ -34,8 +34,6 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
 
     public required int TrialLength { get; set; }
 
-    public required bool PaymentOptional { get; set; }
-
     public required string SenderEmail { get; set; }
 
     // Distinct from TrialLength: this is the token lifetime from GlobalSettings, not the trial period.
@@ -107,14 +105,9 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
                       $"&product={string.Join(",", Products.Select(p => (int)p))}" +
                       $"&trialLength={TrialLength}" +
                       $"&salesAssistedToken={WebUtility.UrlEncode(Token)}" +
-                      $"&email={WebUtility.UrlEncode(Email)}";
-
-            if (PaymentOptional)
-            {
-                url += "&paymentOptional=true";
-            }
-
-            url += "&fromEmail=true";
+                      $"&email={WebUtility.UrlEncode(Email)}" +
+                      $"&paymentOptional=true" +
+                      $"&fromEmail=true";
 
             return url;
         }
