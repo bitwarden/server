@@ -1464,7 +1464,7 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ScheduleTriggeredFamiliesMigration_FlagOn_UpdatesOrganization()
+    public async Task HandleAsync_ScheduleTriggeredFamiliesMigration_UpdatesOrganization()
     {
         // Arrange — Families 2019 → FamiliesAnnually migration via schedule
         var organizationId = Guid.NewGuid();
@@ -1521,8 +1521,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
@@ -1544,58 +1542,7 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ScheduleTriggeredMigration_FlagOff_DoesNotUpdateOrganization()
-    {
-        // Arrange
-        var organizationId = Guid.NewGuid();
-
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            Status = SubscriptionStatus.Active,
-            ScheduleId = "sub_sched_123",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(365) }]
-            },
-            Metadata = new Dictionary<string, string>
-            {
-                { "organizationId", organizationId.ToString() }
-            }
-        };
-
-        var parsedEvent = new Event
-        {
-            Data = new EventData
-            {
-                Object = subscription,
-                PreviousAttributes = JObject.FromObject(new
-                {
-                    items = new
-                    {
-                        data = new[] { new { price = new { id = "personal-org-annually" } } }
-                    }
-                })
-            }
-        };
-
-        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
-            .Returns(subscription);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(false);
-        var organization = new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually };
-        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
-    }
-
-    [Fact]
-    public async Task HandleAsync_NoSchedule_FlagOn_DoesNotUpdateOrganization()
+    public async Task HandleAsync_NoSchedule_DoesNotUpdateOrganization()
     {
         // Arrange — no ScheduleId means this isn't a schedule transition
         var organizationId = Guid.NewGuid();
@@ -1632,8 +1579,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
         var organization = new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually };
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
@@ -1694,8 +1639,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
@@ -1754,8 +1697,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
         _organizationRepository.GetByIdAsync(organizationId).Returns(new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually });
 
@@ -1798,8 +1739,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
         _organizationRepository.GetByIdAsync(organizationId).Returns(new Organization { Id = organizationId });
 
         // Act
@@ -1857,8 +1796,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
@@ -1934,8 +1871,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
