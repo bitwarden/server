@@ -322,6 +322,24 @@ public class AccountController : Controller
 
                 return Redirect(redirectUrl);
             }
+            catch (SsoAuthnRequiresOrgMembershipException ex)
+            {
+                // Same cleanup + redirect contract as the invite-acceptance catch above,
+                // but emits the OrgMembershipRequired errorCode so the client can dispatch
+                // its own match/no-match split (see SsoAuthnRequiresOrgMembershipException
+                // for the two scenarios that converge here).
+                await HttpContext.SignOutAsync(
+                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+
+                var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+                    _globalSettings.BaseServiceUri.VaultWithHash,
+                    ex.UserEmail,
+                    ex.OrganizationId,
+                    ex.OrganizationDisplayName,
+                    SsoRedirectUrlBuilder.ErrorCodes.OrgMembershipRequired);
+
+                return Redirect(redirectUrl);
+            }
 #nullable restore
         }
 
@@ -550,7 +568,10 @@ public class AccountController : Controller
                 throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
             }
 
-            OrganizationUser guaranteedOrgUser = possibleOrgUser ?? throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
+            OrganizationUser guaranteedOrgUser = possibleOrgUser ?? throw new SsoAuthnRequiresOrgMembershipException(
+                organization.Id,
+                organization.DisplayName(),
+                guaranteedExistingUser.Email);
 
             /*
              * ----------------------------------------------------

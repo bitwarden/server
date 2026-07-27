@@ -31,6 +31,8 @@ public class Startup
 
         services.AddCustomDataProtectionServices(Environment, globalSettings);
 
+        services.AddDistributedCache(globalSettings);
+
         services.AddTokenizers();
         services.AddDatabaseRepositories(globalSettings);
         services.AddTestPlayIdTracking(globalSettings);

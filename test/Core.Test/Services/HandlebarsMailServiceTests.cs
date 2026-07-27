@@ -380,4 +380,42 @@ public class HandlebarsMailServiceTests
         // Assert
         Assert.StartsWith(expectedVaultBase, result);
     }
+
+    [Theory]
+    [InlineData(nameof(HandlebarsMailService.SendEmergencyAccessConfirmedEmailAsync))]
+    [InlineData(nameof(HandlebarsMailService.SendEmergencyAccessRecoveryApproved))]
+    [InlineData(nameof(HandlebarsMailService.SendEmergencyAccessRecoveryReminder))]
+    public async Task EmergencyAccessEmails_ShouldEncodeNamesOnlyOnce(string methodName)
+    {
+        // Arrange
+        const string name = "Alice & Bob";
+        const string email = "recipient@example.com";
+        var emergencyAccess = new EmergencyAccess
+        {
+            Type = EmergencyAccessType.Takeover,
+            RecoveryInitiatedDate = DateTime.UtcNow.AddHours(-1),
+            WaitTimeDays = 2,
+        };
+
+        // Act
+        switch (methodName)
+        {
+            case nameof(HandlebarsMailService.SendEmergencyAccessConfirmedEmailAsync):
+                await _sut.SendEmergencyAccessConfirmedEmailAsync(name, email);
+                break;
+            case nameof(HandlebarsMailService.SendEmergencyAccessRecoveryApproved):
+                await _sut.SendEmergencyAccessRecoveryApproved(emergencyAccess, name, email);
+                break;
+            case nameof(HandlebarsMailService.SendEmergencyAccessRecoveryReminder):
+                await _sut.SendEmergencyAccessRecoveryReminder(emergencyAccess, name, email);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(methodName), methodName, null);
+        }
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.HtmlContent.Contains("Alice &amp; Bob") &&
+            !m.HtmlContent.Contains("Alice &amp;amp; Bob")));
+    }
 }

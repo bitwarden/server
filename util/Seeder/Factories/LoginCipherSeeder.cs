@@ -23,7 +23,7 @@ internal static class LoginCipherSeeder
             Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToLoginData(), CipherType.Login, options.OrganizationId, options.UserId);
     }
 

@@ -6,6 +6,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -43,6 +44,10 @@ public class SingleOrganizationScene(
         public bool EnableSecretsManager { get; set; }
         public int? SmSeats { get; set; }
         public int? SmServiceAccounts { get; set; }
+        public OrganizationOverrides? Overrides { get; set; }
+        public GatewayType? Gateway { get; set; }
+        public string? GatewayCustomerId { get; set; }
+        public string? GatewaySubscriptionId { get; set; }
     }
 
     public async Task<SceneResult<SingleOrganizationSceneResult>> SeedAsync(Request request)
@@ -50,7 +55,7 @@ public class SingleOrganizationScene(
         var user = await userRepository.GetByIdAsync(request.OwnerUserId);
         if (user == null)
         {
-            throw new Exception($"User with ID {request.OwnerUserId} not found.");
+            throw new InvalidOperationException($"User with ID {request.OwnerUserId} not found.");
         }
 
         if (string.IsNullOrEmpty(user.PublicKey))
@@ -69,6 +74,14 @@ public class SingleOrganizationScene(
             orgKeys.PublicKey,
             orgKeys.PrivateKey,
             request.PlanType);
+
+        PlanFeatures.ApplyOrganizationOverrides(organization, request.Overrides);
+
+        OrganizationSeeder.ApplyBilling(
+            organization,
+            request.Gateway,
+            request.GatewayCustomerId,
+            request.GatewaySubscriptionId);
 
         if (request.EnableSecretsManager)
         {

@@ -386,147 +386,6 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenNonDirectTaxCountryOrganization_SetsReverseCharge()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123" };
-        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            CustomerId = "cus_123",
-            Items = new StripeList<SubscriptionItem>(),
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Customer = new Customer { Id = "cus_123" },
-            Metadata = new Dictionary<string, string>()
-        };
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
-            Address = new Address { Country = "DE" },
-            TaxExempt = TaxExempt.None
-        };
-        var organization = new Organization
-        {
-            Id = _organizationId,
-            BillingEmail = "org@example.com",
-            PlanType = PlanType.EnterpriseAnnually
-        };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService
-            .GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
-        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new EnterprisePlan(isAnnual: true));
-        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            Arg.Is("cus_123"),
-            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.Reverse));
-    }
-
-    [Fact]
-    public async Task HandleAsync_WhenUSOrganizationWithManualReverseCharge_CorrectsTaxExemptToNone()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123" };
-        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            CustomerId = "cus_123",
-            Items = new StripeList<SubscriptionItem>(),
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Customer = new Customer { Id = "cus_123" },
-            Metadata = new Dictionary<string, string>()
-        };
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
-            Address = new Address { Country = "US" },
-            TaxExempt = TaxExempt.Reverse
-        };
-        var organization = new Organization
-        {
-            Id = _organizationId,
-            BillingEmail = "org@example.com",
-            PlanType = PlanType.EnterpriseAnnually
-        };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService
-            .GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
-        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new EnterprisePlan(isAnnual: true));
-        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            Arg.Is("cus_123"),
-            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.None));
-    }
-
-    [Fact]
-    public async Task HandleAsync_WhenSwissOrganizationWithReverse_CorrectsTaxExemptToNone()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123" };
-        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            CustomerId = "cus_123",
-            Items = new StripeList<SubscriptionItem>(),
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Customer = new Customer { Id = "cus_123" },
-            Metadata = new Dictionary<string, string>()
-        };
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
-            Address = new Address { Country = "CH" },
-            TaxExempt = TaxExempt.Reverse
-        };
-        var organization = new Organization
-        {
-            Id = _organizationId,
-            BillingEmail = "org@example.com",
-            PlanType = PlanType.EnterpriseAnnually
-        };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService
-            .GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
-        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new EnterprisePlan(isAnnual: true));
-        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.None));
-    }
-
-    [Fact]
     public async Task HandleAsync_WhenOrganizationCustomerIsExempt_DoesNotUpdateTaxExemption()
     {
         // Arrange
@@ -625,11 +484,6 @@ public class UpcomingInvoiceHandlerTests
         // Assert
         await _providerRepository.Received(2).GetByIdAsync(_providerId);
 
-        // Verify tax exempt was set to reverse for non-direct-tax-country providers
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            Arg.Is("cus_123"),
-            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.Reverse));
-
         // Verify automatic tax was enabled
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is("sub_123"),
@@ -644,63 +498,6 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<string>(s => s == subscription.CollectionMethod),
             Arg.Is<bool>(b => b == true),
             Arg.Is<string>(s => s == $"{paymentMethod.Brand} ending in {paymentMethod.Last4}"));
-    }
-
-    [Fact]
-    public async Task HandleAsync_WhenSwissProviderWithReverse_CorrectsTaxExemptToNone()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123" };
-        var invoice = new Invoice
-        {
-            CustomerId = "cus_123",
-            AmountDue = 10000,
-            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
-            Lines = new StripeList<InvoiceLineItem>
-            {
-                Data = [new() { Description = "Test Item" }]
-            }
-        };
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            CustomerId = "cus_123",
-            Items = new StripeList<SubscriptionItem>(),
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Customer = new Customer { Id = "cus_123" },
-            Metadata = new Dictionary<string, string>(),
-            CollectionMethod = "charge_automatically"
-        };
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
-            Address = new Address { Country = "CH" },
-            TaxExempt = TaxExempt.Reverse
-        };
-        var provider = new Provider { Id = _providerId, BillingEmail = "provider@example.com" };
-
-        var paymentMethod = new Card { Last4 = "4242", Brand = "visa" };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-
-        _stripeEventUtilityService
-            .GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, null, _providerId));
-
-        _providerRepository.GetByIdAsync(_providerId).Returns(provider);
-        _getPaymentMethodQuery.Run(provider).Returns(MaskedPaymentMethod.From(paymentMethod));
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _providerRepository.Received(2).GetByIdAsync(_providerId);
-
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.None));
     }
 
     [Fact]
@@ -755,87 +552,6 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<CustomerUpdateOptions>());
     }
 
-    [Fact]
-    public async Task HandleAsync_WhenNonDirectTaxCountryProvider_SetsReverseCharge()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123" };
-        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            CustomerId = "cus_123",
-            Items = new StripeList<SubscriptionItem>(),
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Customer = new Customer { Id = "cus_123" },
-            Metadata = new Dictionary<string, string>(),
-            CollectionMethod = "charge_automatically"
-        };
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
-            Address = new Address { Country = "DE" },
-            TaxExempt = TaxExempt.None
-        };
-        var provider = new Provider { Id = _providerId, BillingEmail = "provider@example.com" };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService
-            .GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, null, _providerId));
-        _providerRepository.GetByIdAsync(_providerId).Returns(provider);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            Arg.Is("cus_123"),
-            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.Reverse));
-    }
-
-    [Fact]
-    public async Task HandleAsync_WhenUSProviderWithManualReverseCharge_CorrectsTaxExemptToNone()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123" };
-        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            CustomerId = "cus_123",
-            Items = new StripeList<SubscriptionItem>(),
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Customer = new Customer { Id = "cus_123" },
-            Metadata = new Dictionary<string, string>(),
-            CollectionMethod = "charge_automatically"
-        };
-        var customer = new Customer
-        {
-            Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
-            Address = new Address { Country = "US" },
-            TaxExempt = TaxExempt.Reverse
-        };
-        var provider = new Provider { Id = _providerId, BillingEmail = "provider@example.com" };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService
-            .GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, null, _providerId));
-        _providerRepository.GetByIdAsync(_providerId).Returns(provider);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            Arg.Is("cus_123"),
-            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.None));
-    }
     [Fact]
     public async Task HandleAsync_WhenOrganizationNotFound_DoesNothing()
     {
@@ -1775,10 +1491,8 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_FlagOn_OrganizationWithMismatchedTaxExempt_DoesNotUpdateCustomerTaxExempt()
+    public async Task HandleAsync_OrganizationWithMismatchedTaxExempt_DoesNotUpdateCustomerTaxExempt()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
-
         var parsedEvent = new Event { Id = "evt_123" };
         var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
         var subscription = new Subscription
@@ -1820,10 +1534,8 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_FlagOn_ProviderWithMismatchedTaxExempt_DoesNotUpdateCustomerTaxExempt()
+    public async Task HandleAsync_ProviderWithMismatchedTaxExempt_DoesNotUpdateCustomerTaxExempt()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
-
         var parsedEvent = new Event { Id = "evt_123" };
         var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
         var subscription = new Subscription
@@ -2528,6 +2240,7 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
             !mail.View.HasDiscount &&
+            !mail.View.ShowProactiveDiscountCopy &&
             mail.View.IsAnnual &&
             mail.View.Seats == 320 &&
             mail.View.PerUserMonthlyPrice == "$6" &&
@@ -2588,7 +2301,69 @@ public class UpcomingInvoiceHandlerTests
         // Assert — the email is still sent, price-only, and the StripeException does not propagate.
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
-            !mail.View.HasDiscount));
+            !mail.View.HasDiscount &&
+            !mail.View.ShowProactiveDiscountCopy));
+    }
+
+    [Theory]
+    [InlineData("repeating", 12L, 12, true)]
+    [InlineData("once", null, 0, false)]
+    [InlineData("forever", null, 0, false)]
+    public async Task HandleAsync_WhenBusinessTier_SetsProactiveDiscountMonths_FromCouponDuration(
+        string duration, long? durationInMonths, int expectedMonths, bool expectedShow)
+    {
+        // Arrange — a proactive coupon whose Stripe duration drives the loyalty-discount copy. Only a
+        // "repeating" coupon has a finite month span; "once"/"forever" suppress the copy.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually2020
+        };
+        var enterprise2020Plan = new Enterprise2020Plan(isAnnual: true);
+        var enterprisePlan = new EnterprisePlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = "loyalty",
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterprisePlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+        _stripeAdapter.GetCouponAsync("loyalty", Arg.Any<CouponGetOptions>())
+            .Returns(new Coupon { PercentOff = 20, Duration = duration, DurationInMonths = durationInMonths });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.View.ProactiveDiscountMonths == expectedMonths &&
+            mail.View.ShowProactiveDiscountCopy == expectedShow));
     }
 
     [Fact]
@@ -3266,6 +3041,142 @@ public class UpcomingInvoiceHandlerTests
             mail.View.PerUserMonthlyPrice == "$5"));
     }
 
+    // PM-39816: when the org holds more Secrets Manager seats than occupied members, the renewal email must
+    // quote the raised Password Manager seat count so it matches what the scheduler bills (current Teams
+    // requires SM <= PM). 9 SM seats / 7 occupied members => the email quotes 9, flooring on the Stripe SM line.
+    [Fact]
+    public async Task SendBusinessRenewalEmail_TeamsStarter_RaisesQuotedSeatsToCoverSecretsManager()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.TeamsStarter2023);
+        var sourcePlan = new TeamsStarterPlan2023();
+        var targetPlan = new TeamsPlan(isAnnual: false);
+
+        // The surviving Stripe SM seat line (9) is what the scheduler floors Password Manager on.
+        subscription.Items.Data.Add(new SubscriptionItem
+        {
+            Price = new Price { Id = sourcePlan.SecretsManager.StripeSeatPlanId },
+            Quantity = 9
+        });
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.TeamsStarter2023,
+            Seats = 10,
+            SmSeats = 9
+        };
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "teams-starter-2023",
+            MigrationPathId = MigrationPathId.TeamsStarter2023ToCurrent,
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter2023).Returns(sourcePlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(targetPlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(_organizationId)
+            .Returns(new OrganizationSeatCounts { Users = 7 });
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — the email quotes 9 seats (raised from 7 occupied to cover SM), matching the invoice.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.ToEmails.Contains("org@example.com") &&
+            !mail.View.IsAnnual &&
+            mail.View.Seats == 9));
+    }
+
+    // PM-39816: the renewal email also raises the quoted seat count for the Teams 2019 packaged source,
+    // matching the scheduler's floor on the Stripe SM seat line. 9 SM seats / 7 occupied -> quote 9.
+    [Fact]
+    public async Task SendBusinessRenewalEmail_Teams2019_RaisesQuotedSeatsToCoverSecretsManager()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.TeamsMonthly2019);
+        var sourcePlan = new Teams2019Plan(isAnnual: false);
+        var targetPlan = new TeamsPlan(isAnnual: false);
+
+        // The surviving Stripe SM seat line (9) is what the scheduler floors Password Manager on.
+        subscription.Items.Data.Add(new SubscriptionItem
+        {
+            Price = new Price { Id = sourcePlan.SecretsManager.StripeSeatPlanId },
+            Quantity = 9
+        });
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.TeamsMonthly2019,
+            Seats = 5,
+            SmSeats = 9
+        };
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "teams-2019-monthly",
+            MigrationPathId = MigrationPathId.Teams2019MonthlyToCurrent,
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2019).Returns(sourcePlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(targetPlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(_organizationId)
+            .Returns(new OrganizationSeatCounts { Users = 7 });
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — the email quotes 9 seats (raised from 7 occupied to cover SM), matching the invoice.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.ToEmails.Contains("org@example.com") &&
+            mail.View.Seats == 9));
+    }
+
     [Fact]
     public async Task HandleAsync_WhenBusinessTier_AndCohortCouponOnPhase_PlusSubscriptionCoupon_ItemizesAndTotalsBoth()
     {
@@ -3681,7 +3592,7 @@ public class UpcomingInvoiceHandlerTests
             subscriptionDiscounts:
             [
                 new Discount { Coupon = new Coupon { Id = "sub-5", PercentOff = 5 } }
-            ]);
+        ]);
         var (organization, enterprise2020Plan, enterprisePlan, assignment, cohort, cohortId) =
             BuildBusinessMigrationContext(coupon: "cohort-20");
 
@@ -3807,6 +3718,66 @@ public class UpcomingInvoiceHandlerTests
             mail.View.DiscountLines.Count == 1 &&
             mail.View.DiscountLines[0] == "10%" &&
             mail.View.TotalPrice == "$20,736"));
+    }
+
+    // PM-37514: a Teams 2019 (ActualUsage) renewal email must quote the same seat count the scheduler
+    // bills — for a sub-5 org that is the occupied count, NOT organization.Seats (the base allotment)
+    // and NOT the seat-overage line. 3 occupied of a 5-base org -> the email quotes 3 seats.
+    [Fact]
+    public async Task HandleAsync_Teams2019Migration_SubFiveOrg_RenewalEmailQuotesOccupiedSeats()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.TeamsMonthly2019);
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.TeamsMonthly2019,
+            Seats = 5 // base allotment; only 3 are occupied
+        };
+        var source = new Teams2019Plan(isAnnual: false);
+        var target = new TeamsPlan(isAnnual: false);
+        var cohortId = Guid.NewGuid();
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "teams-2019-monthly",
+            MigrationPathId = MigrationPathId.Teams2019MonthlyToCurrent,
+            IsActive = true
+        };
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(_organizationId)
+            .Returns(new OrganizationSeatCounts { Users = 3 });
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2019).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(target);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — quotes occupied (3), not the 5-seat base allotment.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.View.Seats == 3));
     }
 
     [Fact]
@@ -4070,4 +4041,3 @@ public class UpcomingInvoiceHandlerTests
     };
 
 }
-

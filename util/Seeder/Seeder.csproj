@@ -31,6 +31,11 @@
     <EmbeddedResource Include="Seeds\fixtures\**\*.json" />
   </ItemGroup>
 
+  <!-- Embed mock attachment bodies (txt/pdf) as assembly resources -->
+  <ItemGroup>
+    <EmbeddedResource Include="Seeds\attachments\**\*.*" />
+  </ItemGroup>
+
   <!-- Allow integration tests to access internal seeders for validation -->
   <ItemGroup>
     <InternalsVisibleTo Include="SeederApi.IntegrationTest" />

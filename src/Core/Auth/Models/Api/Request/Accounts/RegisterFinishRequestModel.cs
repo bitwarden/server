@@ -16,6 +16,7 @@ public enum RegisterFinishTokenType : byte
     OrgSponsoredFreeFamilyPlan = 3,
     EmergencyAccessInvite = 4,
     ProviderInvite = 5,
+    SalesAssisted = 6,
 }
 
 public class RegisterFinishRequestModel : IValidatableObject
@@ -68,6 +69,8 @@ public class RegisterFinishRequestModel : IValidatableObject
     public string? ProviderInviteToken { get; set; }
 
     public Guid? ProviderUserId { get; set; }
+
+    public string? SalesAssistedToken { get; set; }
 
     public User ToUser(bool isV2Encryption)
     {
@@ -134,6 +137,10 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public RegisterFinishTokenType GetTokenType()
     {
+        if (!string.IsNullOrWhiteSpace(SalesAssistedToken))
+        {
+            return RegisterFinishTokenType.SalesAssisted;
+        }
         if (!string.IsNullOrWhiteSpace(EmailVerificationToken))
         {
             return RegisterFinishTokenType.EmailVerification;
@@ -309,6 +316,14 @@ public class RegisterFinishRequestModel : IValidatableObject
                     yield return new ValidationResult(
                         $"{nameof(ProviderUserId)} absent when processing register/finish.",
                         [nameof(ProviderUserId)]);
+                }
+                break;
+            case RegisterFinishTokenType.SalesAssisted:
+                if (string.IsNullOrEmpty(SalesAssistedToken))
+                {
+                    yield return new ValidationResult(
+                        $"{nameof(SalesAssistedToken)} absent when processing register/finish.",
+                        [nameof(SalesAssistedToken)]);
                 }
                 break;
             default:

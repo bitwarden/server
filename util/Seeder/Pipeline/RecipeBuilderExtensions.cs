@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
@@ -31,10 +32,11 @@ public static class RecipeBuilderExtensions
         string fixture,
         string? planType = null,
         int? seats = null,
-        OrganizationOverrides? overrides = null)
+        OrganizationOverrides? overrides = null,
+        Guid? id = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats, overrides));
+        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats, overrides, id));
         return builder;
     }
 
@@ -54,10 +56,11 @@ public static class RecipeBuilderExtensions
         string domain,
         int? seats = null,
         PlanType planType = PlanType.EnterpriseAnnually,
-        OrganizationOverrides? overrides = null)
+        OrganizationOverrides? overrides = null,
+        Guid? id = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType, overrides));
+        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType, overrides, id));
         return builder;
     }
 
@@ -108,6 +111,37 @@ public static class RecipeBuilderExtensions
         }
 
         builder.AddStep(_ => new CreateOrganizationDomainsStep(unique));
+        return builder;
+    }
+
+    /// <summary>
+    /// Attach a SAML 2.0 SSO configuration (wired to the local dev IdP) and set the org's SSO identifier.
+    /// Only SAML is supported today; other providers are skipped at execution time (see <see cref="CreateSsoConfigStep"/>).
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="identifier">Org SSO identifier (the domain_hint typed at login); mangled with the org when --mangle is set</param>
+    /// <param name="provider">Provider from the preset ("saml"/"oidc"); null defaults to saml</param>
+    /// <param name="memberDecryptionType">How members decrypt after SSO auth (MasterPassword by default)</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no organization exists or the identifier is empty</exception>
+    public static RecipeBuilder WithSso(
+        this RecipeBuilder builder,
+        string identifier,
+        string? provider,
+        MemberDecryptionType memberDecryptionType)
+    {
+        if (!builder.HasOrg)
+        {
+            throw new InvalidOperationException(
+                "SSO configuration requires an organization. Call UseOrganization() or CreateOrganization() first.");
+        }
+
+        if (string.IsNullOrWhiteSpace(identifier))
+        {
+            throw new InvalidOperationException("SSO configuration requires a non-empty identifier.");
+        }
+
+        builder.AddStep(_ => new CreateSsoConfigStep(identifier, provider, memberDecryptionType));
         return builder;
     }
 
@@ -344,6 +378,29 @@ public static class RecipeBuilderExtensions
 
         builder.HasFixtureCiphers = true;
         builder.AddStep(_ => CreateCiphersStep.ForPersonalVault(fixture));
+        return builder;
+    }
+
+    /// <summary>
+    /// Create attachments for fixture ciphers that declare an <c>attachments</c> array, each in a
+    /// specified historical encryption mode. A no-op when the fixture declares no attachments.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="fixture">Cipher fixture name without extension (the same fixture the ciphers came from)</param>
+    /// <param name="personal">True for a personal vault (encrypt with the user key); false for an organization vault (org key)</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no fixture ciphers exist</exception>
+    internal static RecipeBuilder UseCipherAttachments(this RecipeBuilder builder, string fixture, bool personal)
+    {
+        if (!builder.HasFixtureCiphers)
+        {
+            throw new InvalidOperationException(
+                "Cipher attachments require fixture ciphers. Call UseCiphers() or UsePersonalVaultCiphers() first.");
+        }
+
+        builder.AddStep(_ => personal
+            ? CreateCipherAttachmentsStep.ForPersonalVault(fixture)
+            : CreateCipherAttachmentsStep.ForOrganization(fixture));
         return builder;
     }
 

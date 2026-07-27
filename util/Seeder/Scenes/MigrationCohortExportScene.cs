@@ -1,0 +1,232 @@
+﻿using System.ComponentModel.DataAnnotations;
+using System.Globalization;
+using AutoMapper;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Services;
+using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using LinqToDB.EntityFrameworkCore;
+using CoreCohort = Bit.Core.Billing.Organizations.PlanMigration.Entities.OrganizationPlanMigrationCohort;
+using CoreCohortAssignment = Bit.Core.Billing.Organizations.PlanMigration.Entities.OrganizationPlanMigrationCohortAssignment;
+using CoreOrganization = Bit.Core.AdminConsole.Entities.Organization;
+using EfCohort = Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohort;
+using EfCohortAssignment = Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohortAssignment;
+using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
+using EfPlayItem = Bit.Infrastructure.EntityFramework.Models.PlayItem;
+using MigrationPath = Bit.Core.Billing.Organizations.PlanMigration.Enums.MigrationPathId;
+
+namespace Bit.Seeder.Scenes;
+
+public readonly struct MigrationCohortExportSceneResult
+{
+    public Guid CohortId { get; init; }
+    public bool CohortCreated { get; init; }
+    public int OrganizationsCreated { get; init; }
+    public int AssignmentsCreated { get; init; }
+}
+
+/// <summary>
+/// Seeds a migration cohort plus N inert organizations, each assigned to the cohort, so the
+/// Admin Portal cohort-management table has a populated cohort ready to "Export CSV".
+/// </summary>
+/// <remarks>
+/// The HTTP/API equivalent of the PM-36965 SQL seed script. The organizations are throwaway
+/// placeholders (Disabled, no billing, no users) and exist only because
+/// <c>OrganizationPlanMigrationCohortAssignment</c> has a FK to <c>Organization</c> with a UNIQUE
+/// constraint on <c>OrganizationId</c> -- every assignment needs its own real organization row.
+///
+/// The cohort, organizations, and assignments are bulk-inserted via LinqToDB <c>BulkCopy</c> (the same
+/// path <see cref="Pipeline.BulkCommitter"/> uses) so counts in the tens of thousands stay fast, all
+/// inside a single transaction so a mid-sequence failure leaves the database untouched rather than
+/// partly seeded. Each organization's <c>CreationDate</c> is spread across distinct seconds. The
+/// export, however, orders on the <em>assignment's</em> <c>(CreationDate, Id)</c>, and assignments
+/// created in one bulk batch share a near-identical <c>CreationDate</c>, so the cursor advances on the
+/// <c>Id</c> tiebreaker. That is exactly the bulk-loaded case the export's stored procedure is
+/// documented to handle, so it remains correct.
+///
+/// Cleanup: <c>BulkCopy</c> bypasses the repository <c>CreateAsync</c> hook that normally records
+/// play-id tracking rows, so this scene bulk-inserts the <see cref="PlayItem"/> rows itself when the
+/// request carries an <c>x-play-id</c>. That lets <c>DELETE /seed/{playId}</c> tear the seeded
+/// organizations down (their assignments cascade away via the FK). The cohort row is NOT play-id
+/// tracked -- <c>DestroySceneCommand</c> only deletes users/organizations -- so an emptied cohort is
+/// left behind after a play-id delete; remove it by name if desired
+/// (<c>DELETE FROM dbo.OrganizationPlanMigrationCohort WHERE Name = '&lt;CohortName&gt;'</c>).
+///
+/// LOCAL / NON-PROD ONLY -- the SeederApi refuses to run in production.
+/// </remarks>
+public class MigrationCohortExportScene(
+    DatabaseContext db,
+    IMapper mapper,
+    IPlayIdService playIdService,
+    IOrganizationPlanMigrationCohortRepository cohortRepository)
+    : IScene<MigrationCohortExportScene.Request, MigrationCohortExportSceneResult>
+{
+    /// <summary>
+    /// Inert plan applied to seeded placeholder organizations. Arbitrary -- these orgs never
+    /// behave like live organizations (Enabled = false, no billing, no users).
+    /// </summary>
+    private const PlanType InertPlanType = PlanType.EnterpriseAnnually;
+
+    /// <summary>Anchor for the spread CreationDate, matching the SQL seed script's baseline.</summary>
+    private static readonly DateTime _creationAnchor = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    private const int MinOrgCount = 1;
+    private const int MaxOrgCount = 100_000;
+
+    public class Request
+    {
+        [Required]
+        public required string CohortName { get; set; }
+
+        // The scene enforces this range explicitly in SeedAsync -- the SeederApi executes scenes by
+        // deserializing arguments and calling SeedAsync directly, so DataAnnotations here are not run
+        // by the framework. The attribute documents the contract and applies if validation is wired up.
+        [Required]
+        [Range(MinOrgCount, MaxOrgCount)]
+        public required int OrgCount { get; set; }
+
+        /// <summary>
+        /// Migration path for the cohort. Null produces a Churn-only cohort. Defaults to
+        /// <see cref="MigrationPath.Enterprise2020AnnualToCurrent"/> to mirror the SQL seed script.
+        /// </summary>
+        public MigrationPath? MigrationPathId { get; set; } = MigrationPath.Enterprise2020AnnualToCurrent;
+
+        /// <summary>
+        /// Distinctive name prefix for the seeded organizations so they can be identified and
+        /// cleaned up. Must stay short enough that the suffixed name fits Organization.Name.
+        /// </summary>
+        [MaxLength(40)]
+        public string NamePrefix { get; set; } = "pm36965-seed-";
+    }
+
+    public async Task<SceneResult<MigrationCohortExportSceneResult>> SeedAsync(Request request)
+    {
+        if (request.OrgCount is < MinOrgCount or > MaxOrgCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(request), request.OrgCount,
+                $"{nameof(request.OrgCount)} must be between {MinOrgCount} and {MaxOrgCount}.");
+        }
+
+        var existingCohort = await cohortRepository.GetByNameAsync(request.CohortName);
+        var cohortCreated = existingCohort is null;
+
+        var cohort = existingCohort ?? BuildCohort(request);
+        var organizations = BuildOrganizations(request);
+        var assignments = BuildAssignments(organizations, cohort.Id);
+
+        // Wrap every write in one transaction so the scene is all-or-nothing: a mid-sequence failure
+        // (e.g. a timeout on a large assignment insert) rolls back the cohort and organizations rather
+        // than leaving orphaned rows or organizations without their play-id tracking. LinqToDB's
+        // BulkCopy honors the EF transaction opened here (see UserRepository for the same pattern).
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
+        // BulkCopy maps Core entities to their EF counterparts (navigation properties are ignored).
+        if (cohortCreated)
+        {
+            db.BulkCopy([mapper.Map<EfCohort>(cohort)]);
+        }
+
+        db.BulkCopy(organizations.Select(mapper.Map<EfOrganization>));
+        db.BulkCopy(assignments.Select(mapper.Map<EfCohortAssignment>));
+
+        // Record play-id tracking rows for the organizations so DELETE /seed/{playId} can clean them
+        // up. BulkCopy bypasses the repository CreateAsync hook that normally does this, so the scene
+        // inserts the PlayItem rows directly -- and in bulk, to keep the fast path fast.
+        RecordOrganizationsForPlayId(organizations);
+
+        await transaction.CommitAsync();
+
+        return new SceneResult<MigrationCohortExportSceneResult>(
+            result: new MigrationCohortExportSceneResult
+            {
+                CohortId = cohort.Id,
+                CohortCreated = cohortCreated,
+                OrganizationsCreated = organizations.Count,
+                AssignmentsCreated = assignments.Count,
+            },
+            mangleMap: []);
+    }
+
+    private static CoreCohort BuildCohort(Request request)
+    {
+        var cohort = new CoreCohort
+        {
+            Name = request.CohortName,
+            MigrationPathId = request.MigrationPathId,
+            IsActive = true,
+        };
+        cohort.SetNewId();
+        return cohort;
+    }
+
+    private static List<CoreOrganization> BuildOrganizations(Request request)
+    {
+        var organizations = new List<CoreOrganization>(request.OrgCount);
+
+        for (var n = 1; n <= request.OrgCount; n++)
+        {
+            // Spread CreationDate across distinct seconds so the export keyset cursor advances over
+            // real dates, exactly as the SQL seed script does.
+            var creationDate = _creationAnchor.AddSeconds(n);
+            var suffix = n.ToString("D6", CultureInfo.InvariantCulture);
+
+            organizations.Add(new CoreOrganization
+            {
+                Id = CoreHelpers.GenerateComb(),
+                Name = $"{request.NamePrefix}{suffix}",
+                BillingEmail = $"{request.NamePrefix}{n}@example.com",
+                Plan = "Enterprise (Annually)",
+                PlanType = InertPlanType,
+                Status = OrganizationStatusType.Created,
+                Enabled = false, // never behaves like a live organization
+                CreationDate = creationDate,
+                RevisionDate = creationDate,
+            });
+        }
+
+        return organizations;
+    }
+
+    private static List<CoreCohortAssignment> BuildAssignments(
+        IEnumerable<CoreOrganization> organizations, Guid cohortId) =>
+        organizations.Select(org =>
+        {
+            // CreationDate defaults to DateTime.UtcNow at construction and is not settable here, so
+            // assignments in one bulk batch share a near-identical value. RevisionDate is settable, so
+            // align it for tidiness.
+            var assignment = new CoreCohortAssignment
+            {
+                OrganizationId = org.Id,
+                CohortId = cohortId,
+            };
+            assignment.RevisionDate = assignment.CreationDate;
+            assignment.SetNewId();
+            return assignment;
+        }).ToList();
+
+    /// <summary>
+    /// Bulk-inserts a <see cref="PlayItem"/> row per organization when the request is part of a play
+    /// session, mirroring what the repository tracking decorators do on <c>CreateAsync</c>. No-op when
+    /// no <c>x-play-id</c> is set. Deleting an organization cascade-removes its <see cref="PlayItem"/>
+    /// row, so <c>DELETE /seed/{playId}</c> stays self-consistent.
+    /// </summary>
+    private void RecordOrganizationsForPlayId(IEnumerable<CoreOrganization> organizations)
+    {
+        if (!playIdService.InPlay(out var playId))
+        {
+            return;
+        }
+
+        var playItems = organizations.Select(org =>
+        {
+            var playItem = PlayItem.Create(org, playId);
+            playItem.SetNewId(); // repository normally assigns the COMB id; BulkCopy bypasses it
+            return playItem;
+        });
+        db.BulkCopy(playItems.Select(mapper.Map<EfPlayItem>));
+    }
+}

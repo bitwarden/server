@@ -78,7 +78,6 @@ public class ProfileResponseModel : ResponseModel
     public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }
     /// <summary>
     /// Organizations where the user is in the Confirmed or Accepted status.
-    /// Null when the <c>pm-34145-policies-in-accepted-state</c> feature flag is disabled.
     /// New clients should prefer this property and fall back to <see cref="Organizations"/> if absent.
     /// </summary>
     public IEnumerable<ProfileOrganizationResponseModel> OrganizationsNew { get; set; }

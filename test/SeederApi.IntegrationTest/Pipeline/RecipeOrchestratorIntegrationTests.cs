@@ -116,15 +116,15 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
 
     private RecipeOrchestrator NewOrchestrator(IManglerService mangler)
     {
-        // Mapper + LicensingService are not exercised by the pre-flight guard,
-        // which fires before BulkCommitter or any AutoMapper usage. Null-forgive
-        // them; if the guard ever stops being the first thing in Execute, these
-        // tests will fail loudly.
+        // Mapper, LicensingService, and AttachmentStorageService are not exercised by the pre-flight
+        // guard, which fires before BulkCommitter or any AutoMapper usage. Null-forgive them; if the
+        // guard ever stops being the first thing in Execute, these tests will fail loudly.
         var deps = new SeederDependencies(
             _db,
             null!,
             new PasswordHasher<User>(),
             mangler,
+            null!,
             null!);
         return new RecipeOrchestrator(deps);
     }

@@ -119,6 +119,13 @@ public class SubscriptionInfo
         /// </para>
         /// </summary>
         public IReadOnlyList<string>? AppliesTo { get; set; }
+
+        /// <summary>
+        /// True when this discount was surfaced from a price-migration schedule's Phase 2 coupon
+        /// rather than a genuine customer- or subscription-level discount. Lets clients distinguish
+        /// a deferred price-migration coupon from a real discount. Defaults to false.
+        /// </summary>
+        public bool IsFromSchedule { get; set; }
     }
 
     public class BillingSubscription
@@ -147,6 +154,7 @@ public class SubscriptionInfo
             GracePeriod = sub?.CollectionMethod == "charge_automatically"
                 ? 14
                 : 30;
+            ServiceAccountGrace = sub?.GetMigrationGraceServiceAccounts() ?? 0;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -164,20 +172,27 @@ public class SubscriptionInfo
         public DateTime? UnpaidPeriodEndDate { get; set; }
         public int GracePeriod { get; set; }
 
+        /// <summary>
+        /// The count of permanently-free Secrets Manager service accounts granted beyond the plan baseline
+        /// during a pricing migration. Read from Stripe subscription metadata; 0 when none was granted.
+        /// </summary>
+        public int ServiceAccountGrace { get; set; }
+
         public class BillingSubscriptionItem
         {
             public BillingSubscriptionItem(SubscriptionItem item)
             {
                 if (item.Plan != null)
                 {
+                    PriceId = item.Price?.Id;
                     ProductId = item.Plan.ProductId;
                     Name = item.Plan.Nickname;
                     Amount = ConvertFromStripeMinorUnits(item.Plan.Amount) ?? 0;
                     Interval = item.Plan.Interval;
 
-                    if (item.Metadata != null)
+                    if (item.Price?.Metadata != null)
                     {
-                        AddonSubscriptionItem = item.Metadata.TryGetValue("isAddOn", out var value) && bool.Parse(value);
+                        AddonSubscriptionItem = item.Price.Metadata.TryGetValue("isAddOn", out var value) && bool.Parse(value);
                     }
                 }
 
@@ -186,6 +201,9 @@ public class SubscriptionInfo
             }
 
             public bool AddonSubscriptionItem { get; set; }
+
+            /// <summary>Internal only; not mapped to the API response. Used to match a line to a plan's price.</summary>
+            public string? PriceId { get; set; }
             public string? ProductId { get; set; }
             public string? Name { get; set; }
             public decimal Amount { get; set; }

@@ -54,7 +54,8 @@ internal sealed class RecipeExecutor
             context.Groups.Count,
             context.Collections.Count,
             context.Ciphers.Count,
-            context.Folders.Count);
+            context.Folders.Count,
+            context.SsoIdentifier);
 
         var progress = context.GetProgress();
         progress?.Report(new PhaseStarted(SeederPhases.CommittingToDatabase, null));

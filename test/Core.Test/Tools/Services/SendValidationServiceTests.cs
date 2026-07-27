@@ -285,4 +285,34 @@ public class SendValidationServiceTests
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ValidateUserCanSaveAsync(null, send));
     }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_SendDeletionDateExceedsDeletionHours_ThrowsBadRequest(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement { DisableSend = false });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
+
+        var cases = new Dictionary<int, string>(){
+            { 1, "1 hour" },
+            { 24, "1 day" },
+            { 48, "2 days" },
+            { 72, "3 days" },
+            { 168, "7 days" },
+            { 336, "14 days" },
+            { 720, "30 days" }
+        };
+        foreach (var kvp in cases)
+        {
+            sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+                .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, DeletionHours = kvp.Key });
+            send.DeletionDate = send.CreationDate.AddHours(kvp.Key + 5);
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+            Assert.Equal($"Due to an Enterprise policy your Sends must have deletion dates no more than {kvp.Value} from their creation dates", exception.Message);
+        }
+
+    }
 }

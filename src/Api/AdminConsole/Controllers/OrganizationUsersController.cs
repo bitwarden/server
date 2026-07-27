@@ -2,6 +2,7 @@
 // NOTE: This file is partially migrated to nullable reference types. Remove inline #nullable directives when addressing the FIXME.
 #nullable disable
 
+using System.Net;
 using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
@@ -90,6 +91,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
     private readonly IAcceptOrganizationInviteLinkCommand _acceptOrganizationInviteLinkCommand;
+    private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
+    private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -124,7 +127,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
         IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
         IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery,
-        IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand)
+        IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand,
+        IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
+        IGetOrganizationInviteCommand getOrganizationInviteCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -160,6 +165,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
         _acceptOrganizationInviteLinkCommand = acceptOrganizationInviteLinkCommand;
+        _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
+        _getOrganizationInviteCommand = getOrganizationInviteCommand;
     }
 
     [HttpGet("{id}")]
@@ -187,9 +194,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Returns a set of basic information about all members of the organization. This is available to all members of
-    /// the organization to manage collections. For this reason, it contains as little information as possible and no
-    /// cryptographic keys or other sensitive data.
+    /// Returns a set of basic information about all members of the organization. This is available to all members
+    /// of the organization, since a broad range of features across the app depend on basic member lookups
+    /// (collection management, group management, event logs, sponsorship, etc.) that are not specific to any one
+    /// permission. For this reason, it contains as little information as possible and no cryptographic keys or
+    /// other sensitive data.
     /// </summary>
     /// <param name="orgId">Organization identifier</param>
     /// <returns>List of users for the organization.</returns>
@@ -464,7 +473,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var existingUserType = organizationUser.Type;
 
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
-            collectionsToSave, groupsToSave);
+            collectionsToSave, groupsToSave, model.DefaultUserCollectionName);
     }
 
     [HttpPost("{id}")]
@@ -783,7 +792,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpGet("pending-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>> GetPendingAutoConfirmUsersAsync(Guid orgId)
     {
         var pendingUsers = await _getPendingAutoConfirmUsersQuery.GetPendingAutoConfirmUsersAsync(orgId);
@@ -793,7 +801,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPost("bulk-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkAutomaticallyConfirmOrganizationUsersAsync(
         [BindOrganization] Organization organization,
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
@@ -864,11 +871,56 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var result = await _acceptOrganizationInviteLinkCommand.AcceptAsync(new AcceptOrganizationInviteLinkRequest
         {
+            OrganizationId = model.OrganizationId,
             Code = model.Code,
             User = user,
             ResetPasswordKey = model.ResetPasswordKey,
         });
 
         return Handle(result, _ => TypedResults.Ok());
+    }
+
+    [HttpPost("/organizations/users/invite-link/confirm")]
+    [RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
+    public async Task<IResult> ConfirmInviteLink([FromBody] ConfirmOrganizationInviteLinkRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _confirmOrganizationInviteLinkCommand.ConfirmAsync(new ConfirmOrganizationInviteLinkRequest
+        {
+            OrganizationId = model.OrganizationId,
+            Code = model.Code,
+            User = user,
+            OrgUserKey = model.OrgUserKey,
+            ResetPasswordKey = model.ResetPasswordKey,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
+        });
+
+        return Handle(result, _ => TypedResults.Ok());
+    }
+
+    [HttpPost("/organizations/users/invite-link/invite")]
+    [ProducesResponseType(typeof(OrganizationInviteResponseModel), (int)HttpStatusCode.OK)]
+    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
+    public async Task<IResult> GetInvite([FromBody] GetOrganizationInviteRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _getOrganizationInviteCommand.GetInviteAsync(new GetOrganizationInviteRequest
+        {
+            OrganizationId = model.OrganizationId,
+            Code = model.Code,
+            User = user,
+        });
+
+        return Handle(result, invite => TypedResults.Ok(new OrganizationInviteResponseModel(invite)));
     }
 }

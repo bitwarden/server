@@ -6,13 +6,14 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
@@ -174,34 +175,6 @@ public class UpcomingInvoiceHandler(
         Customer customer,
         string eventId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            var isBusinessUse = organization.PlanType.GetProductTier() != ProductTierType.Families;
-            if (isBusinessUse)
-            {
-                var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
-                switch (customer)
-                {
-                    case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                        when determinedTaxExemptStatus != customerTaxExemptStatus:
-                        try
-                        {
-                            await stripeAdapter.UpdateCustomerAsync(subscription.CustomerId,
-                                new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                        }
-                        catch (Exception exception)
-                        {
-                            logger.LogError(
-                                exception,
-                                "Failed to set organization's ({OrganizationID}) to the required tax exemption while processing event with ID {EventID}",
-                                organization.Id,
-                                eventId);
-                        }
-                        break;
-                }
-            }
-        }
-
         if (!subscription.AutomaticTax.Enabled)
         {
             try
@@ -364,7 +337,8 @@ public class UpcomingInvoiceHandler(
             var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
             var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
 
-            await SendBusinessRenewalEmailAsync(organization, subscription, sourcePlan, targetPlan, cohort);
+            await SendBusinessRenewalEmailAsync(
+                organization, subscription, sourcePlan, targetPlan, cohort, migrationPath.SeatCountPolicy);
         }
         catch (Exception exception)
         {
@@ -384,7 +358,8 @@ public class UpcomingInvoiceHandler(
         Subscription subscription,
         Plan sourcePlan,
         Plan targetPlan,
-        OrganizationPlanMigrationCohort cohort)
+        OrganizationPlanMigrationCohort cohort,
+        SeatCountPolicy seatCountPolicy)
     {
         var renewalDate = subscription.GetCurrentPeriodEnd();
         if (renewalDate is null)
@@ -399,7 +374,7 @@ public class UpcomingInvoiceHandler(
         }
 
         var culture = new CultureInfo("en-US");
-        var seats = await ResolveSeatCountAsync(subscription, sourcePlan, organization);
+        var seats = await ResolveSeatCountAsync(subscription, sourcePlan, organization, seatCountPolicy);
 
         // SeatPrice is a per-year figure on annual plans and a per-month figure on monthly plans. The per-user
         // monthly line always shows a monthly rate (annual ÷ 12); the recurring total is quoted in the plan's own
@@ -436,7 +411,9 @@ public class UpcomingInvoiceHandler(
                 PerUserMonthlyPrice = FormatCurrency(perUserMonthly, culture),
                 IsAnnual = targetPlan.IsAnnual,
                 TotalPrice = FormatCurrency(total, culture),
-                DiscountLines = [.. discounts.Select(discount => discount.Display)]
+                DiscountLines = [.. discounts.Select(discount => discount.Display)],
+                ProactiveDiscountMonths = discounts
+                    .FirstOrDefault(discount => discount.CouponId == cohort.ProactiveDiscountCouponCode)?.Months ?? 0
             }
         });
     }
@@ -446,14 +423,24 @@ public class UpcomingInvoiceHandler(
             ? amount.ToString("C0", culture)
             : amount.ToString("C2", culture);
 
-    private async Task<int> ResolveSeatCountAsync(Subscription subscription, Plan sourcePlan, Organization organization)
+    private async Task<int> ResolveSeatCountAsync(
+        Subscription subscription, Plan sourcePlan, Organization organization, SeatCountPolicy seatCountPolicy)
     {
-        // A packaged source has no per-seat line, so the fallback below would quote organization.Seats (the
-        // bundle cap). Match the billed quantity instead: the org's actual occupied seats, floored at 1.
-        if (sourcePlan.HasNonSeatBasedPasswordManagerPlan())
+        // A Packaged source's line items don't reflect the true seat total, so resolve the quote from
+        // actual usage to match what the scheduler bills.
+        if (sourcePlan.IsPackagedMigrationSource(seatCountPolicy))
         {
-            var occupied = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            return Math.Max(1, occupied.Total);
+            var occupied = (await organizationRepository
+                .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
+            var passwordManagerSeats = sourcePlan.ResolveMigratedSeatCount(occupied, organization.Seats);
+
+            // Floor the quote on the Stripe SM seat line so the email matches the billed PM seats (SM <= PM).
+            var secretsManagerSeatQuantity = subscription.Items.Data
+                .FirstOrDefault(item =>
+                    sourcePlan.SecretsManager is not null &&
+                    item.Price?.Id == sourcePlan.SecretsManager.StripeSeatPlanId)?.Quantity ?? 0;
+
+            return (int)Math.Max((long)passwordManagerSeats, secretsManagerSeatQuantity);
         }
 
         var seatItem = subscription.Items.Data
@@ -473,7 +460,7 @@ public class UpcomingInvoiceHandler(
         return (int)(seats ?? 0);
     }
 
-    private sealed record Discount(bool IsPercentage, decimal Value, string Display);
+    private sealed record Discount(bool IsPercentage, decimal Value, string Display, string CouponId, long Months);
 
     private async Task<List<Discount>> ResolveDiscountsAsync(
         OrganizationPlanMigrationCohort cohort,
@@ -486,15 +473,19 @@ public class UpcomingInvoiceHandler(
 
         Discount? MapCoupon(Coupon? coupon, string couponId)
         {
+            var months = coupon?.DurationInMonths ?? 0;
+
             if (coupon?.PercentOff is { } percentOff)
             {
-                return new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%");
+                return new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%",
+                    CouponId: couponId, Months: months);
             }
 
             if (coupon?.AmountOff is { } amountOffMinorUnits)
             {
                 var amountOff = amountOffMinorUnits / 100M;
-                return new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture));
+                return new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture),
+                    CouponId: couponId, Months: months);
             }
 
             logger.LogError(
@@ -757,30 +748,6 @@ public class UpcomingInvoiceHandler(
         Customer customer,
         string eventId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
-            switch (customer)
-            {
-                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                    when determinedTaxExemptStatus != customerTaxExemptStatus:
-                    try
-                    {
-                        await stripeAdapter.UpdateCustomerAsync(subscription.CustomerId,
-                            new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                    }
-                    catch (Exception exception)
-                    {
-                        logger.LogError(
-                            exception,
-                            "Failed to set provider's ({ProviderID}) to the required tax exemption while processing event with ID {EventID}",
-                            provider.Id,
-                            eventId);
-                    }
-                    break;
-            }
-        }
-
         if (!subscription.AutomaticTax.Enabled)
         {
             try

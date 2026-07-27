@@ -35,7 +35,8 @@ public class UpgradePremiumToOrganizationCommandTests
             string? stripeSeatPlanId = null,
             string? stripePremiumAccessPlanId = null,
             string? stripeStoragePlanId = null,
-            int baseSeats = 1)
+            int baseSeats = 1,
+            bool hasRiskInsights = false)
         {
             Type = planType;
             ProductTier = ProductTierType.Teams;
@@ -56,6 +57,7 @@ public class UpgradePremiumToOrganizationCommandTests
             HasOrganizationDomains = false;
             HasKeyConnector = false;
             HasScim = false;
+            HasRiskInsights = hasRiskInsights;
             HasResetPassword = false;
             UsersGetPremium = false;
             HasCustomPermissions = false;
@@ -93,8 +95,9 @@ public class UpgradePremiumToOrganizationCommandTests
         string? stripeSeatPlanId = null,
         string? stripePremiumAccessPlanId = null,
         string? stripeStoragePlanId = null,
-        int baseSeats = 1) =>
-        new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId, baseSeats);
+        int baseSeats = 1,
+        bool hasRiskInsights = false) =>
+        new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId, baseSeats, hasRiskInsights);
 
     private static PremiumPlan CreateTestPremiumPlan(
         string seatPriceId = "premium-annually",
@@ -145,7 +148,6 @@ public class UpgradePremiumToOrganizationCommandTests
     private readonly IGetPaymentMethodQuery _getPaymentMethodQuery = Substitute.For<IGetPaymentMethodQuery>();
     private readonly IPushNotificationService _pushNotificationService = Substitute.For<IPushNotificationService>();
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = Substitute.For<ILogger<UpgradePremiumToOrganizationCommand>>();
-    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly UpgradePremiumToOrganizationCommand _command;
 
     public UpgradePremiumToOrganizationCommandTests()
@@ -177,8 +179,7 @@ public class UpgradePremiumToOrganizationCommandTests
             _braintreeService,
             _getPaymentMethodQuery,
             _organizationAbilityCacheService,
-            _pushNotificationService,
-            _featureService);
+            _pushNotificationService);
     }
 
     private static Core.Billing.Payment.Models.BillingAddress CreateTestBillingAddress() =>
@@ -848,7 +849,7 @@ public class UpgradePremiumToOrganizationCommandTests
         };
 
         var mockPremiumPlans = CreateTestPremiumPlansList();
-        var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
+        var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually", hasRiskInsights: true);
 
         _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
@@ -878,6 +879,7 @@ public class UpgradePremiumToOrganizationCommandTests
                 org.Gateway == GatewayType.Stripe &&
                 org.GatewayCustomerId == "cus_123" &&
                 org.GatewaySubscriptionId == "sub_123" &&
+                org.UseRiskInsights == mockPlan.HasRiskInsights &&
                 org.Enabled == true));
     }
 
@@ -1196,7 +1198,7 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithNoTaxId_SetsTaxExemptToNone_DoesNotCreateTaxId(User user)
+    public async Task Run_WithNoTaxId_DoesNotCreateTaxId(User user)
     {
         // Arrange
         user.Premium = true;
@@ -1242,15 +1244,11 @@ public class UpgradePremiumToOrganizationCommandTests
 
         // Assert
         Assert.True(result.Success);
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(options =>
-                options.TaxExempt == StripeConstants.TaxExempt.None));
         await _stripeAdapter.DidNotReceive().CreateTaxIdAsync(Arg.Any<string>(), Arg.Any<TaxIdCreateOptions>());
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithTaxId_SetsTaxExemptToReverse_CreatesOneTaxId(User user)
+    public async Task Run_WithTaxId_CreatesOneTaxId(User user)
     {
         // Arrange
         user.Premium = true;
@@ -1297,10 +1295,6 @@ public class UpgradePremiumToOrganizationCommandTests
 
         // Assert
         Assert.True(result.Success);
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(options =>
-                options.TaxExempt == StripeConstants.TaxExempt.Reverse));
         await _stripeAdapter.Received(1).CreateTaxIdAsync(
             "cus_123",
             Arg.Is<TaxIdCreateOptions>(options =>
@@ -1375,7 +1369,7 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithSpanishNIF_SetsTaxExemptToReverse_CreatesBothSpanishNIFAndEUVAT(User user)
+    public async Task Run_WithSpanishNIF_CreatesBothSpanishNIFAndEUVAT(User user)
     {
         // Arrange
         user.Premium = true;
@@ -1423,11 +1417,6 @@ public class UpgradePremiumToOrganizationCommandTests
         // Assert
         Assert.True(result.Success);
 
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(options =>
-                options.TaxExempt == StripeConstants.TaxExempt.Reverse));
-
         // Verify Spanish NIF was created
         await _stripeAdapter.Received(1).CreateTaxIdAsync(
             "cus_123",
@@ -1444,7 +1433,7 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithSwissCountry_SetsTaxExemptToNone(User user)
+    public async Task Run_DoesNotSetTaxExempt(User user)
     {
         user.Premium = true;
         user.GatewaySubscriptionId = "sub_123";
@@ -1494,7 +1483,7 @@ public class UpgradePremiumToOrganizationCommandTests
         await _stripeAdapter.Received(1).UpdateCustomerAsync(
             "cus_123",
             Arg.Is<CustomerUpdateOptions>(options =>
-                options.TaxExempt == StripeConstants.TaxExempt.None));
+                options.TaxExempt == null));
         await _stripeAdapter.DidNotReceive().CreateTaxIdAsync(Arg.Any<string>(), Arg.Any<TaxIdCreateOptions>());
     }
 

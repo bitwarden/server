@@ -430,7 +430,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         });
 
         // Staged members are not subject to organization policies
-        await organizationUserRepository.CreateAsync(GetStagedOrganizationUser(org, user));
+        await organizationUserRepository.CreateStagedTestOrganizationUserAsync(org, user);
 
         // Act
         var results = await policyRepository.GetPolicyDetailsByUserIdAndPolicyTypeAsync(
@@ -491,14 +491,6 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         UserId = null, // Invited users don't have UserId
         Email = user.Email,
         Status = OrganizationUserStatusType.Invited,
-        Type = OrganizationUserType.User
-    };
-
-    private static OrganizationUser GetStagedOrganizationUser(Organization organization, User user) => new()
-    {
-        OrganizationId = organization.Id,
-        UserId = user.Id,
-        Status = OrganizationUserStatusType.Staged,
         Type = OrganizationUserType.User
     };
 }

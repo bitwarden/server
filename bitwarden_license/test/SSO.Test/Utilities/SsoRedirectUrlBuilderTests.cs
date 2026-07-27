@@ -151,4 +151,36 @@ public class SsoRedirectUrlBuilderTests
             "ssoOrgInviteAcceptanceRequired",
             SsoRedirectUrlBuilder.ErrorCodes.InviteAcceptanceRequired);
     }
+
+    [Fact]
+    public void ErrorCodes_OrgMembershipRequired_HasStableValue()
+    {
+        // Cross-language contract with the web client's
+        // SsoRedirectErrorCode.OrgMembershipRequired. Changing it requires
+        // a coordinated client change.
+        Assert.Equal(
+            "ssoOrgMembershipRequired",
+            SsoRedirectUrlBuilder.ErrorCodes.OrgMembershipRequired);
+    }
+
+    [Fact]
+    public void BuildLoginRedirectUrl_OrgMembershipRequiredErrorCode_ComposesExpectedUrl()
+    {
+        // Smoke test: the builder is errorCode-agnostic (takes a string), so encoding
+        // semantics are already covered by the other tests. This pins the output shape
+        // for the new errorCode lane so a regression in the constant is caught here.
+        var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+            VaultWithHash,
+            email: "user@example.com",
+            organizationId: OrgId,
+            organizationDisplayName: "Acme",
+            errorCode: SsoRedirectUrlBuilder.ErrorCodes.OrgMembershipRequired);
+
+        Assert.Equal(
+            "https://vault.bitwarden.com/#/login?email=user%40example.com" +
+            $"&organizationId={OrgId}" +
+            "&organizationName=Acme" +
+            "&error=ssoOrgMembershipRequired",
+            url);
+    }
 }

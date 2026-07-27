@@ -175,6 +175,7 @@ public class UpgradeOrganizationPlanVNextCommand(
         organization.UseAutomaticUserConfirmation = plan.AutomaticUserConfirmation;
         organization.UseMyItems = plan.HasMyItems;
         organization.UseInviteLinks = plan.HasInviteLinks;
+        organization.UseRiskInsights = plan.HasRiskInsights;
 
         if (keys != null)
         {
