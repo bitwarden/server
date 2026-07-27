@@ -6,7 +6,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public static class InvitingUserOrganizationProviderValidator
 {
-    public static ValidationResult<InviteOrganizationProvider> Validate(InviteOrganizationProvider inviteOrganizationProvider, int? seats)
+    public static ValidationResult<InviteOrganizationProvider> Validate(InviteOrganizationProvider inviteOrganizationProvider)
     {
         if (inviteOrganizationProvider is not { Enabled: true })
         {
@@ -20,7 +20,7 @@ public static class InvitingUserOrganizationProviderValidator
 
         if (inviteOrganizationProvider.Type == ProviderType.Reseller)
         {
-            return new Invalid<InviteOrganizationProvider>(new ProviderResellerSeatLimitError(inviteOrganizationProvider, seats));
+            return new Invalid<InviteOrganizationProvider>(new ProviderResellerSeatLimitError(inviteOrganizationProvider));
         }
 
         return new Valid<InviteOrganizationProvider>(inviteOrganizationProvider);
