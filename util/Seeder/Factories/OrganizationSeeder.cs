@@ -57,7 +57,7 @@ internal static class OrganizationExtensions
 
         return new OrganizationUser
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organization.Id,
             UserId = shouldLinkUserId ? user.Id : null,
             Email = shouldLinkUserId ? null : user.Email,
