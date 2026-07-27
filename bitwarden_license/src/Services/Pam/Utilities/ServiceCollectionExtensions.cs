@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
         // AccessRule write path.
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
+        services.AddScoped<IAccessRuleWriteValidator, AccessRuleWriteValidator>();
         services.AddScoped<ICreateAccessRuleCommand, CreateAccessRuleCommand>();
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
