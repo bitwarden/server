@@ -32,11 +32,10 @@ public static class RecipeBuilderExtensions
         string fixture,
         string? planType = null,
         int? seats = null,
-        OrganizationOverrides? overrides = null,
-        Guid? id = null)
+        OrganizationOverrides? overrides = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats, overrides, id));
+        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats, overrides));
         return builder;
     }
 
@@ -56,11 +55,10 @@ public static class RecipeBuilderExtensions
         string domain,
         int? seats = null,
         PlanType planType = PlanType.EnterpriseAnnually,
-        OrganizationOverrides? overrides = null,
-        Guid? id = null)
+        OrganizationOverrides? overrides = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType, overrides, id));
+        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType, overrides));
         return builder;
     }
 
