@@ -325,10 +325,10 @@ public class UpcomingInvoiceHandler(
             return false;
         }
 
-        await stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
-
         try
         {
+            await stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
+
             var result = await businessPlanMigrationCoordinator.ExecuteAsync(organization, subscription);
             switch (result)
             {
@@ -342,8 +342,10 @@ public class UpcomingInvoiceHandler(
                         "Business plan migration was scheduled for Organization ({OrganizationID}) but no renewal notification was sent while processing '{EventType}' event ({EventID}); manual notification may be required",
                         organization.Id, @event.Type, @event.Id);
                     return true;
+                case BusinessPlanMigrationResult.NotAssigned:
+                case BusinessPlanMigrationResult.AlreadyMigrated:
+                case BusinessPlanMigrationResult.NotScheduled:
                 default:
-                    // NotAssigned / AlreadyMigrated / NotScheduled — let the standard upcoming-invoice email flow.
                     return false;
             }
         }
