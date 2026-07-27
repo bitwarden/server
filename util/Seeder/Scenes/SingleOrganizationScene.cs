@@ -103,7 +103,7 @@ public class SingleOrganizationScene(
 
         var apiKey = new OrganizationApiKey
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organization.Id,
             Type = OrganizationApiKeyType.Default,
             ApiKey = CoreHelpers.SecureRandomString(30),
