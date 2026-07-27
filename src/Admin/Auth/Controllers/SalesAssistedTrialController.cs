@@ -36,8 +36,7 @@ public class SalesAssistedTrialController(
         {
             ProductTier = ProductTierType.Enterprise,
             Products = new List<ProductType> { ProductType.PasswordManager },
-            TrialLength = 30,
-            PaymentOptional = true
+            TrialLength = 30
         });
     }
 
@@ -61,8 +60,7 @@ public class SalesAssistedTrialController(
                 senderEmail,
                 model.ProductTier,
                 model.Products,
-                model.TrialLength,
-                model.PaymentOptional);
+                model.TrialLength);
         }
         catch (BadRequestException ex)
         {
