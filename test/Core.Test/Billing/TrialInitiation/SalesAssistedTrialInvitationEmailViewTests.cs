@@ -15,7 +15,6 @@ public class SalesAssistedTrialInvitationEmailViewTests
             ProductTier = productTier,
             Products = [ProductType.PasswordManager],
             TrialLength = 7,
-            PaymentOptional = false,
             SenderEmail = "sales@bitwarden.com",
             ExpiryDays = 5,
         };
