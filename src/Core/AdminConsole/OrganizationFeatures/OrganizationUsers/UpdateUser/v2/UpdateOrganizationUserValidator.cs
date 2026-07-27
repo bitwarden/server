@@ -9,6 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
@@ -17,7 +18,9 @@ public class UpdateOrganizationUserValidator(
     IGroupRepository groupRepository,
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
     IOrganizationUserValidationService organizationUserValidationService,
-    ICollectionRepository collectionRepository)
+    ICollectionRepository collectionRepository,
+    IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
+    IOrganizationDomainRepository organizationDomainRepository)
     : IUpdateOrganizationUserValidator
 {
     public async Task<ValidationResult<UpdateOrganizationUserRequest>> ValidateAsync(
@@ -32,6 +35,7 @@ public class UpdateOrganizationUserValidator(
 
         var freeOrgAdminError = await organizationUserValidationService.ValidateFreeOrgAdminLimitAsync(
             organizationUser.UserId, request.Organization.PlanType, organizationUser.Type, request.NewType);
+
         if (freeOrgAdminError is not null)
         {
             return Invalid(request, freeOrgAdminError);
@@ -87,7 +91,61 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new ManageMutuallyExclusive());
         }
 
+        var accountChangeError = await ValidateAccountChangeAsync(request);
+        if (accountChangeError is not null)
+        {
+            return Invalid(request, accountChangeError);
+        }
+
         return Valid(request);
+    }
+
+    /// <summary>
+    /// A member must be claimed by the organization to change their name; changing their email additionally
+    /// requires no master password and a new address on an org-verified domain.
+    /// </summary>
+    private async Task<Error?> ValidateAccountChangeAsync(UpdateOrganizationUserRequest request)
+    {
+        var organizationUser = request.OrganizationUserToUpdate;
+
+        // A member with no linked account cannot be claimed, so their email cannot be changed.
+        if (!string.IsNullOrWhiteSpace(request.NewEmail) && (request.UserToUpdate is null || !organizationUser.UserId.HasValue))
+        {
+            return new MemberNotClaimedError();
+        }
+
+        var isEmailChanging = request.IsEmailChanged();
+        var isNameChanging = request.IsNameChanged();
+
+        if (!isEmailChanging && !isNameChanging)
+        {
+            return null;
+        }
+
+        if (isEmailChanging && request.UserToUpdate!.HasMasterPassword())
+        {
+            return new MemberHasMasterPasswordError();
+        }
+
+        var claimedStatus = await getOrganizationUsersClaimedStatusQuery
+            .GetUsersOrganizationClaimedStatusAsync(request.Organization.Id, [organizationUser.Id]);
+        if (!(claimedStatus.TryGetValue(organizationUser.Id, out var isClaimed) && isClaimed))
+        {
+            return isEmailChanging ? new MemberNotClaimedError() : new NameChangeMemberNotClaimedError();
+        }
+
+        if (isEmailChanging)
+        {
+            var newDomain = EmailValidation.GetDomain(request.NewEmail!);
+            var verifiedDomains = await organizationDomainRepository
+                .GetVerifiedDomainsByOrganizationIdsAsync([request.Organization.Id]);
+            if (!verifiedDomains.Any(d => string.Equals(d.DomainName, newDomain, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                return new NewEmailDomainNotClaimedError();
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

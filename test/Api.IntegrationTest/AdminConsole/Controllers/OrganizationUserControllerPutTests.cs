@@ -1,11 +1,14 @@
 ﻿using System.Net;
+using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -309,6 +312,158 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         await AssertDoesNotHaveCollectionAsync(member, defaultCollection.Id);
     }
 
+    [Fact]
+    public async Task Put_WhenChangingRoleAndNameForClaimedMember_ReturnsNoContentAndPersistsBoth()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var (member, _) = await CreateClaimedMemberWithoutMasterPasswordAsync();
+
+        var request = new OrganizationUserUpdateRequestModel
+        {
+            Type = OrganizationUserType.Admin,
+            Permissions = new Permissions(),
+            Collections = [],
+            Groups = [],
+            Name = "Updated Name"
+        };
+
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{member.Id}", request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var updatedOrgUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(member.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserType.Admin, updatedOrgUser.Type);
+
+        var updatedUser = await _factory.GetService<IUserRepository>().GetByIdAsync(member.UserId!.Value);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("Updated Name", updatedUser.Name);
+    }
+
+    [Fact]
+    public async Task Put_WhenChangingEmailForClaimedMember_ReturnsNoContentAndPersistsEmail()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var (member, domain) = await CreateClaimedMemberWithoutMasterPasswordAsync();
+
+        var newEmail = $"new-{Guid.NewGuid()}@{domain}";
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{member.Id}", UpdateRequest(email: newEmail));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var updatedUser = await _factory.GetService<IUserRepository>().GetByIdAsync(member.UserId!.Value);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(newEmail, updatedUser.Email, ignoreCase: true);
+        Assert.True(updatedUser.EmailVerified);
+    }
+
+    [Fact]
+    public async Task Put_WhenChangingEmailAndNameForClaimedMember_PersistsBoth()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var (member, domain) = await CreateClaimedMemberWithoutMasterPasswordAsync();
+
+        var newEmail = $"new-{Guid.NewGuid()}@{domain}";
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{member.Id}", UpdateRequest(email: newEmail, name: "Updated Name"));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var updatedUser = await _factory.GetService<IUserRepository>().GetByIdAsync(member.UserId!.Value);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(newEmail, updatedUser.Email, ignoreCase: true);
+        Assert.Equal("Updated Name", updatedUser.Name);
+    }
+
+    [Fact]
+    public async Task Put_WhenChangingEmailForUnclaimedMember_ReturnsNotClaimedProblemDetails()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        // No verified domain is created, so the member is not claimed by the organization.
+        var memberEmail = $"unclaimed-{Guid.NewGuid()}@bitwarden.com";
+        var (_, member) = await OrganizationTestHelpers.CreateUserWithoutMasterPasswordAsync(
+            _factory, memberEmail, _organization.Id);
+
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{member.Id}",
+            UpdateRequest(email: $"new-{Guid.NewGuid()}@bitwarden.com"));
+
+        await AssertValidationProblemAsync(response, new MemberNotClaimedError());
+    }
+
+    [Fact]
+    public async Task Put_WhenChangingNameForUnclaimedMember_ReturnsNotClaimedProblemDetails()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        // No verified domain is created, so the member is not claimed by the organization.
+        var memberEmail = $"unclaimed-{Guid.NewGuid()}@bitwarden.com";
+        var (_, member) = await OrganizationTestHelpers.CreateUserWithoutMasterPasswordAsync(
+            _factory, memberEmail, _organization.Id);
+
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{member.Id}", UpdateRequest(name: "Updated Name"));
+
+        await AssertValidationProblemAsync(response, new NameChangeMemberNotClaimedError());
+    }
+
+    [Fact]
+    public async Task Put_WhenChangingEmailForMemberWithMasterPassword_ReturnsHasMasterPasswordProblemDetails()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        // CreateNewUserWithAccountAsync registers a real account, which has a master password.
+        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{member.Id}",
+            UpdateRequest(email: $"new-{Guid.NewGuid()}@bitwarden.com"));
+
+        await AssertValidationProblemAsync(response, new MemberHasMasterPasswordError());
+    }
+
+    [Fact]
+    public async Task Put_WhenChangingEmailToUnverifiedDomain_ReturnsDomainNotClaimedProblemDetails()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var (member, _) = await CreateClaimedMemberWithoutMasterPasswordAsync();
+
+        var unverifiedDomain = OrganizationTestHelpers.GenerateRandomDomain();
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{member.Id}",
+            UpdateRequest(email: $"new-{Guid.NewGuid()}@{unverifiedDomain}"));
+
+        await AssertValidationProblemAsync(response, new NewEmailDomainNotClaimedError());
+    }
+
+    [Fact]
+    public async Task Put_WhenChangingEmailToAddressAlreadyInUse_ReturnsAlreadyInUseProblemDetails()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var (member, domain) = await CreateClaimedMemberWithoutMasterPasswordAsync();
+
+        // Same-domain address already taken, so domain validation passes and the uniqueness check rejects it.
+        var takenEmail = $"taken-{Guid.NewGuid()}@{domain}";
+        await OrganizationTestHelpers.CreateUserWithoutMasterPasswordAsync(_factory, takenEmail, _organization.Id);
+
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{member.Id}", UpdateRequest(email: takenEmail));
+
+        await AssertValidationProblemAsync(response, new EmailAlreadyInUseError());
+    }
+
     private static HttpStatusCode ExpectedSuccess(bool flagOn) =>
         flagOn ? HttpStatusCode.NoContent : HttpStatusCode.OK;
 
@@ -394,5 +549,46 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         Assert.True(sharedAccess.ReadOnly);
         Assert.False(sharedAccess.HidePasswords);
         Assert.False(sharedAccess.Manage);
+    }
+
+    // A master-password-less member on a verified org domain is "claimed" and eligible for an email change.
+    private async Task<(OrganizationUser Member, string Domain)> CreateClaimedMemberWithoutMasterPasswordAsync()
+    {
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
+        _organization.UseOrganizationDomains = true;
+        await _factory.GetService<IOrganizationRepository>().ReplaceAsync(_organization);
+        await OrganizationTestHelpers.CreateVerifiedDomainAsync(_factory, _organization.Id, domain);
+
+        var (_, member) = await OrganizationTestHelpers.CreateUserWithoutMasterPasswordAsync(
+            _factory, $"member-{Guid.NewGuid()}@{domain}", _organization.Id);
+        return (member, domain);
+    }
+
+    private static OrganizationUserUpdateRequestModel UpdateRequest(string? email = null, string? name = null) =>
+        new()
+        {
+            Type = OrganizationUserType.User,
+            Permissions = new Permissions(),
+            Collections = [],
+            Groups = [],
+            Email = email,
+            Name = name
+        };
+
+    private static async Task AssertValidationProblemAsync(
+        HttpResponseMessage response, IValidationError expectedError)
+    {
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = problem.RootElement;
+        Assert.Equal("validation_error", root.GetProperty("type").GetString());
+        Assert.Equal("One or more validation errors occurred.", root.GetProperty("title").GetString());
+        Assert.Equal(400, root.GetProperty("status").GetInt32());
+
+        var errors = root.GetProperty("errors").GetProperty(expectedError.PropertyName);
+        Assert.Equal(1, errors.GetArrayLength());
+        Assert.Equal(expectedError.Type, errors[0].GetProperty("type").GetString());
+        Assert.Equal(expectedError.Message, errors[0].GetProperty("detail").GetString());
     }
 }
