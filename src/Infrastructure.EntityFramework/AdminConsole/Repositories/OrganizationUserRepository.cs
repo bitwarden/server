@@ -540,6 +540,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         ResetPasswordKey = ou.ResetPasswordKey,
                         UsesKeyConnector = ou.User != null && ou.User.UsesKeyConnector,
                         AccessSecretsManager = ou.AccessSecretsManager,
+                        AccessPam = ou.AccessPam,
                         HasMasterPassword = ou.User != null && !string.IsNullOrWhiteSpace(ou.User.MasterPassword),
                         RevocationReason = ou.RevocationReason,
                         CreationDate = ou.CreationDate,
@@ -825,6 +826,12 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
     {
         var query = new OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery(organizationId);
+        return await GetCountFromQuery(query);
+    }
+
+    public async Task<int> GetOccupiedPamSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        var query = new OrganizationUserReadOccupiedPamSeatCountByOrganizationIdQuery(organizationId);
         return await GetCountFromQuery(query);
     }
 

@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Authorization;
+﻿using System.Net;
+using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -28,6 +29,7 @@ public class OrganizationInviteLinksController(
 {
     [AllowAnonymous]
     [HttpPost("/organizations/invite-link/status")]
+    [ProducesResponseType(typeof(OrganizationInviteLinkStatusResponseModel), (int)HttpStatusCode.OK)]
     public async Task<IResult> GetStatus([FromBody] GetOrganizationInviteLinkStatusRequestModel model)
     {
         var result = await getOrganizationInviteLinkStatusQuery.GetStatusAsync(model.OrganizationId, model.Code);
@@ -45,6 +47,7 @@ public class OrganizationInviteLinksController(
 
     [AllowAnonymous]
     [HttpPost("/organizations/invite-link/policies")]
+    [ProducesResponseType(typeof(ListResponseModel<PolicyResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IResult> GetPolicies([FromBody] GetOrganizationInviteLinkPoliciesRequestModel model)
     {
         var result = await getOrganizationInviteLinkPoliciesQuery.GetPoliciesAsync(model.OrganizationId, model.Code);
@@ -55,6 +58,7 @@ public class OrganizationInviteLinksController(
 
     [AllowAnonymous]
     [HttpPost("/organizations/invite-link/validate-email-domain")]
+    [ProducesResponseType(typeof(OrganizationInviteLinkValidateEmailDomainResponseModel), (int)HttpStatusCode.OK)]
     public async Task<IResult> ValidateEmailDomain(
         [FromBody] OrganizationInviteLinkValidateEmailDomainRequestModel model)
     {
@@ -66,6 +70,7 @@ public class OrganizationInviteLinksController(
 
     [HttpGet("")]
     [Authorize<ManageUsersRequirement>]
+    [ProducesResponseType(typeof(OrganizationInviteLinkResponseModel), (int)HttpStatusCode.OK)]
     public async Task<IResult> Get(Guid orgId)
     {
         var result = await getOrganizationInviteLinkQuery.GetAsync(orgId);
@@ -76,6 +81,7 @@ public class OrganizationInviteLinksController(
 
     [HttpPost("")]
     [Authorize<ManageUsersRequirement>]
+    [ProducesResponseType(typeof(OrganizationInviteLinkResponseModel), (int)HttpStatusCode.Created)]
     public async Task<IResult> Create(Guid orgId, [FromBody] CreateOrganizationInviteLinkRequestModel model)
     {
         var result = await createOrganizationInviteLinkCommand.CreateAsync(
@@ -89,6 +95,7 @@ public class OrganizationInviteLinksController(
 
     [HttpPut("")]
     [Authorize<ManageUsersRequirement>]
+    [ProducesResponseType(typeof(OrganizationInviteLinkResponseModel), (int)HttpStatusCode.OK)]
     public async Task<IResult> Update(Guid orgId, [FromBody] UpdateOrganizationInviteLinkRequestModel model)
     {
         var result = await updateOrganizationInviteLinkCommand.UpdateAsync(
@@ -100,6 +107,7 @@ public class OrganizationInviteLinksController(
 
     [HttpPut("support-confirm")]
     [Authorize<ManageUsersRequirement>]
+    [ProducesResponseType(typeof(OrganizationInviteLinkResponseModel), (int)HttpStatusCode.OK)]
     public async Task<IResult> UpdateInviteSupportConfirm(Guid orgId, [FromBody] UpdateInviteSupportConfirmRequestModel model)
     {
         var result = await updateInviteSupportConfirmCommand.UpdateAsync(
@@ -111,6 +119,7 @@ public class OrganizationInviteLinksController(
 
     [HttpDelete("")]
     [Authorize<ManageUsersRequirement>]
+    [ProducesResponseType((int)HttpStatusCode.NoContent)]
     public async Task<IResult> Delete(Guid orgId)
     {
         var result = await deleteOrganizationInviteLinkCommand.DeleteAsync(orgId);
@@ -119,6 +128,7 @@ public class OrganizationInviteLinksController(
 
     [HttpPost("refresh")]
     [Authorize<ManageUsersRequirement>]
+    [ProducesResponseType(typeof(OrganizationInviteLinkResponseModel), (int)HttpStatusCode.OK)]
     public async Task<IResult> Refresh(Guid orgId, [FromBody] RefreshOrganizationInviteLinkRequestModel model)
     {
         var result = await refreshOrganizationInviteLinkCommand.RefreshAsync(

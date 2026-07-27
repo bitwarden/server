@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -120,6 +121,20 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { key, value },
             });
         });
+    }
+
+    protected override IHostBuilder? CreateHostBuilder()
+    {
+        var builder = base.CreateHostBuilder();
+        // Disable OTel to prevent OTLP export attempts hanging test runs in CI.
+        builder?.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "OpenTelemetry:Enabled", "false" },
+            });
+        });
+        return builder;
     }
 
     /// <summary>

@@ -9,7 +9,8 @@ BEGIN
         [PlayId],
         [UserId],
         [OrganizationId],
-        [CreationDate]
+        [CreationDate],
+        [ProviderId]
     FROM
         [dbo].[PlayItem]
     WHERE
