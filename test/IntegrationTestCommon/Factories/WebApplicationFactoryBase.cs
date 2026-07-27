@@ -126,9 +126,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     protected override IHostBuilder? CreateHostBuilder()
     {
         var builder = base.CreateHostBuilder();
-        // Disable OTel in all test factories. UseBitwardenSdk() registers OTLP exporters that
-        // open gRPC channels with exponential-backoff retries; when the endpoint is unreachable
-        // (e.g. CI) the retry loop stalls response-body completion for ~136 s per request.
+        // Disable OTel to prevent OTLP export attempts hanging test runs in CI.
         builder?.ConfigureAppConfiguration((_, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
