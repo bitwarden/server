@@ -23,7 +23,6 @@ internal record SeedPreset
 
 internal record SeedPresetOrganization
 {
-    public string? Id { get; init; }
     public string? Fixture { get; init; }
     public string? Name { get; init; }
     public string? Domain { get; init; }

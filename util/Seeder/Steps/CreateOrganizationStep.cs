@@ -18,7 +18,6 @@ internal sealed class CreateOrganizationStep : IStep
     private readonly int? _seats;
     private readonly PlanType _planType;
     private readonly OrganizationOverrides? _overrides;
-    private readonly Guid? _id;
 
     private CreateOrganizationStep(
         string? fixtureName,
@@ -26,8 +25,7 @@ internal sealed class CreateOrganizationStep : IStep
         string? domain,
         int? seats,
         PlanType planType,
-        OrganizationOverrides? overrides,
-        Guid? id)
+        OrganizationOverrides? overrides)
     {
         if (fixtureName is null && (name is null || domain is null))
         {
@@ -41,25 +39,22 @@ internal sealed class CreateOrganizationStep : IStep
         _seats = seats;
         _planType = planType;
         _overrides = overrides;
-        _id = id;
     }
 
     internal static CreateOrganizationStep FromFixture(
         string fixtureName,
         string? planType = null,
         int? seats = null,
-        OrganizationOverrides? overrides = null,
-        Guid? id = null) =>
-        new(fixtureName, null, null, seats, PlanFeatures.Parse(planType), overrides, id);
+        OrganizationOverrides? overrides = null) =>
+        new(fixtureName, null, null, seats, PlanFeatures.Parse(planType), overrides);
 
     internal static CreateOrganizationStep FromParams(
         string name,
         string domain,
         int? seats = null,
         PlanType planType = PlanType.EnterpriseAnnually,
-        OrganizationOverrides? overrides = null,
-        Guid? id = null) =>
-        new(null, name, domain, seats, planType, overrides, id);
+        OrganizationOverrides? overrides = null) =>
+        new(null, name, domain, seats, planType, overrides);
 
     public void Execute(SeederContext context)
     {
@@ -85,7 +80,7 @@ internal sealed class CreateOrganizationStep : IStep
 
         var seats = _seats ?? PlanFeatures.GenerateRealisticSeatCount(_planType, domain);
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
-        var organization = OrganizationSeeder.Create(name, domain, seats, context.GetMangler(), orgKeys.PublicKey, orgKeys.PrivateKey, _planType, _id);
+        var organization = OrganizationSeeder.Create(name, domain, seats, context.GetMangler(), orgKeys.PublicKey, orgKeys.PrivateKey, _planType);
 
         PlanFeatures.ApplyOrganizationOverrides(organization, _overrides);
 
