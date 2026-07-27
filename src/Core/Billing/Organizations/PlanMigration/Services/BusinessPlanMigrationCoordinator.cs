@@ -61,19 +61,32 @@ public class BusinessPlanMigrationCoordinator(
             }
         }
 
-        // Notify phase: the schedule is committed, so failures here are caught (never propagate) and leave
-        // the stamp null so the notification retries if this flow runs again for the organization.
+        // Notify phase: the schedule is already committed, so failures here are caught and never propagate.
+        // We send first, then stamp.
         if (assignment.RenewalNotificationSentDate is null)
         {
+            bool notificationSent;
             try
             {
                 var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
-                var notificationSent = await renewalNotificationService.SendRenewalEmailAsync(organization, subscription, cohort);
-                if (!notificationSent)
-                {
-                    return BusinessPlanMigrationResult.CompletedWithoutNotification;
-                }
+                notificationSent = await renewalNotificationService.SendRenewalEmailAsync(organization, subscription, cohort);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Business plan migration scheduled for Organization ({OrganizationId}) subscription ({SubscriptionId}) but the renewal notification did not complete; a later sweep run will retry",
+                    organization.Id, subscription.Id);
+                return BusinessPlanMigrationResult.CompletedWithoutNotification;
+            }
 
+            if (!notificationSent)
+            {
+                return BusinessPlanMigrationResult.CompletedWithoutNotification;
+            }
+
+            try
+            {
                 assignment.RenewalNotificationSentDate = DateTime.UtcNow;
                 await cohortAssignmentRepository.ReplaceAsync(assignment);
             }
@@ -81,9 +94,8 @@ public class BusinessPlanMigrationCoordinator(
             {
                 logger.LogError(
                     exception,
-                    "Business plan migration scheduled for Organization ({OrganizationId}) subscription ({SubscriptionId}) but the renewal notification did not complete; manual notification may be required",
-                    organization.Id, subscription.Id);
-                return BusinessPlanMigrationResult.CompletedWithoutNotification;
+                    "Renewal email was sent to Organization ({OrganizationId}) but stamping RenewalNotificationSentDate on cohort assignment ({CohortId}) failed; a later sweep run may resend",
+                    organization.Id, assignment.CohortId);
             }
         }
 
