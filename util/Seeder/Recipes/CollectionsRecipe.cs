@@ -35,7 +35,7 @@ public class CollectionsRecipe(DatabaseContext db)
         {
             collectionList.Add(new Core.Entities.Collection
             {
-                Id = CoreHelpers.GenerateComb(),
+                Id = CombGuid.Generate(),
                 OrganizationId = organizationId,
                 Name = $"Collection {i + 1}",
                 Type = CollectionType.SharedCollection,
