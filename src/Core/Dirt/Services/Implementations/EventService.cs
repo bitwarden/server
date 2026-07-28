@@ -347,7 +347,7 @@ public class EventService : IEventService
             return;
         }
 
-        var eventMessage = new EventMessage(_currentContext)
+        var e = new EventMessage(_currentContext)
         {
             OrganizationId = organization.Id,
             ProviderId = await GetProviderIdAsync(organization.Id),
@@ -356,7 +356,7 @@ public class EventService : IEventService
             Date = date.GetValueOrDefault(DateTime.UtcNow),
             InstallationId = GetInstallationId(),
         };
-        await _eventWriteService.CreateAsync(eventMessage);
+        await _eventWriteService.CreateAsync(e);
     }
 
     public async Task LogOrganizationEventAsync(Organization organization, EventType type, EventSystemUser systemUser, DateTime? date = null)
