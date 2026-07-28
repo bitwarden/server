@@ -36,6 +36,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         // Read preset to extract kdfIterations before building services.
         // CLI --kdf-iterations takes precedence over the preset value.
         var preset = reader.Read<Models.SeedPreset>($"presets.{presetName}");
+
         var effectiveKdf = kdfIterations ?? preset.KdfIterations ?? 5_000;
 
         var services = new ServiceCollection();

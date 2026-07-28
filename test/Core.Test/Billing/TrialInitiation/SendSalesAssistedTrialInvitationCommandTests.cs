@@ -193,4 +193,24 @@ public class SendSalesAssistedTrialInvitationCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 0, true));
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task HandleAsync_TeamsStarter_ThrowsBadRequest(
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        // Arrange
+        var products = new[] { ProductType.PasswordManager };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.TeamsStarter, products, 7, false));
+
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
+    }
 }
