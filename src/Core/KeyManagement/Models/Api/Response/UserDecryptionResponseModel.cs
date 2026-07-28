@@ -21,4 +21,10 @@ public class UserDecryptionResponseModel
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public V2UpgradeTokenResponseModel? V2UpgradeToken { get; set; }
+
+    /// <summary>
+    /// Hex-encoded key id of the user's current user key, when the server knows it.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? UserKeyId { get; set; }
 }

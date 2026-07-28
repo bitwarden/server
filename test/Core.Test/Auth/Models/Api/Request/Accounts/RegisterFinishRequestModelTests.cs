@@ -184,7 +184,7 @@ public class RegisterFinishRequestModelTests
             {
                 Kdf = kdfRequest,
                 MasterKeyWrappedUserKey = userSymmetricKey,
-                Salt = email.ToLowerInvariant().Trim()
+                Salt = email.ToLowerInvariant().Trim(),
             },
             AccountKeys = accountKeysRequest
         };
@@ -250,7 +250,7 @@ public class RegisterFinishRequestModelTests
             {
                 Kdf = kdfRequest,
                 MasterKeyWrappedUserKey = userSymmetricKey,
-                Salt = email.ToLowerInvariant().Trim()
+                Salt = email.ToLowerInvariant().Trim(),
             },
             AccountKeys = accountKeysRequest
         };

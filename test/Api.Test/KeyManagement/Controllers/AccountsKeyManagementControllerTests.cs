@@ -7,6 +7,7 @@ using Bit.Api.KeyManagement.Controllers;
 using Bit.Api.KeyManagement.Enums;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Validators;
+using Bit.Api.Test.KeyManagement.AutoFixture;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
@@ -30,12 +31,14 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.KeyManagement.Controllers;
 
 [ControllerCustomize(typeof(AccountsKeyManagementController))]
+[KeyIdRequestCustomize]
 [SutProviderCustomize]
 [JsonDocumentCustomize]
 public class AccountsKeyManagementControllerTests
@@ -44,6 +47,53 @@ public class AccountsKeyManagementControllerTests
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
 
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostUserKeyIdAsync_UserNull_Throws(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        SetUserKeyIdRequestModel data)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostUserKeyIdAsync(data));
+
+        await sutProvider.GetDependency<ISetUserKeyIdCommand>().ReceivedWithAnyArgs(0)
+            .SetUserKeyIdAsync(Arg.Any<Guid>(), Arg.Any<KeyId>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostUserKeyIdAsync_Success_PassesKeyIdToCommand(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User user)
+    {
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var data = new SetUserKeyIdRequestModel { UserKeyId = userKeyId };
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        await sutProvider.Sut.PostUserKeyIdAsync(data);
+
+        await sutProvider.GetDependency<ISetUserKeyIdCommand>().Received(1)
+            .SetUserKeyIdAsync(Arg.Is(user.Id),
+                Arg.Is<KeyId>(k => k == KeyId.FromHexEncodedString(userKeyId)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostUserKeyIdAsync_KeyIdAlreadySet_PropagatesBadRequest(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User user)
+    {
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var data = new SetUserKeyIdRequestModel { UserKeyId = userKeyId };
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<ISetUserKeyIdCommand>()
+            .SetUserKeyIdAsync(Arg.Is(user.Id), Arg.Any<KeyId>())
+            .ThrowsAsync(new BadRequestException("User key id is already set."));
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostUserKeyIdAsync(data));
+    }
 
     [Theory]
     [BitAutoData]

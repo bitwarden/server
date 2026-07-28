@@ -252,6 +252,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
     }
 
+
     private static void ValidatePublicKeyEncryptionKeyPairUnchanged(BaseRotateUserAccountKeysData model, User user)
     {
         var publicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey;
@@ -319,6 +320,10 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         var now = DateTime.UtcNow;
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastKeyRotationDate = now;
+        // A rotation always replaces the user key, so any previously stored key id is now stale.
+        // Assign unconditionally: a client that does not supply one leaves the server with no key id
+        // rather than a wrong one.
+        user.UserKeyId = baseModel.UserKeyId?.ToString();
 
         // V2UpgradeToken is only valid for V1 users transitioning to V2.
         // For V2 users the token is semantically invalid — discard it and perform a full logout.

@@ -42,7 +42,7 @@ public class AccountKeysRequestModel
                 {
                     PublicKeyEncryptionKeyPairData = PublicKeyEncryptionKeyPair.ToPublicKeyEncryptionKeyPairData(),
                     SignatureKeyPairData = SignatureKeyPair.ToSignatureKeyPairData(),
-                    SecurityStateData = SecurityState.ToSecurityState()
+                    SecurityStateData = SecurityState.ToSecurityState(),
                 };
             }
         }

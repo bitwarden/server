@@ -105,12 +105,13 @@ public class RegisterFinishRequestModel : IValidatableObject
     public RegisterFinishData ToData()
     {
         var unlockData = MasterPasswordUnlock?.ToData();
+        var accountKeysData = AccountKeys?.ToAccountKeysData();
         var authenticationData = MasterPasswordAuthentication?.ToData();
         // TODO clean up flow once old fields are deprecated
         // https://bitwarden.atlassian.net/browse/PM-27326
         return new RegisterFinishData
         {
-            UserAccountKeysData = AccountKeys?.ToAccountKeysData() ??
+            UserAccountKeysData = accountKeysData ??
                 new UserAccountKeysData
                 {
                     PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData
@@ -132,6 +133,7 @@ public class RegisterFinishRequestModel : IValidatableObject
             MasterKeyWrappedUserKey = unlockData?.MasterKeyWrappedUserKey ?? UserSymmetricKey ?? throw new BadRequestException("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
             MasterPasswordAuthenticationHash = authenticationData?.MasterPasswordAuthenticationHash ?? MasterPasswordHash ?? throw new BadRequestException("MasterPasswordHash couldn't be found on either the MasterPasswordAuthenticationData or the MasterPasswordHash property passed in."),
             Salt = unlockData?.Salt,
+            UserKeyId = unlockData?.UserKeyId,
         };
     }
 

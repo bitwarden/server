@@ -796,7 +796,7 @@ public class AccountsControllerTests : IDisposable
             {
                 Kdf = kdfData,
                 MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
-                Salt = email
+                Salt = email,
             },
             AccountKeys = accountKeys,
         };
@@ -905,7 +905,7 @@ public class AccountsControllerTests : IDisposable
             {
                 Kdf = kdfData,
                 MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
-                Salt = email
+                Salt = email,
             },
             AccountKeys = accountKeys
         };
@@ -1010,7 +1010,7 @@ public class AccountsControllerTests : IDisposable
             {
                 Kdf = unlockKdf,
                 MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
-                Salt = email
+                Salt = email,
             },
             // root KDF fields intentionally null
             Kdf = null,

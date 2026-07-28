@@ -13,6 +13,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
@@ -50,6 +51,7 @@ public class AccountsKeyManagementController : Controller
     private readonly IKeyRotationDataQuery _keyRotationDataQuery;
     private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
     private readonly IConvertUserToKeyConnectorCommand _convertUserToKeyConnectorCommand;
+    private readonly ISetUserKeyIdCommand _setUserKeyIdCommand;
 
     public AccountsKeyManagementController(IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
@@ -69,7 +71,8 @@ public class AccountsKeyManagementController : Controller
             webAuthnKeyValidator,
         IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> deviceValidator,
         ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand,
-        IConvertUserToKeyConnectorCommand convertUserToKeyConnectorCommand)
+        IConvertUserToKeyConnectorCommand convertUserToKeyConnectorCommand,
+        ISetUserKeyIdCommand setUserKeyIdCommand)
     {
         _userService = userService;
         _regenerateUserAsymmetricKeysCommand = regenerateUserAsymmetricKeysCommand;
@@ -87,6 +90,21 @@ public class AccountsKeyManagementController : Controller
         _keyRotationDataQuery = keyRotationDataQuery;
         _setKeyConnectorKeyCommand = setKeyConnectorKeyCommand;
         _convertUserToKeyConnectorCommand = convertUserToKeyConnectorCommand;
+        _setUserKeyIdCommand = setUserKeyIdCommand;
+    }
+
+    /// <summary>
+    /// Reports the key id of the caller's current user key to the server.
+    /// </summary>
+    /// <remarks>
+    /// This is meant for backfilling the user-key id for existing users for whom
+    /// the key id is not yet recorded.
+    /// </remarks>
+    [HttpPost("key-management/user-key-id")]
+    public async Task PostUserKeyIdAsync([FromBody] SetUserKeyIdRequestModel request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        await _setUserKeyIdCommand.SetUserKeyIdAsync(user.Id, request.ToKeyId());
     }
 
     [HttpPost("key-management/regenerate-keys")]
@@ -118,6 +136,7 @@ public class AccountsKeyManagementController : Controller
             BaseData = new BaseRotateUserAccountKeysData
             {
                 AccountKeys = model.AccountKeys.ToAccountKeysData(),
+                UserKeyId = KeyId.FromHexEncodedString(model.UserKeyId),
                 EmergencyAccesses =
                     await _emergencyAccessValidator.ValidateAsync(user,
                         model.AccountUnlockData.EmergencyAccessUnlockData),
@@ -267,6 +286,7 @@ public class AccountsKeyManagementController : Controller
         return new BaseRotateUserAccountKeysData
         {
             AccountKeys = request.WrappedAccountCryptographicState.ToAccountKeysData(),
+            UserKeyId = KeyId.FromHexEncodedString(request.UserKeyId),
             EmergencyAccesses =
                 await _emergencyAccessValidator.ValidateAsync(user, request.UnlockData.EmergencyAccessUnlockData),
             OrganizationUsers =

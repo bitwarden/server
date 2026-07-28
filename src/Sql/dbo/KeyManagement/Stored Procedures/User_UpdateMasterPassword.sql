@@ -9,7 +9,8 @@ CREATE PROCEDURE [dbo].[User_UpdateMasterPassword]
     @KdfParallelism INT = NULL,
     @RevisionDate DATETIME2(7),
     @AccountRevisionDate DATETIME2(7),
-    @MasterPasswordSalt NVARCHAR(256) = NULL
+    @MasterPasswordSalt NVARCHAR(256) = NULL,
+    @UserKeyId VARCHAR(64) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -26,7 +27,8 @@ BEGIN
         [KdfParallelism] = @KdfParallelism,
         [RevisionDate] = @RevisionDate,
         [AccountRevisionDate] = @AccountRevisionDate,
-        [MasterPasswordSalt] = @MasterPasswordSalt
+        [MasterPasswordSalt] = @MasterPasswordSalt,
+        [UserKeyId] = @UserKeyId
     WHERE
         [Id] = @Id
 END

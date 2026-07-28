@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[User_UpdateAccountCryptographicState]
+﻿CREATE PROCEDURE [dbo].[User_UpdateAccountCryptographicState]
     @Id UNIQUEIDENTIFIER,
     @PublicKey NVARCHAR(MAX),
     @PrivateKey NVARCHAR(MAX),

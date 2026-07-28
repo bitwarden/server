@@ -22,4 +22,9 @@ public class BaseRotateUserAccountKeysData
     public required IEnumerable<Cipher> Ciphers { get; set; }
     public required IEnumerable<Folder> Folders { get; set; }
     public required IReadOnlyList<Send> Sends { get; set; }
+
+    /// <summary>
+    /// Key id of the new user key this rotation sets, when the client supplied it.
+    /// </summary>
+    public KeyId? UserKeyId { get; set; }
 }

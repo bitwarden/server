@@ -261,6 +261,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         userEntity.V2UpgradeToken = user.V2UpgradeToken;
 
+        // Key rotation always establishes a new user key, so an absent key id clears any
+        // now-stale value rather than preserving it.
+        userEntity.UserKeyId = user.UserKeyId;
+
         await dbContext.SaveChangesAsync();
 
         //  Update re-encrypted data
@@ -564,6 +568,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
             userEntity.MasterPasswordSalt = masterPasswordUnlockData.Salt;
+            userEntity.UserKeyId = masterPasswordUnlockData.UserKeyId?.ToString();
             // TODO (PM-35501): Persist SecurityStamp so the rotation done in
             // MasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword
             // is persisted.
@@ -605,9 +610,31 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.Key = registerFinishData.MasterKeyWrappedUserKey;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
+            userEntity.UserKeyId = registerFinishData.UserKeyId?.ToString();
 
             await dbContext.SaveChangesAsync();
         };
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> TrySetUserKeyIdAsync(Guid userId, KeyId userKeyId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Resolved before the update expression so it is passed as a parameter rather than
+        // something the provider has to translate.
+        var hexEncodedKeyId = userKeyId.ToString();
+
+        // The UserKeyId == null predicate keeps "only set when not already set" a single
+        // conditional statement, matching the SQL Server implementation.
+        var rowsAffected = await dbContext.Users
+            .Where(u => u.Id == userId && u.UserKeyId == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(u => u.UserKeyId, hexEncodedKeyId)
+                .SetProperty(u => u.RevisionDate, DateTime.UtcNow));
+
+        return rowsAffected > 0;
     }
 
     private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)

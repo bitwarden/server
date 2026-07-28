@@ -61,5 +61,8 @@ public class UpdateExistingKdfConfigurationData
         // Validate Salt is unchanged for user
         MasterPasswordUnlock.ValidateSaltUnchangedForUser(user);
         MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
+
+        // A KDF change re-wraps the existing user key, it MUST NOT change the user-key
+        MasterPasswordUnlock.ValidateUserKeyUnchangedForUser(user);
     }
 }

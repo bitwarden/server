@@ -266,6 +266,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     user.AccountRevisionDate;
                 cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value =
                     user.LastKeyRotationDate;
+                cmd.Parameters.Add("@UserKeyId", SqlDbType.VarChar).Value =
+                    (object?)user.UserKeyId ?? DBNull.Value;
                 cmd.ExecuteNonQuery();
             }
 
@@ -488,7 +490,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
-                    MasterPasswordSalt = masterPasswordUnlockData.Salt
+                    MasterPasswordSalt = masterPasswordUnlockData.Salt,
+                    UserKeyId = masterPasswordUnlockData.UserKeyId?.ToString()
                     // TODO (PM-35501): Add SecurityStamp so the rotation done in
                     // MasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword
                     // is persisted.
@@ -540,10 +543,24 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     Key = registerFinishData.MasterKeyWrappedUserKey,
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
+                    UserKeyId = registerFinishData.UserKeyId?.ToString(),
                 },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
         };
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> TrySetUserKeyIdAsync(Guid userId, KeyId userKeyId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var rowsAffected = await connection.ExecuteScalarAsync<int>(
+            "[dbo].[User_TrySetUserKeyId]",
+            new { Id = userId, UserKeyId = userKeyId.ToString(), RevisionDate = DateTime.UtcNow },
+            commandType: CommandType.StoredProcedure);
+
+        return rowsAffected > 0;
     }
 
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)

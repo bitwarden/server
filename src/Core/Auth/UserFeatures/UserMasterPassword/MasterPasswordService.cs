@@ -67,6 +67,7 @@ internal class MasterPasswordService(
 
         user.Key = setInitialData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
         ApplyKdfStateOnUser(user, setInitialData.MasterPasswordUnlock.Kdf);
+        SetNewUserKeyId(user, setInitialData.MasterPasswordUnlock);
 
         // Set salt on the user
         user.MasterPasswordSalt = setInitialData.MasterPasswordUnlock.Salt;
@@ -159,6 +160,7 @@ internal class MasterPasswordService(
         }
 
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
+        ValidateUserKeyUnchangedForUser(user, updateExistingData.MasterPasswordUnlock);
 
         // Always override the master password hint, even if it's null
         user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
@@ -195,6 +197,7 @@ internal class MasterPasswordService(
 
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
         ApplyKdfStateOnUser(user, updateExistingData.MasterPasswordUnlock.Kdf);
+        ValidateUserKeyUnchangedForUser(user, updateExistingData.MasterPasswordUnlock);
 
         // Always override the master password hint, even if it's null
         user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
@@ -310,6 +313,22 @@ internal class MasterPasswordService(
         user.KdfIterations = kdf.Iterations;
         user.KdfMemory = kdf.Memory;
         user.KdfParallelism = kdf.Parallelism;
+    }
+
+    private static void SetNewUserKeyId(User user, MasterPasswordUnlockData masterPasswordUnlock)
+    {
+        if (masterPasswordUnlock.ContainedKeyId() != null)
+        {
+            user.SetUserKeyId(masterPasswordUnlock.ContainedKeyId()!);
+        }
+    }
+
+    private static void ValidateUserKeyUnchangedForUser(User user, MasterPasswordUnlockData masterPasswordUnlock)
+    {
+        if (masterPasswordUnlock.UserKeyId != null && user.GetUserKeyId() != null && masterPasswordUnlock.ContainedKeyId() != user.GetUserKeyId())
+        {
+            throw new BadRequestException("Master password unlock data must not change the user key.");
+        }
     }
 
     // A properly initialized or database-hydrated User should have at a minimum a non-default user ID.

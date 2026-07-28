@@ -30,6 +30,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.KeyManagement.Controllers;
 
+[KeyIdRequestCustomize]
 public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private static readonly string _mockEncryptedString =

@@ -2214,6 +2214,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UserKeyId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("INTEGER");
 
