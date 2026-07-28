@@ -2,6 +2,8 @@
 #nullable disable
 
 using System.Text.Json;
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -10,6 +12,7 @@ using Bit.Api.Auth.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Response.Organizations;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -476,6 +479,20 @@ public class OrganizationsController : Controller
         }
 
         return new OrganizationPublicKeyResponseModel(org);
+    }
+
+    [HttpGet("{orgId}/private-key")]
+    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<OrganizationPrivateKeyResponseModel> GetPrivateKey(Guid orgId)
+    {
+        var org = await _organizationRepository.GetByIdAsync(orgId);
+        if (org == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return new OrganizationPrivateKeyResponseModel(org);
     }
 
     [Obsolete("TDL-136 Renamed to public-key (2023.8), left for backwards compatibility with older clients.")]

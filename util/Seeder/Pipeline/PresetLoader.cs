@@ -1,4 +1,5 @@
-﻿using Bit.Core.Vault.Enums;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
@@ -123,6 +124,16 @@ internal static class PresetLoader
             builder.WithOrganizationDomain(org.ClaimedDomains);
         }
 
+        if (preset.Sso is not null)
+        {
+            builder.WithSso(
+                preset.Sso.Identifier
+                    ?? throw new InvalidOperationException(
+                        $"Preset '{presetName}' has an 'sso' block without an 'identifier'."),
+                preset.Sso.Provider,
+                ParseMemberDecryptionType(preset.Sso.EncryptionType));
+        }
+
         if (preset.Roster?.Fixture is not null)
         {
             builder.UseRoster(preset.Roster.Fixture, reader);
@@ -213,6 +224,16 @@ internal static class PresetLoader
         LimitCollectionCreation = org.LimitCollectionCreation,
         LimitCollectionDeletion = org.LimitCollectionDeletion,
     };
+
+    private static MemberDecryptionType ParseMemberDecryptionType(string? encryptionType) =>
+        encryptionType?.ToLowerInvariant() switch
+        {
+            null or "" or "masterpassword" => MemberDecryptionType.MasterPassword,
+            "trusteddevices" or "trusteddeviceencryption" => MemberDecryptionType.TrustedDeviceEncryption,
+            "keyconnector" => MemberDecryptionType.KeyConnector,
+            _ => throw new InvalidOperationException(
+                $"Unknown SSO encryptionType '{encryptionType}'. Valid values: masterPassword, trustedDevices, keyConnector."),
+        };
 
     private static DensityProfile? ParseDensity(SeedPresetDensity? preset)
     {

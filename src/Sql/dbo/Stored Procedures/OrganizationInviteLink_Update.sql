@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[OrganizationInviteLink_Update]
     @Id                   UNIQUEIDENTIFIER,
-    @Code                 UNIQUEIDENTIFIER,
+    @Code                 NVARCHAR(300),
     @OrganizationId       UNIQUEIDENTIFIER,
     @AllowedDomains       NVARCHAR(MAX),
     @Invite               NVARCHAR(MAX),

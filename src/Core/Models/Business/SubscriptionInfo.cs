@@ -119,6 +119,13 @@ public class SubscriptionInfo
         /// </para>
         /// </summary>
         public IReadOnlyList<string>? AppliesTo { get; set; }
+
+        /// <summary>
+        /// True when this discount was surfaced from a price-migration schedule's Phase 2 coupon
+        /// rather than a genuine customer- or subscription-level discount. Lets clients distinguish
+        /// a deferred price-migration coupon from a real discount. Defaults to false.
+        /// </summary>
+        public bool IsFromSchedule { get; set; }
     }
 
     public class BillingSubscription

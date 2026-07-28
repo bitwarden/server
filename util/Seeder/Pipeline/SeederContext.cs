@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.RustSDK;
@@ -48,6 +49,8 @@ public sealed class SeederContext(IServiceProvider services)
 
     internal string? Domain { get; set; }
 
+    internal string? SsoIdentifier { get; set; }
+
     internal User? Owner { get; set; }
 
     internal OrganizationUser? OwnerOrgUser { get; set; }
@@ -57,6 +60,8 @@ public sealed class SeederContext(IServiceProvider services)
     internal List<Organization> Organizations { get; } = [];
 
     internal List<OrganizationDomain> OrganizationDomains { get; } = [];
+
+    internal List<SsoConfig> SsoConfigs { get; } = [];
 
     internal List<User> Users { get; } = [];
 

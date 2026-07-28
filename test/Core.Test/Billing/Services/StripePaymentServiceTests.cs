@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
@@ -73,6 +73,7 @@ public class StripePaymentServiceTests
         Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(20m, result.CustomerDiscount.PercentOff);
         Assert.Equal(14.00m, result.CustomerDiscount.AmountOff); // Converted from cents
+        Assert.False(result.CustomerDiscount.IsFromSchedule); // Genuine customer discount, not schedule-derived
     }
 
     [Theory]
@@ -541,6 +542,7 @@ public class StripePaymentServiceTests
         Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(25m, result.CustomerDiscount.PercentOff);
         Assert.True(result.CustomerDiscount.Active);
+        Assert.True(result.CustomerDiscount.IsFromSchedule);
 
         // Assert — schedule was fetched with the phase coupon expand path. Coupon is direct on the
         // phase discount (no `.source` segment); `.applies_to` keeps it within Stripe's 4-level cap.
@@ -1215,8 +1217,6 @@ public class StripePaymentServiceTests
         Assert.True(item.AddonSubscriptionItem);
     }
 
-    #region AdjustSubscription — CompleteSubscriptionUpdate tax exempt alignment
-
     [Theory, BitAutoData]
     public async Task AdjustSubscription_FetchesSubscriptionAndCustomerWithDiscountSourceCouponExpanded(
         SutProvider<StripePaymentService> sutProvider,
@@ -1539,8 +1539,6 @@ public class StripePaymentServiceTests
             Arg.Any<string>(),
             Arg.Any<CustomerUpdateOptions>());
     }
-
-    #endregion
 
     [Theory]
     [BitAutoData]

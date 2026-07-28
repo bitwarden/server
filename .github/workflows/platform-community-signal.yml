@@ -9,6 +9,7 @@ permissions: {}
 jobs:
   signal:
     name: Signal platform-community review
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     uses: bitwarden/gh-actions/.github/workflows/_platform-community-signal.yml@main
     permissions:
       contents: read

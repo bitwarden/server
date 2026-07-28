@@ -1,4 +1,3 @@
-﻿using System.Globalization;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core;
@@ -17,9 +16,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
-using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
-using Bit.Core.Models.Mail.Billing.Renewal.Premium;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
@@ -121,7 +118,6 @@ public class UpcomingInvoiceHandlerTests
         await _stripeAdapter.DidNotReceive()
             .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
     }
-
     [Fact]
     public async Task HandleAsync_WhenValidUser_SendsEmail()
     {
@@ -832,11 +828,6 @@ public class UpcomingInvoiceHandlerTests
         // Assert
         await _providerRepository.Received(2).GetByIdAsync(_providerId);
 
-        // Verify tax exempt was set to reverse for non-direct-tax-country providers
-        await _stripeAdapter.Received(1).UpdateCustomerAsync(
-            Arg.Is("cus_123"),
-            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.Reverse));
-
         // Verify automatic tax was enabled
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is("sub_123"),
@@ -1392,7 +1383,6 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<bool>(),
             Arg.Any<string>());
     }
-
     [Fact]
     public async Task HandleAsync_WhenMilestone3Enabled_AndFamilies2019Plan_UpdatesSubscriptionAndOrganization()
     {
@@ -1764,15 +1754,13 @@ public class UpcomingInvoiceHandlerTests
 
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
-
     [Fact]
-    public async Task HandleAsync_WhenMilestone3Enabled_AndUpdateFails_LogsErrorAndSendsTraditionalEmail()
+    public async Task HandleAsync_Premium_CallsScheduler()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
         var customerId = "cus_123";
         var subscriptionId = "sub_123";
-        var passwordManagerItemId = "si_pm_123";
 
         var invoice = new Invoice
         {
@@ -2924,7 +2912,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount)
             .Returns(new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount });
 
@@ -2938,7 +2925,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_Families_DeferEnabled_CallsScheduler()
+    public async Task HandleAsync_Families_CallsScheduler()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
@@ -2989,7 +2976,6 @@ public class UpcomingInvoiceHandlerTests
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount)
             .Returns(new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount });
@@ -3004,7 +2990,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_FlagOn_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
+    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
@@ -3037,7 +3023,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new TeamsPlan(isAnnual: true));
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
@@ -3093,7 +3078,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_FlagOn_SchedulePresent_CarriesCustomerDiscountIntoFuturePhaseOnly()
+    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_SchedulePresent_CarriesCustomerDiscountIntoFuturePhaseOnly()
     {
         // C1 (worker): carry the customer discount into the FUTURE phase only (StartDate > now), not
         // the active phase 0 — whose discountConsumed predicate is false but which is still billing.
@@ -3133,7 +3118,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new TeamsPlan(isAnnual: true));
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
@@ -3182,7 +3166,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
+    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_NoSchedule_UpdatesSubscriptionDirectly()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
@@ -3211,7 +3195,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new TeamsPlan(isAnnual: true));
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
@@ -3230,7 +3213,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenPremiumUserTaxNotEnabled_FlagOn_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
+    public async Task HandleAsync_WhenPremiumUserTaxNotEnabled_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
@@ -3262,7 +3245,6 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
@@ -3318,7 +3300,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenPremiumUserTaxNotEnabled_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
+    public async Task HandleAsync_WhenPremiumUserTaxNotEnabled_NoSchedule_UpdatesSubscriptionDirectly()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
@@ -3346,7 +3328,6 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
@@ -3365,7 +3346,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenTaxNotEnabled_FlagOn_Phase2Active_SkipsCompletedPhaseAndClearsConsumedDiscounts()
+    public async Task HandleAsync_WhenTaxNotEnabled_Phase2Active_SkipsCompletedPhaseAndClearsConsumedDiscounts()
     {
         // Arrange — Phase 1 has ended, Phase 2 is now the active phase.
         // Phase 2's one-time migration discount was consumed at transition and must not be re-included.
@@ -3399,7 +3380,6 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
@@ -3449,10 +3429,8 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_FlagOn_OrganizationWithMismatchedTaxExempt_DoesNotUpdateCustomerTaxExempt()
+    public async Task HandleAsync_OrganizationWithMismatchedTaxExempt_DoesNotUpdateCustomerTaxExempt()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
-
         var parsedEvent = new Event { Id = "evt_123" };
         var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
         var subscription = new Subscription
@@ -3496,10 +3474,8 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_FlagOn_ProviderWithMismatchedTaxExempt_DoesNotUpdateCustomerTaxExempt()
+    public async Task HandleAsync_ProviderWithMismatchedTaxExempt_DoesNotUpdateCustomerTaxExempt()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
-
         var parsedEvent = new Event { Id = "evt_123" };
         var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
         var subscription = new Subscription
