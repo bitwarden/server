@@ -13,6 +13,9 @@ builder.ConfigureRedis();
 builder.ConfigureIdp();
 var services = builder.ConfigureServices(db, secretsSetup, mail, azurite);
 
+builder.ConfigureSeeder(db, secretsSetup, azurite);
+services["scim"].WithScimClient();
+
 builder.ConfigureWebFrontend(services["api"]);
 
 #if ENABLE_NGROK_COMMUNITY_PLUGIN
