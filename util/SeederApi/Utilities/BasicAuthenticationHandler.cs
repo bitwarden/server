@@ -22,10 +22,12 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
         IOptions<SeederSettings> seederSettings)
         : base(options, logger, encoder)
     {
-        _accounts = seederSettings.Value.Accounts.ToDictionary(
-            a => a.Username,
-            a => Encoding.UTF8.GetBytes(a.Password),
-            StringComparer.Ordinal);
+        // Drop half-configured entries
+        // Repeated usernames use the first configured password
+        _accounts = seederSettings.Value.Accounts
+            .Where(a => !string.IsNullOrEmpty(a.Username) && !string.IsNullOrEmpty(a.Password))
+            .GroupBy(a => a.Username, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => Encoding.UTF8.GetBytes(g.First().Password), StringComparer.Ordinal);
     }
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()

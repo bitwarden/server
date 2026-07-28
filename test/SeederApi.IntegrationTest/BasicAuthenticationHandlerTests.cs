@@ -12,12 +12,20 @@ public class BasicAuthenticationHandlerTests : IClassFixture<SeederApiApplicatio
     private const string Pass1 = "pass1";
     private const string User2 = "user2";
     private const string Pass2 = "pass2";
+    private const string BlankPwUser = "blank-pw-user";
+    private const string OrphanPassword = "orphan-password";
+    private const string DupePass = "different-pass";
 
     private readonly HttpClient _client;
 
     public BasicAuthenticationHandlerTests(SeederApiApplicationFactory factory)
     {
-        factory.ConfigureAccounts((User1, Pass1), (User2, Pass2));
+        factory.ConfigureAccounts(
+            (User1, Pass1),
+            (User2, Pass2),
+            (BlankPwUser, ""),
+            ("", OrphanPassword),
+            (User1, DupePass));
         _client = factory.CreateClient();
     }
 
@@ -163,6 +171,34 @@ public class BasicAuthenticationHandlerTests : IClassFixture<SeederApiApplicatio
         _client.SetBasicAuthentication(User2, Pass2);
         var response = await PostQuery();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task BlankConfiguredPassword_DoesNotAuthenticate_EvenWithEmptySuppliedPassword()
+    {
+        var token = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{BlankPwUser}:"));
+        _client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Basic {token}");
+        var response = await PostQuery();
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task BlankConfiguredUsername_DoesNotAuthenticate_EvenWithMatchingPassword()
+    {
+        var token = Convert.ToBase64String(Encoding.UTF8.GetBytes($":{OrphanPassword}"));
+        _client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Basic {token}");
+        var response = await PostQuery();
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DuplicateConfiguredUsername_LaterOccurrencePasswordRejected()
+    {
+        // First-occurrence-wins is verified by ProtectedEndpoint_WithValidCredentials_ReturnsOk
+        // (User1 is duplicated in the fixture with DupePass, and Pass1 still authenticates).
+        _client.SetBasicAuthentication(User1, DupePass);
+        var response = await PostQuery();
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
