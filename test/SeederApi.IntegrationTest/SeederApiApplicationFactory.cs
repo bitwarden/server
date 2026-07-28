@@ -35,8 +35,8 @@ public class SeederApiApplicationFactory : WebApplicationFactoryBase<Startup>
         {
             builder.AddInMemoryCollection(new Dictionary<string, string>
             {
-                { "seederSettings:Username", username},
-                { "seederSettings:Password", password}
+                { "seederSettings:Accounts:0:Username", username },
+                { "seederSettings:Accounts:0:Password", password }
             });
         });
     }
