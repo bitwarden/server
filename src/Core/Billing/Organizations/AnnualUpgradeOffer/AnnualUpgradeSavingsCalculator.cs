@@ -26,6 +26,14 @@ internal static class AnnualUpgradeSavingsCalculator
     /// equivalent. A line the redemption cannot map is a line the redemption will refuse, so
     /// quoting a figure for it would advertise an offer that cannot be taken.
     /// </summary>
+    /// <remarks>
+    /// The caller must load the subscription with <c>customer</c>, <c>discounts</c>, and
+    /// <c>items.data.discounts</c> expanded. Stripe deserializes an unexpanded discount collection
+    /// as a non-null list of null elements, which this method cannot distinguish from having no
+    /// discounts at all. An unexpanded payload would therefore silently degrade to a list-price
+    /// quote, and because it would also read as zero subscription-level coupons, it could let a
+    /// customer-level coupon that Stripe actually suppresses leak into the calculation.
+    /// </remarks>
     public static AnnualUpgradeSavings? Calculate(
         Subscription subscription, Plan currentPlan, Plan annualLatestPlan)
     {

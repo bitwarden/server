@@ -114,7 +114,7 @@ public class AnnualUpgradeSavingsCalculatorTests
         decimal? percentOff = null,
         long? amountOff = null,
         string duration = "forever",
-        string currency = "usd",
+        string? currency = "usd",
         List<string>? appliesToProducts = null) => new()
         {
             Id = $"di_{couponId}",
@@ -293,5 +293,76 @@ public class AnnualUpgradeSavingsCalculatorTests
         var result = AnnualUpgradeSavingsCalculator.Calculate(subscription, _currentPlan, _annualLatestPlan);
 
         Assert.Equal(_currentPlan.PasswordManager.SeatPrice * 10 * 12, result!.Value.CurrentAnnualCost);
+    }
+
+    [Fact]
+    public void Calculate_ItemAmountOffThenInvoicePercentOff_AppliesInStripeOrder()
+    {
+        // Mixed discount types so the two orderings diverge: item discounts must be struck into
+        // the line before invoice discounts see it. Correct order on the $40 seat line is
+        // (40 - 10) * 0.9 = 27; applying the invoice percentage first would give 40 * 0.9 - 10 = 26.
+        var seats = Item(_currentPlan.PasswordManager.StripeSeatPlanId, 10);
+        seats.Discounts = [Discount("item10off", amountOff: 1000)];
+        var subscription = Subscription(seats);
+        subscription.Discounts = [Discount("invoice10pct", percentOff: 10m)];
+
+        var result = AnnualUpgradeSavingsCalculator.Calculate(subscription, _currentPlan, _annualLatestPlan);
+
+        var expectedMonthly = (_currentPlan.PasswordManager.SeatPrice * 10 - 10m) * 0.9m;
+        var expectedAnnual = (_annualLatestPlan.PasswordManager.SeatPrice * 10 - 10m) * 0.9m;
+        Assert.Equal(expectedMonthly * 12, result!.Value.CurrentAnnualCost);
+        Assert.Equal(expectedAnnual, result.Value.NewAnnualCost);
+    }
+
+    [Fact]
+    public void Calculate_ItemLevelAmountOff_DeductsExactCentsAmountWithoutClamping()
+    {
+        // 500 cents against a $40 line: well short of the line's value, so a correct cents-to-
+        // dollars conversion deducts exactly $5. A 100x conversion error would instead try to
+        // deduct $500 and clamp the line at zero, which this asserts against.
+        var seats = Item(_currentPlan.PasswordManager.StripeSeatPlanId, 10);
+        seats.Discounts = [Discount("fivedollarsoff", amountOff: 500)];
+        var subscription = Subscription(seats);
+
+        var result = AnnualUpgradeSavingsCalculator.Calculate(subscription, _currentPlan, _annualLatestPlan);
+
+        var expectedMonthly = _currentPlan.PasswordManager.SeatPrice * 10 - 5m;
+        Assert.Equal(expectedMonthly * 12, result!.Value.CurrentAnnualCost);
+    }
+
+    [Fact]
+    public void Calculate_UnscopedCouponThenScopedCoupon_AllocatesProportionallyBeforeScoping()
+    {
+        // Seats ($40) and storage ($10) total $50. An unscoped $10 coupon applied first must
+        // allocate proportionally: $8 off seats, $2 off storage, leaving seats at $32 and storage
+        // at $8. The storage-only 50% coupon then halves the already-reduced storage line by $4,
+        // for a $36 total. An equal split would instead leave storage at $5 going into the second
+        // coupon (total $37.50); dumping the whole deduction onto the first line encountered would
+        // leave storage untouched at $10 going into the second coupon (total $35).
+        var subscription = Subscription(
+            Item(_currentPlan.PasswordManager.StripeSeatPlanId, 10),
+            Item(_currentPlan.PasswordManager.StripeStoragePlanId, 20, "prod_storage"));
+        subscription.Discounts =
+        [
+            Discount("tendollarsoff", amountOff: 1000),
+            Discount("storagehalf", percentOff: 50m, appliesToProducts: ["prod_storage"])
+        ];
+
+        var result = AnnualUpgradeSavingsCalculator.Calculate(subscription, _currentPlan, _annualLatestPlan);
+
+        Assert.Equal(36m * 12, result!.Value.CurrentAnnualCost);
+    }
+
+    [Fact]
+    public void Calculate_PercentOffCouponWithNullCurrency_StillApplies()
+    {
+        // Stripe only sets Coupon.Currency on fixed-amount coupons and leaves it null for
+        // percent-off ones, so the currency gate must not run unconditionally.
+        var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 10));
+        subscription.Discounts = [Discount("pctnullcurrency", percentOff: 10m, currency: null)];
+
+        var result = AnnualUpgradeSavingsCalculator.Calculate(subscription, _currentPlan, _annualLatestPlan);
+
+        Assert.Equal(_currentPlan.PasswordManager.SeatPrice * 10 * 0.9m * 12, result!.Value.CurrentAnnualCost);
     }
 }
