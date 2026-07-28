@@ -1,4 +1,4 @@
-namespace Bit.Core.Utilities;
+﻿namespace Bit.Core.Utilities;
 
 /// <summary>
 /// Exception thrown when an SSRF protection check fails.
