@@ -83,7 +83,7 @@ public enum EventType : int
     OrganizationUser_NotificationBannerActionClicked = 1522,
     OrganizationUser_Staged = 1523, // Member provisioned without an invitation (e.g. via SCIM / Directory Connector)
     OrganizationUser_InviteLinkAccepted = 1524, // User was accepted into an organization invite via invite link
-    OrganizationUser_InviteLinkConfirmed = 1525, // User was confirmed into an organization via invite link
+    OrganizationUser_InviteLinkConfirmed = 1526, // User was confirmed into an organization via invite link
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
