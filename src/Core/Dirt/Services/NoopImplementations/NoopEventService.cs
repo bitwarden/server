@@ -59,7 +59,7 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
-    public Task LogOrganizationEventAsync(OrganizationAbility organizationAbility, EventType type, DateTime? date = null)
+    public Task LogOrganizationEventAsync(OrganizationAbility organization, EventType type, DateTime? date = null)
     {
         return Task.FromResult(0);
     }

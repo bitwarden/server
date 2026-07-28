@@ -40,7 +40,7 @@ public interface IEventService
     /// <summary>
     /// Use the cached organization abilities to check for Enabled and UseEvents, then log the event.
     /// </summary>
-    Task LogOrganizationEventAsync(OrganizationAbility organizationAbility, EventType type, DateTime? date = null);
+    Task LogOrganizationEventAsync(OrganizationAbility organization, EventType type, DateTime? date = null);
     Task LogOrganizationEventAsync(Organization organization, EventType type, EventSystemUser systemUser, DateTime? date = null);
     Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null);
     Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events);

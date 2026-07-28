@@ -338,35 +338,19 @@ public class EventService : IEventService
     }
 
     public async Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
+        => await LogOrganizationEventAsync(new OrganizationAbility(organization), type, date);
+
+    public async Task LogOrganizationEventAsync(OrganizationAbility organization, EventType type, DateTime? date = null)
     {
         if (!organization.Enabled || !organization.UseEvents)
         {
             return;
         }
 
-        var e = new EventMessage(_currentContext)
+        var eventMessage = new EventMessage(_currentContext)
         {
             OrganizationId = organization.Id,
             ProviderId = await GetProviderIdAsync(organization.Id),
-            Type = type,
-            ActingUserId = _currentContext?.UserId,
-            Date = date.GetValueOrDefault(DateTime.UtcNow),
-            InstallationId = GetInstallationId(),
-        };
-        await _eventWriteService.CreateAsync(e);
-    }
-
-    public async Task LogOrganizationEventAsync(OrganizationAbility organizationAbility, EventType type, DateTime? date = null)
-    {
-        if (!organizationAbility.Enabled || !organizationAbility.UseEvents)
-        {
-            return;
-        }
-
-        var eventMessage = new EventMessage(_currentContext)
-        {
-            OrganizationId = organizationAbility.Id,
-            ProviderId = await GetProviderIdAsync(organizationAbility.Id),
             Type = type,
             ActingUserId = _currentContext?.UserId,
             Date = date.GetValueOrDefault(DateTime.UtcNow),
