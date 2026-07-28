@@ -732,6 +732,306 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
+    public async Task Run_PersonalOrganization_SchedulePresent_PreservesPhaseMetadata()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var phase1Start = DateTime.UtcNow.AddDays(-10);
+        var phase1End = DateTime.UtcNow.AddDays(5);
+        var phase2End = DateTime.UtcNow.AddDays(370);
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        // The non-cohort key pins the passthrough as unconditional — nothing filters by key.
+        var phaseMetadata = new Dictionary<string, string>
+        {
+            { MetadataKeys.MigrationCohortId, "cohort_123" },
+            { MetadataKeys.MigrationCohortName, "Families 2020 Annual" },
+            { "unrelated_key", "unrelated_value" }
+        };
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = organization.GatewaySubscriptionId,
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase1Start,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_old", Quantity = 1 }],
+                                Discounts = [],
+                                Metadata = phaseMetadata,
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase1End,
+                                EndDate = phase2End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_new", Quantity = 1 }],
+                                Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "milestone-3" }],
+                                Metadata = phaseMetadata,
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[0].Metadata != null &&
+                o.Phases[0].Metadata[MetadataKeys.MigrationCohortId] == "cohort_123" &&
+                o.Phases[0].Metadata[MetadataKeys.MigrationCohortName] == "Families 2020 Annual" &&
+                o.Phases[0].Metadata["unrelated_key"] == "unrelated_value" &&
+                o.Phases[1].Metadata != null &&
+                o.Phases[1].Metadata[MetadataKeys.MigrationCohortId] == "cohort_123" &&
+                o.Phases[1].Metadata[MetadataKeys.MigrationCohortName] == "Families 2020 Annual" &&
+                o.Phases[1].Metadata["unrelated_key"] == "unrelated_value"));
+    }
+
+    [Fact]
+    public async Task Run_PersonalOrganization_SchedulePresent_PhaseMetadataEmpty_StaysEmpty()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var phase1Start = DateTime.UtcNow.AddDays(-10);
+        var phase1End = DateTime.UtcNow.AddDays(5);
+        var phase2End = DateTime.UtcNow.AddDays(370);
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = organization.GatewaySubscriptionId,
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase1Start,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_old", Quantity = 1 }],
+                                Discounts = [],
+                                Metadata = new Dictionary<string, string>(),
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase1End,
+                                EndDate = phase2End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_new", Quantity = 1 }],
+                                Discounts = [],
+                                Metadata = new Dictionary<string, string>(),
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[0].Metadata != null && o.Phases[0].Metadata.Count == 0 &&
+                o.Phases[1].Metadata != null && o.Phases[1].Metadata.Count == 0));
+    }
+
+    [Fact]
+    public async Task Run_PersonalOrganization_MultiPhaseSchedule_PreservesMetadataOnEveryRebuiltPhase()
+    {
+        // Phase 0 has already ended, so it is skipped and the surviving phases shift down by one.
+        // Distinct metadata per phase is what catches an index-shift bug; a uniform dict would hide it.
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var phase0Start = DateTime.UtcNow.AddDays(-370);
+        var phase0End = DateTime.UtcNow.AddDays(-5);
+        var phase1End = DateTime.UtcNow.AddDays(360);
+        var phase2End = DateTime.UtcNow.AddDays(725);
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = organization.GatewaySubscriptionId,
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase0Start,
+                                EndDate = phase0End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_oldest", Quantity = 1 }],
+                                Discounts = [],
+                                Metadata = new Dictionary<string, string> { { MetadataKeys.MigrationCohortId, "cohort_0" } },
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase0End,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_old", Quantity = 1 }],
+                                Discounts = [],
+                                Metadata = new Dictionary<string, string> { { MetadataKeys.MigrationCohortId, "cohort_1" } },
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase1End,
+                                EndDate = phase2End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_new", Quantity = 1 }],
+                                Discounts = [],
+                                Metadata = new Dictionary<string, string> { { MetadataKeys.MigrationCohortId, "cohort_2" } },
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[0].Items[0].Price == "price_old" &&
+                o.Phases[0].Metadata != null &&
+                o.Phases[0].Metadata[MetadataKeys.MigrationCohortId] == "cohort_1" &&
+                o.Phases[1].Items[0].Price == "price_new" &&
+                o.Phases[1].Metadata != null &&
+                o.Phases[1].Metadata[MetadataKeys.MigrationCohortId] == "cohort_2"));
+    }
+
+    [Fact]
     public async Task Run_PersonalOrganization_NoSchedule_UpdatesSubscriptionDirectly()
     {
         var organization = new Organization
