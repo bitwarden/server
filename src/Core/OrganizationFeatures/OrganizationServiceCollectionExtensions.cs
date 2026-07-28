@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.ModifyUserAccess;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Import;
@@ -190,6 +191,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateCollectionCommand, UpdateCollectionCommand>();
         services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();
         services.AddScoped<IBulkAddCollectionAccessCommand, BulkAddCollectionAccessCommand>();
+        services.AddScoped<IModifyCollectionUserAccessCommand, ModifyCollectionUserAccessCommand>();
+        services.AddScoped<IModifyCollectionUserAccessValidator, ModifyCollectionUserAccessValidator>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)
