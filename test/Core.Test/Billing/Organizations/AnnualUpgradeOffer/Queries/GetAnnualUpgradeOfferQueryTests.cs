@@ -5,6 +5,9 @@ using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
+using Bit.Core.Billing.Organizations.Schedules.Enums;
+using Bit.Core.Billing.Organizations.Schedules.Models;
+using Bit.Core.Billing.Organizations.Schedules.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
@@ -23,19 +26,35 @@ public class GetAnnualUpgradeOfferQueryTests
     private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IGetChurnOfferCohortMembershipQuery _getChurnOfferCohortMembershipQuery =
         Substitute.For<IGetChurnOfferCohortMembershipQuery>();
+    private readonly IGetOrganizationSubscriptionScheduleOwnershipQuery _getScheduleOwnershipQuery =
+        Substitute.For<IGetOrganizationSubscriptionScheduleOwnershipQuery>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ILogger<GetAnnualUpgradeOfferQuery> _logger =
         Substitute.For<ILogger<GetAnnualUpgradeOfferQuery>>();
     private readonly GetAnnualUpgradeOfferQuery _query;
 
+    // Default target for the new schedule-ownership and calculator-driven tests below, all of
+    // which put the organization on the legacy TeamsMonthly2020 vintage. Teams2020Plan's own
+    // annual seat price is used as the "annual-latest" plan rather than the current TeamsPlan's,
+    // because TeamsPlan's annual seat price ($48/seat/yr) exactly equals the 2020 monthly rate
+    // annualized ($4/seat/mo x 12), which would zero out savings for a seat-only line and break
+    // the ">0 savings" gate the query applies. Using Teams2020Plan's own annual rate ($36/seat/yr)
+    // keeps a genuine margin without touching any of the given test bodies.
+    private readonly Teams2020Plan _currentPlan = new(isAnnual: false);
+    private readonly Teams2020Plan _annualLatestPlan = new(isAnnual: true);
+
     public GetAnnualUpgradeOfferQueryTests()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(_currentPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(_annualLatestPlan);
+        _getScheduleOwnershipQuery.Run(Arg.Any<Organization>(), Arg.Any<Subscription>())
+            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
+                OrganizationSubscriptionScheduleOwnership.None, null));
         _query = new GetAnnualUpgradeOfferQuery(
-            _logger, _featureService, _getChurnOfferCohortMembershipQuery, _pricingClient, _stripeAdapter);
+            _logger, _featureService, _getChurnOfferCohortMembershipQuery,
+            _getScheduleOwnershipQuery, _pricingClient, _stripeAdapter);
     }
 
     private static Organization CreateOrganization(PlanType planType) => new()
@@ -51,12 +70,20 @@ public class GetAnnualUpgradeOfferQueryTests
         {
             Id = "sub_123",
             CustomerId = "cus_123",
+            Currency = "usd",
             Items = new StripeList<SubscriptionItem> { Data = [.. items] }
         };
         _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
         return subscription;
     }
+
+    private static SubscriptionItem SeatItem(string priceId, long quantity) => new()
+    {
+        Id = $"si_{priceId}",
+        Quantity = quantity,
+        Price = new Price { Id = priceId, ProductId = $"prod_{priceId}" }
+    };
 
     [Fact]
     public async Task Run_FlagDisabled_ReturnsNull_WithoutAnyLookups()
@@ -188,7 +215,7 @@ public class GetAnnualUpgradeOfferQueryTests
     }
 
     [Fact]
-    public async Task Run_NoSeatLineItem_ReturnsNull()
+    public async Task Run_NoLineItems_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         _getChurnOfferCohortMembershipQuery.Run(organization).Returns((ChurnOfferCohortMembership?)null);
@@ -198,140 +225,12 @@ public class GetAnnualUpgradeOfferQueryTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
-        SetupSubscription(organization,
-            new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeStoragePlanId }, Quantity = 2 });
+        // The calculator suppresses when there are no priceable lines at all.
+        SetupSubscription(organization);
 
         var result = await _query.Run(organization);
 
         Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task Run_ActiveScheduleAlreadyTargetsAnnualPrice_ReturnsNull()
-    {
-        var organization = CreateOrganization(PlanType.TeamsMonthly);
-        _getChurnOfferCohortMembershipQuery.Run(organization).Returns((ChurnOfferCohortMembership?)null);
-
-        var monthlyPlan = new TeamsPlan(false);
-        var annualPlan = new TeamsPlan(true);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
-
-        SetupSubscription(organization,
-            new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 20 });
-
-        // A redeemed org keeps its monthly PlanType until renewal; the annual-switch schedule
-        // is the only durable marker of redemption.
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data =
-                [
-                    new SubscriptionSchedule
-                    {
-                        SubscriptionId = "sub_123",
-                        Status = SubscriptionScheduleStatus.Active,
-                        Phases =
-                        [
-                            new SubscriptionSchedulePhase
-                            {
-                                Items = [new SubscriptionSchedulePhaseItem { PriceId = monthlyPlan.PasswordManager.StripeSeatPlanId, Quantity = 20 }]
-                            },
-                            new SubscriptionSchedulePhase
-                            {
-                                Items = [new SubscriptionSchedulePhaseItem { PriceId = annualPlan.PasswordManager.StripeSeatPlanId, Quantity = 20 }]
-                            }
-                        ]
-                    }
-                ]
-            });
-
-        var result = await _query.Run(organization);
-
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task Run_ActiveScheduleTargetsMonthlyPrice_StillReturnsOffer()
-    {
-        var organization = CreateOrganization(PlanType.TeamsMonthly);
-        _getChurnOfferCohortMembershipQuery.Run(organization).Returns((ChurnOfferCohortMembership?)null);
-
-        var monthlyPlan = new TeamsPlan(false);
-        var annualPlan = new TeamsPlan(true);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
-
-        SetupSubscription(organization,
-            new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 20 });
-
-        // A Track A migration schedule targets a monthly price in its future phase; it must
-        // NOT suppress the offer (redeeming releases and replaces it).
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data =
-                [
-                    new SubscriptionSchedule
-                    {
-                        SubscriptionId = "sub_123",
-                        Status = SubscriptionScheduleStatus.Active,
-                        Phases =
-                        [
-                            new SubscriptionSchedulePhase
-                            {
-                                Items = [new SubscriptionSchedulePhaseItem { PriceId = monthlyPlan.PasswordManager.StripeSeatPlanId, Quantity = 20 }]
-                            }
-                        ]
-                    }
-                ]
-            });
-
-        var result = await _query.Run(organization);
-
-        Assert.NotNull(result);
-    }
-
-    [Fact]
-    public async Task Run_AnnualScheduleForDifferentSubscriptionOrInactive_StillReturnsOffer()
-    {
-        var organization = CreateOrganization(PlanType.TeamsMonthly);
-        _getChurnOfferCohortMembershipQuery.Run(organization).Returns((ChurnOfferCohortMembership?)null);
-
-        var monthlyPlan = new TeamsPlan(false);
-        var annualPlan = new TeamsPlan(true);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
-
-        SetupSubscription(organization,
-            new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 20 });
-
-        // Two schedules carry the annual seat price but neither marks THIS subscription as
-        // redeemed: one belongs to a different subscription, the other is not active. The offer
-        // must still surface.
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data =
-                [
-                    new SubscriptionSchedule
-                    {
-                        SubscriptionId = "sub_other",
-                        Status = SubscriptionScheduleStatus.Active,
-                        Phases = [new SubscriptionSchedulePhase { Items = [new SubscriptionSchedulePhaseItem { PriceId = annualPlan.PasswordManager.StripeSeatPlanId, Quantity = 20 }] }]
-                    },
-                    new SubscriptionSchedule
-                    {
-                        SubscriptionId = "sub_123",
-                        Status = SubscriptionScheduleStatus.Canceled,
-                        Phases = [new SubscriptionSchedulePhase { Items = [new SubscriptionSchedulePhaseItem { PriceId = annualPlan.PasswordManager.StripeSeatPlanId, Quantity = 20 }] }]
-                    }
-                ]
-            });
-
-        var result = await _query.Run(organization);
-
-        Assert.NotNull(result);
     }
 
     [Fact]
@@ -354,5 +253,151 @@ public class GetAnnualUpgradeOfferQueryTests
 
         Assert.NotNull(result);
         Assert.Equal(monthlyPlan.PasswordManager.SeatPrice * 20 * 12, result.CurrentAnnualCost);
+    }
+
+    [Fact]
+    public async Task Run_ForeignSchedule_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        _getScheduleOwnershipQuery.Run(organization, subscription)
+            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
+                OrganizationSubscriptionScheduleOwnership.Foreign,
+                new SubscriptionSchedule { Id = "sub_sched_finance" }));
+
+        Assert.Null(await _query.Run(organization));
+    }
+
+    [Fact]
+    public async Task Run_AnnualUpgradeSchedule_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        _getScheduleOwnershipQuery.Run(organization, subscription)
+            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
+                OrganizationSubscriptionScheduleOwnership.AnnualUpgrade,
+                new SubscriptionSchedule { Id = "sub_sched_annual" }));
+
+        Assert.Null(await _query.Run(organization));
+    }
+
+    [Fact]
+    public async Task Run_PriceMigrationSchedule_StillReturnsOffer()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        _getScheduleOwnershipQuery.Run(organization, subscription)
+            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
+                OrganizationSubscriptionScheduleOwnership.PriceMigration,
+                new SubscriptionSchedule { Id = "sub_sched_migration" }));
+
+        Assert.NotNull(await _query.Run(organization));
+    }
+
+    [Fact]
+    public async Task Run_ExpandsScheduleAndDiscounts()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        SetupSubscription(organization, SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+
+        await _query.Run(organization);
+
+        await _stripeAdapter.Received(1).GetSubscriptionAsync(
+            organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.Contains("schedule") &&
+                options.Expand.Contains("customer") &&
+                options.Expand.Contains("customer.discount.coupon.applies_to") &&
+                options.Expand.Contains("discounts.coupon.applies_to") &&
+                options.Expand.Contains("items.data.discounts.coupon")));
+    }
+
+    [Fact]
+    public async Task Run_SecretsManagerLines_IncludedInBothFigures()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5),
+            SeatItem(_currentPlan.SecretsManager.StripeSeatPlanId, 3));
+
+        var result = await _query.Run(organization);
+
+        var expectedMonthly =
+            _currentPlan.PasswordManager.SeatPrice * 5 +
+            _currentPlan.SecretsManager.SeatPrice * 3;
+        Assert.NotNull(result);
+        Assert.Equal(expectedMonthly * 12, result!.CurrentAnnualCost);
+    }
+
+    [Fact]
+    public async Task Run_UnmappableLineItem_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5),
+            SeatItem("price_sponsorship", 1));
+
+        Assert.Null(await _query.Run(organization));
+    }
+
+    [Fact]
+    public async Task Run_ItemDiscountsPresentButUnexpanded_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+
+        // Construct the subscription via the same JSON path Stripe.NET uses on API responses: when
+        // "discounts" is not in the request's Expand list, the SDK populates an item's Discounts
+        // with a same-length list of null entries. Direct assignment of `[null]` is rewritten by
+        // the SDK's expandable-field setter (see RedeemAnnualUpgradeOfferCommandTests for the same
+        // workaround), so JSON deserialization is the only way to reproduce the unexpanded state
+        // in a unit test.
+        var unexpandedJson = $$"""
+            {
+              "id": "sub_123",
+              "object": "subscription",
+              "customer": "cus_123",
+              "currency": "usd",
+              "items": {
+                "object": "list",
+                "data": [
+                  {
+                    "id": "si_seat",
+                    "object": "subscription_item",
+                    "quantity": 5,
+                    "price": { "id": "{{_currentPlan.PasswordManager.StripeSeatPlanId}}", "object": "price", "product": "prod_pm" },
+                    "discounts": ["di_1"]
+                  }
+                ]
+              }
+            }
+            """;
+        var subscription = Newtonsoft.Json.JsonConvert.DeserializeObject<Subscription>(unexpandedJson)!;
+        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        Assert.Null(await _query.Run(organization));
+    }
+
+    [Fact]
+    public async Task Run_AmountOffCouponMakesMonthlyCheaper_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        // A fixed amount comes off twelve monthly invoices but only one annual invoice, so a large
+        // enough coupon genuinely leaves the organization better off staying monthly.
+        subscription.Discounts =
+        [
+            new Discount
+            {
+                Id = "di_big",
+                Coupon = new Coupon { Id = "big", AmountOff = 10_000, Duration = "forever", Currency = "usd" }
+            }
+        ];
+
+        Assert.Null(await _query.Run(organization));
     }
 }

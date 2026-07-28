@@ -1,8 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
+using Bit.Core.Billing.Organizations.Schedules.Enums;
+using Bit.Core.Billing.Organizations.Schedules.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
@@ -11,15 +12,23 @@ using Stripe;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 
-using static StripeConstants;
-
 public class GetAnnualUpgradeOfferQuery(
     ILogger<GetAnnualUpgradeOfferQuery> logger,
     IFeatureService featureService,
     IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
+    IGetOrganizationSubscriptionScheduleOwnershipQuery getScheduleOwnershipQuery,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : IGetAnnualUpgradeOfferQuery
 {
+    private static readonly List<string> SubscriptionExpansions =
+    [
+        "schedule",
+        "customer",
+        "customer.discount.coupon.applies_to",
+        "discounts.coupon.applies_to",
+        "items.data.discounts.coupon"
+    ];
+
     public async Task<AnnualUpgradeOfferResult?> Run(Organization organization)
     {
         // Kill switch: the offer shares the business plan migration program's flag so ops can
@@ -54,46 +63,61 @@ public class GetAnnualUpgradeOfferQuery(
         var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, logger, organization, nameof(GetAnnualUpgradeOfferQuery));
+            stripeAdapter, logger, organization, nameof(GetAnnualUpgradeOfferQuery), SubscriptionExpansions);
         if (subscription is null)
         {
             return null;
         }
 
-        // A redeemed org keeps its monthly PlanType until renewal, so the annual-switch schedule
-        // is the only durable marker that the offer was already taken. Only the annual-latest
-        // seat price suppresses: a Track A migration schedule targets a monthly price and must
-        // keep the offer visible (redeeming releases and replaces that schedule).
-        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
-        var alreadyRedeemed = schedules.Data.Any(s =>
-            s.SubscriptionId == subscription.Id &&
-            s.Status == SubscriptionScheduleStatus.Active &&
-            s.Phases.Any(p => p.Items.Any(i => i.PriceId == annualLatestPlan.PasswordManager.StripeSeatPlanId)));
-        if (alreadyRedeemed)
+        // Stripe.NET deserializes an unexpanded discount array as a list of null entries.
+        // Quoting from one would silently price the organization as if it had no discounts.
+        if (HasUnexpandedDiscounts(subscription))
+        {
+            logger.LogError(
+                "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded with unexpanded discounts; refusing to quote a savings figure",
+                nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id);
+            return null;
+        }
+
+        var ownership = await getScheduleOwnershipQuery.Run(organization, subscription);
+        switch (ownership.Ownership)
+        {
+            // A redeemed organization keeps its monthly PlanType until renewal, so the annual
+            // schedule is the only durable marker that the offer was already taken.
+            case OrganizationSubscriptionScheduleOwnership.AnnualUpgrade:
+                logger.LogInformation(
+                    "{Query}: Organization ({OrganizationId}) already redeemed the annual upgrade offer; suppressing",
+                    nameof(GetAnnualUpgradeOfferQuery), organization.Id);
+                return null;
+
+            // Redeeming would have to release a schedule Bitwarden did not create, for example a
+            // negotiated renewal built by hand in the Stripe Dashboard. Never show an offer whose
+            // redemption we would refuse.
+            case OrganizationSubscriptionScheduleOwnership.Foreign:
+                logger.LogWarning(
+                    "{Query}: Organization ({OrganizationId}) has an unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}); suppressing the annual upgrade offer",
+                    nameof(GetAnnualUpgradeOfferQuery), organization.Id, ownership.Schedule?.Id, subscription.Id);
+                return null;
+        }
+
+        var savings = AnnualUpgradeSavingsCalculator.Calculate(subscription, currentPlan, annualLatestPlan);
+        if (savings is null)
         {
             return null;
         }
 
-        // Savings quote what Stripe actually bills: the purchased seat quantity on the
-        // subscription's seat line, which the redemption schedule preserves and the renewal
-        // invoice charges. Occupied seats can be lower and would understate both figures.
-        var seatItem = subscription.Items.Data.FirstOrDefault(i =>
-            i.Price?.Id == currentPlan.PasswordManager.StripeSeatPlanId);
-        if (seatItem is null)
+        var difference = savings.Value.CurrentAnnualCost - savings.Value.NewAnnualCost;
+        if (difference <= 0)
         {
             return null;
         }
 
-        var currentAnnualCost = currentPlan.PasswordManager.SeatPrice * seatItem.Quantity * 12;
-        var newAnnualCost = annualLatestPlan.PasswordManager.SeatPrice * seatItem.Quantity;
-        var savings = currentAnnualCost - newAnnualCost;
-
-        if (savings <= 0)
-        {
-            return null;
-        }
-
-        return new AnnualUpgradeOfferResult(currentAnnualCost, newAnnualCost, savings);
+        return new AnnualUpgradeOfferResult(
+            savings.Value.CurrentAnnualCost, savings.Value.NewAnnualCost, difference);
     }
+
+    private static bool HasUnexpandedDiscounts(Subscription subscription) =>
+        (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d is null)) ||
+        subscription.Items.Data.Any(item =>
+            item.Discounts is { Count: > 0 } && item.Discounts.Any(d => d is null));
 }
