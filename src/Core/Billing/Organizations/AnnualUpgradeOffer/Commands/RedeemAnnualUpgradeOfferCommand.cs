@@ -47,7 +47,7 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, _logger, organization, CommandName,
-            ["customer", "discounts.coupon", "items.data.discounts.coupon", "schedule"]);
+            ["discounts.coupon", "items.data.discounts.coupon", "schedule"]);
         if (subscription is null)
         {
             return DefaultConflict;
@@ -140,15 +140,26 @@ public class RedeemAnnualUpgradeOfferCommand(
             var phase1 = schedule.Phases[0];
 
             // Phase 1 is the in-flight phase; Stripe rejects the update unless it
-            // round-trips unchanged, including any discounts already on it.
+            // round-trips unchanged, including any discounts already on it, whether at the
+            // phase level or bound to an individual item.
             var phase1Options = new SubscriptionSchedulePhaseOptions
             {
                 StartDate = phase1.StartDate,
                 EndDate = phase1.EndDate,
-                Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
+                Items = [.. phase1.Items.Select(i =>
                 {
-                    Price = i.PriceId,
-                    Quantity = i.Quantity
+                    var itemDiscounts = i.Discounts is { Count: > 0 } ?
+                        i.Discounts.Select(d => new SubscriptionSchedulePhaseItemDiscountOptions
+                        {
+                            Coupon = d.CouponId
+                        }).ToList() : null;
+
+                    return new SubscriptionSchedulePhaseItemOptions
+                    {
+                        Price = i.PriceId,
+                        Quantity = i.Quantity,
+                        Discounts = itemDiscounts
+                    };
                 })],
                 Discounts = phase1.Discounts is { Count: > 0 } ?
                 [

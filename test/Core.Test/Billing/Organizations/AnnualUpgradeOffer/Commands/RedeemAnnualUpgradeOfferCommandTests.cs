@@ -144,7 +144,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
         Assert.True(result.IsT0);
         await _stripeAdapter.Received(1).GetSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionGetOptions>(o =>
-                o.Expand.Contains("customer") &&
                 o.Expand.Contains("discounts.coupon") &&
                 o.Expand.Contains("items.data.discounts.coupon") &&
                 o.Expand.Contains("schedule")));
@@ -272,6 +271,43 @@ public class RedeemAnnualUpgradeOfferCommandTests
               "object": "subscription",
               "customer": "cus_123",
               "discounts": ["di_abc"]
+            }
+            """;
+        var subscription = Newtonsoft.Json.JsonConvert.DeserializeObject<Subscription>(unexpandedJson)!;
+        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT2);
+        await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_UnexpandedItemDiscounts_ReturnsConflict_WithoutMutatingStripe()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        _getOfferQuery.Run(organization).Returns(new AnnualUpgradeOfferResult(60m, 48m, 12m));
+
+        // Same JSON-deserialization approach as the subscription-level unexpanded-discounts test
+        // above: when "items.data.discounts.coupon" is not in the request's Expand list,
+        // Stripe.NET populates each item's Discounts with a same-length list of null entries.
+        const string unexpandedJson = """
+            {
+              "id": "sub_123",
+              "object": "subscription",
+              "customer": "cus_123",
+              "items": {
+                "object": "list",
+                "data": [
+                  {
+                    "id": "si_123",
+                    "object": "subscription_item",
+                    "discounts": ["di_line"]
+                  }
+                ]
+              }
             }
             """;
         var subscription = Newtonsoft.Json.JsonConvert.DeserializeObject<Subscription>(unexpandedJson)!;
@@ -511,5 +547,103 @@ public class RedeemAnnualUpgradeOfferCommandTests
         // does not specify discounts, which is exactly the discount the subscription bills under today.
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id,
             Arg.Is<SubscriptionScheduleUpdateOptions>(options => options.Phases[1].Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_Phase1DiscountsEmpty_LeavesPhase1DiscountsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        // An empty (but non-null) collection is what Stripe actually returns when a phase has no
+        // discounts; a null-only check on this would let an empty array slip through instead of
+        // being normalized to null.
+        var (_, schedule) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
+            phase1Discounts: []);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(options => options.Phases[0].Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_SubscriptionDiscountsEmpty_LeavesPhase2DiscountsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        // An empty (but non-null) collection, not the null-source case the "?." already handles.
+        var (_, schedule) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
+            subscriptionDiscounts: []);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(options => options.Phases[1].Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_ItemDiscountsEmpty_LeavesPhaseTwoItemDiscountsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        // An empty (but non-null) collection on the item itself, distinct from
+        // Run_ItemWithoutDiscounts_LeavesPhaseTwoItemDiscountsNull above, which never sets
+        // Discounts at all and so only exercises the null-source case.
+        var seatItem = new SubscriptionItem
+        {
+            Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId },
+            Quantity = 10,
+            Discounts = []
+        };
+        var (_, schedule) = SetupRedeemableSubscription(organization, [seatItem]);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(options =>
+                options.Phases[1].Items.All(item => item.Discounts == null)));
+    }
+
+    [Fact]
+    public async Task Run_Phase1ItemHasDiscount_SurvivesRoundTrip()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var (_, schedule) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
+        // The schedule Stripe builds from FromSubscription already mirrors the subscription's
+        // current item-level discount onto Phase 1; the rebuild must carry it across unchanged
+        // rather than stripping it for the remainder of the current term.
+        schedule.Phases[0].Items[0].Discounts =
+            [new SubscriptionSchedulePhaseItemDiscount { CouponId = "line-coupon" }];
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(options =>
+                options.Phases[0].Items[0].Discounts != null &&
+                options.Phases[0].Items[0].Discounts.Any(d => d.Coupon == "line-coupon")));
     }
 }
