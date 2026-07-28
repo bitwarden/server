@@ -44,15 +44,45 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithOrganizationNotFound_ReturnsInviteLinkNotFound(
+    public async Task AcceptAsync_WithCodeMismatch_ReturnsInviteLinkNotFound(
         AcceptOrganizationInviteLinkRequest request,
         OrganizationInviteLink inviteLink,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
+        inviteLink.OrganizationId = request.OrganizationId;
+        inviteLink.Code = Guid.NewGuid().ToString();
+
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(inviteLink.Code)
+            .GetByOrganizationIdAsync(request.OrganizationId)
             .Returns(inviteLink);
 
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkNotFound>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptAsync_WithOrganizationNotFound_ReturnsInviteLinkNotFound(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        var code = Guid.NewGuid();
+        inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = code.ToString();
+
+        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(inviteLink);
+
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = code,
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -63,20 +93,28 @@ public class AcceptOrganizationInviteLinkCommandTests
     public async Task AcceptAsync_WithOrganizationDisabled_ReturnsInviteLinkNotFound(
         Organization organization,
         OrganizationInviteLink inviteLink,
-        AcceptOrganizationInviteLinkRequest request,
+        User user,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         organization.Enabled = false;
         inviteLink.OrganizationId = organization.Id;
+        var code = Guid.NewGuid();
+        inviteLink.Code = code.ToString();
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(inviteLink.Code)
+            .GetByOrganizationIdAsync(organization.Id)
             .Returns(inviteLink);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = code,
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -87,21 +125,22 @@ public class AcceptOrganizationInviteLinkCommandTests
     public async Task AcceptAsync_WithOrganizationNotUsingInviteLinks_ReturnsInviteLinkNotAvailable(
         Organization organization,
         OrganizationInviteLink inviteLink,
-        AcceptOrganizationInviteLinkRequest request,
+        User user,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         organization.Enabled = true;
         organization.UseInviteLinks = false;
         inviteLink.OrganizationId = organization.Id;
 
-        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(request.Code)
-            .Returns(inviteLink);
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        organization.UseInviteLinks = false;
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -119,7 +158,12 @@ public class AcceptOrganizationInviteLinkCommandTests
         inviteLink.AllowedDomains = "[\"allowed.com\"]";
         user.Email = "user@notallowed.com";
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -136,13 +180,17 @@ public class AcceptOrganizationInviteLinkCommandTests
         SetupHappyPath(organization, inviteLink, user, sutProvider);
         user.EmailVerified = false;
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
         Assert.IsType<EmailNotVerified>(result.AsError);
 
-        // Guard runs in the validation phase - no membership should be created.
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(default!);
@@ -166,7 +214,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetByOrganizationAsync(organization.Id, user.Id)
             .Returns(revokedOrganizationUser);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -190,7 +243,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetByOrganizationEmailAsync(organization.Id, user.Email)
             .Returns(revokedEmailInvite);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -218,7 +276,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetByOrganizationAsync(organization.Id, user.Id)
             .Returns(existingOrganizationUser);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -243,7 +306,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetByOrganizationEmailAsync(organization.Id, user.Email)
             .Returns(invitedOrganizationUser);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsSuccess);
@@ -286,7 +354,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetCountByFreeOrganizationAdminUserAsync(user.Id)
             .Returns(1);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -319,7 +392,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetCountByFreeOrganizationAdminUserAsync(user.Id)
             .Returns(0);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsSuccess);
@@ -345,7 +423,12 @@ public class AcceptOrganizationInviteLinkCommandTests
                 Invalid(new AcceptOrganizationMembershipValidationResult(),
                     new UserIsAMemberOfAnotherOrganization())));
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -372,7 +455,12 @@ public class AcceptOrganizationInviteLinkCommandTests
                 Invalid(new AcceptOrganizationMembershipValidationResult(),
                     new TwoFactorRequiredForMembership())));
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -407,7 +495,13 @@ public class AcceptOrganizationInviteLinkCommandTests
                 }
             ]));
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user, ResetPasswordKey = null };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+            ResetPasswordKey = null
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -432,7 +526,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
             .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -461,7 +560,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
             .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -496,7 +600,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .AutoAddSeatsAsync(organization, 1)
             .Throws(businessFailure);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -525,7 +634,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .AutoAddSeatsAsync(organization, 1)
             .Throws(new InvalidOperationException("stripe outage"));
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.AcceptAsync(request));
 
@@ -549,7 +663,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
             .Returns(new List<OrganizationUserUserDetails> { adminDetails });
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsSuccess);
@@ -613,7 +732,8 @@ public class AcceptOrganizationInviteLinkCommandTests
         var resetPasswordKey = "valid-key-123";
         var request = new AcceptOrganizationInviteLinkRequest
         {
-            Code = inviteLink.Code,
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
             User = user,
             ResetPasswordKey = resetPasswordKey
         };
@@ -635,7 +755,12 @@ public class AcceptOrganizationInviteLinkCommandTests
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsSuccess);
@@ -655,7 +780,12 @@ public class AcceptOrganizationInviteLinkCommandTests
         SetupHappyPath(organization, inviteLink, user, sutProvider);
         SetupAutoConfirmPolicy(organization, user, sutProvider);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsSuccess);
@@ -673,7 +803,12 @@ public class AcceptOrganizationInviteLinkCommandTests
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsSuccess);
@@ -696,7 +831,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetManyByUserAsync(user.Id)
             .Returns([providerUser]);
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -724,7 +864,12 @@ public class AcceptOrganizationInviteLinkCommandTests
                 Invalid(new AcceptOrganizationMembershipValidationResult(),
                     new UserCannotBelongToAnotherOrganization())));
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
@@ -751,7 +896,12 @@ public class AcceptOrganizationInviteLinkCommandTests
             .DeleteAllByUserIdAsync(user.Id)
             .Throws(new InvalidOperationException("db failure"));
 
-        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.AcceptAsync(request));
 
@@ -778,10 +928,6 @@ public class AcceptOrganizationInviteLinkCommandTests
                 })));
     }
 
-    /// <summary>
-    /// Configures the default "happy path" mocks so individual tests only need
-    /// to override the one thing they are testing.
-    /// </summary>
     private static void SetupHappyPath(
         Organization org,
         OrganizationInviteLink link,
@@ -793,12 +939,13 @@ public class AcceptOrganizationInviteLinkCommandTests
         org.Seats = 10;
         org.MaxAutoscaleSeats = null;
         link.OrganizationId = org.Id;
+        link.Code = Guid.NewGuid().ToString();
         link.AllowedDomains = "[\"example.com\"]";
         user.Email = "user@example.com";
         user.EmailVerified = true;
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByCodeAsync(link.Code)
+            .GetByOrganizationIdAsync(org.Id)
             .Returns(link);
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -821,7 +968,6 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetManyByUserAsync(user.Id)
             .Returns(new List<OrganizationUser>());
 
-        // No provider membership by default
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetManyByUserAsync(user.Id)
             .Returns([]);
@@ -830,7 +976,6 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
             .Returns(new ResetPasswordPolicyRequirement([]));
 
-        // Membership validator returns valid (no restrictions) by default
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
             .ValidateAsync(Arg.Is<AcceptOrganizationMembershipValidationRequest>(r =>
                 r.OrganizationId == org.Id && r.User == user))

@@ -6,7 +6,7 @@ public interface IValidateOrganizationInviteLinkEmailDomainQuery
 {
     /// <summary>
     /// Returns whether the email's domain is allowed by the invite link,
-    /// or an error if the invite link does not exist.
+    /// or an error if the invite link does not exist or the code does not match.
     /// </summary>
-    Task<CommandResult<bool>> ValidateAsync(Guid code, string email);
+    Task<CommandResult<bool>> ValidateAsync(Guid organizationId, Guid code, string email);
 }

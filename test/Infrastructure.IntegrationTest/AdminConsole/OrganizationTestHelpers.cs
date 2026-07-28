@@ -205,7 +205,7 @@ public static class OrganizationTestHelpers
         string identifier = "test")
         => repository.CreateAsync(new OrganizationInviteLink
         {
-            Code = Guid.NewGuid(),
+            Code = Guid.NewGuid().ToString(),
             OrganizationId = organization.Id,
             AllowedDomains = "[\"example.com\"]",
             Invite = $"invite-blob-{identifier}",
