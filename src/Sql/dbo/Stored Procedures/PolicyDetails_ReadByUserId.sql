@@ -31,7 +31,7 @@ WHERE
             -- (Note: this excludes "invited but revoked" users who don't have an OU.UserId yet,
             -- but those users will go through policy enforcement later as part of accepting their invite after being restored.
             -- This is an intentionally unhandled edge case for now.)
-            (OU.[Status] != 0 AND OU.[UserId] = @UserId)
+            (OU.[Status] IN (-1, 1, 2) AND OU.[UserId] = @UserId)
 
             -- 'Invited' OrgUsers are not linked to a UserId yet, so we have to look up their email
             OR EXISTS (

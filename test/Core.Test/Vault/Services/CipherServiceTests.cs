@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -797,7 +798,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipher.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -884,7 +885,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -915,7 +916,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -1048,7 +1049,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -1110,7 +1111,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -1366,7 +1367,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -1396,7 +1397,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -1553,7 +1554,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -1601,7 +1602,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -1654,7 +1655,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -1667,7 +1668,7 @@ public class CipherServiceTests
 
         Assert.Contains("Cipher does not belong to the input organization.", exception.Message);
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
              .Received(1)
              .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
                  ids.Contains(targetOrgId) &&
@@ -1810,7 +1811,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -1841,7 +1842,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -1981,7 +1982,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -2030,7 +2031,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {

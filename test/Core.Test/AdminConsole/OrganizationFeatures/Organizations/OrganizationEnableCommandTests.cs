@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -27,7 +27,7 @@ public class OrganizationEnableCommandTests
         await sutProvider.GetDependency<IOrganizationRepository>()
             .DidNotReceive()
             .ReplaceAsync(Arg.Any<Organization>());
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .DidNotReceive()
             .UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
     }
@@ -47,7 +47,7 @@ public class OrganizationEnableCommandTests
         await sutProvider.GetDependency<IOrganizationRepository>()
             .DidNotReceive()
             .ReplaceAsync(Arg.Any<Organization>());
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .DidNotReceive()
             .UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
     }
@@ -68,7 +68,7 @@ public class OrganizationEnableCommandTests
         await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
             .ReplaceAsync(organization);
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .UpsertOrganizationAbilityAsync(organization);
     }
@@ -90,7 +90,7 @@ public class OrganizationEnableCommandTests
         await sutProvider.GetDependency<IOrganizationRepository>()
             .DidNotReceive()
             .ReplaceAsync(Arg.Any<Organization>());
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .DidNotReceive()
             .UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
     }
@@ -117,7 +117,7 @@ public class OrganizationEnableCommandTests
         await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
             .ReplaceAsync(organization);
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .UpsertOrganizationAbilityAsync(organization);
     }
@@ -140,7 +140,7 @@ public class OrganizationEnableCommandTests
         await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
             .ReplaceAsync(organization);
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .UpsertOrganizationAbilityAsync(organization);
     }

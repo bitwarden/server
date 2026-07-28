@@ -40,6 +40,30 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
             commandType: CommandType.StoredProcedure);
     }
 
+    public async Task<IReadOnlyList<CohortAssignmentExportRow>> GetExportRowsByCohortIdAsync(
+        Guid cohortId, DateTime? afterCreationDate, Guid? afterId, int take)
+    {
+        if (afterCreationDate is null != (afterId is null))
+        {
+            throw new ArgumentException("afterCreationDate and afterId must both be set or both be null.");
+        }
+
+        await using var connection = new SqlConnection(ReadOnlyConnectionString);
+
+        var results = await connection.QueryAsync<CohortAssignmentExportRow>(
+            $"[{Schema}].[{Table}_ReadManyExportByCohortId]",
+            new
+            {
+                CohortId = cohortId,
+                AfterCreationDate = afterCreationDate,
+                AfterId = afterId,
+                Take = take,
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
     public async Task<CohortBulkAssignmentSummary> SyncManyAsync(
         IEnumerable<ResolvedCohortBulkAssignmentRow> rows)
     {
@@ -57,5 +81,22 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
             $"[{Schema}].[{Table}_UpdateManySync]",
             new { JsonData = jsonData, RevisionDate = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<IReadOnlyList<OrganizationPlanMigrationCohortAssignment>> GetSendInvoiceCandidatesInWindowAsync(int minDays, int maxDays)
+    {
+        if (minDays > maxDays)
+        {
+            throw new ArgumentException("minDays must be less than or equal to maxDays.");
+        }
+
+        await using var connection = new SqlConnection(ReadOnlyConnectionString);
+
+        var results = await connection.QueryAsync<OrganizationPlanMigrationCohortAssignment>(
+            $"[{Schema}].[{Table}_ReadManyByExpirationDateRange]",
+            new { MinDays = minDays, MaxDays = maxDays },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
     }
 }

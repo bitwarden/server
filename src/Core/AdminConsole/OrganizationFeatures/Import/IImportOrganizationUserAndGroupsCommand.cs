@@ -11,6 +11,7 @@ public interface IImportOrganizationUsersAndGroupsCommand
         IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers,
         IEnumerable<string> removeUserExternalIds,
-        bool overwriteExisting
+        bool overwriteExisting,
+        bool inviteUsersAfterProvisioning
     );
 }

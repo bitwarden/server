@@ -106,6 +106,9 @@ public class UpgradeOrganizationPlanVNextCommandTests
         Assert.Equal(targetPlan.Type, organization.PlanType);
         Assert.Equal(targetPlan.PasswordManager.BaseStorageGb, organization.MaxStorageGb);
         Assert.Null(organization.SmServiceAccounts);
+        Assert.False(targetPlan.HasRiskInsights);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
+        Assert.False(organization.UseRiskInsights);
     }
 
     [Fact]
@@ -294,6 +297,9 @@ public class UpgradeOrganizationPlanVNextCommandTests
         Assert.Equal(targetPlan.AutomaticUserConfirmation, organization.UseAutomaticUserConfirmation);
         Assert.Equal(targetPlan.HasMyItems, organization.UseMyItems);
         Assert.Equal(targetPlan.HasInviteLinks, organization.UseInviteLinks);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
+        Assert.True(targetPlan.HasRiskInsights);
+        Assert.True(organization.UseRiskInsights);
     }
 
     [Fact]

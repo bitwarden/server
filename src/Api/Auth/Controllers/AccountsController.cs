@@ -26,7 +26,6 @@ using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -470,11 +469,7 @@ public class AccountsController : Controller
 
         var accountKeys = await _userAccountKeysQuery.Run(user);
 
-        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null;
-        if (_featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState))
-        {
-            organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
-        }
+        var organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
         var response = new ProfileResponseModel(user, accountKeys, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,

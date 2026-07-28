@@ -20,7 +20,7 @@ internal static class SecureNoteCipherSeeder
             Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToSecureNoteData(), CipherType.SecureNote, options.OrganizationId, options.UserId);
     }
 

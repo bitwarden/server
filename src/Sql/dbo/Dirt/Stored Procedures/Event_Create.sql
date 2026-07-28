@@ -21,7 +21,8 @@
     @SecretId UNIQUEIDENTIFIER = null,
     @ServiceAccountId UNIQUEIDENTIFIER = null,
     @ProjectId UNIQUEIDENTIFIER = null,
-    @GrantedServiceAccountId UNIQUEIDENTIFIER = null
+    @GrantedServiceAccountId UNIQUEIDENTIFIER = null,
+    @SendId UNIQUEIDENTIFIER = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -50,7 +51,8 @@ BEGIN
         [SecretId],
         [ServiceAccountId],
         [ProjectId],
-        [GrantedServiceAccountId]
+        [GrantedServiceAccountId],
+        [SendId]
     )
     VALUES
     (
@@ -76,6 +78,7 @@ BEGIN
         @SecretId,
         @ServiceAccountId,
         @ProjectId,
-        @GrantedServiceAccountId
+        @GrantedServiceAccountId,
+        @SendId
     )
 END

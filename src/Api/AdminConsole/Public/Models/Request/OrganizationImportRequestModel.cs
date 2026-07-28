@@ -29,6 +29,11 @@ public class OrganizationImportRequestModel
     /// Indicates an import of over 2000 users and/or groups is expected
     /// </summary>
     public bool LargeImport { get; set; } = false;
+    /// <summary>
+    /// Determines whether newly provisioned members are sent an invitation email. When false, new members are
+    /// created in the Staged status without an invitation. Defaults to true.
+    /// </summary>
+    public bool InviteUsersAfterProvisioning { get; set; } = true;
 
     public class OrganizationImportGroupRequestModel
     {

@@ -74,18 +74,6 @@ public class ProviderRepository : Repository<Provider, Guid>, IProviderRepositor
         }
     }
 
-    public async Task<ICollection<ProviderAbility>> GetManyAbilitiesAsync()
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<ProviderAbility>(
-                "[dbo].[Provider_ReadAbilities]",
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
     public async Task<ProviderAbility?> GetAbilityAsync(Guid id)
     {
         await using var connection = new SqlConnection(ReadOnlyConnectionString);

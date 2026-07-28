@@ -17,6 +17,7 @@ public static class SsoRedirectUrlBuilder
     public static class ErrorCodes
     {
         public const string InviteAcceptanceRequired = "ssoOrgInviteAcceptanceRequired";
+        public const string OrgMembershipRequired = "ssoOrgMembershipRequired";
         // Future: AccessRevoked = "ssoOrganizationAccessRevoked", etc.
     }
 

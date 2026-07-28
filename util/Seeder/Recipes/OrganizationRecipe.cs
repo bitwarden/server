@@ -22,10 +22,17 @@ public class OrganizationRecipe(SeederDependencies deps)
     /// <param name="presetName">Name of the embedded preset (e.g., "dunder-mifflin-full")</param>
     /// <param name="password">Optional password for all seeded accounts</param>
     /// <param name="kdfIterations">Optional KDF iteration count override</param>
+    /// <param name="orgName">Optional organization name override. Replaces the preset/fixture name when provided.</param>
+    /// <param name="ownerEmail">Optional owner email override. Replaces the default <c>owner@&lt;domain&gt;</c> when provided.</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public OrganizationSeedResult Seed(string presetName, string? password = null, int? kdfIterations = null)
+    public OrganizationSeedResult Seed(
+        string presetName,
+        string? password = null,
+        int? kdfIterations = null,
+        string? orgName = null,
+        string? ownerEmail = null)
     {
-        var result = _orchestrator.Execute(presetName, password, kdfIterations);
+        var result = _orchestrator.Execute(presetName, password, kdfIterations, orgName, ownerEmail);
 
         if (result.OrganizationId is null)
         {

@@ -146,7 +146,6 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
-        services.AddOptionality();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
 
@@ -230,6 +229,10 @@ public class Startup
 
         // Add IdentityServer to the request pipeline.
         app.UseIdentityServer();
+
+        // Gates endpoints carrying IFeatureMetadata; required in any app that
+        // routes requests through endpoints tagged with [RequireFeature].
+        app.UseFeatureFlagChecks();
 
         // Add Mvc stuff
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());

@@ -2,6 +2,7 @@
 using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
@@ -11,6 +12,7 @@ using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -45,7 +47,7 @@ public class OrganizationReportControllerTests
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
@@ -87,7 +89,7 @@ public class OrganizationReportControllerTests
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
@@ -123,7 +125,7 @@ public class OrganizationReportControllerTests
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
@@ -160,7 +162,7 @@ public class OrganizationReportControllerTests
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(false);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
@@ -224,47 +226,45 @@ public class OrganizationReportControllerTests
             .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
     }
 
-    // TODO: Re-enable in PM-37469 when UseRiskInsights access control is restored
-    // [Theory, BitAutoData]
-    // public async Task GetLatestOrganizationReportAsync_NoUseRiskInsights_ThrowsBadRequestException(
-    //     SutProvider<OrganizationReportsController> sutProvider,
-    //     Guid orgId)
-    // {
-    //     // Arrange
-    //     sutProvider.GetDependency<ICurrentContext>()
-    //         .AccessReports(orgId)
-    //         .Returns(true);
-    //
-    //     sutProvider.GetDependency<IApplicationCacheService>()
-    //         .GetOrganizationAbilityAsync(orgId)
-    //         .Returns(new OrganizationAbility { UseRiskInsights = false });
-    //
-    //     // Act & Assert
-    //     await Assert.ThrowsAsync<BadRequestException>(() =>
-    //         sutProvider.Sut.GetLatestOrganizationReportAsync(orgId));
-    //
-    //     await sutProvider.GetDependency<IGetOrganizationReportQuery>()
-    //         .DidNotReceive()
-    //         .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
-    // }
+    [Theory, BitAutoData]
+    public async Task GetLatestOrganizationReportAsync_NoUseRiskInsights_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(orgId)
+            .Returns(true);
 
-    // CreateOrganizationReportAsync - V1 (flag off)
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(orgId)
+            .Returns(new OrganizationAbility { UseRiskInsights = false });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetLatestOrganizationReportAsync(orgId));
+
+        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .DidNotReceive()
+            .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
+    }
+
+    // CreateOrganizationReportAsync - the file path is gated on the new architecture, then selected by
+    // request shape (FileSize); it is never selected by the file-storage flag.
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V1_WithValidRequest_ReturnsOkResult(
+    public async Task CreateOrganizationReportAsync_NewArchOn_WithoutFileSize_TakesInlinePath(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequestModel request,
         OrganizationReport expectedReport)
     {
         // Arrange
+        request.FileSize = null;
         expectedReport.ReportFile = null;
 
         SetupAuthorization(sutProvider, orgId);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(false);
+        SetupNewArchitecture(sutProvider, enabled: true);
 
         sutProvider.GetDependency<IAddOrganizationReportCommand>()
             .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>())
@@ -277,36 +277,14 @@ public class OrganizationReportControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var expectedResponse = new OrganizationReportResponseModel(expectedReport);
         Assert.Equivalent(expectedResponse, okResult.Value);
-    }
 
-    [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V1_WithoutAccess_ThrowsNotFoundException(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        AddOrganizationReportRequestModel request)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(false);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(false);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.CreateOrganizationReportAsync(orgId, request));
-
-        await sutProvider.GetDependency<IAddOrganizationReportCommand>()
+        await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
             .DidNotReceive()
-            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
+            .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
     }
 
-    // CreateOrganizationReportAsync - V2 (flag on)
-
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V2_WithValidRequest_ReturnsFileResponseModel(
+    public async Task CreateOrganizationReportAsync_NewArchOn_WithFileSize_TakesFileCreatePath(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequestModel request,
@@ -319,7 +297,8 @@ public class OrganizationReportControllerTests
         var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
         expectedReport.SetReportFile(reportFile);
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupAuthorization(sutProvider, orgId);
+        SetupNewArchitecture(sutProvider, enabled: true);
 
         sutProvider.GetDependency<ICreateOrganizationReportCommand>()
             .CreateAsync(Arg.Any<AddOrganizationReportRequest>())
@@ -342,19 +321,129 @@ public class OrganizationReportControllerTests
         Assert.Equal(uploadUrl, response.ReportFileUploadUrl);
         Assert.Equal(FileUploadType.Azure, response.FileUploadType);
         Assert.NotNull(response.ReportResponse);
+
+        await sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .DidNotReceive()
+            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
     }
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V2_EmptyOrgId_ThrowsBadRequestException(
+    public async Task CreateOrganizationReportAsync_NewArchOff_WithFileSize_TakesInlinePath(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        AddOrganizationReportRequestModel request,
+        OrganizationReport expectedReport)
+    {
+        // Arrange - file storage requires the new architecture, so a FileSize with the new-architecture
+        // flag off must NOT write a file; it falls through to the inline path.
+        request.FileSize = 1024;
+        expectedReport.ReportFile = null;
+
+        SetupAuthorization(sutProvider, orgId);
+        SetupNewArchitecture(sutProvider, enabled: false);
+
+        sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>())
+            .Returns(expectedReport);
+
+        // Act
+        var result = await sutProvider.Sut.CreateOrganizationReportAsync(orgId, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
+
+        await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
+            .DidNotReceive()
+            .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
+    }
+
+    // Under the new architecture, path selection must be independent of the file-storage flag: the
+    // client chooses its request shape from that flag via a config cache that can lag the server, so
+    // branching on it here would fail whenever the client and server disagree.
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportAsync_NewArchOn_WithFileSize_FileStorageFlagOff_StillTakesFileCreatePath(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        AddOrganizationReportRequestModel request,
+        OrganizationReport expectedReport,
+        string uploadUrl)
+    {
+        // Arrange - client sent a file-shaped body while the server's file-storage flag is off.
+        request.FileSize = 1024;
+
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
+        expectedReport.SetReportFile(reportFile);
+
+        SetupAuthorization(sutProvider, orgId);
+        SetupNewArchitecture(sutProvider, enabled: true);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
+        sutProvider.GetDependency<ICreateOrganizationReportCommand>()
+            .CreateAsync(Arg.Any<AddOrganizationReportRequest>())
+            .Returns(expectedReport);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .GetReportFileUploadUrlAsync(expectedReport, Arg.Any<ReportFile>())
+            .Returns(uploadUrl);
+
+        // Act
+        var result = await sutProvider.Sut.CreateOrganizationReportAsync(orgId, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<OrganizationReportFileResponseModel>(okResult.Value);
+
+        await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
+            .Received(1)
+            .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportAsync_NewArchOn_WithoutFileSize_FileStorageFlagOn_StillTakesInlinePath(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        AddOrganizationReportRequestModel request,
+        OrganizationReport expectedReport)
+    {
+        // Arrange - client sent an inline body while the server's file-storage flag is on.
+        request.FileSize = null;
+        expectedReport.ReportFile = null;
+
+        SetupAuthorization(sutProvider, orgId);
+        SetupNewArchitecture(sutProvider, enabled: true);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>())
+            .Returns(expectedReport);
+
+        // Act
+        var result = await sutProvider.Sut.CreateOrganizationReportAsync(orgId, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
+
+        await sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .Received(1)
+            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportAsync_EmptyOrgId_ThrowsBadRequestException(
         SutProvider<OrganizationReportsController> sutProvider,
         AddOrganizationReportRequestModel request)
     {
         // Arrange
         var emptyOrgId = Guid.Empty;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(true);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -364,35 +453,13 @@ public class OrganizationReportControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V2_MissingFileSize_ThrowsBadRequestException(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        AddOrganizationReportRequestModel request)
-    {
-        // Arrange
-        request.FileSize = null;
-
-        SetupV2Authorization(sutProvider, orgId);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.CreateOrganizationReportAsync(orgId, request));
-
-        Assert.Equal("File size is required.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V2_WithoutAccess_ThrowsNotFoundException(
+    public async Task CreateOrganizationReportAsync_WithoutAccess_ThrowsNotFoundException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequestModel request)
     {
         // Arrange
         request.FileSize = 1024;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(true);
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -405,6 +472,10 @@ public class OrganizationReportControllerTests
         await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
             .DidNotReceive()
             .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
+
+        await sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .DidNotReceive()
+            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
     }
 
     // GetOrganizationReportAsync
@@ -665,7 +736,7 @@ public class OrganizationReportControllerTests
         report.OrganizationId = orgId;
         report.SetReportFile(reportFile);
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupNewArchAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
@@ -695,7 +766,7 @@ public class OrganizationReportControllerTests
         Guid reportId)
     {
         // Arrange
-        SetupV2Authorization(sutProvider, orgId);
+        SetupNewArchAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(reportId)
@@ -715,7 +786,7 @@ public class OrganizationReportControllerTests
         // Arrange
         report.OrganizationId = Guid.NewGuid();
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupNewArchAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
@@ -739,7 +810,7 @@ public class OrganizationReportControllerTests
         report.OrganizationId = orgId;
         report.SetReportFile(reportFile);
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupNewArchAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
@@ -760,7 +831,7 @@ public class OrganizationReportControllerTests
         report.OrganizationId = orgId;
         report.ReportFile = null;
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupNewArchAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
@@ -782,7 +853,7 @@ public class OrganizationReportControllerTests
         report.OrganizationId = orgId;
         report.SetReportFile(reportFile);
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupNewArchAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
@@ -801,7 +872,7 @@ public class OrganizationReportControllerTests
     {
         // Arrange
         var report = new OrganizationReport { OrganizationId = orgId };
-        SetupV2Authorization(sutProvider, orgId);
+        SetupNewArchAuthorization(sutProvider, orgId);
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(reportId)
             .Returns(report);
@@ -821,7 +892,7 @@ public class OrganizationReportControllerTests
     {
         // Arrange
         var report = new OrganizationReport { OrganizationId = orgId };
-        SetupV2Authorization(sutProvider, orgId);
+        SetupNewArchAuthorization(sutProvider, orgId);
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(reportId)
             .Returns(report);
@@ -1488,10 +1559,10 @@ public class OrganizationReportControllerTests
         Assert.Equal("Invalid content.", exception.Message);
     }
 
-    // CreateOrganizationReportAsync - V2 file size cap
+    // CreateOrganizationReportAsync - file size cap
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V2_FileSizeExceedsLimit_ThrowsBadRequestException(
+    public async Task CreateOrganizationReportAsync_FileSizeExceedsLimit_ThrowsBadRequestException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequestModel request)
@@ -1499,7 +1570,8 @@ public class OrganizationReportControllerTests
         // Arrange
         request.FileSize = Constants.FileSize501mb + 1;
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupAuthorization(sutProvider, orgId);
+        SetupNewArchitecture(sutProvider, enabled: true);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -1525,7 +1597,11 @@ public class OrganizationReportControllerTests
         var fileData = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
         report.SetReportFile(fileData);
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
+            .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
@@ -1551,7 +1627,11 @@ public class OrganizationReportControllerTests
         var fileData = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
         report.SetReportFile(fileData);
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
+            .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
@@ -1584,7 +1664,7 @@ public class OrganizationReportControllerTests
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(false);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
@@ -1616,7 +1696,7 @@ public class OrganizationReportControllerTests
         var fileData = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
         report.SetReportFile(fileData);
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupNewArchAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
@@ -1641,27 +1721,34 @@ public class OrganizationReportControllerTests
             .AccessReports(orgId)
             .Returns(true);
 
-        // TODO: Re-enable in PM-37469 when UseRiskInsights access control is restored
-        // sutProvider.GetDependency<IApplicationCacheService>()
-        //     .GetOrganizationAbilityAsync(orgId)
-        //     .Returns(new OrganizationAbility { UseRiskInsights = true });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(orgId)
+            .Returns(new OrganizationAbility { UseRiskInsights = true });
     }
 
-    private static void SetupV2Authorization(
+    private static void SetupNewArchitecture(
+        SutProvider<OrganizationReportsController> sutProvider,
+        bool enabled)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
+            .Returns(enabled);
+    }
+
+    private static void SetupNewArchAuthorization(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId)
     {
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(true);
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
 
-        // TODO: Re-enable in PM-37469 when UseRiskInsights access control is restored
-        // sutProvider.GetDependency<IApplicationCacheService>()
-        //     .GetOrganizationAbilityAsync(orgId)
-        //     .Returns(new OrganizationAbility { UseRiskInsights = true });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(orgId)
+            .Returns(new OrganizationAbility { UseRiskInsights = true });
     }
 }

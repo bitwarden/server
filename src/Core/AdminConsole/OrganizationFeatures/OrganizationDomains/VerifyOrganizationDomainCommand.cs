@@ -151,8 +151,7 @@ public class VerifyOrganizationDomainCommand(
 
         var domainUserEmails = orgUserUsers
             .Where(ou => ou.Email.ToLower().EndsWith($"@{domain.DomainName.ToLower()}") &&
-                         ou.Status != OrganizationUserStatusType.Revoked &&
-                         ou.Status != OrganizationUserStatusType.Invited)
+                         ou.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed)
             .Select(ou => ou.Email);
 
         var organization = await organizationRepository.GetByIdAsync(domain.OrganizationId);

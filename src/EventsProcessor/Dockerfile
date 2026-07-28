@@ -47,7 +47,7 @@ ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
-RUN apk add --no-cache curl \
+RUN apk add --no-cache \
     icu-libs \
     shadow \
     && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu 
@@ -57,6 +57,6 @@ WORKDIR /app
 COPY --from=build /source/src/EventsProcessor/out /app
 COPY ./src/EventsProcessor/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
+HEALTHCHECK CMD wget --quiet --tries=1 --output-document=/dev/null http://localhost:5000/alive || exit 1
 
 CMD ["/entrypoint.sh"]

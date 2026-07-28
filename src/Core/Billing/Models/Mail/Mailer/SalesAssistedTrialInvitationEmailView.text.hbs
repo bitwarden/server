@@ -1,0 +1,15 @@
+{{#>FullTextLayout}}
+Your Bitwarden contact, {{SenderEmail}}, has arranged this trial for you.
+
+{{#if Features}}
+{{#if TrialLength}}During your {{TrialLength}}-day free trial of {{ProductName}}, your team can:{{else}}With your {{ProductName}} plan, your team can:{{/if}}
+{{#each Features}}
+  • {{this}}
+{{/each}}
+{{/if}}
+
+Get started:
+{{{Url}}}
+
+This invitation expires in {{ExpiryDays}} days. Have questions? Reach out to {{SenderEmail}}.
+{{/FullTextLayout}}
