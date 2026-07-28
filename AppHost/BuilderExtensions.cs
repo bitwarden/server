@@ -17,6 +17,7 @@ public static class BuilderExtensions
         return builder
             .AddExecutable("setup-secrets", "pwsh", "../dev", "-File", builder.Required("Scripts:SecretsSetup"),
                 "-clear")
+            .WithFeatureManager(builder)
             .ExcludeFromManifest();
     }
 
