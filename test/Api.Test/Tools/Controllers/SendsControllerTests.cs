@@ -38,7 +38,6 @@ public class SendsControllerTests : IDisposable
     private readonly IUserService _userService;
     private readonly ISendRepository _sendRepository;
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
-    private readonly IAnonymousSendCommand _anonymousSendCommand;
     private readonly ISendOwnerQuery _sendOwnerQuery;
     private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
@@ -54,7 +53,6 @@ public class SendsControllerTests : IDisposable
         _userService = Substitute.For<IUserService>();
         _sendRepository = Substitute.For<ISendRepository>();
         _nonAnonymousSendCommand = Substitute.For<INonAnonymousSendCommand>();
-        _anonymousSendCommand = Substitute.For<IAnonymousSendCommand>();
         _sendOwnerQuery = Substitute.For<ISendOwnerQuery>();
         _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
@@ -69,7 +67,6 @@ public class SendsControllerTests : IDisposable
             _sendRepository,
             _userService,
             _sendAuthorizationService,
-            _anonymousSendCommand,
             _nonAnonymousSendCommand,
             _sendOwnerQuery,
             _sendFileStorageService,

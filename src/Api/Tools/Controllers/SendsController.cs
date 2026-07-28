@@ -33,7 +33,6 @@ public class SendsController : Controller
     private readonly IUserService _userService;
     private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
-    private readonly IAnonymousSendCommand _anonymousSendCommand;
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
     private readonly ISendOwnerQuery _sendOwnerQuery;
     private readonly ILogger<SendsController> _logger;
@@ -47,7 +46,6 @@ public class SendsController : Controller
         ISendRepository sendRepository,
         IUserService userService,
         ISendAuthorizationService sendAuthorizationService,
-        IAnonymousSendCommand anonymousSendCommand,
         INonAnonymousSendCommand nonAnonymousSendCommand,
         ISendOwnerQuery sendOwnerQuery,
         ISendFileStorageService sendFileStorageService,
@@ -62,7 +60,6 @@ public class SendsController : Controller
         _sendRepository = sendRepository;
         _userService = userService;
         _sendAuthorizationService = sendAuthorizationService;
-        _anonymousSendCommand = anonymousSendCommand;
         _nonAnonymousSendCommand = nonAnonymousSendCommand;
         _sendOwnerQuery = sendOwnerQuery;
         _sendFileStorageService = sendFileStorageService;
