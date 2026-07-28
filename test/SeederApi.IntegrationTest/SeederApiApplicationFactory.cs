@@ -31,13 +31,20 @@ public class SeederApiApplicationFactory : WebApplicationFactoryBase<Startup>
 
     public void ConfigureAuth(string username, string password)
     {
+        ConfigureAccounts((username, password));
+    }
+
+    public void ConfigureAccounts(params (string Username, string Password)[] accounts)
+    {
         UpdateConfiguration(builder =>
         {
-            builder.AddInMemoryCollection(new Dictionary<string, string>
+            var entries = new Dictionary<string, string>();
+            for (var i = 0; i < accounts.Length; i++)
             {
-                { "seederSettings:Accounts:0:Username", username },
-                { "seederSettings:Accounts:0:Password", password }
-            });
+                entries[$"seederSettings:Accounts:{i}:Username"] = accounts[i].Username;
+                entries[$"seederSettings:Accounts:{i}:Password"] = accounts[i].Password;
+            }
+            builder.AddInMemoryCollection(entries);
         });
     }
 }
