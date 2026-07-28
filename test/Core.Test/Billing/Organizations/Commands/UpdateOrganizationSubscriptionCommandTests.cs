@@ -6,8 +6,10 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Microsoft.Extensions.Logging;
@@ -22,6 +24,7 @@ using static StripeConstants;
 public class UpdateOrganizationSubscriptionCommandTests
 {
     private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
+    private readonly IHasPaymentMethodQuery _hasPaymentMethodQuery = Substitute.For<IHasPaymentMethodQuery>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _assignmentRepository =
@@ -42,8 +45,11 @@ public class UpdateOrganizationSubscriptionCommandTests
         _pricingClient.GetPlanOrThrow(Arg.Any<PlanType>())
             .Returns(MockPlans.Get(PlanType.EnterpriseAnnually2020));
 
+        _hasPaymentMethodQuery.Run(Arg.Any<ISubscriber>()).Returns(true);
+
         _command = new UpdateOrganizationSubscriptionCommand(
             _featureService,
+            _hasPaymentMethodQuery,
             Substitute.For<ILogger<UpdateOrganizationSubscriptionCommand>>(),
             _assignmentRepository,
             _cohortRepository,
@@ -516,6 +522,76 @@ public class UpdateOrganizationSubscriptionCommandTests
                 options.PaymentBehavior == PaymentBehavior.PendingIfIncomplete));
     }
 
+    // PM-40015 (QA issue #2): a failed charge under pending_if_incomplete parks the change in
+    // subscription.pending_update. The command must fail and void the update's invoice so Stripe
+    // can't apply the change on a later payment.
+    [Fact]
+    public async Task Run_UpdateHeldAsPendingUpdate_VoidsInvoiceAndReturnsBadRequest()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(
+            collectionMethod: CollectionMethod.ChargeAutomatically,
+            items: [("price_seats", "si_1", 5)]);
+
+        var updatedSubscription = CreateSubscription(
+            collectionMethod: CollectionMethod.ChargeAutomatically,
+            items: [("price_seats", "si_1", 5)]);
+        updatedSubscription.PendingUpdate = new SubscriptionPendingUpdate
+        {
+            ExpiresAt = DateTime.UtcNow.AddHours(23)
+        };
+        updatedSubscription.LatestInvoiceId = "inv_pending_update";
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(updatedSubscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.IsT1);
+        Assert.Equal(
+            "We couldn't charge your payment method, so your subscription was not updated. Please check your payment method and try again.",
+            result.AsT1.Response);
+
+        await _stripeAdapter.Received(1).VoidInvoiceAsync("inv_pending_update");
+    }
+
+    // PM-40015: voiding a delinquent subscription's pending-update invoice flips it from unpaid
+    // back to active in Stripe while the original debt stays open (verified via test clock), so
+    // an immediate-charge change on an unpaid subscription must be refused before Stripe is called.
+    [Fact]
+    public async Task Run_ChargeImmediately_ChargeAutomatically_UnpaidSubscription_ReturnsBadRequestWithoutUpdatingStripe()
+    {
+        var organization = CreateOrganization(exemptFromBillingAutomation: true);
+        var subscription = CreateSubscription(
+            status: SubscriptionStatus.Unpaid,
+            collectionMethod: CollectionMethod.ChargeAutomatically,
+            items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_sm_seats", 1)],
+            ChargeImmediately = true
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.IsT1);
+        Assert.Equal(
+            "Your subscription has an unpaid invoice. Please resolve the outstanding balance and try again.",
+            result.AsT1.Response);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateSubscriptionAsync(default!, default!);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().VoidInvoiceAsync(default!);
+    }
+
     [Fact]
     public async Task Run_ChargeImmediately_SendInvoice_NoPaymentBehavior()
     {
@@ -749,6 +825,126 @@ public class UpdateOrganizationSubscriptionCommandTests
         await _stripeAdapter.Received(1).GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>());
         await _stripeAdapter.DidNotReceive().FinalizeInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceFinalizeOptions>());
         await _stripeAdapter.DidNotReceive().SendInvoiceAsync(Arg.Any<string>());
+    }
+
+    // The subscription update has already been applied when invoice finalization runs; failing the
+    // command at that point would make callers skip persisting a change Stripe is already billing.
+    [Fact]
+    public async Task Run_SendInvoice_Structural_InvoiceFinalizationFails_StillReturnsSuccess()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(
+            collectionMethod: CollectionMethod.SendInvoice,
+            items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var updatedSubscription = CreateSubscription(
+            collectionMethod: CollectionMethod.SendInvoice,
+            items: [("price_seats", "si_1", 5), ("price_storage", "si_2", 1)]);
+        updatedSubscription.LatestInvoiceId = "inv_123";
+
+        _stripeAdapter
+            .UpdateSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(updatedSubscription);
+
+        var draftInvoice = new Invoice { Id = "inv_123", Status = InvoiceStatus.Draft };
+        _stripeAdapter.GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>()).Returns(draftInvoice);
+
+        _stripeAdapter
+            .FinalizeInvoiceAsync("inv_123", Arg.Any<InvoiceFinalizeOptions>())
+            .Returns<Invoice>(_ => throw new StripeException("Something went wrong"));
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.DidNotReceive().SendInvoiceAsync(Arg.Any<string>());
+    }
+
+    // An unpaid subscription usually means broken payment; without this check Stripe rejects the
+    // charge-automatically update with an error that surfaces as an unactionable 500 (PM-40015,
+    // QA issue #6).
+    [Fact]
+    public async Task Run_ChargeAutomatically_Structural_NoPaymentMethod_ReturnsBadRequest()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(
+            collectionMethod: CollectionMethod.ChargeAutomatically,
+            items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        _hasPaymentMethodQuery.Run(organization).Returns(false);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.IsT1);
+        Assert.Equal(
+            "You don't have a payment method on file. Please add one and try again.",
+            result.AsT1.Response);
+
+        await _stripeAdapter.DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_SendInvoice_Structural_DoesNotCheckPaymentMethod()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(
+            collectionMethod: CollectionMethod.SendInvoice,
+            items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _hasPaymentMethodQuery.DidNotReceive().Run(Arg.Any<ISubscriber>());
+    }
+
+    [Fact]
+    public async Task Run_ChargeAutomatically_NonStructural_DoesNotCheckPaymentMethod()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(
+            collectionMethod: CollectionMethod.ChargeAutomatically,
+            items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _hasPaymentMethodQuery.DidNotReceive().Run(Arg.Any<ISubscriber>());
     }
 
     [Fact]

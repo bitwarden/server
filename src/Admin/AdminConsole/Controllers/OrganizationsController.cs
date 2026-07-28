@@ -377,7 +377,8 @@ public class OrganizationsController : Controller
             PlanType = organization.PlanType,
             Seats = organization.Seats,
             UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
-            Enabled = organization.Enabled
+            Enabled = organization.Enabled,
+            ExemptFromBillingAutomation = organization.ExemptFromBillingAutomation
         };
 
         if (model.PlanType.HasValue)
@@ -527,9 +528,25 @@ public class OrganizationsController : Controller
             }
         }
 
+        // Clear any pending unpaid-lifecycle cancellation when newly exempting an organization from billing
+        if (!existingOrganizationData.ExemptFromBillingAutomation && organization.ExemptFromBillingAutomation)
+        {
+            try
+            {
+                await _subscriberService.ResumeFromUnpaidCancellationAsync(organization);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to clear pending unpaid cancellation for organization {OrganizationId} on billing automation exemption.",
+                    organization.Id);
+                TempData["Warning"] = "Organization updated successfully, but clearing the pending Stripe cancellation failed.";
+            }
+        }
+
         // Schedule the unpaid-lifecycle cancellation when disabling an organization whose Stripe subscription
-        // is unpaid but was never scheduled by the webhook handler.
-        if (existingOrganizationData.Enabled && !organization.Enabled)
+        // is unpaid but was never scheduled by the webhook handler. Exempt organizations are spared (PM-40015).
+        if (existingOrganizationData.Enabled && !organization.Enabled && !organization.ExemptFromBillingAutomation)
         {
             try
             {

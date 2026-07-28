@@ -340,6 +340,200 @@ public class OrganizationsControllerTests
             && o.UseAutomaticUserConfirmation == true));
     }
 
+    // PM-40015 (QA issues #5/#7): marking an organization exempt from billing automation must also
+    // rescind a pending unpaid-lifecycle cancellation, mirroring the existing re-enable transition.
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_NewlyExemptFromBillingAutomation_ClearsPendingUnpaidCancellation(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Arrange
+        organization.Enabled = true;
+        organization.ExemptFromBillingAutomation = false;
+        organization.UseAutomaticUserConfirmation = false;
+
+        var update = new OrganizationEditModel
+        {
+            Enabled = true,
+            ExemptFromBillingAutomation = true
+        };
+
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Org_Billing_Edit)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        // Act
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        // Assert
+        await sutProvider.GetDependency<ISubscriberService>()
+            .Received(1)
+            .ResumeFromUnpaidCancellationAsync(Arg.Is<Organization>(o => o.Id == organization.Id));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_AlreadyExemptFromBillingAutomation_DoesNotClearPendingUnpaidCancellation(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Arrange
+        organization.Enabled = true;
+        organization.ExemptFromBillingAutomation = true;
+        organization.UseAutomaticUserConfirmation = false;
+
+        var update = new OrganizationEditModel
+        {
+            Enabled = true,
+            ExemptFromBillingAutomation = true
+        };
+
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Org_Billing_Edit)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        // Act
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        // Assert
+        await sutProvider.GetDependency<ISubscriberService>()
+            .DidNotReceive()
+            .ResumeFromUnpaidCancellationAsync(Arg.Any<Organization>());
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Disabled_NotExempt_SchedulesUnpaidCancellation(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Arrange
+        organization.Enabled = true;
+        organization.ExemptFromBillingAutomation = false;
+        organization.UseAutomaticUserConfirmation = false;
+        organization.UseSecretsManager = false;
+
+        var update = new OrganizationEditModel
+        {
+            Enabled = false,
+            ExemptFromBillingAutomation = false
+        };
+
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Org_CheckEnabledBox)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        // Act
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        // Assert
+        await sutProvider.GetDependency<ISubscriberService>()
+            .Received(1)
+            .ScheduleUnpaidCancellationAsync(Arg.Is<Organization>(o => o.Id == organization.Id));
+    }
+
+    // PM-40015: exemption from billing automation means the unpaid-lifecycle cancellation must not
+    // apply, so disabling an exempt organization must not schedule one.
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Disabled_ExemptFromBillingAutomation_DoesNotScheduleUnpaidCancellation(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Arrange
+        organization.Enabled = true;
+        organization.ExemptFromBillingAutomation = true;
+        organization.UseAutomaticUserConfirmation = false;
+        organization.UseSecretsManager = false;
+
+        var update = new OrganizationEditModel
+        {
+            Enabled = false,
+            ExemptFromBillingAutomation = true
+        };
+
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Org_CheckEnabledBox)
+            .Returns(true);
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Org_Billing_Edit)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        // Act
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        // Assert
+        await sutProvider.GetDependency<ISubscriberService>()
+            .DidNotReceive()
+            .ScheduleUnpaidCancellationAsync(Arg.Any<Organization>());
+    }
+
+    // PM-40015: exempting and disabling in the same edit must not clear the pending cancellation
+    // only to immediately schedule a new one.
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_NewlyExemptAndDisabled_ClearsPendingCancellationWithoutRescheduling(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Arrange
+        organization.Enabled = true;
+        organization.ExemptFromBillingAutomation = false;
+        organization.UseAutomaticUserConfirmation = false;
+        organization.UseSecretsManager = false;
+
+        var update = new OrganizationEditModel
+        {
+            Enabled = false,
+            ExemptFromBillingAutomation = true
+        };
+
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Org_CheckEnabledBox)
+            .Returns(true);
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Org_Billing_Edit)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        // Act
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        // Assert
+        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
+        await subscriberService
+            .Received(1)
+            .ResumeFromUnpaidCancellationAsync(Arg.Is<Organization>(o => o.Id == organization.Id));
+        await subscriberService
+            .DidNotReceive()
+            .ScheduleUnpaidCancellationAsync(Arg.Any<Organization>());
+    }
+
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]

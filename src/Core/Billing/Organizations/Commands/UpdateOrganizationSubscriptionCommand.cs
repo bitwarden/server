@@ -4,6 +4,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
@@ -48,6 +49,7 @@ public interface IUpdateOrganizationSubscriptionCommand
 
 public class UpdateOrganizationSubscriptionCommand(
     IFeatureService featureService,
+    IHasPaymentMethodQuery hasPaymentMethodQuery,
     ILogger<UpdateOrganizationSubscriptionCommand> logger,
     IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
     IOrganizationPlanMigrationCohortRepository cohortRepository,
@@ -174,6 +176,26 @@ public class UpdateOrganizationSubscriptionCommand(
             return subscription;
         }
 
+        // An immediate charge on an unpaid subscription parks the change in pending_update when the
+        // card declines, and voiding that update's invoice flips the subscription back to active in
+        // Stripe with the original debt still open (PM-40015, verified via test clock) — so refuse
+        // the change before Stripe is called.
+        if (hasStructuralChanges && isChargedAutomatically && subscription.Status == SubscriptionStatus.Unpaid)
+        {
+            _logger.LogWarning(
+                "{Command}: Refused immediate-charge update for organization ({OrganizationId}) subscription ({SubscriptionId}) because the subscription is unpaid",
+                CommandName, organization.Id, subscription.Id);
+
+            return new BadRequest("Your subscription has an unpaid invoice. Please resolve the outstanding balance and try again.");
+        }
+
+        // A charge-automatically structural change bills immediately; with no payment method on
+        // file Stripe rejects the update with an error that surfaces as an unactionable 500
+        if (hasStructuralChanges && isChargedAutomatically && !await hasPaymentMethodQuery.Run(organization))
+        {
+            return new BadRequest("You don't have a payment method on file. Please add one and try again.");
+        }
+
         var options = new SubscriptionUpdateOptions { Items = items, ProrationBehavior = prorationBehavior };
 
         if (paymentBehavior is not null)
@@ -191,23 +213,47 @@ public class UpdateOrganizationSubscriptionCommand(
 
         var updatedSubscription = await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
 
+        // With pending_if_incomplete, a failed charge parks the change in subscription.pending_update
+        // instead of applying it (PM-40015). Voiding the update's invoice cancels the held change;
+        // otherwise Stripe applies it if the invoice is paid within ~23 hours.
+        if (updatedSubscription.PendingUpdate is not null)
+        {
+            _logger.LogWarning(
+                "{Command}: Update for organization ({OrganizationId}) subscription ({SubscriptionId}) was not applied — payment failed and Stripe held the change as a pending update",
+                CommandName, organization.Id, subscription.Id);
+
+            await stripeAdapter.VoidInvoiceAsync(updatedSubscription.LatestInvoiceId);
+
+            return new BadRequest(
+                "We couldn't charge your payment method, so your subscription was not updated. Please check your payment method and try again.");
+        }
+
         // ReSharper disable once InvertIf
         if (!isChargedAutomatically && hasStructuralChanges && updatedSubscription.LatestInvoiceId is not null)
         {
-            var invoice = await stripeAdapter.GetInvoiceAsync(updatedSubscription.LatestInvoiceId);
-
-            if (invoice is { Status: InvoiceStatus.Draft })
+            try
             {
-                var finalizedInvoice = await stripeAdapter.FinalizeInvoiceAsync(invoice.Id,
-                    new InvoiceFinalizeOptions { AutoAdvance = false });
+                var invoice = await stripeAdapter.GetInvoiceAsync(updatedSubscription.LatestInvoiceId);
 
-                await stripeAdapter.SendInvoiceAsync(finalizedInvoice.Id);
+                if (invoice is { Status: InvoiceStatus.Draft })
+                {
+                    var finalizedInvoice = await stripeAdapter.FinalizeInvoiceAsync(invoice.Id,
+                        new InvoiceFinalizeOptions { AutoAdvance = false });
+
+                    await stripeAdapter.SendInvoiceAsync(finalizedInvoice.Id);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "{Command}: Latest invoice ({InvoiceId}) after subscription ({SubscriptionId}) update for organization ({OrganizationId}) was in '{Status}' status",
+                        CommandName, invoice.Id, subscription.Id, organization.Id, invoice.Status);
+                }
             }
-            else
+            catch (Exception exception)
             {
-                _logger.LogWarning(
-                    "{Command}: Latest invoice ({InvoiceId}) after subscription ({SubscriptionId}) update for organization ({OrganizationId}) was in '{Status}' status",
-                    CommandName, invoice.Id, subscription.Id, organization.Id, invoice.Status);
+                _logger.LogError(exception,
+                    "{Command}: Subscription ({SubscriptionId}) for organization ({OrganizationId}) was updated, but finalizing and sending invoice ({InvoiceId}) failed and requires manual attention",
+                    CommandName, subscription.Id, organization.Id, updatedSubscription.LatestInvoiceId);
             }
         }
 
