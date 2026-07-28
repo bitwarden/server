@@ -36,6 +36,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
     IPushNotificationService pushNotificationService,
+    IEventService eventService,
     ILogger<ConfirmOrganizationInviteLinkCommand> logger)
     : IConfirmOrganizationInviteLinkCommand
 {
@@ -85,6 +86,8 @@ public class ConfirmOrganizationInviteLinkCommand(
 
         // The membership now carries the organization key, so notify the user's other devices to sync it.
         await pushNotificationService.PushSyncOrgKeysAsync(user.Id);
+
+        await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_InviteLinkConfirmed);
 
         return new None();
     }

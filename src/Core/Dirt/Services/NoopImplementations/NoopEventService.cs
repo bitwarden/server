@@ -5,6 +5,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Vault.Entities;
 
@@ -54,6 +55,11 @@ public class NoopEventService : IEventService
     }
 
     public Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogOrganizationEventAsync(OrganizationAbility organizationAbility, EventType type, DateTime? date = null)
     {
         return Task.FromResult(0);
     }

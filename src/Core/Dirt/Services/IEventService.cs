@@ -8,6 +8,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Vault.Entities;
 
@@ -36,6 +37,10 @@ public interface IEventService
     Task LogOrganizationUserEventsAsync<T>(IEnumerable<(T, EventType, DateTime?)> events) where T : IOrganizationUser;
     Task LogOrganizationUserEventsAsync<T>(IEnumerable<(T, EventType, EventSystemUser, DateTime?)> events) where T : IOrganizationUser;
     Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null);
+    /// <summary>
+    /// Use the cached organization abilities to check permissions, then log the event.
+    /// </summary>
+    Task LogOrganizationEventAsync(OrganizationAbility organizationAbility, EventType type, DateTime? date = null);
     Task LogOrganizationEventAsync(Organization organization, EventType type, EventSystemUser systemUser, DateTime? date = null);
     Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null);
     Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events);
