@@ -14,15 +14,14 @@ namespace Bit.SeederApi.IntegrationTest.Steps;
 
 public sealed class CreateCipherAttachmentsStepTests : IDisposable
 {
-    private const string Fixture = "encryption-modes";
-    private const string V0Name = "v0 — legacy attachment (no attachment key)";
-    private const string V1Name = "v1 — attachment key wrapped by user key";
-    private const string V2Name = "v2 — attachment key wrapped by cipher key";
-    private const string MultiName = "Multi — v0 + v1 attachments on one cipher";
-    private const string Control1Name = "Control — user-key cipher, no attachment";
-    private const string Control2Name = "Control — cipher-key cipher, no attachment";
-
-    private readonly string _tempDir = Path.Combine(Path.GetTempPath(), "seeder-attach-" + Guid.NewGuid().ToString("N"));
+    private const string _fixture = "encryption-modes";
+    private const string _v0Name = "v0 — legacy attachment (no attachment key)";
+    private const string _v1Name = "v1 — attachment key wrapped by user key";
+    private const string _v2Name = "v2 — attachment key wrapped by cipher key";
+    private const string _multiName = "Multi — v0 + v1 attachments on one cipher";
+    private const string _control1Name = "Control — user-key cipher, no attachment";
+    private const string _control2Name = "Control — cipher-key cipher, no attachment";
+    private readonly string _tempDir = Path.Join(Path.GetTempPath(), "seeder-attach-" + Guid.NewGuid().ToString("N"));
 
     [Fact]
     public void Execute_SeedsAttachmentsAcrossAllVersions()
@@ -31,35 +30,35 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
         var userKey = RustSdkService.GenerateUserKeys("attach-test@example.com", "asdfasdfasdf").Key;
         context.Registry.UserDigests.Add(new EntityRegistry.UserDigest(Guid.NewGuid(), Guid.Empty, userKey));
 
-        CreateCiphersStep.ForPersonalVault(Fixture).Execute(context);
-        CreateCipherAttachmentsStep.ForPersonalVault(Fixture).Execute(context);
+        CreateCiphersStep.ForPersonalVault(_fixture).Execute(context);
+        CreateCipherAttachmentsStep.ForPersonalVault(_fixture).Execute(context);
 
         // v0 — one attachment with no attachment key; blob decryptable with the vault key.
-        var v0Cipher = ByName(context, V0Name);
+        var v0Cipher = ByName(context, _v0Name);
         var v0 = Assert.Single(v0Cipher.GetAttachments()!);
         Assert.Null(v0.Value.Key);
         AssertBlob(baseDir, v0Cipher.Id, v0.Key, v0.Value.Size);
 
         // v1 — one attachment whose key is wrapped (user key); blob present.
-        var v1Cipher = ByName(context, V1Name);
+        var v1Cipher = ByName(context, _v1Name);
         var v1 = Assert.Single(v1Cipher.GetAttachments()!);
         Assert.StartsWith("2.", v1.Value.Key);
         AssertBlob(baseDir, v1Cipher.Id, v1.Key, v1.Value.Size);
 
         // v2 — requires the host cipher to be a cipher-key cipher (Cipher.Key populated).
-        var v2Cipher = ByName(context, V2Name);
+        var v2Cipher = ByName(context, _v2Name);
         Assert.False(string.IsNullOrEmpty(v2Cipher.Key));
         var v2 = Assert.Single(v2Cipher.GetAttachments()!);
         Assert.StartsWith("2.", v2.Value.Key);
         AssertBlob(baseDir, v2Cipher.Id, v2.Key, v2.Value.Size);
 
         // Multi — two attachments on a single cipher.
-        var multi = ByName(context, MultiName).GetAttachments()!;
+        var multi = ByName(context, _multiName).GetAttachments()!;
         Assert.Equal(2, multi.Count);
 
         // Controls — no attachments.
-        Assert.Null(ByName(context, Control1Name).GetAttachments());
-        Assert.Null(ByName(context, Control2Name).GetAttachments());
+        Assert.Null(ByName(context, _control1Name).GetAttachments());
+        Assert.Null(ByName(context, _control2Name).GetAttachments());
     }
 
     [Fact]
@@ -149,10 +148,10 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
         var userKey = RustSdkService.GenerateUserKeys("noop-test@example.com", "asdfasdfasdf").Key;
         context.Registry.UserDigests.Add(new EntityRegistry.UserDigest(Guid.NewGuid(), Guid.Empty, userKey));
 
-        CreateCiphersStep.ForPersonalVault(Fixture).Execute(context);
+        CreateCiphersStep.ForPersonalVault(_fixture).Execute(context);
 
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            CreateCipherAttachmentsStep.ForPersonalVault(Fixture).Execute(context));
+            CreateCipherAttachmentsStep.ForPersonalVault(_fixture).Execute(context));
         Assert.Contains("NoopAttachmentStorageService", ex.Message);
     }
 
@@ -184,7 +183,9 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
 
     private static void AssertBlob(string baseDir, Guid cipherId, string attachmentId, long expectedSize)
     {
-        var path = Path.Combine(baseDir, cipherId.ToString(), attachmentId);
+        var fileName = Path.GetFileName(attachmentId);
+        var cipherDir = Path.Combine(baseDir, cipherId.ToString());
+        var path = Path.Combine(cipherDir, fileName);
         Assert.True(File.Exists(path), $"expected attachment blob at {path}");
 
         var bytes = File.ReadAllBytes(path);
@@ -206,9 +207,14 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
     {
         Directory.CreateDirectory(_tempDir);
 
-        var globalSettings = new GlobalSettings();
-        globalSettings.Attachment.BaseDirectory = _tempDir;
-        globalSettings.BaseServiceUri.Api = "http://localhost";
+        var globalSettings = new GlobalSettings
+        {
+            Attachment = { BaseDirectory = _tempDir },
+            BaseServiceUri =
+        {
+            Api = "http://localhost"
+        }
+        };
         baseDir = globalSettings.Attachment.BaseDirectory;
 
         var storage = new LocalAttachmentStorageService(globalSettings, DataProtectionProvider.Create("seeder-tests"));

@@ -71,6 +71,7 @@ public class StripePaymentServiceTests
         Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(20m, result.CustomerDiscount.PercentOff);
         Assert.Equal(14.00m, result.CustomerDiscount.AmountOff); // Converted from cents
+        Assert.False(result.CustomerDiscount.IsFromSchedule); // Genuine customer discount, not schedule-derived
     }
 
     [Theory]
@@ -603,6 +604,7 @@ public class StripePaymentServiceTests
         Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(25m, result.CustomerDiscount.PercentOff);
         Assert.True(result.CustomerDiscount.Active);
+        Assert.True(result.CustomerDiscount.IsFromSchedule);
     }
 
     [Theory]
@@ -1256,198 +1258,6 @@ public class StripePaymentServiceTests
         Assert.True(item.AddonSubscriptionItem);
     }
 
-    #region AdjustSubscription — CompleteSubscriptionUpdate tax exempt alignment
-
-    [Theory, BitAutoData]
-    public async Task AdjustSubscription_WhenNonDirectTaxCountry_SetsReverseCharge(
-        SutProvider<StripePaymentService> sutProvider,
-        Organization organization)
-    {
-        var plan = new EnterprisePlan(isAnnual: true);
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.GatewaySubscriptionId = "sub_123";
-        organization.Seats = 0;
-        organization.UseSecretsManager = false;
-        organization.MaxStorageGb = null;
-
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            Status = "active",
-            Customer = new Customer
-            {
-                Id = "cus_123",
-                Address = new Address { Country = "DE" },
-                TaxExempt = TaxExempt.None
-            },
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Plan = new Stripe.Plan { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Quantity = 0
-                    }
-                ]
-            }
-        };
-
-        sutProvider.GetDependency<IPricingClient>()
-            .GetPlanOrThrow(PlanType.EnterpriseAnnually)
-            .Returns(plan);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
-            .Returns(new Subscription { Id = "sub_123", LatestInvoiceId = "inv_123" });
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>())
-            .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetCustomerAsync("cus_123")
-            .Returns(new Customer { Id = "cus_123" });
-
-        await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
-
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.Reverse));
-    }
-
-    [Theory, BitAutoData]
-    public async Task AdjustSubscription_WhenUSWithManualReverse_CorrectsTaxExemptToNone(
-        SutProvider<StripePaymentService> sutProvider,
-        Organization organization)
-    {
-        var plan = new EnterprisePlan(isAnnual: true);
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.GatewaySubscriptionId = "sub_123";
-        organization.Seats = 0;
-        organization.UseSecretsManager = false;
-        organization.MaxStorageGb = null;
-
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            Status = "active",
-            Customer = new Customer
-            {
-                Id = "cus_123",
-                Address = new Address { Country = "US" },
-                TaxExempt = TaxExempt.Reverse
-            },
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Plan = new Stripe.Plan { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Quantity = 0
-                    }
-                ]
-            }
-        };
-
-        sutProvider.GetDependency<IPricingClient>()
-            .GetPlanOrThrow(PlanType.EnterpriseAnnually)
-            .Returns(plan);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
-            .Returns(new Subscription { Id = "sub_123", LatestInvoiceId = "inv_123" });
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>())
-            .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetCustomerAsync("cus_123")
-            .Returns(new Customer { Id = "cus_123" });
-
-        await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
-
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.None));
-    }
-
-    [Theory, BitAutoData]
-    public async Task AdjustSubscription_WhenSwissWithReverse_CorrectsTaxExemptToNone(
-        SutProvider<StripePaymentService> sutProvider,
-        Organization organization)
-    {
-        // CH is a direct-tax country — "reverse" is not preserved; it should be corrected to "none".
-        var plan = new EnterprisePlan(isAnnual: true);
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.GatewaySubscriptionId = "sub_123";
-        organization.Seats = 0;
-        organization.UseSecretsManager = false;
-        organization.MaxStorageGb = null;
-
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            Status = "active",
-            Customer = new Customer
-            {
-                Id = "cus_123",
-                Address = new Address { Country = "CH" },
-                TaxExempt = TaxExempt.Reverse
-            },
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Plan = new Stripe.Plan { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Quantity = 0
-                    }
-                ]
-            }
-        };
-
-        sutProvider.GetDependency<IPricingClient>()
-            .GetPlanOrThrow(PlanType.EnterpriseAnnually)
-            .Returns(plan);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
-            .Returns(new Subscription { Id = "sub_123", LatestInvoiceId = "inv_123" });
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>())
-            .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetCustomerAsync("cus_123")
-            .Returns(new Customer { Id = "cus_123" });
-
-        await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
-
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.None));
-    }
-
     [Theory, BitAutoData]
     public async Task AdjustSubscription_WhenCustomerIsExempt_DoesNotUpdateTaxExemption(
         SutProvider<StripePaymentService> sutProvider,
@@ -1510,8 +1320,6 @@ public class StripePaymentServiceTests
             Arg.Any<string>(),
             Arg.Any<CustomerUpdateOptions>());
     }
-
-    #endregion
 
     [Theory]
     [BitAutoData]

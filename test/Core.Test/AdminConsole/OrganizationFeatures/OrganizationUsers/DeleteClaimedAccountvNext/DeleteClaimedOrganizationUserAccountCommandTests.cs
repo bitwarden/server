@@ -246,7 +246,7 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_FlagEnabled_CallsSubscriberService(
+    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_CallsSubscriberService(
         SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user,
         Guid organizationId,
@@ -274,10 +274,6 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
 
         SetupValidatorMock(sutProvider, [CreateSuccessfulValidationResult(request)]);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
-
         var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, [orgUser.Id], deletingUserId);
 
         Assert.True(results.Single().Result.IsSuccess);
@@ -288,58 +284,11 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
                 user,
                 cancelImmediately: false,
                 Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id));
-
-        await sutProvider.GetDependency<IUserService>().DidNotReceiveWithAnyArgs().CancelPremiumAsync(default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_FlagDisabled_CallsCancelPremium(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
-        User user,
-        Guid organizationId,
-        Guid deletingUserId,
-        [OrganizationUser] OrganizationUser orgUser)
-    {
-        orgUser.UserId = user.Id;
-        orgUser.OrganizationId = organizationId;
-
-        var request = new DeleteUserValidationRequest
-        {
-            OrganizationId = organizationId,
-            OrganizationUserId = orgUser.Id,
-            OrganizationUser = orgUser,
-            User = user,
-            DeletingUserId = deletingUserId,
-            IsClaimed = true
-        };
-
-        SetupRepositoryMocks(sutProvider,
-            new List<OrganizationUser> { orgUser },
-            [user],
-            organizationId,
-            new Dictionary<Guid, bool> { { orgUser.Id, true } });
-
-        SetupValidatorMock(sutProvider, [CreateSuccessfulValidationResult(request)]);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(false);
-
-        var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, [orgUser.Id], deletingUserId);
-
-        Assert.True(results.Single().Result.IsSuccess);
-
-        await sutProvider.GetDependency<IUserService>().Received(1).CancelPremiumAsync(user);
-
-        await sutProvider.GetDependency<ISubscriberService>()
-            .DidNotReceiveWithAnyArgs()
-            .CancelSubscription(default, default, default);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_FlagDisabled_HandlesGatewayException(
+    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_HandlesGatewayException(
         SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user,
         Guid organizationId,
@@ -367,60 +316,6 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
             new Dictionary<Guid, bool> { { orgUser.Id, true } });
 
         SetupValidatorMock(sutProvider, [validationResult]);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(false);
-
-        var gatewayException = new GatewayException("Payment gateway error");
-        sutProvider.GetDependency<IUserService>()
-            .CancelPremiumAsync(user)
-            .ThrowsAsync(gatewayException);
-
-        var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, [orgUser.Id], deletingUserId);
-
-        var resultsList = results.ToList();
-        Assert.Single(resultsList);
-        Assert.True(resultsList.First().Result.IsSuccess);
-
-        await sutProvider.GetDependency<IUserService>().Received(1).CancelPremiumAsync(user);
-        await AssertSuccessfulUserOperations(sutProvider, [user], [orgUser]);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_FlagEnabled_HandlesGatewayException(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
-        User user,
-        Guid organizationId,
-        Guid deletingUserId,
-        [OrganizationUser] OrganizationUser orgUser)
-    {
-        orgUser.UserId = user.Id;
-        orgUser.OrganizationId = organizationId;
-
-        var request = new DeleteUserValidationRequest
-        {
-            OrganizationId = organizationId,
-            OrganizationUserId = orgUser.Id,
-            OrganizationUser = orgUser,
-            User = user,
-            DeletingUserId = deletingUserId,
-            IsClaimed = true
-        };
-        var validationResult = CreateSuccessfulValidationResult(request);
-
-        SetupRepositoryMocks(sutProvider,
-            new List<OrganizationUser> { orgUser },
-            [user],
-            organizationId,
-            new Dictionary<Guid, bool> { { orgUser.Id, true } });
-
-        SetupValidatorMock(sutProvider, [validationResult]);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
 
         var gatewayException = new GatewayException("Payment gateway error");
         sutProvider.GetDependency<ISubscriberService>()
@@ -439,14 +334,12 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
                 user,
                 cancelImmediately: false,
                 Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id));
-        await sutProvider.GetDependency<IUserService>().DidNotReceiveWithAnyArgs().CancelPremiumAsync(default);
         await AssertSuccessfulUserOperations(sutProvider, [user], [orgUser]);
     }
 
-
     [Theory]
     [BitAutoData]
-    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_FlagDisabled_HandlesBillingExceptionAndLogsWarning(
+    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_HandlesBillingException(
         SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user,
         Guid organizationId,
@@ -474,60 +367,6 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
             new Dictionary<Guid, bool> { { orgUser.Id, true } });
 
         SetupValidatorMock(sutProvider, [validationResult]);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(false);
-
-        var billingException = new BillingException();
-        sutProvider.GetDependency<IUserService>()
-            .CancelPremiumAsync(user)
-            .ThrowsAsync(billingException);
-
-        var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, [orgUser.Id], deletingUserId);
-
-        var resultsList = results.ToList();
-        Assert.Single(resultsList);
-        Assert.True(resultsList.First().Result.IsSuccess);
-
-        await sutProvider.GetDependency<IUserService>().Received(1).CancelPremiumAsync(user);
-        await AssertSuccessfulUserOperations(sutProvider, [user], [orgUser]);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_FlagEnabled_HandlesBillingException(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
-        User user,
-        Guid organizationId,
-        Guid deletingUserId,
-        [OrganizationUser] OrganizationUser orgUser)
-    {
-        orgUser.UserId = user.Id;
-        orgUser.OrganizationId = organizationId;
-
-        var request = new DeleteUserValidationRequest
-        {
-            OrganizationId = organizationId,
-            OrganizationUserId = orgUser.Id,
-            OrganizationUser = orgUser,
-            User = user,
-            DeletingUserId = deletingUserId,
-            IsClaimed = true
-        };
-        var validationResult = CreateSuccessfulValidationResult(request);
-
-        SetupRepositoryMocks(sutProvider,
-            new List<OrganizationUser> { orgUser },
-            [user],
-            organizationId,
-            new Dictionary<Guid, bool> { { orgUser.Id, true } });
-
-        SetupValidatorMock(sutProvider, [validationResult]);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
 
         var billingException = new BillingException();
         sutProvider.GetDependency<ISubscriberService>()
@@ -546,7 +385,6 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
                 user,
                 cancelImmediately: false,
                 Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id));
-        await sutProvider.GetDependency<IUserService>().DidNotReceiveWithAnyArgs().CancelPremiumAsync(default);
         await AssertSuccessfulUserOperations(sutProvider, [user], [orgUser]);
     }
 

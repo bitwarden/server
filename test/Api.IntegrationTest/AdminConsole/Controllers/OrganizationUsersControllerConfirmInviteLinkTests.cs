@@ -71,15 +71,12 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
     [Fact]
     public async Task ConfirmInviteLink_WithValidRequest_ReturnsOkAndConfirmsMembership()
     {
-        // Arrange
         var code = await CreateInviteLinkAsync();
         var (joinerClient, joinerEmail) = await CreateJoinerClientAsync();
 
-        // Act
         var response = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/confirm", BuildConfirmRequest(code));
+            "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, code));
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var userRepository = _factory.GetService<IUserRepository>();
@@ -96,34 +93,27 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
     [Fact]
     public async Task ConfirmInviteLink_WithUnknownCode_ReturnsNotFound()
     {
-        // Arrange
         var (joinerClient, _) = await CreateJoinerClientAsync();
 
-        // Act
         var response = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/confirm", BuildConfirmRequest(Guid.NewGuid()));
+            "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, Guid.NewGuid()));
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task ConfirmInviteLink_WhenAlreadyConfirmed_ReturnsValidationProblemWithTypedCode()
     {
-        // Arrange
         var code = await CreateInviteLinkAsync();
         var (joinerClient, _) = await CreateJoinerClientAsync();
 
         var firstResponse = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/confirm", BuildConfirmRequest(code));
+            "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, code));
         Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
 
-        // Act
-        // Confirming again finds the already-confirmed membership and fails with a 400 validation problem.
         var secondResponse = await joinerClient.PostAsJsonAsync(
-            "/organizations/users/invite-link/confirm", BuildConfirmRequest(code));
+            "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, code));
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, secondResponse.StatusCode);
 
         using var problem = JsonDocument.Parse(await secondResponse.Content.ReadAsStringAsync());
@@ -162,9 +152,10 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
         return (joinerClient, joinerEmail);
     }
 
-    private static ConfirmOrganizationInviteLinkRequestModel BuildConfirmRequest(Guid code) =>
+    private static ConfirmOrganizationInviteLinkRequestModel BuildConfirmRequest(Guid organizationId, Guid code) =>
         new()
         {
+            OrganizationId = organizationId,
             Code = code,
             OrgUserKey = _validEncryptedKey,
             DefaultUserCollectionName = _validEncryptedKey,
