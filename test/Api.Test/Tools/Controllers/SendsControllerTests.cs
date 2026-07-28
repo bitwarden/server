@@ -2,7 +2,6 @@
 using System.Text;
 using System.Text.Json;
 using AutoFixture.Xunit2;
-using Bit.Api.Models.Response;
 using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
@@ -24,6 +23,7 @@ using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
