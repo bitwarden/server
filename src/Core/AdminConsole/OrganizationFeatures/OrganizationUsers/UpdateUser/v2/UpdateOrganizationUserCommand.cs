@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
+﻿using Bit.Core.AdminConsole.Models.Mail.Mailer.MemberEmailChanged;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -9,10 +10,12 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using CommandError = Bit.Core.AdminConsole.Utilities.v2.Error;
 
@@ -31,7 +34,9 @@ public class UpdateOrganizationUserCommand(
     IUserRepository userRepository,
     IChangeEmailCommand changeEmailCommand,
     IPushNotificationService pushNotificationService,
-    TimeProvider timeProvider)
+    IMailer mailer,
+    TimeProvider timeProvider,
+    ILogger<UpdateOrganizationUserCommand> logger)
     : IUpdateOrganizationUserCommand
 {
     public async Task<CommandResult> UpdateUserAsync(UpdateOrganizationUserRequest request)
@@ -107,8 +112,12 @@ public class UpdateOrganizationUserCommand(
 
             if (request.IsEmailChanged())
             {
+                var previousEmail = request.UserToUpdate.Email;
+
                 // ChangeEmailAsync persists the account (including any name change above) and syncs Stripe.
                 await changeEmailCommand.ChangeEmailAsync(request.UserToUpdate, request.NewEmail!);
+
+                await TrySendEmailChangedNotificationAsync(previousEmail, request);
             }
             else
             {
@@ -134,6 +143,22 @@ public class UpdateOrganizationUserCommand(
         OrganizationDomainAllowEmailChangeQuery.EmailNotOnVerifiedDomainError => new NewEmailDomainNotClaimedError(),
         _ => new EmailChangeFailedError(ex.Message)
     };
+
+    private async Task TrySendEmailChangedNotificationAsync(string previousEmail, UpdateOrganizationUserRequest request)
+    {
+        try
+        {
+            await mailer.SendEmail(new MemberEmailChangedNotificationMail
+            {
+                ToEmails = [previousEmail],
+                View = new MemberEmailChangedNotificationView { NewEmail = request.NewEmail! }
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to send member email-change notification for organization user {OrganizationUserId}.", request.OrganizationUserToUpdate.Id);
+        }
+    }
 
     private async Task<CommandError?> TryEnablingSecretsManagerAsync(UpdateOrganizationUserRequest request)
     {
