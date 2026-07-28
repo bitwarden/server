@@ -365,4 +365,41 @@ public class AnnualUpgradeSavingsCalculatorTests
 
         Assert.Equal(_currentPlan.PasswordManager.SeatPrice * 10 * 0.9m * 12, result!.Value.CurrentAnnualCost);
     }
+
+    [Fact]
+    public void Calculate_ItemPercentOff_RoundsLineToCentsBeforeTwelveMultiply()
+    {
+        // The $4 seat line, one third off: 4 * (1 - 0.33333) = 2.66668, which must round to 2.67
+        // before the monthly figure is multiplied by twelve. Left unrounded, twelve invoices would
+        // total 2.66668 * 12 = 32.00016; rounded per line first, they total 2.67 * 12 = 32.04.
+        var seats = Item(_currentPlan.PasswordManager.StripeSeatPlanId, 1);
+        seats.Discounts = [Discount("thirdoff", percentOff: 33.333m)];
+        var subscription = Subscription(seats);
+
+        var result = AnnualUpgradeSavingsCalculator.Calculate(subscription, _currentPlan, _annualLatestPlan);
+
+        Assert.Equal(32.04m, result!.Value.CurrentAnnualCost);
+    }
+
+    [Fact]
+    public void Calculate_InvoiceDeductionUnevenSplit_RoundsEachLineToCents()
+    {
+        // Three identical $10 lines share a $10 unscoped deduction three ways: 10 - 10/3 =
+        // 6.666..., which rounds to $6.67 per line. Summing the three rounded lines gives $20.01,
+        // a cent more than the $20.00 the total-preserving deduction would otherwise leave, so this
+        // is only observable because each line is rounded before the lines are summed. The annual
+        // side is analogous at $80 per line: 80 - 80/3 = 76.666..., rounding to $76.67 each, for
+        // $230.01 rather than $230.00.
+        var storagePlanId = _currentPlan.PasswordManager.StripeStoragePlanId;
+        var subscription = Subscription(
+            Item(storagePlanId, 20, "prod_storage"),
+            Item(storagePlanId, 20, "prod_storage"),
+            Item(storagePlanId, 20, "prod_storage"));
+        subscription.Discounts = [Discount("tenoff", amountOff: 1000)];
+
+        var result = AnnualUpgradeSavingsCalculator.Calculate(subscription, _currentPlan, _annualLatestPlan);
+
+        Assert.Equal(20.01m * 12, result!.Value.CurrentAnnualCost);
+        Assert.Equal(230.01m, result.Value.NewAnnualCost);
+    }
 }

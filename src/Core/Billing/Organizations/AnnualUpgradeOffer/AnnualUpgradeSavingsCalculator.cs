@@ -102,7 +102,13 @@ internal static class AnnualUpgradeSavingsCalculator
         string currency,
         Func<PlanPriceMapping, decimal> unitPrice)
     {
-        var amounts = lines.Select(line => unitPrice(line.Mapping) * line.Item.Quantity).ToArray();
+        // Rounded here and after every discount below, mirroring Stripe striking each line to
+        // integer minor units as it goes. Rounding only once, at the end, would let a sub-cent
+        // residual compound across stacked coupons and then be amplified twelvefold by the
+        // monthly-to-annual multiply in Calculate.
+        var amounts = lines
+            .Select(line => RoundToCents(unitPrice(line.Mapping) * line.Item.Quantity))
+            .ToArray();
 
         // Stripe applies line item discounts before invoice discounts, and the invoice subtotal is
         // struck with item discounts already incorporated.
@@ -116,9 +122,9 @@ internal static class AnnualUpgradeSavingsCalculator
                     continue;
                 }
 
-                amounts[i] = coupon!.PercentOff is { } percentOff
+                amounts[i] = RoundToCents(coupon!.PercentOff is { } percentOff
                     ? amounts[i] * (1 - percentOff / 100m)
-                    : Math.Max(0m, amounts[i] - AmountOff(coupon));
+                    : Math.Max(0m, amounts[i] - AmountOff(coupon)));
             }
         }
 
@@ -147,12 +153,21 @@ internal static class AnnualUpgradeSavingsCalculator
             // matching how Stripe spreads an invoice-level discount across line items.
             foreach (var i in scope)
             {
-                amounts[i] -= deduction * (amounts[i] / scopedAmount);
+                amounts[i] = RoundToCents(amounts[i] - deduction * (amounts[i] / scopedAmount));
             }
         }
 
         return amounts.Sum();
     }
+
+    /// <summary>
+    /// Two decimal places, halves rounded away from zero: the commercial convention, and the
+    /// opposite of the banker's rounding .NET defaults to, so it is passed explicitly. Stripe's
+    /// exact midpoint behaviour was not verified against its documentation; this is a deliberate
+    /// choice on our part, not a proven match, and a future reader should not assume otherwise.
+    /// </summary>
+    private static decimal RoundToCents(decimal amount) =>
+        Math.Round(amount, 2, MidpointRounding.AwayFromZero);
 
     /// <summary>
     /// Only coupons that will still be running at renewal are modelled. A <c>once</c> coupon is
