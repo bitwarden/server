@@ -38,13 +38,17 @@ public static class HttpClientBuilderSsrfExtensions
         // follows redirects internally, bypassing SSRF checks on redirect targets.
         builder.ConfigurePrimaryHttpMessageHandler((handler, _) =>
         {
-            if (handler is SocketsHttpHandler socketsHttpHandler)
+            switch (handler)
             {
-                socketsHttpHandler.AllowAutoRedirect = false;
-            }
-            else
-            {
-                Debug.Fail($"Expected SocketsHttpHandler but got {handler.GetType().Name}. Only SocketsHttpHandler is supported.");
+                case SocketsHttpHandler socketsHttpHandler:
+                    socketsHttpHandler.AllowAutoRedirect = false;
+                    break;
+                case HttpClientHandler httpClientHandler:
+                    httpClientHandler.AllowAutoRedirect = false;
+                    break;
+                default:
+                    Debug.Fail($"Expected SocketsHttpHandler or HttpClientHandler but got {handler.GetType().Name}.");
+                    break;
             }
         });
 
