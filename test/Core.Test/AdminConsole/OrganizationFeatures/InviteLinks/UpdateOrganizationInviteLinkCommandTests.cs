@@ -21,29 +21,21 @@ public class UpdateOrganizationInviteLinkCommandTests
     [Theory, BitAutoData]
     public async Task UpdateAsync_WithValidInput_Success(
         Organization organization,
+        OrganizationInviteLink existingLink,
         SutProvider<UpdateOrganizationInviteLinkCommand> sutProvider)
     {
         organization.Enabled = true;
         organization.UseEvents = true;
+        existingLink.OrganizationId = organization.Id;
+        existingLink.CreationDate = DateTime.UtcNow.AddDays(-5);
+        existingLink.RevisionDate = existingLink.CreationDate;
+        existingLink.SetAllowedDomains(["old.com"]);
 
         SetupAbility(sutProvider, organization.Id);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
-
-        var originalCreationDate = DateTime.UtcNow.AddDays(-5);
-        var existingLink = new OrganizationInviteLink
-        {
-            Id = Guid.NewGuid(),
-            Code = Guid.NewGuid(),
-            OrganizationId = organization.Id,
-            Invite = "invite-blob",
-            SupportsConfirmation = true,
-            CreationDate = originalCreationDate,
-            RevisionDate = originalCreationDate,
-        };
-        existingLink.SetAllowedDomains(["old.com"]);
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -58,10 +50,10 @@ public class UpdateOrganizationInviteLinkCommandTests
         Assert.Same(existingLink, link);
         Assert.Equal(existingLink.Id, link.Id);
         Assert.Equal(existingLink.Code, link.Code);
-        Assert.Equal("invite-blob", link.Invite);
-        Assert.True(link.SupportsConfirmation);
-        Assert.Equal(originalCreationDate, link.CreationDate);
-        Assert.True(link.RevisionDate > originalCreationDate);
+        Assert.Equal(existingLink.Invite, link.Invite);
+        Assert.Equal(existingLink.SupportsConfirmation, link.SupportsConfirmation);
+        Assert.Equal(existingLink.CreationDate, link.CreationDate);
+        Assert.True(link.RevisionDate > existingLink.CreationDate);
 
         var deserializedDomains = JsonSerializer.Deserialize<List<string>>(link.AllowedDomains);
         Assert.NotNull(deserializedDomains);

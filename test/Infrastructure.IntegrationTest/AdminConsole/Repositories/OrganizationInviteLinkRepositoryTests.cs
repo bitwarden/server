@@ -27,6 +27,31 @@ public class OrganizationInviteLinkRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task CreateAsync_RoundTrip_CodeIsUnprotected(
+        IOrganizationInviteLinkRepository repository,
+        IOrganizationRepository organizationRepository)
+    {
+        var originalCode = Guid.NewGuid().ToString();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        await repository.CreateAsync(new OrganizationInviteLink
+        {
+            Code = originalCode,
+            OrganizationId = organization.Id,
+            AllowedDomains = "[\"example.com\"]",
+            Invite = "invite-blob",
+            SupportsConfirmation = true,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+        });
+
+        var result = await repository.GetByOrganizationIdAsync(organization.Id);
+
+        Assert.NotNull(result);
+        Assert.Equal(originalCode, result.Code);
+    }
+
+    [Theory, DatabaseData]
     public async Task CreateAsync_DuplicateOrganizationId_Throws(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
@@ -36,64 +61,6 @@ public class OrganizationInviteLinkRepositoryTests
 
         await Assert.ThrowsAnyAsync<Exception>(
             () => repository.CreateTestOrganizationInviteLinkAsync(organization, "second"));
-    }
-
-    [Theory, DatabaseData]
-    public async Task CreateAsync_DuplicateCode_Throws(
-        IOrganizationInviteLinkRepository repository,
-        IOrganizationRepository organizationRepository)
-    {
-        var organization1 = await organizationRepository.CreateTestOrganizationAsync(identifier: "org1");
-        var organization2 = await organizationRepository.CreateTestOrganizationAsync(identifier: "org2");
-
-        var sharedCode = Guid.NewGuid();
-
-        await repository.CreateAsync(new OrganizationInviteLink
-        {
-            Code = sharedCode,
-            OrganizationId = organization1.Id,
-            AllowedDomains = "[\"example.com\"]",
-            Invite = "invite-blob-1",
-            SupportsConfirmation = true,
-            CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
-        });
-
-        await Assert.ThrowsAnyAsync<Exception>(() => repository.CreateAsync(new OrganizationInviteLink
-        {
-            Code = sharedCode,
-            OrganizationId = organization2.Id,
-            AllowedDomains = "[\"example.com\"]",
-            Invite = "invite-blob-2",
-            SupportsConfirmation = true,
-            CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
-        }));
-    }
-
-    [Theory, DatabaseData]
-    public async Task GetByCodeAsync_ReturnsLink(
-        IOrganizationInviteLinkRepository repository,
-        IOrganizationRepository organizationRepository)
-    {
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var link = await repository.CreateTestOrganizationInviteLinkAsync(organization);
-
-        var result = await repository.GetByCodeAsync(link.Code);
-
-        Assert.NotNull(result);
-        Assert.Equal(link.Id, result.Id);
-        Assert.Equal(link.Code, result.Code);
-        Assert.Equal(link.Invite, result.Invite);
-    }
-
-    [Theory, DatabaseData]
-    public async Task GetByCodeAsync_NonExistentCode_ReturnsNull(
-        IOrganizationInviteLinkRepository repository)
-    {
-        var result = await repository.GetByCodeAsync(Guid.NewGuid());
-
-        Assert.Null(result);
     }
 
     [Theory, DatabaseData]
@@ -165,7 +132,7 @@ public class OrganizationInviteLinkRepositoryTests
 
         var newLink = new OrganizationInviteLink
         {
-            Code = Guid.NewGuid(),
+            Code = Guid.NewGuid().ToString(),
             OrganizationId = organization.Id,
             AllowedDomains = oldLink.AllowedDomains,
             Invite = "new-invite-blob",
@@ -186,7 +153,7 @@ public class OrganizationInviteLinkRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task RefreshAsync_WhenInsertViolatesUniqueCode_RollsBackDelete(
+    public async Task RefreshAsync_WhenInsertViolatesUniqueOrganizationId_RollsBackDelete(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
     {
@@ -194,12 +161,12 @@ public class OrganizationInviteLinkRepositoryTests
         var org2 = await organizationRepository.CreateTestOrganizationAsync(identifier: "org2");
 
         var org1Link = await repository.CreateTestOrganizationInviteLinkAsync(org1);
-        var org2Link = await repository.CreateTestOrganizationInviteLinkAsync(org2);
+        await repository.CreateTestOrganizationInviteLinkAsync(org2);
 
         var conflictingLink = new OrganizationInviteLink
         {
-            Code = org2Link.Code,
-            OrganizationId = org1.Id,
+            Code = Guid.NewGuid().ToString(),
+            OrganizationId = org2.Id,
             AllowedDomains = org1Link.AllowedDomains,
             Invite = "new-invite-blob",
             SupportsConfirmation = true,

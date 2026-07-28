@@ -13,7 +13,7 @@ internal sealed class CreateOrganizationApiKeyStep : IStep
 
         var apiKey = new OrganizationApiKey
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = org.Id,
             Type = OrganizationApiKeyType.Default,
             ApiKey = CoreHelpers.SecureRandomString(30),
