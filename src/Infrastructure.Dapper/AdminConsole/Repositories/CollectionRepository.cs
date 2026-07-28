@@ -346,6 +346,57 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    public async Task ModifyUserAccessAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> upserts, IEnumerable<Guid> removeOrganizationUserIds,
+        DateTime revisionDate)
+    {
+        collectionIds = collectionIds.ToList();
+        upserts = upserts.ToList();
+        removeOrganizationUserIds = removeOrganizationUserIds.ToList();
+
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            if (removeOrganizationUserIds.Any())
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[CollectionUser_DeleteMany]",
+                    new
+                    {
+                        CollectionIds = collectionIds.ToGuidIdArrayTVP(),
+                        OrganizationUserIds = removeOrganizationUserIds.ToGuidIdArrayTVP()
+                    },
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
+            }
+
+            // Run this even with no upserts, so a remove-only request still bumps revision dates.
+            // Matches the EF Core implementation.
+            await connection.ExecuteAsync(
+                $"[{Schema}].[Collection_CreateOrUpdateAccessForMany]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    CollectionIds = collectionIds.ToGuidIdArrayTVP(),
+                    Users = upserts.ToArrayTVP(),
+                    Groups = Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP(),
+                    RevisionDate = revisionDate
+                },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
     public async Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users)
     {
         using (var connection = new SqlConnection(ConnectionString))

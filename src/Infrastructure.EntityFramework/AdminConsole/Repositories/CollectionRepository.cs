@@ -115,6 +115,99 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    public async Task ModifyUserAccessAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> upserts, IEnumerable<Guid> removeOrganizationUserIds,
+        DateTime revisionDate)
+    {
+        collectionIds = collectionIds.ToList();
+        upserts = upserts.ToList();
+        removeOrganizationUserIds = removeOrganizationUserIds.ToList();
+
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+            try
+            {
+                if (upserts.Any())
+                {
+                    var upsertIds = upserts.Select(u => u.Id).ToList();
+                    var validOrganizationUserIds = (await dbContext.OrganizationUsers
+                        .Where(ou => ou.OrganizationId == organizationId && upsertIds.Contains(ou.Id))
+                        .Select(ou => ou.Id)
+                        .ToListAsync()).ToHashSet();
+
+                    var existingCollectionUsers = await dbContext.CollectionUsers
+                        .Where(cu => collectionIds.Contains(cu.CollectionId))
+                        .ToDictionaryAsync(x => (x.CollectionId, x.OrganizationUserId));
+
+                    // Skip ids that aren't in this organization, same as the SQL version's join does.
+                    var validUpserts = upserts.Where(u => validOrganizationUserIds.Contains(u.Id)).ToList();
+                    foreach (var collectionId in collectionIds)
+                    {
+                        foreach (var requestedUser in validUpserts)
+                        {
+                            if (!existingCollectionUsers.TryGetValue(
+                                (collectionId, requestedUser.Id), out var existingCollectionUser))
+                            {
+                                // This is a brand new entry
+                                dbContext.CollectionUsers.Add(new CollectionUser
+                                {
+                                    CollectionId = collectionId,
+                                    OrganizationUserId = requestedUser.Id,
+                                    HidePasswords = requestedUser.HidePasswords,
+                                    ReadOnly = requestedUser.ReadOnly,
+                                    Manage = requestedUser.Manage
+                                });
+                                continue;
+                            }
+
+                            // It already exists, update it
+                            existingCollectionUser.HidePasswords = requestedUser.HidePasswords;
+                            existingCollectionUser.ReadOnly = requestedUser.ReadOnly;
+                            existingCollectionUser.Manage = requestedUser.Manage;
+                            dbContext.CollectionUsers.Update(existingCollectionUser);
+                        }
+                    }
+
+                    await dbContext.SaveChangesAsync();
+                }
+
+                if (removeOrganizationUserIds.Any())
+                {
+                    var toRemove = await dbContext.CollectionUsers
+                        .Where(cu => collectionIds.Contains(cu.CollectionId) &&
+                            removeOrganizationUserIds.Contains(cu.OrganizationUserId))
+                        .ToListAsync();
+                    dbContext.RemoveRange(toRemove);
+                    await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(removeOrganizationUserIds);
+                    await dbContext.SaveChangesAsync();
+                }
+
+                var collections = await dbContext.Collections
+                    .Where(c => collectionIds.Contains(c.Id))
+                    .ToListAsync();
+                foreach (var collection in collections)
+                {
+                    collection.RevisionDate = revisionDate;
+                }
+
+                // Bump everyone with access to a target collection now that the changes above are saved.
+                // Same order as CreateOrUpdateAccessForManyAsync.
+                await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(collectionIds, organizationId);
+                await dbContext.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+    }
+
     public async Task<Tuple<Core.Entities.Collection?, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id)
     {
         var collection = await base.GetByIdAsync(id);
