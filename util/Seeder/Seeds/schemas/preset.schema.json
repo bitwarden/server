@@ -18,6 +18,11 @@
       "description": "Organization configuration. Use 'fixture' for a named fixture, or 'name'+'domain' for inline creation.",
       "additionalProperties": false,
       "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional fixed organization GUID (omit to auto-generate). Lets canonical presets pin downstream wiring such as dev/.env."
+        },
         "fixture": {
           "type": "string",
           "description": "Name of an organization fixture file (e.g., 'dunder-mifflin')."
@@ -223,8 +228,8 @@
         },
         "encryptionType": {
           "type": "string",
-          "enum": ["masterPassword", "trustedDevices"],
-          "description": "How member keys are protected. 'masterPassword' = standard SSO, 'trustedDevices' = TDE (no master password)."
+          "enum": ["masterPassword", "trustedDevices", "keyConnector"],
+          "description": "How member keys are protected. 'masterPassword' = standard SSO, 'trustedDevices' = TDE (no master password), 'keyConnector' = Key Connector."
         },
         "provider": {
           "type": "string",

@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Models;
+﻿using Bit.Seeder.Guards;
+using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,11 +37,15 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         // Read preset to extract kdfIterations before building services.
         // CLI --kdf-iterations takes precedence over the preset value.
         var preset = reader.Read<Models.SeedPreset>($"presets.{presetName}");
+
+        FixedOrganizationIdGuard.EnsureAvailable(preset.Organization, id => deps.Db.Organizations.Any(o => o.Id == id));
+
         var effectiveKdf = kdfIterations ?? preset.KdfIterations ?? 5_000;
 
         var services = new ServiceCollection();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
+        services.AddSingleton(deps.AttachmentStorageService);
         services.AddSingleton<ISeedReader>(reader);
         services.AddSingleton(new SeederSettings(password, effectiveKdf, orgNameOverride, ownerEmailOverride));
         services.AddSingleton(deps.Db);
@@ -67,6 +72,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var services = new ServiceCollection();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
+        services.AddSingleton(deps.AttachmentStorageService);
         services.AddSingleton(new SeederSettings(
             options.Password,
             options.KdfIterations,
@@ -136,6 +142,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var services = new ServiceCollection();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
+        services.AddSingleton(deps.AttachmentStorageService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
         services.AddSingleton(deps.LicensingService);
         if (deps.Progress is not null)

@@ -58,6 +58,13 @@ public class BillingCustomerDiscount
     public IReadOnlyList<string>? AppliesTo { get; }
 
     /// <summary>
+    /// True when this discount was surfaced from a price-migration schedule's Phase 2 coupon
+    /// rather than a genuine customer- or subscription-level discount. Lets clients distinguish
+    /// a deferred price-migration coupon from a real discount.
+    /// </summary>
+    public bool IsFromSchedule { get; }
+
+    /// <summary>
     /// Creates a BillingCustomerDiscount from a SubscriptionInfo.BillingCustomerDiscount.
     /// </summary>
     /// <param name="discount">The discount to convert. Must not be null.</param>
@@ -73,5 +80,6 @@ public class BillingCustomerDiscount
         End = discount.End;
         DurationInMonths = discount.DurationInMonths;
         AppliesTo = discount.AppliesTo;
+        IsFromSchedule = discount.IsFromSchedule;
     }
 }

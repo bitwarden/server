@@ -9,6 +9,7 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,8 +25,7 @@ public class ReportsController : Controller
     private readonly IAddPasswordHealthReportApplicationCommand _addPwdHealthReportAppCommand;
     private readonly IGetPasswordHealthReportApplicationQuery _getPwdHealthReportAppQuery;
     private readonly IDropPasswordHealthReportApplicationCommand _dropPwdHealthReportAppCommand;
-    private readonly IAddOrganizationReportCommand _addOrganizationReportCommand;
-    private readonly IGetOrganizationReportQuery _getOrganizationReportQuery;
+    private readonly IGetPasskeyDirectoryQuery _getPasskeyDirectoryQuery;
     private readonly ILogger<ReportsController> _logger;
 
     public ReportsController(
@@ -35,8 +35,7 @@ public class ReportsController : Controller
         IAddPasswordHealthReportApplicationCommand addPasswordHealthReportApplicationCommand,
         IGetPasswordHealthReportApplicationQuery getPasswordHealthReportApplicationQuery,
         IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand,
-        IGetOrganizationReportQuery getOrganizationReportQuery,
-        IAddOrganizationReportCommand addOrganizationReportCommand,
+        IGetPasskeyDirectoryQuery getPasskeyDirectoryQuery,
         ILogger<ReportsController> logger
     )
     {
@@ -46,8 +45,7 @@ public class ReportsController : Controller
         _addPwdHealthReportAppCommand = addPasswordHealthReportApplicationCommand;
         _getPwdHealthReportAppQuery = getPasswordHealthReportApplicationQuery;
         _dropPwdHealthReportAppCommand = dropPwdHealthReportAppCommand;
-        _getOrganizationReportQuery = getOrganizationReportQuery;
-        _addOrganizationReportCommand = addOrganizationReportCommand;
+        _getPasskeyDirectoryQuery = getPasskeyDirectoryQuery;
         _logger = logger;
     }
 
@@ -205,5 +203,23 @@ public class ReportsController : Controller
         }
 
         await _dropPwdHealthReportAppCommand.DropPasswordHealthReportApplicationAsync(request);
+    }
+
+    /// <summary>
+    /// Gets the list of domains that support passkeys from the 2FA Directory
+    /// </summary>
+    /// <returns>List of domains with passkey support details</returns>
+    [HttpGet("passkey-directory")]
+    [RequireFeature(FeatureFlagKeys.PasskeyDirectoryReport)]
+    public async Task<IEnumerable<PasskeyDirectoryResponseModel>> GetPasskeyDirectoryAsync()
+    {
+        var entries = await _getPasskeyDirectoryQuery.GetPasskeyDirectoryAsync();
+        return entries.Select(e => new PasskeyDirectoryResponseModel
+        {
+            DomainName = e.DomainName,
+            Passwordless = e.Passwordless,
+            Mfa = e.Mfa,
+            Instructions = e.Instructions
+        });
     }
 }

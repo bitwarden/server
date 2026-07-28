@@ -1,0 +1,86 @@
+@using Bit.Core.Billing.Enums
+@using Bit.SharedWeb.Utilities
+@model Bit.Admin.Auth.Models.SalesAssistedTrial.SalesTrialInviteModel
+@{
+    ViewData["Title"] = "Send Sales-Assisted Trial Invitation";
+}
+
+<div class="mx-auto" style="max-width: 768px;">
+    <h1>Send Sales-Assisted Trial Invitation</h1>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"] as string))
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div asp-validation-summary="All" class="alert alert-danger"></div>
+
+    <form method="post" asp-action="Index" asp-antiforgery="true">
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label"></label>
+            <span asp-validation-for="Email" class="text-danger"></span>
+            <input asp-for="Email" type="email" class="form-control" />
+                    </div>
+
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Name <span class="text-muted">(optional)</span></label>
+            <span asp-validation-for="Name" class="text-danger"></span>
+            <input asp-for="Name" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ProductTier" class="form-label"></label>
+            <span asp-validation-for="ProductTier" class="text-danger"></span>
+            @{
+                // Teams Starter is a deprecated tier and must not be offered for new
+                // sales-assisted trials. There is no data-driven "available tiers" signal at
+                // this (ProductTierType) granularity to filter on — Plan.Disabled/Available
+                // is a per-SKU (PlanType) flag from the Pricing Service, one level more
+                // specific than this coarse tier grouping. Hand-filtering the enum mirrors
+                // the codebase's own existing precedent for excluding this exact value
+                // (_OrganizationForm.cshtml's PlanType.TeamsStarter filter).
+                var productTiers = Enum.GetValues<ProductTierType>()
+                    .Where(t => t != ProductTierType.TeamsStarter)
+                    .Select(t => new SelectListItem
+                    {
+                        Value = ((int)t).ToString(),
+                        Text = t.GetDisplayAttribute()?.GetName() ?? t.ToString()
+                    })
+                    .ToList();
+            }
+            <select asp-for="ProductTier" class="form-select" asp-items="productTiers"></select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Products</label>
+            <span asp-validation-for="Products" class="text-danger"></span>
+            @foreach (var product in Enum.GetValues<ProductType>())
+            {
+                <div class="form-check">
+                    <input type="checkbox" name="Products" value="@product" id="product-@product" class="form-check-input"
+                           checked="@(Model.Products != null && Model.Products.Contains(product))" />
+                    <label for="product-@product" class="form-check-label">@product</label>
+                </div>
+            }
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="TrialLength" class="form-label"></label>
+            <span asp-validation-for="TrialLength" class="text-danger"></span>
+            <input asp-for="TrialLength" type="number" min="0" max="30" class="form-control" />
+        </div>
+
+        <div class="mb-3 form-check">
+            <input asp-for="PaymentOptional" type="checkbox" class="form-check-input" />
+            <label asp-for="PaymentOptional" class="form-check-label"></label>
+            <span asp-validation-for="PaymentOptional" class="text-danger"></span>
+        </div>
+
+        <div class="d-flex mt-3">
+            <button type="submit" class="btn btn-primary">Send invitation</button>
+        </div>
+    </form>
+</div>

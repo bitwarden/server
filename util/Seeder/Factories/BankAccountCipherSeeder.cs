@@ -19,7 +19,7 @@ internal static class BankAccountCipherSeeder
             Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToBankAccountData(), CipherType.BankAccount, options.OrganizationId, options.UserId);
     }
 }
