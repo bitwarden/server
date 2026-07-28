@@ -78,6 +78,17 @@ public interface IPriceIncreaseScheduler
     /// schedule is released, dropping it from the deferred business migration.
     /// </param>
     Task Release(string customerId, string subscriptionId, Guid? organizationId = null);
+
+    /// <summary>
+    /// Releases an already-resolved subscription schedule, skipping the schedule lookup that
+    /// <see cref="Release(string, string, Guid?)"/> performs. Pass null when the caller has
+    /// established that no schedule is attached; the cohort assignment is still dropped when
+    /// <paramref name="organizationId"/> is supplied. Callers that have already classified the
+    /// schedule should prefer this overload so ownership is decided once.
+    /// </summary>
+    /// <param name="activeSchedule">The active schedule to release, or null when none is attached.</param>
+    /// <param name="organizationId">When supplied, the organization's cohort assignment is dropped.</param>
+    Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null);
 }
 
 public class PriceIncreaseScheduler(
@@ -218,14 +229,20 @@ public class PriceIncreaseScheduler(
 
     public async Task Release(string customerId, string subscriptionId, Guid? organizationId = null)
     {
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = customerId });
+
+        var activeSchedule = schedules.Data.FirstOrDefault(s =>
+            s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
+
+        await ReleaseSchedule(activeSchedule, organizationId);
+    }
+
+    public async Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null)
+    {
+        var subscriptionId = activeSchedule?.SubscriptionId;
         try
         {
-            var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-                new SubscriptionScheduleListOptions { Customer = customerId });
-
-            var activeSchedule = schedules.Data.FirstOrDefault(s =>
-                s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
-
             if (activeSchedule != null)
             {
                 await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);

@@ -4,6 +4,9 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
+using Bit.Core.Billing.Organizations.Schedules.Enums;
+using Bit.Core.Billing.Organizations.Schedules.Models;
+using Bit.Core.Billing.Organizations.Schedules.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
@@ -22,6 +25,8 @@ public class RedeemAnnualUpgradeOfferCommandTests
     private static readonly DateTime _phase1End = new(2026, 8, 6, 0, 0, 0, DateTimeKind.Utc);
 
     private readonly IGetAnnualUpgradeOfferQuery _getOfferQuery = Substitute.For<IGetAnnualUpgradeOfferQuery>();
+    private readonly IGetOrganizationSubscriptionScheduleOwnershipQuery _getScheduleOwnershipQuery =
+        Substitute.For<IGetOrganizationSubscriptionScheduleOwnershipQuery>();
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
@@ -29,9 +34,14 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
     public RedeemAnnualUpgradeOfferCommandTests()
     {
+        _getScheduleOwnershipQuery.Run(Arg.Any<Organization>(), Arg.Any<Subscription>())
+            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
+                OrganizationSubscriptionScheduleOwnership.None, null));
+
         _command = new RedeemAnnualUpgradeOfferCommand(
             Substitute.For<ILogger<RedeemAnnualUpgradeOfferCommand>>(),
             _getOfferQuery,
+            _getScheduleOwnershipQuery,
             _priceIncreaseScheduler,
             _pricingClient,
             _stripeAdapter);
@@ -83,6 +93,26 @@ public class RedeemAnnualUpgradeOfferCommandTests
         return (subscription, schedule);
     }
 
+    /// <summary>
+    /// Sets up a redeemable subscription with no line items, so the flow reaches the schedule
+    /// ownership check without needing pricing plan mocks configured.
+    /// </summary>
+    private Subscription SetupSubscription(Organization organization)
+    {
+        _getOfferQuery.Run(organization).Returns(new AnnualUpgradeOfferResult(60m, 48m, 12m));
+
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        return subscription;
+    }
+
     [Fact]
     public async Task Run_QueryReturnsNullOnRevalidation_ReturnsFailure_StripeNotMutated()
     {
@@ -115,8 +145,8 @@ public class RedeemAnnualUpgradeOfferCommandTests
         await _stripeAdapter.Received(1).GetSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts.coupon")));
         // Passing organization.Id (not null) is what drops the org's cohort assignment inside
-        // Release -- Alex's 2026-07-02 decision that switching to annual also exits the cohort.
-        await _priceIncreaseScheduler.Received(1).Release(subscription.CustomerId, subscription.Id, organization.Id);
+        // ReleaseSchedule -- switching to annual also exits the cohort.
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id);
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id, Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
             o.EndBehavior == SubscriptionScheduleEndBehavior.Release &&
             o.Phases.Count == 2 &&
@@ -334,5 +364,49 @@ public class RedeemAnnualUpgradeOfferCommandTests
         Assert.True(result.IsT3);
         Assert.IsType<StripeException>(result.AsT3.Exception);
         await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync(schedule.Id);
+    }
+
+    [Fact]
+    public async Task Run_ForeignSchedule_ReturnsConflictWithoutMutatingStripe()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization);
+        _getScheduleOwnershipQuery.Run(organization, subscription)
+            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
+                OrganizationSubscriptionScheduleOwnership.Foreign,
+                new SubscriptionSchedule { Id = "sub_sched_finance" }));
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT2);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().Release(default!, default!, default);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleAsync(default!);
+    }
+
+    [Fact]
+    public async Task Run_PriceMigrationSchedule_ReleasesResolvedSchedule()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization);
+        var migrationSchedule = new SubscriptionSchedule { Id = "sub_sched_migration" };
+        _getScheduleOwnershipQuery.Run(organization, subscription)
+            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
+                OrganizationSubscriptionScheduleOwnership.PriceMigration, migrationSchedule));
+
+        await _command.Run(organization);
+
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(migrationSchedule, organization.Id);
+    }
+
+    [Fact]
+    public async Task Run_NoSchedule_StillDropsCohortAssignment()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        SetupSubscription(organization);
+
+        await _command.Run(organization);
+
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id);
     }
 }

@@ -5,6 +5,8 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration;
+using Bit.Core.Billing.Organizations.Schedules.Enums;
+using Bit.Core.Billing.Organizations.Schedules.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
@@ -18,6 +20,7 @@ using static StripeConstants;
 public class RedeemAnnualUpgradeOfferCommand(
     ILogger<RedeemAnnualUpgradeOfferCommand> logger,
     IGetAnnualUpgradeOfferQuery getOfferQuery,
+    IGetOrganizationSubscriptionScheduleOwnershipQuery getScheduleOwnershipQuery,
     IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter)
@@ -44,7 +47,7 @@ public class RedeemAnnualUpgradeOfferCommand(
         }
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, _logger, organization, CommandName, ["customer", "discounts.coupon"]);
+            stripeAdapter, _logger, organization, CommandName, ["customer", "discounts.coupon", "schedule"]);
         if (subscription is null)
         {
             return DefaultConflict;
@@ -85,14 +88,26 @@ public class RedeemAnnualUpgradeOfferCommand(
             });
         }
 
-        // Only one active schedule is allowed per Stripe subscription. Release any existing
-        // schedule (e.g. a Track A price-migration schedule) before creating the annual-switch
-        // schedule -- per Alex/Micah's 2026-07-02 confirmation, the organization migrates
-        // straight to the annual-latest plan instead of whatever the released schedule was
-        // going to do. Passing organizationId also drops the org's cohort assignment row --
-        // Alex was explicit this should happen (not just be implicitly blocked by the
-        // schedule-existence guard), noting the org may lose a proactive migration discount.
-        await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id, organization.Id);
+        // Stripe permits one active schedule per subscription, so the switch can only be built by
+        // releasing whatever is there. A schedule Bitwarden did not create, for example a
+        // negotiated renewal built by hand in the Stripe Dashboard, must never be released:
+        // unlike a seat change, this operation has no way to proceed while leaving it intact.
+        // The offer query suppresses this case at page load, so reaching here means a schedule
+        // appeared between the offer being shown and the redemption being submitted.
+        var ownership = await getScheduleOwnershipQuery.Run(organization, subscription);
+        if (ownership.Ownership == OrganizationSubscriptionScheduleOwnership.Foreign)
+        {
+            _logger.LogWarning(
+                "{Command}: Refusing to release unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}) for Organization ({OrganizationId})",
+                CommandName, ownership.Schedule?.Id, subscription.Id, organization.Id);
+            return DefaultConflict;
+        }
+
+        // Releasing a Track A price-migration schedule is intended: the organization moves straight
+        // to the annual-latest plan, which reaches the same destination the migration would have.
+        // Passing organizationId also drops the cohort assignment row so the organization leaves
+        // the migration cohort, accepting that it may lose a proactive migration discount.
+        await priceIncreaseScheduler.ReleaseSchedule(ownership.Schedule, organization.Id);
 
         var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
             new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
