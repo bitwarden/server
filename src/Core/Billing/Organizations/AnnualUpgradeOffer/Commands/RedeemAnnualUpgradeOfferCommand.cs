@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration;
@@ -47,7 +46,8 @@ public class RedeemAnnualUpgradeOfferCommand(
         }
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, _logger, organization, CommandName, ["customer", "discounts.coupon", "schedule"]);
+            stripeAdapter, _logger, organization, CommandName,
+            ["customer", "discounts.coupon", "items.data.discounts.coupon", "schedule"]);
         if (subscription is null)
         {
             return DefaultConflict;
@@ -59,6 +59,15 @@ public class RedeemAnnualUpgradeOfferCommand(
         {
             _logger.LogError(
                 "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded without expanding 'discounts'; refusing to rebuild its schedule",
+                CommandName, subscription.Id, organization.Id);
+            return DefaultConflict;
+        }
+
+        if (subscription.Items.Data.Any(item =>
+                item.Discounts is { Count: > 0 } && item.Discounts.Any(d => d is null)))
+        {
+            _logger.LogError(
+                "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded without expanding item discounts; refusing to rebuild its schedule",
                 CommandName, subscription.Id, organization.Id);
             return DefaultConflict;
         }
@@ -81,10 +90,24 @@ public class RedeemAnnualUpgradeOfferCommand(
                 return DefaultConflict;
             }
 
+            // A coupon bound to a single line does not travel with the customer or subscription
+            // discounts, so it has to be copied onto the phase item explicitly or it disappears at
+            // renewal. The savings quote assumes it survives. Copy by coupon ID rather than
+            // promotion code: promotion codes carrying a minimum-amount restriction cannot be
+            // applied to a future schedule phase.
+            var itemDiscounts = item.Discounts?
+                .Where(discount => !string.IsNullOrEmpty(discount?.Coupon?.Id))
+                .Select(discount => new SubscriptionSchedulePhaseItemDiscountOptions
+                {
+                    Coupon = discount.Coupon.Id
+                })
+                .ToList();
+
             phase2Items.Add(new SubscriptionSchedulePhaseItemOptions
             {
                 Price = targetPriceId,
-                Quantity = item.Quantity
+                Quantity = item.Quantity,
+                Discounts = itemDiscounts is { Count: > 0 } ? itemDiscounts : null
             });
         }
 
@@ -127,20 +150,29 @@ public class RedeemAnnualUpgradeOfferCommand(
                     Price = i.PriceId,
                     Quantity = i.Quantity
                 })],
-                Discounts = phase1.Discounts is null ? null :
+                Discounts = phase1.Discounts is { Count: > 0 } ?
                 [
                     .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
                     {
                         Coupon = d.CouponId
                     })
-                ],
+                ] : null,
                 ProrationBehavior = ProrationBehavior.None
             };
 
-            // Phase-level discounts override the customer-level one, so the customer coupon
-            // must be copied in explicitly to keep stacking; the merge de-duplicates.
-            var phase2Discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-                subscription.Discounts?.Select(d => d.Coupon.Id)).ToPhaseDiscountOptions();
+            // Customer-level and subscription-level discounts do not stack: Stripe only applies the
+            // customer's when the subscription has none of its own. Carry the subscription's
+            // coupons when it has them, and otherwise leave the array unspecified so the phase
+            // inherits the customer coupon, which is exactly what the subscription bills under
+            // today. Merging both would start applying a customer coupon Stripe is suppressing,
+            // quietly enlarging the organization's discount at renewal.
+            var phase2Discounts = subscription.Discounts?
+                .Where(discount => !string.IsNullOrEmpty(discount?.Coupon?.Id))
+                .Select(discount => new SubscriptionSchedulePhaseDiscountOptions
+                {
+                    Coupon = discount.Coupon.Id
+                })
+                .ToList();
 
             // Stripe requires every phase to be bounded (end_date or duration); Phase 2 runs
             // exactly one annual term, then the schedule releases per EndBehavior below.
@@ -149,7 +181,7 @@ public class RedeemAnnualUpgradeOfferCommand(
                 StartDate = phase1.EndDate,
                 EndDate = phase1.EndDate.AddYears(1),
                 Items = phase2Items,
-                Discounts = phase2Discounts.Count > 0 ? phase2Discounts : null,
+                Discounts = phase2Discounts is { Count: > 0 } ? phase2Discounts : null,
                 ProrationBehavior = ProrationBehavior.None
             };
 

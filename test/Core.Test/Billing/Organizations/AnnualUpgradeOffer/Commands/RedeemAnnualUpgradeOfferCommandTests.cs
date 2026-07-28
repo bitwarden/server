@@ -143,7 +143,11 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         Assert.True(result.IsT0);
         await _stripeAdapter.Received(1).GetSubscriptionAsync(organization.GatewaySubscriptionId,
-            Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts.coupon")));
+            Arg.Is<SubscriptionGetOptions>(o =>
+                o.Expand.Contains("customer") &&
+                o.Expand.Contains("discounts.coupon") &&
+                o.Expand.Contains("items.data.discounts.coupon") &&
+                o.Expand.Contains("schedule")));
         // Passing organization.Id (not null) is what drops the org's cohort assignment inside
         // ReleaseSchedule -- switching to annual also exits the cohort.
         await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id);
@@ -223,7 +227,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_SubscriptionWithDiscounts_PreservesPhase1_AndMergesIntoPhase2()
+    public async Task Run_SubscriptionWithDiscounts_PreservesPhase1_AndCarriesOwnCouponToPhase2()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         var monthlyPlan = new TeamsPlan(false);
@@ -244,11 +248,11 @@ public class RedeemAnnualUpgradeOfferCommandTests
             o.Phases[0].Discounts != null &&
             o.Phases[0].Discounts.Count == 1 &&
             o.Phases[0].Discounts[0].Coupon == "promo-coupon" &&
-            // Customer coupon first, then existing subscription coupons, de-duplicated.
+            // The subscription already has its own coupon, so Stripe is suppressing the
+            // customer's today; Phase 2 must carry only the subscription's, not both.
             o.Phases[1].Discounts != null &&
-            o.Phases[1].Discounts.Count == 2 &&
-            o.Phases[1].Discounts[0].Coupon == "customer-coupon" &&
-            o.Phases[1].Discounts[1].Coupon == "promo-coupon"));
+            o.Phases[1].Discounts.Count == 1 &&
+            o.Phases[1].Discounts[0].Coupon == "promo-coupon"));
     }
 
     [Fact]
@@ -388,14 +392,17 @@ public class RedeemAnnualUpgradeOfferCommandTests
     public async Task Run_PriceMigrationSchedule_ReleasesResolvedSchedule()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
-        var subscription = SetupSubscription(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
+        var (subscription, _) = SetupRedeemableSubscription(organization, []);
         var migrationSchedule = new SubscriptionSchedule { Id = "sub_sched_migration" };
         _getScheduleOwnershipQuery.Run(organization, subscription)
             .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
                 OrganizationSubscriptionScheduleOwnership.PriceMigration, migrationSchedule));
 
-        await _command.Run(organization);
+        var result = await _command.Run(organization);
 
+        Assert.True(result.IsT0);
         await _priceIncreaseScheduler.Received(1).ReleaseSchedule(migrationSchedule, organization.Id);
     }
 
@@ -403,10 +410,106 @@ public class RedeemAnnualUpgradeOfferCommandTests
     public async Task Run_NoSchedule_StillDropsCohortAssignment()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
-        SetupSubscription(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
+        SetupRedeemableSubscription(organization, []);
 
-        await _command.Run(organization);
+        var result = await _command.Run(organization);
 
+        Assert.True(result.IsT0);
         await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id);
+    }
+
+    [Fact]
+    public async Task Run_ItemLevelDiscounts_CopiedOntoPhaseTwoItems()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var seatItem = new SubscriptionItem
+        {
+            Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId },
+            Quantity = 10,
+            Discounts = [new Discount { Id = "di_1", Coupon = new Coupon { Id = "sm_half_off" } }]
+        };
+        var (_, schedule) = SetupRedeemableSubscription(organization, [seatItem]);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(options =>
+                options.Phases[1].Items.Any(item =>
+                    item.Discounts != null &&
+                    item.Discounts.Any(discount => discount.Coupon == "sm_half_off"))));
+    }
+
+    [Fact]
+    public async Task Run_ItemWithoutDiscounts_LeavesPhaseTwoItemDiscountsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var (_, schedule) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(options =>
+                options.Phases[1].Items.All(item => item.Discounts == null)));
+    }
+
+    [Fact]
+    public async Task Run_SubscriptionHasOwnDiscounts_PhaseTwoDoesNotResurrectCustomerCoupon()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var (_, schedule) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
+            subscriptionDiscounts: [new Discount { Id = "di_sub", Coupon = new Coupon { Id = "sub_coupon" } }],
+            customer: new Customer { Discount = new Discount { Id = "di_cust", Coupon = new Coupon { Id = "customer_coupon" } } });
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(options =>
+                options.Phases[1].Discounts != null &&
+                options.Phases[1].Discounts.Count == 1 &&
+                options.Phases[1].Discounts[0].Coupon == "sub_coupon"));
+    }
+
+    [Fact]
+    public async Task Run_NoSubscriptionDiscounts_PhaseTwoLeavesDiscountsUnspecifiedToInherit()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var (_, schedule) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
+            customer: new Customer { Discount = new Discount { Id = "di_cust", Coupon = new Coupon { Id = "customer_coupon" } } });
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        // Null rather than an explicit array: Stripe inherits the customer coupon when the phase
+        // does not specify discounts, which is exactly the discount the subscription bills under today.
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(options => options.Phases[1].Discounts == null));
     }
 }
