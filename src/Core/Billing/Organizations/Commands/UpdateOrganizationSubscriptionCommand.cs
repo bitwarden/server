@@ -192,10 +192,32 @@ public class UpdateOrganizationSubscriptionCommand(
         }
 
         // A charge-automatically structural change bills immediately; with no payment method on
-        // file Stripe rejects the update with an error that surfaces as an unactionable 500
+        // file Stripe rejects the update with an error that surfaces as an unactionable 500 — but
+        // only when the change actually requires payment. Changes that preview at or below zero
+        // (e.g. a sponsorship swap to a $0 price) need no payment method and go through.
         if (hasStructuralChanges && isChargedAutomatically && !await hasPaymentMethodQuery.Run(organization))
         {
-            return new BadRequest("You don't have a payment method on file. Please add one and try again.");
+            var previewedInvoice = await stripeAdapter.CreateInvoicePreviewAsync(new InvoiceCreatePreviewOptions
+            {
+                Customer = subscription.CustomerId,
+                Subscription = subscription.Id,
+                SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    Items = [.. items.Select(item => new InvoiceSubscriptionDetailsItemOptions
+                    {
+                        Id = item.Id,
+                        Price = item.Price,
+                        Quantity = item.Quantity,
+                        Deleted = item.Deleted
+                    })],
+                    ProrationBehavior = prorationBehavior
+                }
+            });
+
+            if (previewedInvoice.AmountDue > 0)
+            {
+                return new BadRequest("You don't have a payment method on file. Please add one and try again.");
+            }
         }
 
         var options = new SubscriptionUpdateOptions { Items = items, ProrationBehavior = prorationBehavior };

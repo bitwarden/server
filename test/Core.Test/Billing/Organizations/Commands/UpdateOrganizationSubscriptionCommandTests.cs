@@ -876,6 +876,8 @@ public class UpdateOrganizationSubscriptionCommandTests
         SetupGetSubscription(organization, subscription);
 
         _hasPaymentMethodQuery.Run(organization).Returns(false);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice { AmountDue = 500 });
 
         var changeSet = new OrganizationSubscriptionChangeSet
         {
@@ -892,6 +894,44 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         await _stripeAdapter.DidNotReceive()
             .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    // A structural change without a stored payment method is only refused when it actually
+    // requires payment. A sponsorship swap to a $0 price previews at or below zero and must
+    // go through — Stripe needs no payment method for it.
+    [Fact]
+    public async Task Run_ChargeAutomatically_Structural_NoPaymentMethod_NonPositiveInvoice_UpdatesSubscription()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(
+            collectionMethod: CollectionMethod.ChargeAutomatically,
+            items: [("price_families", "si_1", 1)]);
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        _hasPaymentMethodQuery.Run(organization).Returns(false);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice { AmountDue = 0 });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new RemoveItem("price_families"), new AddItem("price_sponsored_families", 1)],
+            ChargeImmediately = true
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Subscription == subscription.Id &&
+            options.SubscriptionDetails.Items.Count == 2 &&
+            options.SubscriptionDetails.Items[0].Id == "si_1" &&
+            options.SubscriptionDetails.Items[0].Deleted == true &&
+            options.SubscriptionDetails.Items[1].Price == "price_sponsored_families"));
+        await _stripeAdapter.Received(1)
+            .UpdateSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
