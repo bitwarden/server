@@ -23,7 +23,7 @@ COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/src/Api
-RUN . /tmp/rid.txt && dotnet restore -r $RID
+RUN dotnet restore
 
 # Build project
 RUN . /tmp/rid.txt && dotnet publish \

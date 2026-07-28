@@ -68,7 +68,7 @@ COPY . ./
 
 # Restore .NET dependencies
 WORKDIR /source/util/SeederApi
-RUN . /etc/build-env && dotnet restore -r ${RID}
+RUN dotnet restore
 
 # Build the project with Rust support
 WORKDIR /source/util/SeederApi

@@ -1,6 +1,9 @@
 {
   "version": 1,
   "dependencies": {
-    "net10.0": {}
+    "net10.0": {},
+    "net10.0/linux-musl-arm": {},
+    "net10.0/linux-musl-arm64": {},
+    "net10.0/linux-musl-x64": {}
   }
 }
