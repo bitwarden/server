@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Organizations.PlanMigration;
 using Stripe;
+using static Bit.Core.Billing.Constants.StripeConstants;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
@@ -18,8 +19,6 @@ internal readonly record struct AnnualUpgradeSavings(decimal CurrentAnnualCost, 
 internal static class AnnualUpgradeSavingsCalculator
 {
     private readonly record struct Line(SubscriptionItem Item, PlanPriceMapping Mapping);
-
-    private const string ForeverDuration = "forever";
 
     /// <summary>
     /// Returns null when the subscription has no line items, or when any line has no annual
@@ -177,7 +176,7 @@ internal static class AnnualUpgradeSavingsCalculator
     /// </summary>
     private static bool IsApplicable(Coupon? coupon, string currency) =>
         coupon is not null &&
-        string.Equals(coupon.Duration, ForeverDuration, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(coupon.Duration, CouponDurations.Forever, StringComparison.OrdinalIgnoreCase) &&
         (coupon.AmountOff is null || string.Equals(coupon.Currency, currency, StringComparison.OrdinalIgnoreCase));
 
     private static decimal AmountOff(Coupon coupon) => (coupon.AmountOff ?? 0L) / 100m;

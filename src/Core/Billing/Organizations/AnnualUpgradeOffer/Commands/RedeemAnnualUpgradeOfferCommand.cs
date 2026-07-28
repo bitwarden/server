@@ -54,11 +54,14 @@ public class RedeemAnnualUpgradeOfferCommand(
         }
 
         // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
-        // proceeding would silently drop the organization's pre-existing discounts.
-        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
+        // proceeding would silently drop the organization's pre-existing discounts. A discount
+        // with no coupon ID is just as unusable: the phase-2 filter below drops it, which would
+        // silently let the customer-level coupon resurrect instead of failing loudly.
+        if (subscription.Discounts is { Count: > 0 } &&
+            subscription.Discounts.Any(d => d == null || string.IsNullOrEmpty(d.Coupon?.Id)))
         {
             _logger.LogError(
-                "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded without expanding 'discounts'; refusing to rebuild its schedule",
+                "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded without expanding 'discounts', or has a discount with no coupon; refusing to rebuild its schedule",
                 CommandName, subscription.Id, organization.Id);
             return DefaultConflict;
         }
@@ -130,7 +133,7 @@ public class RedeemAnnualUpgradeOfferCommand(
         // to the annual-latest plan, which reaches the same destination the migration would have.
         // Passing organizationId also drops the cohort assignment row so the organization leaves
         // the migration cohort, accepting that it may lose a proactive migration discount.
-        await priceIncreaseScheduler.ReleaseSchedule(ownership.Schedule, organization.Id);
+        await priceIncreaseScheduler.ReleaseSchedule(ownership.Schedule, organization.Id, subscription.Id);
 
         var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
             new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });

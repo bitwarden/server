@@ -149,7 +149,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
                 o.Expand.Contains("schedule")));
         // Passing organization.Id (not null) is what drops the org's cohort assignment inside
         // ReleaseSchedule -- switching to annual also exits the cohort.
-        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id);
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id, subscription.Id);
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id, Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
             o.EndBehavior == SubscriptionScheduleEndBehavior.Release &&
             o.Phases.Count == 2 &&
@@ -322,6 +322,51 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
+    public async Task Run_SubscriptionDiscountHasNullCoupon_ReturnsConflict_WithoutMutatingStripe()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        // A discount with no coupon is just as unusable as an unexpanded one: the Phase 2 filter
+        // drops it, which would leave phase2Discounts empty and let the customer-level coupon
+        // resurrect silently instead of failing the redemption.
+        SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
+            subscriptionDiscounts: [new Discount { Coupon = null }]);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT2);
+        await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_SubscriptionDiscountHasEmptyCouponId_ReturnsConflict_WithoutMutatingStripe()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        // Same failure mode as the null-coupon case above, but with a coupon object present and
+        // an empty ID -- the "?." on Coupon alone would not have caught this.
+        SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
+            subscriptionDiscounts: [new Discount { Coupon = new Coupon { Id = "" } }]);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT2);
+        await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
     public async Task Run_SubscriptionNotFound_ReturnsConflict()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
@@ -439,7 +484,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(migrationSchedule, organization.Id);
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(migrationSchedule, organization.Id, subscription.Id);
     }
 
     [Fact]
@@ -448,12 +493,12 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-        SetupRedeemableSubscription(organization, []);
+        var (subscription, _) = SetupRedeemableSubscription(organization, []);
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id);
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id, subscription.Id);
     }
 
     [Fact]

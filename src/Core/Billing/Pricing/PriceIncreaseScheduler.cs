@@ -88,7 +88,12 @@ public interface IPriceIncreaseScheduler
     /// </summary>
     /// <param name="activeSchedule">The active schedule to release, or null when none is attached.</param>
     /// <param name="organizationId">When supplied, the organization's cohort assignment is dropped.</param>
-    Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null);
+    /// <param name="subscriptionId">
+    /// The Stripe subscription ID, used only to identify the subscription in log messages when
+    /// <paramref name="activeSchedule"/> is null and cleanup fails. Callers that already have the
+    /// subscription ID in scope should pass it so manual-cleanup logs stay actionable.
+    /// </param>
+    Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null, string? subscriptionId = null);
 }
 
 public class PriceIncreaseScheduler(
@@ -235,12 +240,12 @@ public class PriceIncreaseScheduler(
         var activeSchedule = schedules.Data.FirstOrDefault(s =>
             s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
 
-        await ReleaseSchedule(activeSchedule, organizationId);
+        await ReleaseSchedule(activeSchedule, organizationId, subscriptionId);
     }
 
-    public async Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null)
+    public async Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null, string? subscriptionId = null)
     {
-        var subscriptionId = activeSchedule?.SubscriptionId;
+        subscriptionId ??= activeSchedule?.SubscriptionId;
         try
         {
             if (activeSchedule != null)
