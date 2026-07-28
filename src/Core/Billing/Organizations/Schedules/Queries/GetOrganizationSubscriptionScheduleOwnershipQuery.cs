@@ -55,7 +55,7 @@ public class GetOrganizationSubscriptionScheduleOwnershipQuery(
         {
             var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
             var carriesAnnualLatestSeatPrice = schedule.Phases?.Any(phase =>
-                phase.Items.Any(item => item.PriceId == annualLatestPlan.PasswordManager.StripeSeatPlanId)) ?? false;
+                (phase.Items ?? []).Any(item => item.PriceId == annualLatestPlan.PasswordManager.StripeSeatPlanId)) ?? false;
 
             if (carriesAnnualLatestSeatPrice)
             {

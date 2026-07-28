@@ -186,4 +186,23 @@ public class GetOrganizationSubscriptionScheduleOwnershipQueryTests
         Assert.Equal(OrganizationSubscriptionScheduleOwnership.Foreign, result.Ownership);
         Assert.Same(schedule, result.Schedule);
     }
+
+    [Fact]
+    public async Task Run_PhaseWithNullItems_ReturnsForeign()
+    {
+        var organization = CreateOrganization();
+        _assignmentRepository.GetByOrganizationIdAsync(organization.Id)
+            .Returns((OrganizationPlanMigrationCohortAssignment?)null);
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_123",
+            Status = SubscriptionScheduleStatus.Active,
+            Phases = [new SubscriptionSchedulePhase { Items = null! }]
+        };
+
+        var result = await _query.Run(organization, CreateSubscription(schedule));
+
+        Assert.Equal(OrganizationSubscriptionScheduleOwnership.Foreign, result.Ownership);
+        Assert.Same(schedule, result.Schedule);
+    }
 }
