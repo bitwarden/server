@@ -25,4 +25,8 @@ public class CurrentContextOrganization
     public OrganizationUserType Type { get; set; }
     public Permissions Permissions { get; set; } = new();
     public bool AccessSecretsManager { get; set; }
+
+    public bool IsAdminOrOwner => Type is OrganizationUserType.Owner or OrganizationUserType.Admin;
+
+    public bool HasPermission(Func<Permissions, bool> permissionPicker) => permissionPicker(Permissions);
 }
