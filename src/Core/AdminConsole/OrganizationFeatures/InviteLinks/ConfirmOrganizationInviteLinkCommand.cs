@@ -76,6 +76,8 @@ public class ConfirmOrganizationInviteLinkCommand(
 
         var organizationUser = membershipResult.AsSuccess;
 
+        await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_InviteLinkConfirmed);
+
         await CreateDefaultCollectionAsync(organization, organizationUser, request.DefaultUserCollectionName);
 
         if (autoEnrollEnabled)
@@ -86,8 +88,6 @@ public class ConfirmOrganizationInviteLinkCommand(
 
         // The membership now carries the organization key, so notify the user's other devices to sync it.
         await pushNotificationService.PushSyncOrgKeysAsync(user.Id);
-
-        await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_InviteLinkConfirmed);
 
         return new None();
     }

@@ -38,7 +38,7 @@ public interface IEventService
     Task LogOrganizationUserEventsAsync<T>(IEnumerable<(T, EventType, EventSystemUser, DateTime?)> events) where T : IOrganizationUser;
     Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null);
     /// <summary>
-    /// Use the cached organization abilities to check permissions, then log the event.
+    /// Use the cached organization abilities to check for Enabled and UseEvents, then log the event.
     /// </summary>
     Task LogOrganizationEventAsync(OrganizationAbility organizationAbility, EventType type, DateTime? date = null);
     Task LogOrganizationEventAsync(Organization organization, EventType type, EventSystemUser systemUser, DateTime? date = null);
