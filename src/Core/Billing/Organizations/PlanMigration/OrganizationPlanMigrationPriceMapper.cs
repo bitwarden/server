@@ -25,7 +25,7 @@ internal static class OrganizationPlanMigrationPriceMapper
     /// <summary>
     /// Maps as <see cref="MapOrNull"/>; returns the input unchanged on miss. Short-circuits when
     /// source and target are the same instance. Pass-through is intentional for Families and
-    /// uniform-price slots — callers should not log misses.
+    /// uniform-price slots, so callers should not log misses.
     /// </summary>
     public static string MapOrPassThrough(string sourcePriceId, Plan source, Plan target)
     {
