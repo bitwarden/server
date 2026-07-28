@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -18,14 +17,8 @@ public record ConfirmInviteLinkNotAvailable()
     public string Type => "invite_link_not_available";
 }
 
-/// <summary>
-/// Returned when the invite link was not created with
-/// <see cref="Entities.OrganizationInviteLink.SupportsConfirmation"/>, so it may only be used with the
-/// accept flow. This error has no accept-endpoint counterpart, so it declares its own message rather
-/// than inheriting one from a shared invite-link error.
-/// </summary>
 public record ConfirmInviteLinkConfirmationNotSupported()
-    : BadRequestError("This invite link cannot be used to confirm your organization membership."), IValidationError
+    : InviteLinkConfirmationNotSupported(), IValidationError
 {
     public string PropertyName => "code";
     public string Type => "invite_link_confirmation_not_supported";
