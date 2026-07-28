@@ -80,4 +80,14 @@ public class SalesAssistedTrialInvitationEmailViewTests
 
         Assert.Equal(expectedUrl, view.SpotImageUrl);
     }
+
+    [Theory]
+    [InlineData(ProductTierType.Free, "You're invited to try Bitwarden")]
+    [InlineData(ProductTierType.Enterprise, "You're invited to start a <b>7-day<br/>free trial</b> of Bitwarden Enterprise")]
+    public void HeroTitle_OmitsTrialLengthForFreeTier(ProductTierType productTier, string expected)
+    {
+        var view = CreateView(productTier);
+
+        Assert.Equal(expected, view.HeroTitle);
+    }
 }
