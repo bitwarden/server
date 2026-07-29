@@ -4,10 +4,6 @@ namespace Bit.Core.Billing.Extensions;
 
 public static class DiscountExtensions
 {
-    // TODO: Remove — unused. No call sites in src/ or test/; the Coupon overload below is the one in use.
-    public static bool AppliesTo(this Discount discount, SubscriptionItem subscriptionItem)
-        => discount.Source.Coupon.AppliesTo.Products.Contains(subscriptionItem.Price.Product.Id);
-
     public static bool AppliesTo(this Coupon coupon, SubscriptionItem subscriptionItem)
         => coupon.AppliesTo?.Products?.Contains(subscriptionItem.Price.Product.Id) ?? false;
 
