@@ -47,38 +47,26 @@ jobs:
         include:
           - project_name: Admin
             base_path: ./src
-            dotnet: true
-            node: true
           - project_name: Api
             base_path: ./src
-            dotnet: true
           - project_name: Billing
             base_path: ./src
-            dotnet: true
           - project_name: Events
             base_path: ./src
-            dotnet: true
           - project_name: EventsProcessor
             base_path: ./src
-            dotnet: true
           - project_name: Icons
             base_path: ./src
-            dotnet: true
           - project_name: Identity
             base_path: ./src
-            dotnet: true
           - project_name: MsSqlMigratorUtility
             base_path: ./util
-            dotnet: true
           - project_name: Notifications
             base_path: ./src
-            dotnet: true
           - project_name: Scim
             base_path: ./bitwarden_license/src
-            dotnet: true
           - project_name: Sso
             base_path: ./bitwarden_license/src
-            dotnet: true
     steps:
       - name: Check out repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -135,9 +123,6 @@ jobs:
       - name: Print environment
         run: |
           whoami
-          dotnet --info
-          node --version
-          npm --version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
           echo "Project: ${{ matrix.project_name }}"
