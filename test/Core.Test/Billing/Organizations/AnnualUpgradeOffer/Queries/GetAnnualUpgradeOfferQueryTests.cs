@@ -5,7 +5,6 @@ using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
-using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
