@@ -1,11 +1,8 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Core.Models.Api;
 
-public class ErrorResponseModel : ResponseModel
+public class ErrorResponseModel : Bit.HttpExtensions.ResponseModel
 {
     public ErrorResponseModel()
         : base("error")
@@ -67,10 +64,10 @@ public class ErrorResponseModel : ResponseModel
         ValidationErrors = errors;
     }
 
-    public string Message { get; set; }
-    public Dictionary<string, IEnumerable<string>> ValidationErrors { get; set; }
+    public string? Message { get; set; }
+    public Dictionary<string, IEnumerable<string>>? ValidationErrors { get; set; }
     // For use in development environments.
-    public string ExceptionMessage { get; set; }
-    public string ExceptionStackTrace { get; set; }
-    public string InnerExceptionMessage { get; set; }
+    public string? ExceptionMessage { get; set; }
+    public string? ExceptionStackTrace { get; set; }
+    public string? InnerExceptionMessage { get; set; }
 }

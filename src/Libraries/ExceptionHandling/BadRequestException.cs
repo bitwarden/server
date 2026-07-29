@@ -1,9 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Core.Exceptions;
-
-#nullable enable
 
 public class BadRequestException : Exception
 {
