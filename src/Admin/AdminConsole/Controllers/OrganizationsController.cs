@@ -394,7 +394,8 @@ public class OrganizationsController : Controller
 
                 if (model.MaxCollections > freePlan.PasswordManager.MaxCollections)
                 {
-                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} collections cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} collections.";
+                    var collectionTerm = _featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation) ? "shared folders" : "collections";
+                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} {collectionTerm} cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} {collectionTerm}.";
                     return RedirectToAction("Edit", new { id });
                 }
 

@@ -165,9 +165,10 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
             if (collectionCount > newPlan.PasswordManager.MaxCollections.Value)
             {
-                throw new BadRequestException($"Your organization currently has {collectionCount} collections. " +
-                                              $"Your new plan allows for a maximum of ({newPlan.PasswordManager.MaxCollections.Value}) collections. " +
-                                              "Remove some collections.");
+                var collectionTerm = _featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation) ? "shared folders" : "collections";
+                throw new BadRequestException($"Your organization currently has {collectionCount} {collectionTerm}. " +
+                                              $"Your new plan allows for a maximum of ({newPlan.PasswordManager.MaxCollections.Value}) {collectionTerm}. " +
+                                              $"Remove some {collectionTerm}.");
             }
         }
 
