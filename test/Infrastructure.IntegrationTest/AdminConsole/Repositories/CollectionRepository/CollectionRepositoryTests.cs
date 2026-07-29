@@ -646,4 +646,57 @@ public class CollectionRepositoryTests
         Assert.True(groupAccess.ReadOnly);
         Assert.True(groupAccess.HidePasswords);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ModifyUserAccessAsync_AppliesAddUpdateAndRemove_BumpsRevisionDate(
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        IUserRepository userRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var updatedUser = await organizationUserRepository.CreateTestOrganizationUserAsync(
+            organization, await userRepository.CreateTestUserAsync());
+        var addedUser = await organizationUserRepository.CreateTestOrganizationUserAsync(
+            organization, await userRepository.CreateTestUserAsync());
+        var removedUser = await organizationUserRepository.CreateTestOrganizationUserAsync(
+            organization, await userRepository.CreateTestUserAsync());
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+
+        await collectionRepository.CreateOrUpdateAccessForManyAsync(
+            organization.Id,
+            [collection.Id],
+            [
+                new CollectionAccessSelection { Id = updatedUser.Id, ReadOnly = true },
+                new CollectionAccessSelection { Id = removedUser.Id, ReadOnly = true }
+            ],
+            [],
+            DateTime.UtcNow);
+
+        var revisionDate = DateTime.UtcNow.AddMinutes(10);
+
+        await collectionRepository.ModifyUserAccessAsync(
+            organization.Id,
+            [collection.Id],
+            [
+                new CollectionAccessSelection { Id = updatedUser.Id, Manage = true },
+                new CollectionAccessSelection { Id = addedUser.Id, ReadOnly = true }
+            ],
+            [removedUser.Id],
+            revisionDate);
+
+        var (actualCollection, actualAccess) = await collectionRepository.GetByIdWithAccessAsync(collection.Id);
+        Assert.NotNull(actualCollection);
+        Assert.Equal(revisionDate, actualCollection.RevisionDate, TimeSpan.FromMilliseconds(10));
+
+        Assert.Equal(2, actualAccess.Users.Count());
+
+        var updatedAccess = actualAccess.Users.Single(u => u.Id == updatedUser.Id);
+        Assert.True(updatedAccess.Manage);
+
+        var addedAccess = actualAccess.Users.Single(u => u.Id == addedUser.Id);
+        Assert.True(addedAccess.ReadOnly);
+
+        Assert.DoesNotContain(actualAccess.Users, u => u.Id == removedUser.Id);
+    }
 }

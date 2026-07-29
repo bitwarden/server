@@ -130,6 +130,17 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
             try
             {
+                if (removeOrganizationUserIds.Any())
+                {
+                    var toRemove = await dbContext.CollectionUsers
+                        .Where(cu => collectionIds.Contains(cu.CollectionId) &&
+                            removeOrganizationUserIds.Contains(cu.OrganizationUserId))
+                        .ToListAsync();
+                    dbContext.RemoveRange(toRemove);
+                    await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(removeOrganizationUserIds);
+                    await dbContext.SaveChangesAsync();
+                }
+
                 if (upserts.Any())
                 {
                     var upsertIds = upserts.Select(u => u.Id).ToList();
@@ -171,17 +182,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         }
                     }
 
-                    await dbContext.SaveChangesAsync();
-                }
-
-                if (removeOrganizationUserIds.Any())
-                {
-                    var toRemove = await dbContext.CollectionUsers
-                        .Where(cu => collectionIds.Contains(cu.CollectionId) &&
-                            removeOrganizationUserIds.Contains(cu.OrganizationUserId))
-                        .ToListAsync();
-                    dbContext.RemoveRange(toRemove);
-                    await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(removeOrganizationUserIds);
                     await dbContext.SaveChangesAsync();
                 }
 
