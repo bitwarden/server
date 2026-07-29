@@ -19,13 +19,13 @@ public static class CollectionUserEndpoints
         group.MapPatch("{id:guid}/users",
             (Guid orgId, Guid id, CollectionUserAccessDeltaRequestModel model, ClaimsPrincipal user,
                     CollectionUserEndpointsHandler handler) =>
-                handler.PatchUserAccessAsync(orgId, [id], model.Add, model.Update, model.Remove, user))
+                handler.PatchUserAccessAsync(orgId, [id], model.Add ?? [], model.Update ?? [], model.Remove ?? [], user))
             .WithName("PatchCollectionUserAccess");
 
         group.MapPatch("users",
             (Guid orgId, BulkCollectionUserAccessDeltaRequestModel model, ClaimsPrincipal user,
                     CollectionUserEndpointsHandler handler) =>
-                handler.PatchUserAccessAsync(orgId, model.CollectionIds.ToList(), model.Add, model.Update, model.Remove, user))
+                handler.PatchUserAccessAsync(orgId, model.CollectionIds?.ToList() ?? [], model.Add ?? [], model.Update ?? [], model.Remove ?? [], user))
             .WithName("PatchBulkCollectionUserAccess");
     }
 }
