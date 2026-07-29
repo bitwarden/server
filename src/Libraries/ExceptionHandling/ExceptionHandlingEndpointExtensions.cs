@@ -1,7 +1,6 @@
-using Bit.Core.Models.Api;
+﻿using Bit.Core.Models.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Metadata;
 
 namespace Bit.Core.Utilities;
 
