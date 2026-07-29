@@ -68,8 +68,9 @@ public class ModifyCollectionUserAccessValidator(IOrganizationUserRepository org
             }
         }
 
-        // Check both Add and Update. The same delta hits every target, so putting yourself in Update instead
-        // of Add would still grant you new access. This blocks that too.
+        // Checks Add and Update, since putting yourself in Update instead of Add still grants new access.
+        // Only blocks joining a collection you're not in yet. Raising access on one you're already in is fine,
+        // since the authorization layer already requires you to manage that collection first.
         if (request.PerformingOrganizationUserId is { } performingId
             && (addIds.Contains(performingId) || updateIds.Contains(performingId))
             && !request.AllowAdminAccessToAllCollectionItems
