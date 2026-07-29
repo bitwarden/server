@@ -1,3 +1,4 @@
+﻿using System.Globalization;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core;
@@ -16,7 +17,9 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
+using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
+using Bit.Core.Models.Mail.Billing.Renewal.Premium;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
@@ -1761,6 +1764,8 @@ public class UpcomingInvoiceHandlerTests
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
         var customerId = "cus_123";
         var subscriptionId = "sub_123";
+        var passwordManagerItemId = "si_pm_123";
+
 
         var invoice = new Invoice
         {
