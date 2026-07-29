@@ -191,6 +191,7 @@ public static class FeatureFlagKeys
     public const string PM34515_BrowserDesktopCheckout = "pm-34515-browser-desktop-checkout";
     public const string DebugDisableSelfHostPremiumCheck = "debug-disable-self-host-premium-check";
     public const string PM35215_BusinessPlanPriceMigration = "pm-35215-business-plan-price-migration";
+    public const string PM38728_SendInvoicePriceMigration = "pm-38728-send-invoice-price-migration";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
