@@ -52,6 +52,9 @@ jobs:
           - project_name: Api
             base_path: ./src
             dotnet: true
+          - project_name: Billing
+            base_path: ./src
+            dotnet: true
           - project_name: Events
             base_path: ./src
             dotnet: true
@@ -128,17 +131,7 @@ jobs:
             echo "::error::Dockerfile not found: $DOCKERFILE"
             exit 1
           fi
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
-
-      - name: Set up Node
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
-        with:
-          cache: "npm"
-          cache-dependency-path: "**/package-lock.json"
-          node-version: "24"
-
+      
       - name: Print environment
         run: |
           whoami
@@ -148,20 +141,6 @@ jobs:
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
           echo "Project: ${{ matrix.project_name }}"
-
-      - name: Build node
-        if: ${{ matrix.node }}
-        working-directory: ${{ matrix.base_path }}/${{ matrix.project_name }}
-        run: |
-          npm ci
-          npm run build
-
-      - name: Publish project
-        working-directory: ${{ matrix.base_path }}/${{ matrix.project_name }}
-        if: ${{ matrix.dotnet }}
-        run: |
-          echo "Publish"
-          dotnet publish -c "Release" -o obj/build-output/publish
 
       - name: Set up QEMU emulators
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
