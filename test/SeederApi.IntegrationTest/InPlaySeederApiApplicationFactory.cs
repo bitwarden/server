@@ -16,8 +16,8 @@ public class InPlaySeederApiApplicationFactory : WebApplicationFactoryBase<Start
     public InPlaySeederApiApplicationFactory()
     {
         UpdateConfiguration("globalSettings:testPlayIdTrackingEnabled", "true");
-        UpdateConfiguration("seederSettings:Username", _username);
-        UpdateConfiguration("seederSettings:Password", _password);
+        UpdateConfiguration("seederSettings:Accounts:0:Username", _username);
+        UpdateConfiguration("seederSettings:Accounts:0:Password", _password);
     }
 
     public string Username => _username;
