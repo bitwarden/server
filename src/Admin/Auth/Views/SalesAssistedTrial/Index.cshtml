@@ -1,6 +1,6 @@
 @using Bit.Core.Billing.Enums
 @using Bit.SharedWeb.Utilities
-@model Bit.Admin.Auth.Models.SalesAssistedTrial.SalesTrialInviteModel
+@model Bit.Admin.Auth.Models.SalesAssistedTrial.SalesAssistedTrialInviteModel
 @{
     ViewData["Title"] = "Send Sales-Assisted Trial Invitation";
 }
@@ -70,13 +70,7 @@
         <div class="mb-3">
             <label asp-for="TrialLength" class="form-label"></label>
             <span asp-validation-for="TrialLength" class="text-danger"></span>
-            <input asp-for="TrialLength" type="number" min="0" max="30" class="form-control" />
-        </div>
-
-        <div class="mb-3 form-check">
-            <input asp-for="PaymentOptional" type="checkbox" class="form-check-input" />
-            <label asp-for="PaymentOptional" class="form-check-label"></label>
-            <span asp-validation-for="PaymentOptional" class="text-danger"></span>
+            <input asp-for="TrialLength" type="number" min="1" max="30" class="form-control" />
         </div>
 
         <div class="d-flex mt-3">
