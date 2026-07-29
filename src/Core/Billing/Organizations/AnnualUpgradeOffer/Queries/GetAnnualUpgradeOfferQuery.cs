@@ -6,7 +6,6 @@ using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -14,7 +13,6 @@ namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 
 public class GetAnnualUpgradeOfferQuery(
     ILogger<GetAnnualUpgradeOfferQuery> logger,
-    IFeatureService featureService,
     IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : IGetAnnualUpgradeOfferQuery
@@ -30,14 +28,6 @@ public class GetAnnualUpgradeOfferQuery(
 
     public async Task<AnnualUpgradeOfferResult?> Run(Organization organization)
     {
-        // Kill switch: the offer shares the business plan migration program's flag so ops can
-        // stop new redemptions without a deploy. The renewal webhook stays ungated on purpose --
-        // schedules created before a flag kill still activate and must flip PlanType.
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
-        {
-            return null;
-        }
-
         // Mutual exclusivity with the churn-mitigation coupon offer: membership in a churn-offer
         // -eligible cohort excludes this offer entirely, regardless of whether that offer is
         // currently live (e.g. its one-shot coupon may already be consumed).

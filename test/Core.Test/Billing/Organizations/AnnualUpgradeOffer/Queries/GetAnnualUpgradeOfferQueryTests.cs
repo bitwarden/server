@@ -7,7 +7,6 @@ using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -20,7 +19,6 @@ using static StripeConstants;
 
 public class GetAnnualUpgradeOfferQueryTests
 {
-    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IGetChurnOfferCohortMembershipQuery _getChurnOfferCohortMembershipQuery =
         Substitute.For<IGetChurnOfferCohortMembershipQuery>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
@@ -41,11 +39,10 @@ public class GetAnnualUpgradeOfferQueryTests
 
     public GetAnnualUpgradeOfferQueryTests()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(_currentPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(_annualLatestPlan);
         _query = new GetAnnualUpgradeOfferQuery(
-            _logger, _featureService, _getChurnOfferCohortMembershipQuery,
+            _logger, _getChurnOfferCohortMembershipQuery,
             _pricingClient, _stripeAdapter);
     }
 
@@ -89,19 +86,6 @@ public class GetAnnualUpgradeOfferQueryTests
         subscription.ScheduleId = id;
         subscription.Schedule = schedule;
         return schedule;
-    }
-
-    [Fact]
-    public async Task Run_FlagDisabled_ReturnsNull_WithoutAnyLookups()
-    {
-        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
-        var organization = CreateOrganization(PlanType.TeamsMonthly);
-
-        var result = await _query.Run(organization);
-
-        Assert.Null(result);
-        await _getChurnOfferCohortMembershipQuery.DidNotReceive().Run(Arg.Any<Organization>());
-        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]

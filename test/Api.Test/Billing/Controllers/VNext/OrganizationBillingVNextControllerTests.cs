@@ -1,4 +1,5 @@
-﻿using Bit.Api.Billing.Controllers.VNext;
+﻿using System.Reflection;
+using Bit.Api.Billing.Controllers.VNext;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
@@ -11,6 +12,7 @@ using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Subscriptions.Commands;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -163,5 +165,21 @@ public class OrganizationBillingVNextControllerTests
         await _sut.RedeemAnnualUpgradeOfferAsync(organization);
 
         await _redeemAnnualUpgradeOfferCommand.Received(1).Run(organization);
+    }
+
+    [Theory]
+    [InlineData(nameof(OrganizationBillingVNextController.GetAnnualUpgradeOfferAsync))]
+    [InlineData(nameof(OrganizationBillingVNextController.RedeemAnnualUpgradeOfferAsync))]
+    public void AnnualUpgradeOfferEndpoints_AreGatedOnTheirOwnFlag(string methodName)
+    {
+        // RequireFeature throws FeatureUnavailableException, which derives from NotFoundException,
+        // so a flag-off environment answers 404 on both endpoints. RequireFeatureAttribute keeps its
+        // flag key in a private field with no public accessor, so this can only confirm the
+        // attribute is present, not which key it carries.
+        var method = typeof(OrganizationBillingVNextController).GetMethod(methodName);
+
+        Assert.NotNull(method);
+        var attribute = method.GetCustomAttributes<RequireFeatureAttribute>().SingleOrDefault();
+        Assert.NotNull(attribute);
     }
 }

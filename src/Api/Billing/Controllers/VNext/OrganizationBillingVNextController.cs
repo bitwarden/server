@@ -4,6 +4,7 @@ using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Subscriptions;
 using Bit.Api.Billing.Models.Requirements;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
@@ -170,6 +171,7 @@ public class OrganizationBillingVNextController(
 
     [Authorize<ManageOrganizationBillingRequirement>]
     [HttpGet("annual-upgrade-offer")]
+    [RequireFeature(FeatureFlagKeys.PM38333_AnnualBillingSavings)]
     [InjectOrganization]
     public async Task<IResult> GetAnnualUpgradeOfferAsync(
         [BindNever] Organization organization)
@@ -180,6 +182,7 @@ public class OrganizationBillingVNextController(
 
     [Authorize<ManageOrganizationBillingRequirement>]
     [HttpPost("annual-upgrade-offer/redeem")]
+    [RequireFeature(FeatureFlagKeys.PM38333_AnnualBillingSavings)]
     [InjectOrganization]
     public async Task<IResult> RedeemAnnualUpgradeOfferAsync(
         [BindNever] Organization organization)
