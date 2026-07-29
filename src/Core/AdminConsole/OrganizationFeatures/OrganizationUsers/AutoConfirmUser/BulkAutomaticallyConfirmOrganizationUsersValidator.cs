@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Enums;
@@ -112,7 +113,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
                 autoConfirmPolicyRequirement, orgId, providerUserIds.Contains(userId), orgMembershipCount);
             if (violation is not null)
             {
-                return Invalid(request, violation);
+                return Invalid(request, WithEmail(violation, request.OrganizationUser?.Email));
             }
         }
 
@@ -159,6 +160,14 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
 
         return Valid(request);
     }
+
+    private static Error WithEmail(Error error, string? email) =>
+        (error, email) switch
+        {
+            (UserCannotBelongToAnotherOrganization, not null) => new UserCannotBelongToAnotherOrganization(email),
+            (OtherOrganizationDoesNotAllowOtherMembership, not null) => new OtherOrganizationDoesNotAllowOtherMembership(email),
+            _ => error
+        };
 
     private async Task<(
         PolicyStatus PolicyStatus,

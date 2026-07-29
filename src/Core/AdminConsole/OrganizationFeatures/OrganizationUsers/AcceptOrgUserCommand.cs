@@ -199,8 +199,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         {
             var message = result.AsError switch
             {
-                UserIsAMemberOfAnotherOrganization => "You cannot accept this invite until you leave or remove all other organizations.",
-                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => "You cannot accept this invite because you are in another organization which forbids it.",
+                UserIsAMemberOfAnotherOrganization => new UserCannotAcceptInviteMemberOfAnotherOrg().Message,
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new UserCannotAcceptInviteForbiddenByOtherOrg().Message,
                 _ => result.AsError.Message
             };
             throw new BadRequestException(message);

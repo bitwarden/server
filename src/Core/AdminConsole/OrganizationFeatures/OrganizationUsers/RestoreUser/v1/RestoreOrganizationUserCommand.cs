@@ -343,8 +343,8 @@ public class RestoreOrganizationUserCommand(
         {
             var singleOrgErrorMessage = singleOrgError switch
             {
-                UserIsAMemberOfAnotherOrganization => $"{user.Email} cannot be restored until they leave or remove all other organizations.",
-                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => $"{user.Email} cannot be restored because they are in another organization which forbids it.",
+                UserIsAMemberOfAnotherOrganization => new UserCannotBeRestoredMemberOfAnotherOrg(user.Email).Message,
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new UserCannotBeRestoredForbiddenByOtherOrg(user.Email).Message,
                 _ => singleOrgError.Message
             };
 

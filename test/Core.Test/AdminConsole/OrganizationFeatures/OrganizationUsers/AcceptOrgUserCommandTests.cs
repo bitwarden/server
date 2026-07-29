@@ -185,8 +185,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You cannot accept this invite until you leave or remove all other organizations.",
-            exception.Message);
+        Assert.Equal(new UserCannotAcceptInviteMemberOfAnotherOrg().Message, exception.Message);
     }
 
     [Theory]
@@ -209,8 +208,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You cannot accept this invite because you are in another organization which forbids it.",
-            exception.Message);
+        Assert.Equal(new UserCannotAcceptInviteForbiddenByOtherOrg().Message, exception.Message);
     }
 
     [Theory]
@@ -634,13 +632,13 @@ public class AcceptOrgUserCommandTests
             .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
             .Returns(Task.FromResult(
                 Invalid(new AcceptOrganizationMembershipValidationResult(),
-                    new UserCannotBelongToAnotherOrganization())));
+                    new UserCannotBelongToAnotherOrganization(string.Empty))));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal(new UserCannotBelongToAnotherOrganization().Message, exception.Message);
+        Assert.Equal(new UserCannotBelongToAnotherOrganization(string.Empty).Message, exception.Message);
         await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .DidNotReceiveWithAnyArgs()
             .DeleteAllByUserIdAsync(Arg.Any<Guid>());

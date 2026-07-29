@@ -215,8 +215,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         {
             var singleOrgErrorMessage = singleOrgError switch
             {
-                UserIsAMemberOfAnotherOrganization => $"{user.Email} cannot be confirmed until they leave or remove all other organizations.",
-                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => $"{user.Email} cannot be confirmed because they are in another organization which forbids it.",
+                UserIsAMemberOfAnotherOrganization => new UserCannotBeConfirmedMemberOfAnotherOrg(user.Email).Message,
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new UserCannotBeConfirmedForbiddenByOtherOrg(user.Email).Message,
                 _ => singleOrgError.Message
             };
 

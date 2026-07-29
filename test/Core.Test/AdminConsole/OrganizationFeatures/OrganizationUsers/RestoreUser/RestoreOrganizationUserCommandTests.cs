@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -379,7 +380,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Contains("test@bitwarden.com cannot be restored because they are in another organization which forbids it.", exception.Message.ToLowerInvariant());
+        Assert.Contains(new UserCannotBeRestoredForbiddenByOtherOrg("test@bitwarden.com").Message.ToLowerInvariant(), exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -424,7 +425,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Contains("test@bitwarden.com cannot be restored until they leave or remove all other organizations.", exception.Message.ToLowerInvariant());
+        Assert.Contains(new UserCannotBeRestoredMemberOfAnotherOrg("test@bitwarden.com").Message.ToLowerInvariant(), exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -760,7 +761,7 @@ public class RestoreOrganizationUserCommandTests
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user),
-                new UserCannotBelongToAnotherOrganization()));
+                new UserCannotBelongToAnotherOrganization(string.Empty)));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(

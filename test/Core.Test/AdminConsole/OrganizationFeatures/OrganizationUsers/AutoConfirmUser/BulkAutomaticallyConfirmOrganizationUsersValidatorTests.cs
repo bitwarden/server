@@ -341,7 +341,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
-            .Returns(new UserCannotBelongToAnotherOrganization());
+            .Returns(new UserCannotBelongToAnotherOrganization(string.Empty));
 
         var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
@@ -371,7 +371,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
-            .Returns(new OtherOrganizationDoesNotAllowOtherMembership());
+            .Returns(new OtherOrganizationDoesNotAllowOtherMembership(string.Empty));
 
         var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 

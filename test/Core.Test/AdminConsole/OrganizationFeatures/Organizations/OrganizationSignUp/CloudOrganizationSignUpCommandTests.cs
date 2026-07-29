@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
@@ -338,7 +339,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains("You may not create an organization. You belong to an organization which has a policy that prohibits you from being a member of any other organization.", exception.Message);
+        Assert.Contains(new UserCannotCreateOrg().Message, exception.Message);
     }
 
     [Theory]
