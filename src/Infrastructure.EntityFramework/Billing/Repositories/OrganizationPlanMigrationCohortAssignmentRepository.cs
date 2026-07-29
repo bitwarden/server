@@ -72,6 +72,71 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
         return await query.CountAsync();
     }
 
+    public async Task<IReadOnlyList<CohortAssignmentExportRow>> GetExportRowsByCohortIdAsync(
+        Guid cohortId, DateTime? afterCreationDate, Guid? afterId, int take)
+    {
+        if (afterCreationDate is null != (afterId is null))
+        {
+            throw new ArgumentException("afterCreationDate and afterId must both be set or both be null.");
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var assignments = dbContext.OrganizationPlanMigrationCohortAssignments
+            .Where(a => a.CohortId == cohortId);
+
+        if (afterCreationDate != null)
+        {
+            assignments = assignments.Where(a =>
+                a.CreationDate > afterCreationDate.Value
+                || (a.CreationDate == afterCreationDate.Value
+                    && a.Id > afterId!.Value));
+        }
+
+        return await assignments
+            .OrderBy(a => a.CreationDate)
+            .ThenBy(a => a.Id)
+            .Take(take)
+            .Select(a => new CohortAssignmentExportRow(
+                a.Id,
+                a.OrganizationId,
+                a.Organization.Name,
+                a.CreationDate,
+                a.ScheduledDate,
+                a.MigratedDate))
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<CoreEntities.OrganizationPlanMigrationCohortAssignment>>
+        GetSendInvoiceCandidatesInWindowAsync(int minDays, int maxDays)
+    {
+        if (minDays > maxDays)
+        {
+            throw new ArgumentException("minDays must be less than or equal to maxDays.");
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var now = DateTime.UtcNow;
+        var results = await (
+            from cma in dbContext.OrganizationPlanMigrationCohortAssignments.AsNoTracking()
+            join c in dbContext.OrganizationPlanMigrationCohorts on cma.CohortId equals c.Id
+            join o in dbContext.Organizations on cma.OrganizationId equals o.Id
+            where c.IsActive
+                  && cma.MigratedDate == null
+                  && (cma.ScheduledDate == null || cma.RenewalNotificationSentDate == null)
+                  && o.GatewayCustomerId != null
+                  && o.GatewaySubscriptionId != null
+                  && o.ExpirationDate != null
+                  && o.ExpirationDate >= now.AddDays(minDays)
+                  && o.ExpirationDate <= now.AddDays(maxDays)
+            select cma
+        ).ToListAsync();
+
+        return Mapper.Map<List<CoreEntities.OrganizationPlanMigrationCohortAssignment>>(results);
+    }
+
     public Task<CohortBulkAssignmentSummary> SyncManyAsync(
         IEnumerable<ResolvedCohortBulkAssignmentRow> rows) =>
         throw new NotSupportedException(

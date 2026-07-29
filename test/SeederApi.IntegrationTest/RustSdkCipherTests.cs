@@ -344,6 +344,122 @@ public sealed class RustSdkCipherTests
     }
 
     [Fact]
+    public void EncryptFields_BankAccountCipher_RoundtripDecrypt()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = new CipherViewDto
+        {
+            Name = "Personal Checking",
+            Type = CipherTypes.BankAccount,
+            BankAccount = new BankAccountViewDto
+            {
+                BankName = "First National Bank",
+                NameOnAccount = "Jane Smith",
+                AccountType = "checking",
+                AccountNumber = "1234567890",
+                RoutingNumber = "021000021",
+                BranchNumber = "001",
+                Pin = "4321",
+                SwiftCode = "FNBAUS33",
+                Iban = "DE89370400440532013000",
+                BankContactPhone = "555-0100"
+            }
+        };
+
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFields(json, fieldPathsJson, orgKeys.Key);
+
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var bankAccount = doc.RootElement.GetProperty("bankAccount");
+
+        Assert.Equal("First National Bank", RustSdkService.DecryptString(bankAccount.GetProperty("bankName").GetString()!, orgKeys.Key));
+        Assert.Equal("1234567890", RustSdkService.DecryptString(bankAccount.GetProperty("accountNumber").GetString()!, orgKeys.Key));
+        Assert.Equal("021000021", RustSdkService.DecryptString(bankAccount.GetProperty("routingNumber").GetString()!, orgKeys.Key));
+        Assert.Equal("4321", RustSdkService.DecryptString(bankAccount.GetProperty("pin").GetString()!, orgKeys.Key));
+        Assert.Equal("DE89370400440532013000", RustSdkService.DecryptString(bankAccount.GetProperty("iban").GetString()!, orgKeys.Key));
+    }
+
+    [Fact]
+    public void EncryptFields_DriversLicenseCipher_RoundtripDecrypt()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = new CipherViewDto
+        {
+            Name = "My Driver's License",
+            Type = CipherTypes.DriversLicense,
+            DriversLicense = new DriversLicenseViewDto
+            {
+                FirstName = "John",
+                MiddleName = "Michael",
+                LastName = "Doe",
+                DateOfBirth = "1990-01-15",
+                LicenseNumber = "D123456789",
+                IssuingCountry = "United States",
+                IssuingState = "California",
+                IssueDate = "2020-01-20",
+                IssuingAuthority = "Department of Motor Vehicles",
+                ExpirationDate = "2028-01-20",
+                LicenseClass = "C"
+            }
+        };
+
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFields(json, fieldPathsJson, orgKeys.Key);
+
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var driversLicense = doc.RootElement.GetProperty("driversLicense");
+
+        Assert.Equal("John", RustSdkService.DecryptString(driversLicense.GetProperty("firstName").GetString()!, orgKeys.Key));
+        Assert.Equal("D123456789", RustSdkService.DecryptString(driversLicense.GetProperty("licenseNumber").GetString()!, orgKeys.Key));
+        Assert.Equal("1990-01-15", RustSdkService.DecryptString(driversLicense.GetProperty("dateOfBirth").GetString()!, orgKeys.Key));
+        Assert.Equal("California", RustSdkService.DecryptString(driversLicense.GetProperty("issuingState").GetString()!, orgKeys.Key));
+    }
+
+    [Fact]
+    public void EncryptFields_PassportCipher_RoundtripDecrypt()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = new CipherViewDto
+        {
+            Name = "My Passport",
+            Type = CipherTypes.Passport,
+            Passport = new PassportViewDto
+            {
+                Surname = "Doe",
+                GivenName = "John",
+                DateOfBirth = "1990-05-10",
+                Sex = "Male",
+                BirthPlace = "New York",
+                Nationality = "American",
+                PassportNumber = "X12345678",
+                PassportType = "Book",
+                IssuingCountry = "United States",
+                IssuingAuthority = "Department of State",
+                IssueDate = "2020-01-15",
+                ExpirationDate = "2030-01-15",
+                NationalIdentificationNumber = "ID123456"
+            }
+        };
+
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFields(json, fieldPathsJson, orgKeys.Key);
+
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var passport = doc.RootElement.GetProperty("passport");
+
+        Assert.Equal("Doe", RustSdkService.DecryptString(passport.GetProperty("surname").GetString()!, orgKeys.Key));
+        Assert.Equal("X12345678", RustSdkService.DecryptString(passport.GetProperty("passportNumber").GetString()!, orgKeys.Key));
+        Assert.Equal("1990-05-10", RustSdkService.DecryptString(passport.GetProperty("dateOfBirth").GetString()!, orgKeys.Key));
+        Assert.Equal("ID123456", RustSdkService.DecryptString(passport.GetProperty("nationalIdentificationNumber").GetString()!, orgKeys.Key));
+    }
+
+    [Fact]
     public void CipherSeeder_CardCipher_ProducesServerCompatibleFormat()
     {
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
@@ -599,5 +715,248 @@ public sealed class RustSdkCipherTests
 
         Assert.DoesNotContain("BEGIN FAKE OPENSSH PRIVATE KEY", cipher.Data);
         Assert.DoesNotContain("ssh-ed25519", cipher.Data);
+    }
+
+    [Fact]
+    public void CipherSeeder_BankAccountCipher_ProducesServerCompatibleFormat()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var orgId = Guid.NewGuid();
+
+        var bankAccount = new BankAccountViewDto
+        {
+            BankName = "First National Bank",
+            NameOnAccount = "Jane Smith",
+            AccountType = "checking",
+            AccountNumber = "1234567890",
+            RoutingNumber = "021000021",
+            BranchNumber = "001",
+            Pin = "4321",
+            SwiftCode = "FNBAUS33",
+            Iban = "DE89370400440532013000",
+            BankContactPhone = "555-0100"
+        };
+
+        var cipher = BankAccountCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.BankAccount,
+            Name = "Personal Checking",
+            EncryptionKey = orgKeys.Key,
+            OrganizationId = orgId,
+            BankAccount = bankAccount
+        });
+
+        Assert.Equal(orgId, cipher.OrganizationId);
+        Assert.Equal(Core.Vault.Enums.CipherType.BankAccount, cipher.Type);
+
+        var bankData = JsonSerializer.Deserialize<CipherBankAccountData>(cipher.Data);
+        Assert.NotNull(bankData);
+
+        const string encStringPrefix = "2.";
+        Assert.StartsWith(encStringPrefix, bankData.Name);
+        Assert.StartsWith(encStringPrefix, bankData.AccountNumber);
+        Assert.StartsWith(encStringPrefix, bankData.RoutingNumber);
+        Assert.StartsWith(encStringPrefix, bankData.Pin);
+        Assert.StartsWith(encStringPrefix, bankData.Iban);
+
+        Assert.DoesNotContain("1234567890", cipher.Data);
+        Assert.DoesNotContain("First National Bank", cipher.Data);
+    }
+
+    [Fact]
+    public void CipherSeeder_DriversLicenseCipher_ProducesServerCompatibleFormat()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var orgId = Guid.NewGuid();
+
+        var driversLicense = new DriversLicenseViewDto
+        {
+            FirstName = "John",
+            MiddleName = "Michael",
+            LastName = "Doe",
+            DateOfBirth = "1990-01-15",
+            LicenseNumber = "D123456789",
+            IssuingCountry = "United States",
+            IssuingState = "California",
+            IssueDate = "2020-01-20",
+            IssuingAuthority = "Department of Motor Vehicles",
+            ExpirationDate = "2028-01-20",
+            LicenseClass = "C"
+        };
+
+        var cipher = DriversLicenseCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.DriversLicense,
+            Name = "My Driver's License",
+            EncryptionKey = orgKeys.Key,
+            OrganizationId = orgId,
+            DriversLicense = driversLicense
+        });
+
+        Assert.Equal(orgId, cipher.OrganizationId);
+        Assert.Equal(Core.Vault.Enums.CipherType.DriversLicense, cipher.Type);
+
+        var licenseData = JsonSerializer.Deserialize<CipherDriversLicenseData>(cipher.Data);
+        Assert.NotNull(licenseData);
+
+        const string encStringPrefix = "2.";
+        Assert.StartsWith(encStringPrefix, licenseData.Name);
+        Assert.StartsWith(encStringPrefix, licenseData.FirstName);
+        Assert.StartsWith(encStringPrefix, licenseData.LicenseNumber);
+        Assert.StartsWith(encStringPrefix, licenseData.DateOfBirth);
+
+        Assert.DoesNotContain("D123456789", cipher.Data);
+        Assert.DoesNotContain("1990-01-15", cipher.Data);
+    }
+
+    [Fact]
+    public void CipherSeeder_PassportCipher_ProducesServerCompatibleFormat()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var orgId = Guid.NewGuid();
+
+        var passport = new PassportViewDto
+        {
+            Surname = "Doe",
+            GivenName = "John",
+            DateOfBirth = "1990-05-10",
+            Sex = "Male",
+            BirthPlace = "New York",
+            Nationality = "American",
+            PassportNumber = "X12345678",
+            PassportType = "Book",
+            IssuingCountry = "United States",
+            IssuingAuthority = "Department of State",
+            IssueDate = "2020-01-15",
+            ExpirationDate = "2030-01-15",
+            NationalIdentificationNumber = "ID123456"
+        };
+
+        var cipher = PassportCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.Passport,
+            Name = "My Passport",
+            EncryptionKey = orgKeys.Key,
+            OrganizationId = orgId,
+            Passport = passport
+        });
+
+        Assert.Equal(orgId, cipher.OrganizationId);
+        Assert.Equal(Core.Vault.Enums.CipherType.Passport, cipher.Type);
+
+        var passportData = JsonSerializer.Deserialize<CipherPassportData>(cipher.Data);
+        Assert.NotNull(passportData);
+
+        const string encStringPrefix = "2.";
+        Assert.StartsWith(encStringPrefix, passportData.Name);
+        Assert.StartsWith(encStringPrefix, passportData.PassportNumber);
+        Assert.StartsWith(encStringPrefix, passportData.DateOfBirth);
+        Assert.StartsWith(encStringPrefix, passportData.NationalIdentificationNumber);
+
+        Assert.DoesNotContain("X12345678", cipher.Data);
+        Assert.DoesNotContain("ID123456", cipher.Data);
+    }
+
+    [Fact]
+    public void EncryptAttachment_V0_HasNoAttachmentKey()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var data = "legacy attachment body"u8.ToArray();
+
+        var enc = RustSdkService.EncryptAttachment(data, orgKeys.Key, null, "notes.txt", 0);
+
+        // v0 attachments carry no attachment key.
+        Assert.Null(enc.Key);
+        // The blob is an AES-256-CBC-HMAC EncArrayBuffer (type byte 0x02).
+        Assert.Equal((byte)2, enc.Data[0]);
+        Assert.Equal(enc.Data.Length, enc.Size);
+        // The filename is encrypted with the vault key.
+        Assert.StartsWith("2.", enc.FileName);
+        Assert.Equal("notes.txt", RustSdkService.DecryptString(enc.FileName, orgKeys.Key));
+    }
+
+    [Fact]
+    public void EncryptAttachment_V1_WrapsAttachmentKeyWithVaultKey()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var data = "user-key wrapped body"u8.ToArray();
+
+        var enc = RustSdkService.EncryptAttachment(data, orgKeys.Key, null, "report.pdf", 1);
+
+        Assert.NotNull(enc.Key);
+        Assert.StartsWith("2.", enc.Key);
+        Assert.Equal((byte)2, enc.Data[0]);
+        Assert.Equal(enc.Data.Length, enc.Size);
+        // The filename is encrypted with the vault key (never the attachment key).
+        Assert.Equal("report.pdf", RustSdkService.DecryptString(enc.FileName, orgKeys.Key));
+    }
+
+    [Fact]
+    public void EncryptAttachment_V2_WrapsAttachmentKeyWithCipherKey()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var wrappedCipherKey = GetWrappedCipherKey(orgKeys.Key);
+        var data = "cipher-key wrapped body"u8.ToArray();
+
+        var enc = RustSdkService.EncryptAttachment(data, orgKeys.Key, wrappedCipherKey, "m5.pdf", 2);
+
+        Assert.NotNull(enc.Key);
+        Assert.StartsWith("2.", enc.Key);
+        Assert.Equal((byte)2, enc.Data[0]);
+        Assert.Equal(enc.Data.Length, enc.Size);
+    }
+
+    [Fact]
+    public void EncryptAttachment_V2_WithoutCipherKey_Throws()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var data = "x"u8.ToArray();
+
+        Assert.Throws<RustSdkException>(() =>
+            RustSdkService.EncryptAttachment(data, orgKeys.Key, null, "x.txt", 2));
+    }
+
+    [Fact]
+    public void EncryptFieldsWithCipherKey_EncryptsFieldsUnderCipherKey()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = new CipherViewDto
+        {
+            Name = "Cipher-Key Login",
+            Type = CipherTypes.Login,
+            Login = new LoginViewDto { Username = "user@example.com", Password = "pw" }
+        };
+
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFieldsWithCipherKey(json, fieldPathsJson, orgKeys.Key);
+
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var root = doc.RootElement;
+
+        // A wrapped cipher key is injected onto the cipher.
+        var wrappedCipherKey = root.GetProperty("key").GetString()!;
+        Assert.StartsWith("2.", wrappedCipherKey);
+
+        // Fields are encrypted with the cipher key — the vault key alone cannot decrypt them.
+        var encryptedName = root.GetProperty("name").GetString()!;
+        Assert.StartsWith("2.", encryptedName);
+        Assert.Throws<RustSdkException>(() => RustSdkService.DecryptString(encryptedName, orgKeys.Key));
+    }
+
+    private static string GetWrappedCipherKey(string vaultKey)
+    {
+        var cipher = new CipherViewDto
+        {
+            Name = "seed",
+            Type = CipherTypes.Login,
+            Login = new LoginViewDto { Username = "u" }
+        };
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFieldsWithCipherKey(json, fieldPathsJson, vaultKey);
+        using var doc = JsonDocument.Parse(encryptedJson);
+        return doc.RootElement.GetProperty("key").GetString()!;
     }
 }

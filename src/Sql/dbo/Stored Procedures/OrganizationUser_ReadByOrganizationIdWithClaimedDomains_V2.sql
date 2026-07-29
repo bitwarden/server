@@ -8,7 +8,7 @@ BEGIN
         SELECT *
         FROM [dbo].[OrganizationUserView]
         WHERE [OrganizationId] = @OrganizationId
-            AND [Status] != 0   -- Exclude invited users
+            AND [Status] IN (-1, 1, 2)   -- Exclude invited and staged users
     ),
     UserDomains AS (
         SELECT U.[Id], U.[EmailDomain]

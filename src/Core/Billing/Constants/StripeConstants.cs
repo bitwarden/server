@@ -197,6 +197,13 @@ public static class StripeConstants
         public const string Scheduled = "scheduled";
     }
 
+    public static class TestClockStatus
+    {
+        public const string Advancing = "advancing";
+        public const string InternalFailure = "internal_failure";
+        public const string Ready = "ready";
+    }
+
     public static class ValidateTaxLocationTiming
     {
         public const string Deferred = "deferred";

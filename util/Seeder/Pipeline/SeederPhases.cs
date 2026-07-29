@@ -3,6 +3,7 @@
 internal static class SeederPhases
 {
     internal const string CommittingToDatabase = "Committing to database";
+    internal const string CreatingAttachments = "Creating attachments";
     internal const string CreatingCiphers = "Creating ciphers";
     internal const string CreatingCollections = "Creating collections";
     internal const string CreatingGroups = "Creating groups";

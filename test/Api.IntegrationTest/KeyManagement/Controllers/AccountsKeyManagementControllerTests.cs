@@ -191,6 +191,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupRotateUserAccountUnlockData(request, user);
         SetupRotateUserAccountData(request);
         SetupRotateUserAccountKeys(request, isV2Crypto: false);
+        var originalMasterPassword = user.MasterPassword;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
         var responseMessage = await response.Content.ReadAsStringAsync();
@@ -203,6 +204,23 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations, userNewState.KdfIterations);
         Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory, userNewState.KdfMemory);
         Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism, userNewState.KdfParallelism);
+
+        // Parity preservation: master-key-wrapped user key and hint are applied from the request
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey, userNewState.Key);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordHint, userNewState.MasterPasswordHint);
+
+        // Parity preservation: master password hash is rewritten and verifies against the new authentication hash
+        Assert.NotEqual(originalMasterPassword, userNewState.MasterPassword);
+        Assert.Equal(
+            PasswordVerificationResult.Success,
+            _passwordHasher.VerifyHashedPassword(
+                userNewState,
+                userNewState.MasterPassword!,
+                request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyAuthenticationHash));
+
+        // PM-38811 parity gap closer: LastPasswordChangeDate is set on this path via MasterPasswordService
+        Assert.NotNull(userNewState.LastPasswordChangeDate);
+        Assert.Equal(DateTime.UtcNow, userNewState.LastPasswordChangeDate.Value, TimeSpan.FromMinutes(1));
     }
 
     [Theory]

@@ -85,4 +85,16 @@ public interface IRegisterUserCommand
     /// <returns><see cref="IdentityResult"/></returns>
     public Task<IdentityResult> RegisterUserViaProviderInviteToken(User user, RegisterFinishData registerFinishData, string providerInviteToken, Guid providerUserId);
 
+    /// <summary>
+    /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
+    /// This path supports sales-assisted trials: it deliberately bypasses the open-registration check so that prospects
+    /// can complete registration in environments where open enrollment is disabled. The sales-assisted
+    /// registration token is the authorization for this path. If the token is invalid or expired, an error will be thrown.
+    /// </summary>
+    /// <param name="user">The <see cref="User"/> to create</param>
+    /// <param name="registerFinishData">Cryptographic data for finishing user registration</param>
+    /// <param name="salesAssistedToken">The sales-assisted registration token sent to the user via email</param>
+    /// <returns><see cref="IdentityResult"/></returns>
+    public Task<IdentityResult> RegisterUserViaSalesAssistedToken(User user, RegisterFinishData registerFinishData, string salesAssistedToken);
+
 }

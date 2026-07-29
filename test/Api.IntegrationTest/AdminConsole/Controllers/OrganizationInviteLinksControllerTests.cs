@@ -5,6 +5,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
@@ -21,8 +22,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
 
-    private const string _validEncryptedKey =
-        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private const string _invite = "opaque-invite";
 
     private Organization _organization = null!;
     private string _ownerEmail = null!;
@@ -36,7 +36,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
                 .IsEnabled(FeatureFlagKeys.GenerateInviteLink)
                 .Returns(true);
         });
-        _factory.SubstituteService<IApplicationCacheService>(cacheService =>
+        _factory.SubstituteService<IOrganizationAbilityCacheService>(cacheService =>
         {
             cacheService
                 .GetOrganizationAbilityAsync(Arg.Any<Guid>())
@@ -73,7 +73,8 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -84,6 +85,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
 
         var validateRequest = new OrganizationInviteLinkValidateEmailDomainRequestModel
         {
+            OrganizationId = _organization.Id,
             Code = created.Code,
             Email = "user@acme.com",
         };
@@ -103,7 +105,8 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var request = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com", "example.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
+            SupportsConfirmation = true,
         };
 
         static void AssertInviteLink(OrganizationInviteLinkResponseModel? content, Organization organization)
@@ -113,7 +116,8 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
             Assert.NotEqual(Guid.Empty, content.Code);
             Assert.Equal(organization.Id, content.OrganizationId);
             Assert.Equal(["acme.com", "example.com"], content.AllowedDomains);
-            Assert.Equal(_validEncryptedKey, content.EncryptedInviteKey);
+            Assert.Equal(_invite, content.Invite);
+            Assert.True(content.SupportsConfirmation);
         }
 
         var createResponse = await _client.PostAsJsonAsync(
@@ -138,7 +142,8 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
 
         var createResponse = await _client.PostAsJsonAsync(
@@ -164,7 +169,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.Equal(created.Id, updated.Id);
         Assert.Equal(created.Code, updated.Code);
         Assert.Equal(_organization.Id, updated.OrganizationId);
-        Assert.Equal(_validEncryptedKey, updated.EncryptedInviteKey);
+        Assert.Equal(_invite, updated.Invite);
         Assert.Equal(["example.com", "new.com"], updated.AllowedDomains);
 
         var getResponse = await _client.GetAsync($"/organizations/{_organization.Id}/invite-link");
@@ -175,8 +180,63 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.NotNull(content);
         Assert.Equal(created.Id, content.Id);
         Assert.Equal(created.Code, content.Code);
-        Assert.Equal(_validEncryptedKey, content.EncryptedInviteKey);
+        Assert.Equal(_invite, content.Invite);
         Assert.Equal(["example.com", "new.com"], content.AllowedDomains);
+    }
+
+    [Fact]
+    public async Task UpdateInviteSupportConfirmThenGet_AsOwner_UpdatesOnlyInviteAndSupportsConfirmation()
+    {
+        // Arrange
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+            Invite = _invite,
+            SupportsConfirmation = false,
+        };
+
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(created);
+
+        const string updatedInvite = "updated-invite";
+        var updateRequest = new UpdateInviteSupportConfirmRequestModel
+        {
+            Invite = updatedInvite,
+            SupportsConfirmation = true,
+        };
+
+        // Act
+        var updateResponse = await _client.PutAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link/support-confirm", updateRequest);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var updated = await updateResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(updated);
+        Assert.Equal(created.Id, updated.Id);
+        Assert.Equal(created.Code, updated.Code);
+        Assert.Equal(_organization.Id, updated.OrganizationId);
+        Assert.Equal(updatedInvite, updated.Invite);
+        Assert.True(updated.SupportsConfirmation);
+        Assert.Equal(["acme.com"], updated.AllowedDomains);
+
+        var getResponse = await _client.GetAsync($"/organizations/{_organization.Id}/invite-link");
+
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+
+        var content = await getResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(content);
+        Assert.Equal(created.Id, content.Id);
+        Assert.Equal(created.Code, content.Code);
+        Assert.Equal(updatedInvite, content.Invite);
+        Assert.True(content.SupportsConfirmation);
+        Assert.Equal(["acme.com"], content.AllowedDomains);
     }
 
     [Fact]
@@ -185,7 +245,8 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -209,7 +270,8 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com", "example.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -219,7 +281,8 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
 
         var refreshRequest = new RefreshOrganizationInviteLinkRequestModel
         {
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
         var refreshResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link/refresh", refreshRequest);
@@ -245,7 +308,8 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
+            SupportsConfirmation = true,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -256,13 +320,15 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var anonClient = _factory.CreateClient();
         var statusResponse = await anonClient.PostAsJsonAsync(
             "/organizations/invite-link/status",
-            new GetOrganizationInviteLinkStatusRequestModel { Code = created.Code });
+            new GetOrganizationInviteLinkStatusRequestModel { OrganizationId = _organization.Id, Code = created.Code });
 
         Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
         var status = await statusResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkStatusResponseModel>();
         Assert.NotNull(status);
         Assert.Equal(_organization.Name, status.OrganizationName);
+        Assert.True(status.LinksEnabled);
         Assert.True(status.SeatsAvailable);
+        Assert.True(status.SupportsConfirmation);
     }
 
     [Fact]
@@ -271,7 +337,8 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -282,7 +349,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var anonClient = _factory.CreateClient();
         var policiesResponse = await anonClient.PostAsJsonAsync(
             "/organizations/invite-link/policies",
-            new GetOrganizationInviteLinkPoliciesRequestModel { Code = created.Code });
+            new GetOrganizationInviteLinkPoliciesRequestModel { OrganizationId = _organization.Id, Code = created.Code });
 
         Assert.Equal(HttpStatusCode.OK, policiesResponse.StatusCode);
         var body = await policiesResponse.Content.ReadFromJsonAsync<ListResponseModel<PolicyResponseModel>>();

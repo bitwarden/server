@@ -20,7 +20,7 @@ internal static class CardCipherSeeder
             Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToCardData(), CipherType.Card, options.OrganizationId, options.UserId);
     }
 

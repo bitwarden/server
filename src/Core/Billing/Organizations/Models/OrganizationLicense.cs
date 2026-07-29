@@ -440,6 +440,7 @@ public class OrganizationLicense : ILicense
         var useMyItems = claimsPrincipal.GetValue<bool>(nameof(UseMyItems));
         var useInviteLinks = claimsPrincipal.GetValue<bool>(nameof(UseInviteLinks));
         var usePam = claimsPrincipal.GetValue<bool>(nameof(UsePam));
+        var useRiskInsights = claimsPrincipal.GetValue<bool>(nameof(UseRiskInsights));
 
         var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
 
@@ -488,7 +489,15 @@ public class OrganizationLicense : ILicense
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseInviteLinks))
                    || useInviteLinks == organization.UseInviteLinks) &&
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UsePam))
-                   || usePam == organization.UsePam);
+                   || usePam == organization.UsePam) &&
+               // UseRiskInsights is additive and plan-derived (backfilled for existing
+               // Enterprise orgs). Licenses issued since 2025-04 carry the claim with the
+               // org's value at generation time, which is False for orgs backfilled later.
+               // Only enforce equality when the claim asserts True, so a stale False claim
+               // does not invalidate a backfilled org and disable it.
+               (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseRiskInsights))
+                   || !useRiskInsights
+                   || useRiskInsights == organization.UseRiskInsights);
 
     }
 

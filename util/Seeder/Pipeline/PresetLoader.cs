@@ -1,4 +1,5 @@
-﻿using Bit.Core.Vault.Enums;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
@@ -64,6 +65,7 @@ internal static class PresetLoader
         if (preset.Ciphers?.Fixture is not null)
         {
             builder.UsePersonalVaultCiphers(preset.Ciphers.Fixture);
+            builder.UseCipherAttachments(preset.Ciphers.Fixture, personal: true);
         }
         else if (preset.Ciphers is { Count: > 0 })
         {
@@ -87,7 +89,7 @@ internal static class PresetLoader
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → OrgApiKey → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+    /// Resolution order: Org → OrgApiKey → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
     /// </remarks>
     private static void BuildRecipe(string presetName, SeedPreset preset, ISeedReader reader, IServiceCollection services)
     {
@@ -120,6 +122,16 @@ internal static class PresetLoader
         if (org.ClaimedDomains is { Count: > 0 })
         {
             builder.WithOrganizationDomain(org.ClaimedDomains);
+        }
+
+        if (preset.Sso is not null)
+        {
+            builder.WithSso(
+                preset.Sso.Identifier
+                    ?? throw new InvalidOperationException(
+                        $"Preset '{presetName}' has an 'sso' block without an 'identifier'."),
+                preset.Sso.Provider,
+                ParseMemberDecryptionType(preset.Sso.EncryptionType));
         }
 
         if (preset.Roster?.Fixture is not null)
@@ -170,6 +182,7 @@ internal static class PresetLoader
         if (preset.Ciphers?.Fixture is not null)
         {
             builder.UseCiphers(preset.Ciphers.Fixture, skipCollectionAssignment: hasCollectionAssignments);
+            builder.UseCipherAttachments(preset.Ciphers.Fixture, personal: false);
         }
         else if (preset.Ciphers is not null && preset.Ciphers.Count > 0)
         {
@@ -212,6 +225,16 @@ internal static class PresetLoader
         LimitCollectionDeletion = org.LimitCollectionDeletion,
     };
 
+    private static MemberDecryptionType ParseMemberDecryptionType(string? encryptionType) =>
+        encryptionType?.ToLowerInvariant() switch
+        {
+            null or "" or "masterpassword" => MemberDecryptionType.MasterPassword,
+            "trusteddevices" or "trusteddeviceencryption" => MemberDecryptionType.TrustedDeviceEncryption,
+            "keyconnector" => MemberDecryptionType.KeyConnector,
+            _ => throw new InvalidOperationException(
+                $"Unknown SSO encryptionType '{encryptionType}'. Valid values: masterPassword, trustedDevices, keyConnector."),
+        };
+
     private static DensityProfile? ParseDensity(SeedPresetDensity? preset)
     {
         if (preset is null)
@@ -240,6 +263,11 @@ internal static class PresetLoader
             CipherTypeDistribution = ParseCipherTypes(preset.CipherTypes),
             PersonalCipherDistribution = ParsePersonalCipherDistribution(preset.PersonalCiphers?.Shape),
             FolderDistribution = ParseFolderDistribution(preset.Folders?.Shape),
+            ArchivedCipherRate = preset.CipherAssignment?.ArchivedRate ?? 0,
+            DeletedCipherRate = preset.CipherAssignment?.DeletedRate ?? 0,
+            ArchivedAndDeletedOverlapRate = preset.CipherAssignment?.ArchivedAndDeletedOverlapRate ?? 0,
+            MaxArchivedCiphers = preset.CipherAssignment?.MaxArchivedCiphers ?? 50,
+            MaxDeletedCiphers = preset.CipherAssignment?.MaxDeletedCiphers ?? 25,
         };
     }
 

@@ -1,0 +1,573 @@
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json.Nodes;
+using Bit.Api.IntegrationTest.Factories;
+using Bit.Core.AdminConsole.Providers.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Entities;
+using Bit.Core.Billing.Subscriptions.Repositories;
+using Bit.Core.Enums;
+using Bit.Core.Repositories;
+using Bit.Core.Settings;
+using Bit.Test.Common.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using Stripe;
+
+namespace Bit.Billing.IntegrationTest;
+
+public class StripeTestsFixture : IAsyncDisposable
+{
+    public ApiApplicationFactory Api { get; }
+    public AdminApplicationFactory Admin { get; }
+
+    public StripeTestsFixture()
+    {
+        Api = CreateApi();
+        Admin = new AdminApplicationFactory(Api.TestDatabase);
+    }
+
+    /// <summary>
+    /// Hook for subclasses (e.g. flag-override fixtures) to apply additional
+    /// configuration to the API factory before the base fixture wires the
+    /// Admin host against its TestDatabase.
+    /// </summary>
+    protected virtual ApiApplicationFactory CreateApi()
+    {
+        return new ApiApplicationFactory
+        {
+            StripeEnabled = true,
+        };
+    }
+
+    /// <summary>
+    /// Builds a fresh <see cref="StripeClient"/> from the API host's resolved
+    /// <see cref="GlobalSettings"/>. Avoids relying on a DI registration for
+    /// <see cref="StripeClient"/>, which the production code does not provide.
+    /// </summary>
+    private StripeClient CreateStripeClient()
+    {
+        var settings = Api.Services.GetRequiredService<GlobalSettings>().Stripe;
+        return new(settings.ApiKey, httpClient: new SystemNetHttpClient(maxNetworkRetries: settings.MaxNetworkRetries));
+    }
+
+    /// <summary>
+    /// Registers a new user, logs them in, creates an organization on the
+    /// requested plan billed via the Stripe test Visa card, and refreshes the
+    /// access token so it carries the new organization-owner claims. Returns
+    /// the authenticated client, the user and organization ids, and the latest
+    /// refresh token for tests that need to re-issue (e.g. picking up further
+    /// claims after a provider is created). Defaults to Enterprise (Annually)
+    /// for the typical business-tier scenario.
+    /// </summary>
+    public async Task<(HttpClient Client, Guid UserId, Guid OrganizationId, string RefreshToken)>
+        PrepareOrganizationOwnerAsync(string email, PlanType planType = PlanType.EnterpriseAnnually)
+    {
+        var (token, refreshToken) = await Api.LoginWithNewAccount(email);
+        var client = Api.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var profileResponse = await client.GetAsync("/accounts/profile");
+        await Assert.SuccessResponseAsync(profileResponse);
+        var profile = (await profileResponse.Content.ReadFromJsonAsync<JsonObject>())!;
+        var userId = profile["id"]!.GetValue<Guid>();
+
+        // Families is a fixed-seat plan; AdditionalSeats is rejected for it.
+        // Business plans (Teams, Enterprise) take seats explicitly.
+        var additionalSeats = planType is PlanType.FamiliesAnnually ? 0 : 10;
+
+        var createResponse = await client.PostAsJsonAsync("/organizations", new
+        {
+            Name = "Test Organization",
+            BusinessName = "Test Business Name",
+            BillingEmail = email,
+            PlanType = planType,
+            Key = "test_key",
+            Keys = new
+            {
+                PublicKey = "test_public_key",
+                EncryptedPrivateKey = "test_encrypted_private_key",
+            },
+            PaymentToken = "pm_card_visa",
+            PaymentMethodType = PaymentMethodType.Card,
+            BillingAddressCountry = "US",
+            BillingAddressPostalCode = "43432",
+            AdditionalSeats = additionalSeats,
+        });
+        await Assert.SuccessResponseAsync(createResponse);
+
+        var createdOrganization = (await createResponse.Content.ReadFromJsonAsync<JsonObject>())!;
+        var organizationId = createdOrganization["id"]!.GetValue<Guid>();
+
+        // Refresh so the bearer token carries the new organization-owner claims.
+        (token, refreshToken) = await Api.Identity.TokenFromRefreshAsync(refreshToken);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        return (client, userId, organizationId, refreshToken);
+    }
+
+    /// <summary>
+    /// Registers a new user, creates an Enterprise organization billed via the
+    /// Stripe test Visa card, runs an Admin-driven business-unit conversion to
+    /// turn it into a Bitwarden provider, and refreshes the access token so it
+    /// carries the new provider-admin claims. Returns the authenticated client
+    /// and the new provider id.
+    /// </summary>
+    public async Task<(HttpClient Client, Guid ProviderId)> PrepareProviderAdminAsync(string email)
+    {
+        var (client, userId, organizationId, refreshToken) = await PrepareOrganizationOwnerAsync(email);
+
+        var adminSession = await Admin.SignInAdminAsync();
+        var invitationToken = await Admin.InitializeBusinessUnitConversionAsync(adminSession, organizationId, email);
+
+        // Refresh to pick up organization-admin claims set during conversion init.
+        var (token, providerRefreshToken) = await Api.Identity.TokenFromRefreshAsync(refreshToken);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var setupResponse = await client.PostAsJsonAsync(
+            $"/organizations/{organizationId}/billing/setup-business-unit",
+            new
+            {
+                UserId = userId,
+                Token = invitationToken,
+                ProviderKey = "provider_key",
+                OrganizationKey = "organization_key",
+            });
+        await Assert.SuccessResponseAsync(setupResponse);
+
+        var providerId = (await setupResponse.Content.ReadFromJsonAsync<JsonValue>())!.GetValue<Guid>();
+
+        // Refresh again to pick up the new provider-admin claims.
+        (token, _) = await Api.Identity.TokenFromRefreshAsync(providerRefreshToken);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        return (client, providerId);
+    }
+
+    /// <summary>
+    /// Creates a verified-instantly Stripe SetupIntent backed by a us_bank_account
+    /// payment method (Stripe test routing + account numbers) and returns the
+    /// payment method id. Tests pass this id to PUT /payment-method, where
+    /// UpdatePaymentMethodCommand.AddBankAccountAsync lists setup intents with
+    /// Expand=data.payment_method to attach it to the subscriber's customer.
+    /// </summary>
+    public async Task<string> CreateConfirmedBankAccountSetupIntentAsync(string email)
+    {
+        var stripeClient = CreateStripeClient();
+
+        var paymentMethod = await stripeClient.V1.PaymentMethods.CreateAsync(new PaymentMethodCreateOptions
+        {
+            Type = "us_bank_account",
+            UsBankAccount = new PaymentMethodUsBankAccountOptions
+            {
+                RoutingNumber = "110000000",
+                AccountNumber = "000111111116",
+                AccountHolderType = "individual",
+                AccountType = "checking",
+            },
+            BillingDetails = new PaymentMethodBillingDetailsOptions
+            {
+                Name = "Test User",
+                Email = email,
+            },
+        });
+
+        await stripeClient.V1.SetupIntents.CreateAsync(new SetupIntentCreateOptions
+        {
+            PaymentMethod = paymentMethod.Id,
+            PaymentMethodTypes = ["us_bank_account"],
+            Usage = "off_session",
+            Confirm = true,
+            MandateData = new SetupIntentMandateDataOptions
+            {
+                CustomerAcceptance = new SetupIntentMandateDataCustomerAcceptanceOptions
+                {
+                    Type = "online",
+                    Online = new SetupIntentMandateDataCustomerAcceptanceOnlineOptions
+                    {
+                        IpAddress = "127.0.0.1",
+                        UserAgent = "Bit.Billing.IntegrationTest",
+                    },
+                },
+            },
+        });
+
+        return paymentMethod.Id;
+    }
+
+    /// <summary>
+    /// Registers a new user, purchases a Premium cloud-hosted subscription
+    /// billed via the Stripe test Visa card, and refreshes the access token so
+    /// it carries the new premium claim. Returns the authenticated client.
+    /// </summary>
+    public async Task<HttpClient> PreparePremiumUserAsync(string email)
+    {
+        var (token, refreshToken) = await Api.LoginWithNewAccount(email);
+        var client = Api.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var subscriptionResponse = await client.PostAsJsonAsync("/account/billing/vnext/subscription", new
+        {
+            TokenizedPaymentMethod = new { Type = "card", Token = "pm_card_visa" },
+            BillingAddress = new { Country = "US", PostalCode = "43432" },
+            AdditionalStorageGb = 0,
+        });
+        await Assert.SuccessResponseAsync(subscriptionResponse);
+
+        // Refresh so the bearer token carries the new premium claim.
+        (token, _) = await Api.Identity.TokenFromRefreshAsync(refreshToken);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        return client;
+    }
+
+    /// <summary>
+    /// Looks up the persisted Stripe customer id for an organization. Used by
+    /// webhook tests to craft event payloads referencing real subscribers.
+    /// </summary>
+    public async Task<string> GetOrganizationGatewayCustomerIdAsync(Guid organizationId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var organization = await scope.ServiceProvider.GetRequiredService<IOrganizationRepository>()
+            .GetByIdAsync(organizationId);
+        return organization!.GatewayCustomerId!;
+    }
+
+    /// <summary>
+    /// Looks up the persisted Stripe subscription id for an organization.
+    /// </summary>
+    public async Task<string> GetOrganizationGatewaySubscriptionIdAsync(Guid organizationId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var organization = await scope.ServiceProvider.GetRequiredService<IOrganizationRepository>()
+            .GetByIdAsync(organizationId);
+        return organization!.GatewaySubscriptionId!;
+    }
+
+    /// <summary>
+    /// Looks up the persisted Stripe customer id for a provider.
+    /// </summary>
+    public async Task<string> GetProviderGatewayCustomerIdAsync(Guid providerId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var provider = await scope.ServiceProvider.GetRequiredService<IProviderRepository>()
+            .GetByIdAsync(providerId);
+        return provider!.GatewayCustomerId!;
+    }
+
+    /// <summary>
+    /// Looks up the persisted Stripe customer id for a user (premium subscriber).
+    /// </summary>
+    public async Task<string> GetUserGatewayCustomerIdAsync(Guid userId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
+            .GetByIdAsync(userId);
+        return user!.GatewayCustomerId!;
+    }
+
+    /// <summary>
+    /// Looks up the persisted Stripe subscription id for a user (premium subscriber).
+    /// </summary>
+    public async Task<string> GetUserGatewaySubscriptionIdAsync(Guid userId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
+            .GetByIdAsync(userId);
+        return user!.GatewaySubscriptionId!;
+    }
+
+    /// <summary>
+    /// Creates a real test-mode charge against the organization's customer and
+    /// returns its id, used by webhook tests that simulate <c>charge.succeeded</c>.
+    /// Fresh signups are on a trial and have no charges yet, so we make one.
+    /// </summary>
+    public async Task<string> CreateChargeForOrganizationAsync(Guid organizationId)
+    {
+        var customerId = await GetOrganizationGatewayCustomerIdAsync(organizationId);
+        var stripeClient = CreateStripeClient();
+        var paymentIntent = await stripeClient.V1.PaymentIntents.CreateAsync(new PaymentIntentCreateOptions
+        {
+            Customer = customerId,
+            Amount = 100,
+            Currency = "usd",
+            PaymentMethod = "pm_card_visa",
+            Confirm = true,
+            OffSession = true,
+            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+            {
+                Enabled = true,
+                AllowRedirects = "never",
+            },
+        });
+        return paymentIntent.LatestChargeId!;
+    }
+
+    /// <summary>
+    /// Creates an empty Stripe SetupIntent attached to the given customer, returning
+    /// its id. Used by webhook tests that simulate <c>setup_intent.succeeded</c>.
+    /// </summary>
+    public async Task<string> CreateBareSetupIntentAsync(string customerId)
+    {
+        var stripeClient = CreateStripeClient();
+        var setupIntent = await stripeClient.V1.SetupIntents.CreateAsync(new SetupIntentCreateOptions
+        {
+            Customer = customerId,
+            PaymentMethodTypes = ["card"],
+            Usage = "off_session",
+        });
+        return setupIntent.Id;
+    }
+
+    /// <summary>
+    /// Drives <see cref="ISubscriberService.ScheduleUnpaidCancellationAsync"/> directly
+    /// against an organization. This is what the Admin Portal's POST /organizations/{id}
+    /// "Edit" form does when an admin disables a billing-disabled org. The Stripe fetch
+    /// inside that method runs regardless of subscription status.
+    /// </summary>
+    public async Task ScheduleUnpaidCancellationForOrganizationAsync(Guid organizationId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var organization = await scope.ServiceProvider.GetRequiredService<IOrganizationRepository>()
+            .GetByIdAsync(organizationId);
+        await scope.ServiceProvider.GetRequiredService<ISubscriberService>()
+            .ScheduleUnpaidCancellationAsync(organization!);
+    }
+
+    /// <summary>
+    /// Drives <see cref="ISubscriberService.ResumeFromUnpaidCancellationAsync"/> directly
+    /// against an organization. The Stripe fetch inside that method runs regardless of
+    /// subscription status.
+    /// </summary>
+    public async Task ResumeFromUnpaidCancellationForOrganizationAsync(Guid organizationId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var organization = await scope.ServiceProvider.GetRequiredService<IOrganizationRepository>()
+            .GetByIdAsync(organizationId);
+        await scope.ServiceProvider.GetRequiredService<ISubscriberService>()
+            .ResumeFromUnpaidCancellationAsync(organization!);
+    }
+
+    /// <summary>
+    /// Cancels the user's subscription immediately (not at period end), forcing the user
+    /// off premium and leaving a Canceled subscription on the existing Stripe customer.
+    /// Used by the "existing customer re-subscribes" branch test.
+    /// </summary>
+    public async Task CancelUserSubscriptionImmediatelyAsync(Guid userId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>().GetByIdAsync(userId);
+        await scope.ServiceProvider.GetRequiredService<ISubscriberService>()
+            .CancelSubscription(user!, cancelImmediately: true);
+
+        // CancelSubscription updates Stripe state; reflect "no longer premium" on the
+        // user row so the re-subscribe controller path doesn't reject with "Already a
+        // premium user."
+        user!.Premium = false;
+        user.PremiumExpirationDate = null;
+        await scope.ServiceProvider.GetRequiredService<IUserRepository>().ReplaceAsync(user);
+    }
+
+    /// <summary>
+    /// Creates a bare Stripe customer attached to the user (no subscription, no payment
+    /// method) and persists its id on the user row. Drives the
+    /// "user has GatewayCustomerId but no premium" code paths in premium creation and
+    /// in the UserHasNoPreviousSubscriptions discount filter.
+    /// </summary>
+    public async Task CreateOrphanedStripeCustomerForUserAsync(Guid userId, string email)
+    {
+        var stripeClient = CreateStripeClient();
+        var customer = await stripeClient.V1.Customers.CreateAsync(new CustomerCreateOptions
+        {
+            Email = email,
+            Description = $"Integration test orphaned customer for {userId}",
+        });
+
+        using var scope = Api.Services.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var user = await repo.GetByIdAsync(userId);
+        user!.Gateway = GatewayType.Stripe;
+        user.GatewayCustomerId = customer.Id;
+        await repo.ReplaceAsync(user);
+    }
+
+    /// <summary>
+    /// Seeds an active <see cref="SubscriptionDiscount"/> with audience
+    /// <see cref="DiscountAudienceType.UserHasNoPreviousSubscriptions"/> applicable to the
+    /// Premium product, plus a real Stripe coupon backing it. Returns the coupon id.
+    /// </summary>
+    public async Task<string> SeedNoPreviousSubscriptionsDiscountAsync(string couponId)
+    {
+        var stripeClient = CreateStripeClient();
+
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* coupon doesn't exist yet — first run */ }
+
+        await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
+        {
+            Id = couponId,
+            Name = "Integration Test New-User Discount",
+            PercentOff = 10,
+            Duration = "once",
+        });
+
+        using var scope = Api.Services.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<ISubscriptionDiscountRepository>();
+        await repo.CreateAsync(new SubscriptionDiscount
+        {
+            StripeCouponId = couponId,
+            StripeProductIds = [StripeConstants.ProductIDs.Premium],
+            PercentOff = 10,
+            Duration = "once",
+            Name = "New-User Premium Discount",
+            StartDate = DateTime.UtcNow.AddDays(-1),
+            EndDate = DateTime.UtcNow.AddDays(30),
+            AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions,
+        });
+        return couponId;
+    }
+
+    /// <summary>
+    /// Drives <see cref="IRemoveOrganizationFromProviderCommand"/> directly. Exercises
+    /// <see cref="ISubscriberService.RemovePaymentSource"/> on the org as part of
+    /// unlinking it from a provider.
+    /// </summary>
+    public async Task RemoveAnyOrganizationFromProviderAsync(Guid providerId)
+    {
+        using var scope = Api.Services.CreateScope();
+        var providerRepo = scope.ServiceProvider.GetRequiredService<IProviderRepository>();
+        var providerOrgRepo = scope.ServiceProvider.GetRequiredService<IProviderOrganizationRepository>();
+        var orgRepo = scope.ServiceProvider.GetRequiredService<IOrganizationRepository>();
+        var command = scope.ServiceProvider.GetRequiredService<IRemoveOrganizationFromProviderCommand>();
+
+        var provider = await providerRepo.GetByIdAsync(providerId);
+        var providerOrgDetails = (await providerOrgRepo.GetManyDetailsByProviderAsync(providerId)).First();
+        var providerOrg = await providerOrgRepo.GetByIdAsync(providerOrgDetails.Id);
+        var organization = await orgRepo.GetByIdAsync(providerOrgDetails.OrganizationId);
+
+        await command.RemoveOrganizationFromProvider(provider!, providerOrg!, organization!);
+    }
+
+    /// <summary>
+    /// Detaches the customer's default Stripe payment method. Drives the
+    /// no-default-PM branch inside <c>GetPaymentSourceAsync</c> which lists setup intents
+    /// with Expand=["data.payment_method"].
+    /// </summary>
+    public async Task DetachDefaultPaymentMethodAsync(string customerId)
+    {
+        var stripeClient = CreateStripeClient();
+        var customer = await stripeClient.V1.Customers.GetAsync(customerId);
+        if (!string.IsNullOrEmpty(customer.InvoiceSettings.DefaultPaymentMethodId))
+        {
+            await stripeClient.V1.PaymentMethods.DetachAsync(customer.InvoiceSettings.DefaultPaymentMethodId);
+        }
+    }
+
+    /// <summary>
+    /// Creates a Stripe coupon (deletes any pre-existing one first), inserts a churn-only
+    /// migration cohort that references it, and assigns the organization to that cohort.
+    /// Drives the <see cref="GetChurnMitigationOfferQuery"/> and
+    /// <see cref="RedeemChurnMitigationOfferCommand"/> Expand-using fetches.
+    /// </summary>
+    public async Task<string> SeedChurnOnlyCohortAsync(Guid organizationId, string couponId)
+    {
+        var stripeClient = CreateStripeClient();
+
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* coupon doesn't exist yet — first run */ }
+
+        await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
+        {
+            Id = couponId,
+            Name = "Integration Test Churn Coupon",
+            PercentOff = 25,
+            Duration = "repeating",
+            DurationInMonths = 3,
+        });
+
+        using var scope = Api.Services.CreateScope();
+        var cohortRepository = scope.ServiceProvider
+            .GetRequiredService<IOrganizationPlanMigrationCohortRepository>();
+        var cohort = await cohortRepository.CreateAsync(new OrganizationPlanMigrationCohort
+        {
+            Name = $"churn-only-{Guid.NewGuid():N}",
+            MigrationPathId = null,
+            ChurnDiscountCouponCode = couponId,
+            IsActive = true,
+        });
+
+        var assignmentRepository = scope.ServiceProvider
+            .GetRequiredService<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = organizationId,
+            CohortId = cohort.Id,
+        });
+
+        return couponId;
+    }
+
+    /// <summary>
+    /// Seeds a migration-cohort assignment and creates an active Stripe SubscriptionSchedule
+    /// on the organization's subscription so the <see cref="GetBitwardenSubscriptionQuery"/>
+    /// and <see cref="StripePaymentService"/> schedule-Expand sites are reachable.
+    /// </summary>
+    public async Task SeedMigrationCohortWithScheduleAsync(Guid organizationId, MigrationPathId migrationPathId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscriptionId = await GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+
+        await stripeClient.V1.SubscriptionSchedules.CreateAsync(new SubscriptionScheduleCreateOptions
+        {
+            FromSubscription = subscriptionId,
+        });
+
+        using var scope = Api.Services.CreateScope();
+        var cohortRepository = scope.ServiceProvider
+            .GetRequiredService<IOrganizationPlanMigrationCohortRepository>();
+        var cohort = await cohortRepository.CreateAsync(new OrganizationPlanMigrationCohort
+        {
+            Name = $"migration-{Guid.NewGuid():N}",
+            MigrationPathId = migrationPathId,
+            IsActive = true,
+        });
+
+        var assignmentRepository = scope.ServiceProvider
+            .GetRequiredService<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = organizationId,
+            CohortId = cohort.Id,
+        });
+    }
+
+    /// <summary>
+    /// Creates a no-op Stripe Checkout Session attached to the given customer for
+    /// webhook tests that simulate <c>checkout.session.completed</c>.
+    /// </summary>
+    public async Task<string> CreateCheckoutSessionAsync(string customerId)
+    {
+        var stripeClient = CreateStripeClient();
+        var session = await stripeClient.V1.Checkout.Sessions.CreateAsync(new Stripe.Checkout.SessionCreateOptions
+        {
+            Customer = customerId,
+            Mode = "setup",
+            PaymentMethodTypes = ["card"],
+            SuccessUrl = "https://example.com/success",
+            CancelUrl = "https://example.com/cancel",
+        });
+        return session.Id;
+    }
+
+    public virtual async ValueTask DisposeAsync()
+    {
+        await Admin.DisposeAsync();
+        await Api.DisposeAsync();
+        GC.SuppressFinalize(this);
+    }
+}

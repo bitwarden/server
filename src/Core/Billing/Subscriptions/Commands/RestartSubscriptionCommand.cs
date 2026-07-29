@@ -97,6 +97,7 @@ public class RestartSubscriptionCommand(
             organization.UseResetPassword = newPlan.HasResetPassword;
             organization.UsersGetPremium = newPlan.UsersGetPremium;
             organization.UseCustomPermissions = newPlan.HasCustomPermissions;
+            organization.UseRiskInsights = newPlan.HasRiskInsights;
         }
 
         var items = new List<SubscriptionItemOptions>();

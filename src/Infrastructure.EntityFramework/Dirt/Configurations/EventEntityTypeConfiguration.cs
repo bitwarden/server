@@ -23,6 +23,13 @@ public class EventEntityTypeConfiguration : IEntityTypeConfiguration<Event>
             index,
             e => new { e.ServiceAccountId, e.GrantedServiceAccountId });
 
+        // Supports reading a single Send's events (Event_ReadPageBySendId). Not filtered here because
+        // MySQL does not support filtered indexes; MSSQL filters on
+        // SendId IS NOT NULL to keep the index small.
+        builder.HasIndex(e => new { e.OrganizationId, e.SendId, e.Date })
+            .IsClustered(false)
+            .HasDatabaseName("IX_Event_OrganizationIdSendIdDate");
+
         builder.ToTable(nameof(Event));
     }
 }

@@ -5,8 +5,8 @@ public interface IChangeEmailCommand
 {
     /// <summary>
     /// Updates the user's email after all upstream authentication and authorization checks have
-    /// passed. On success, signals a settings sync to the user's active sessions; sessions are
-    /// not invalidated.
+    /// passed. Callers need to decide if a Sync or Logout is appropriate after the email change
+    /// and invoke the push service accordingly.
     /// </summary>
     /// <remarks>
     /// For users with a master password, this command is intended to be consumed only once the

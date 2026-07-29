@@ -13,11 +13,11 @@ public class OrganizationInviteLinkResponseModel : ResponseModel
         ArgumentNullException.ThrowIfNull(inviteLink);
 
         Id = inviteLink.Id;
-        Code = inviteLink.Code;
+        Code = Guid.Parse(inviteLink.Code);
         OrganizationId = inviteLink.OrganizationId;
         AllowedDomains = inviteLink.GetAllowedDomains();
-        EncryptedInviteKey = inviteLink.EncryptedInviteKey;
-        EncryptedOrgKey = inviteLink.EncryptedOrgKey;
+        Invite = inviteLink.Invite;
+        SupportsConfirmation = inviteLink.SupportsConfirmation;
         CreationDate = inviteLink.CreationDate;
     }
 
@@ -25,7 +25,7 @@ public class OrganizationInviteLinkResponseModel : ResponseModel
     public Guid Code { get; set; }
     public Guid OrganizationId { get; set; }
     public IEnumerable<string> AllowedDomains { get; set; } = [];
-    public string EncryptedInviteKey { get; set; } = null!;
-    public string? EncryptedOrgKey { get; set; }
+    public string Invite { get; set; } = null!;
+    public bool SupportsConfirmation { get; set; }
     public DateTime CreationDate { get; set; }
 }

@@ -16,5 +16,15 @@ namespace Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 /// different path; see <see cref="MigrationPathId"/> and its snapshot tests for the
 /// immortality guard.
 /// </para>
+/// <para>
+/// <see cref="SeatCountPolicy"/> defaults to <see cref="Enums.SeatCountPolicy.Preserve"/>; Packaged
+/// sources whose line items don't reflect the true seat total set
+/// <see cref="Enums.SeatCountPolicy.ActualUsage"/>.
+/// </para>
 /// </remarks>
-public sealed record MigrationPath(MigrationPathId Id, string Name, PlanType FromPlan, PlanType ToPlan);
+public sealed record MigrationPath(
+    MigrationPathId Id,
+    string Name,
+    PlanType FromPlan,
+    PlanType ToPlan,
+    SeatCountPolicy SeatCountPolicy = SeatCountPolicy.Preserve);
