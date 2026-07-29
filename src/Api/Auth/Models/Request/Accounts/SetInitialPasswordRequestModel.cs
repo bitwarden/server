@@ -64,9 +64,8 @@ public class SetInitialPasswordRequestModel : IValidatableObject
 
         // MasterPasswordSalt column must never be null/empty after a successful password-set
         // operation. Modern clients send an explicit salt via MPUD; older clients don't send one,
-        // so we fall back to the email-derived V1 salt (matching the implicit contract that
-        // User.GetMasterPasswordSalt() already encodes at read time).
-        existingUser.MasterPasswordSalt = MasterPasswordUnlock?.Salt ?? existingUser.Email.ToLowerInvariant().Trim();
+        // so we fall back to the email-derived V1 salt via GetMasterPasswordSalt().
+        existingUser.MasterPasswordSalt = MasterPasswordUnlock?.Salt ?? existingUser.GetMasterPasswordSalt();
 
         Keys?.ToUser(existingUser);
         return existingUser;
