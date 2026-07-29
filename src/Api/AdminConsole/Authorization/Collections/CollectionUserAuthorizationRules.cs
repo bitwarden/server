@@ -24,7 +24,7 @@ public static class CollectionUserAuthorizationRules
             return true;
         }
 
-        if (allowAdminAccessToAllCollectionItems && organization?.HasPermission(p => p.ManageUsers) == true)
+        if (allowAdminAccessToAllCollectionItems && organization is { Permissions.ManageUsers: true })
         {
             return true;
         }
