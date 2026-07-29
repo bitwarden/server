@@ -2,7 +2,7 @@
 using Bit.Core.Utilities;
 using Xunit;
 
-namespace Bit.Core.Test.Utilities;
+namespace Bit.SsrfProtection.Test;
 
 public class IPAddressExtensionsTests
 {
