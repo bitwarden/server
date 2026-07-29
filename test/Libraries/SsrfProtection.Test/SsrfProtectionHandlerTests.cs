@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
