@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Organizations.Models;
@@ -33,7 +34,7 @@ public class SelfHostedOrganizationDetails : Organization
 
         if (license.MaxCollections.HasValue && CollectionCount > license.MaxCollections.Value)
         {
-            var collectionTerm = useSharedFolderTerminology ? "shared folders" : "collections";
+            var collectionTerm = CollectionTerminology.Plural(useSharedFolderTerminology);
             exception = $"Your organization currently has {CollectionCount} {collectionTerm}. " +
                 $"Your new license allows for a maximum of ({license.MaxCollections.Value}) {collectionTerm}. " +
                 $"Remove some {collectionTerm}.";

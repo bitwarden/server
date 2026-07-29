@@ -179,19 +179,22 @@ public class CreateCollectionCommandTests
         [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> users,
         SutProvider<CreateCollectionCommand> sutProvider)
     {
+        const short maxCollections = 5;
+
         collection.Id = default;
+        organization.MaxCollections = maxCollections;
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>()
             .GetCountByOrganizationIdAsync(organization.Id)
-            .Returns(organization.MaxCollections.Value);
+            .Returns(maxCollections);
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.VFO1Foundation)
             .Returns(true);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(collection, null, users));
-        Assert.Equal($@"You have reached the maximum number of shared folders ({organization.MaxCollections.Value}) for this organization.", ex.Message);
+        Assert.Equal($@"You have reached the maximum number of shared folders ({maxCollections}) for this organization.", ex.Message);
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(default);

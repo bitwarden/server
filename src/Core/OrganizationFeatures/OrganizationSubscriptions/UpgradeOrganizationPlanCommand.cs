@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
@@ -165,7 +166,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
             if (collectionCount > newPlan.PasswordManager.MaxCollections.Value)
             {
-                var collectionTerm = _featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation) ? "shared folders" : "collections";
+                var collectionTerm = CollectionTerminology.Plural(_featureService);
                 throw new BadRequestException($"Your organization currently has {collectionCount} {collectionTerm}. " +
                                               $"Your new plan allows for a maximum of ({newPlan.PasswordManager.MaxCollections.Value}) {collectionTerm}. " +
                                               $"Remove some {collectionTerm}.");

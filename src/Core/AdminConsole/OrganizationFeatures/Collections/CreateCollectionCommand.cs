@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -69,7 +70,7 @@ public class CreateCollectionCommand : ICreateCollectionCommand
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
             if (org.MaxCollections.Value <= collectionCount)
             {
-                var collectionTerm = _featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation) ? "shared folders" : "collections";
+                var collectionTerm = CollectionTerminology.Plural(_featureService);
                 throw new BadRequestException($"You have reached the maximum number of {collectionTerm} " +
                 $"({org.MaxCollections.Value}) for this organization.");
             }
