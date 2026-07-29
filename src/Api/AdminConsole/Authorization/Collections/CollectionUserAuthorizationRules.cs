@@ -11,8 +11,7 @@ public static class CollectionUserAuthorizationRules
 {
     /// <summary>
     /// Returns true if the acting user can add, change, or remove another user's access to this collection.
-    /// <paramref name="callerManagesCollection"/> means the acting user has <c>Manage</c> on this collection,
-    /// either directly or through a group.
+    /// <paramref name="callerManagesCollection"/> covers <c>Manage</c> granted directly or through a group.
     /// </summary>
     public static bool CanModifyUserAccess(
         CollectionAccessDetails accessDetails,
@@ -40,8 +39,8 @@ public static class CollectionUserAuthorizationRules
             return true;
         }
 
-        // Owners and Admins can still manage a collection with no manager, even if
-        // AllowAdminAccessToAllCollectionItems is off. (EditAnyCollection callers already returned above.)
+        // Owners and Admins can still manage an orphaned collection even when
+        // AllowAdminAccessToAllCollectionItems is off.
         if (organization is not { IsAdminOrOwner: true })
         {
             return false;

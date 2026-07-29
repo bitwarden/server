@@ -36,8 +36,8 @@ public class ModifyCollectionUserAccessValidator(IOrganizationUserRepository org
             return Invalid(request, new CannotModifyDefaultUserCollectionAccess());
         }
 
-        // This check only makes sense for one collection. With multiple collections, a user might already
-        // have access to one but not another, so we skip it.
+        // Only meaningful for a single collection: across several, a user may already have access to one
+        // target but not another.
         if (request.Targets.Count == 1)
         {
             var existingIds = request.Targets.Single().AccessDetails.Users.Select(u => u.Id).ToHashSet();
@@ -68,9 +68,8 @@ public class ModifyCollectionUserAccessValidator(IOrganizationUserRepository org
             }
         }
 
-        // Checks Add and Update, since putting yourself in Update instead of Add still grants new access.
-        // Only blocks joining a collection you're not in yet. Raising access on one you're already in is fine,
-        // since the authorization layer already requires you to manage that collection first.
+        // Update is checked alongside Add, since it grants access on any target the user isn't yet on. Raising
+        // your own access on a collection you already belong to is fine; authorization required Manage on it.
         if (request.PerformingOrganizationUserId is { } performingId
             && (addIds.Contains(performingId) || updateIds.Contains(performingId))
             && !request.AllowAdminAccessToAllCollectionItems
@@ -102,8 +101,7 @@ public class ModifyCollectionUserAccessValidator(IOrganizationUserRepository org
             .Where(u => !removeIds.Contains(u.Id))
             .Select(u => updatedById.GetValueOrDefault(u.Id, u))
             .Concat(request.Add)
-            // An Update entry still grants access on any target where that user isn't already a member,
-            // so it counts the same as Add here.
+            // An Update entry grants access on targets the user isn't a member of, so it counts as an Add here.
             .Concat(request.Update.Where(u => !existingIds.Contains(u.Id)));
 
         return finalUsers.Any(u => u.Manage);

@@ -44,7 +44,7 @@ public class CollectionUserEndpointsHandler(
 
         var resources = targets.Select(t => new CollectionUserAccessResource(t.Collection, t.AccessDetails)).ToList();
 
-        // Check authorization even for an empty delta, so an empty request can't skip it.
+        // Authorize an empty delta too, so an empty request can't skip the check.
         if (addIds.Count == 0 && updateIds.Count == 0 && removeIds.Count == 0)
         {
             await authorizationService.AuthorizeOrThrowAsync(user, resources, CollectionUserOperations.Update);

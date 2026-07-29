@@ -374,7 +374,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             }
 
             // Run this even with no upserts, so a remove-only request still bumps revision dates.
-            // Matches the EF Core implementation.
             await connection.ExecuteAsync(
                 $"[{Schema}].[Collection_CreateOrUpdateAccessForMany]",
                 new

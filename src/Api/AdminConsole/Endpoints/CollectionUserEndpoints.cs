@@ -6,8 +6,8 @@ using Bit.Core;
 namespace Bit.Api.AdminConsole.Endpoints;
 
 /// <summary>
-/// Maps the PATCH routes for changing a collection's user access as an add/update/remove delta rather than the
-/// full desired list. The bulk route applies the same delta to every listed collection.
+/// Maps the PATCH routes for changing collection user access as an add/update/remove delta. The bulk route
+/// applies the same delta to every listed collection.
 /// </summary>
 public static class CollectionUserEndpoints
 {

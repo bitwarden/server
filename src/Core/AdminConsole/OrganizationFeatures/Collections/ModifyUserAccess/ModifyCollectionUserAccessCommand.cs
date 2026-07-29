@@ -29,8 +29,7 @@ public class ModifyCollectionUserAccessCommand(
         var revisionDate = timeProvider.GetUtcNow().UtcDateTime;
         var upserts = request.Add.Concat(request.Update).ToList();
 
-        // Drop ids that aren't actually members. Otherwise we'd bump some unrelated user's revision date for
-        // no reason.
+        // Drop ids that aren't members, so we don't bump an unrelated user's revision date.
         var existingUserIds = request.Targets
             .SelectMany(t => t.AccessDetails.Users.Select(u => u.Id))
             .ToHashSet();

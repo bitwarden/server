@@ -3,8 +3,7 @@
 namespace Bit.Api.AdminConsole.Models.Request;
 
 /// <summary>
-/// The same add/update/remove delta as <see cref="CollectionUserAccessDeltaRequestModel"/>, applied identically
-/// to every listed collection.
+/// A <see cref="CollectionUserAccessDeltaRequestModel"/> applied to every listed collection.
 /// </summary>
 public class BulkCollectionUserAccessDeltaRequestModel
 {

@@ -8,14 +8,12 @@ using CommandError = Bit.Core.AdminConsole.Utilities.v2.Error;
 namespace Bit.Api.AdminConsole.Utilities;
 
 /// <summary>
-/// Maps a <see cref="CommandResult"/>/<see cref="CommandResult{T}"/> to an HTTP response. Shared by
-/// <see cref="Bit.Api.AdminConsole.Controllers.BaseAdminConsoleController"/> and Minimal API endpoint handlers.
+/// Maps a <see cref="CommandResult"/>/<see cref="CommandResult{T}"/> to an HTTP response.
 /// </summary>
 public static class CommandResultExtensions
 {
     /// <summary>
-    /// Maps a void <see cref="CommandResult"/> to an HTTP response.
-    /// Returns 204 No Content on success, or the appropriate error status code on failure.
+    /// Returns 204 No Content on success, or the mapped error status code on failure.
     /// </summary>
     public static IResult ToHttpResult(this CommandResult commandResult) =>
         commandResult.Match<IResult>(
@@ -24,10 +22,8 @@ public static class CommandResultExtensions
         );
 
     /// <summary>
-    /// Maps a <see cref="CommandResult{T}"/> to an HTTP response.
-    /// On success, delegates to <paramref name="success"/> so the caller can choose the response shape
-    /// (e.g. <c>TypedResults.Created</c> for POST, <c>TypedResults.Ok</c> for GET/PUT).
-    /// On failure, returns the appropriate error status code.
+    /// Delegates to <paramref name="success"/> on success so the caller chooses the response shape, or returns
+    /// the mapped error status code on failure.
     /// </summary>
     public static IResult ToHttpResult<T>(this CommandResult<T> commandResult, Func<T, IResult> success) =>
         commandResult.Match<IResult>(
