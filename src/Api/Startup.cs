@@ -1,4 +1,5 @@
-﻿using Bit.Api.Utilities;
+﻿using Bit.Api.AdminConsole.Endpoints;
+using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Settings;
@@ -286,6 +287,7 @@ public class Startup
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapDefaultControllerRoute();
+            endpoints.MapAdminConsoleEndpoints();
 
 #if !OSS
             // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.

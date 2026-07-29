@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization.Collections;
-using Bit.Api.AdminConsole.Controllers;
-using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.AdminConsole.Endpoints.Handlers;
 using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.ModifyUserAccess;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
@@ -16,54 +15,48 @@ using NSubstitute;
 using OneOf.Types;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Controllers;
+namespace Bit.Api.Test.AdminConsole.Endpoints.Handlers;
 
-[ControllerCustomize(typeof(CollectionUserController))]
 [SutProviderCustomize]
-public class CollectionUserControllerTests
+public class CollectionUserEndpointsHandlerTests
 {
     [Theory, BitAutoData]
-    public async Task PatchCollectionUserAccessAsync_CollectionNotFound_ThrowsNotFound(
-        Guid orgId, Guid collectionId, SutProvider<CollectionUserController> sutProvider)
+    public async Task PatchUserAccessAsync_CollectionNotFound_ThrowsNotFound(
+        Guid orgId, Guid collectionId, SutProvider<CollectionUserEndpointsHandler> sutProvider)
     {
         ArrangeCollections(sutProvider, orgId);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchCollectionUserAccessAsync(
-            orgId, collectionId, new CollectionUserAccessDeltaRequestModel()));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchUserAccessAsync(
+            orgId, [collectionId], [], [], [], new ClaimsPrincipal()));
 
         await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs()
             .AuthorizeAsync(default, default, default(IEnumerable<IAuthorizationRequirement>));
     }
 
     [Theory, BitAutoData]
-    public async Task PatchBulkCollectionUserAccessAsync_SomeCollectionIdsNotFound_ThrowsNotFound(
-        Guid orgId, SutProvider<CollectionUserController> sutProvider)
+    public async Task PatchUserAccessAsync_SomeCollectionIdsNotFound_ThrowsNotFound(
+        Guid orgId, SutProvider<CollectionUserEndpointsHandler> sutProvider)
     {
         var collectionA = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
         ArrangeCollections(sutProvider, orgId, collectionA);
 
-        var model = new BulkCollectionUserAccessDeltaRequestModel
-        {
-            CollectionIds = [collectionA.Id, Guid.NewGuid()]
-        };
-
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.PatchBulkCollectionUserAccessAsync(orgId, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchUserAccessAsync(
+            orgId, [collectionA.Id, Guid.NewGuid()], [], [], [], new ClaimsPrincipal()));
 
         await sutProvider.GetDependency<IModifyCollectionUserAccessCommand>().DidNotReceiveWithAnyArgs()
             .ModifyAsync(default);
     }
 
     [Theory, BitAutoData]
-    public async Task PatchCollectionUserAccessAsync_EmptyDelta_StillAuthorizesUpdate(
-        Guid orgId, SutProvider<CollectionUserController> sutProvider)
+    public async Task PatchUserAccessAsync_EmptyDelta_StillAuthorizesUpdate(
+        Guid orgId, SutProvider<CollectionUserEndpointsHandler> sutProvider)
     {
         var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
         ArrangeCollections(sutProvider, orgId, collection);
         ArrangeAuthorization(sutProvider, CollectionUserOperations.Update);
         ArrangeCommandSucceeds(sutProvider);
 
-        await sutProvider.Sut.PatchCollectionUserAccessAsync(orgId, collection.Id, new CollectionUserAccessDeltaRequestModel());
+        await sutProvider.Sut.PatchUserAccessAsync(orgId, [collection.Id], [], [], [], new ClaimsPrincipal());
 
         await sutProvider.GetDependency<IAuthorizationService>().Received(1).AuthorizeAsync(
             Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(),
@@ -71,9 +64,9 @@ public class CollectionUserControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PatchCollectionUserAccessAsync_Authorized_AppliesDeltaToSingleTarget(
+    public async Task PatchUserAccessAsync_Authorized_AppliesDeltaToSingleTarget(
         Guid orgId, Guid newUserId, Guid updatedUserId, Guid removedUserId,
-        SutProvider<CollectionUserController> sutProvider)
+        SutProvider<CollectionUserEndpointsHandler> sutProvider)
     {
         var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
         ArrangeCollections(sutProvider, orgId, collection);
@@ -81,14 +74,11 @@ public class CollectionUserControllerTests
             CollectionUserOperations.Create, CollectionUserOperations.Update, CollectionUserOperations.Delete);
         ArrangeCommandSucceeds(sutProvider);
 
-        var model = new CollectionUserAccessDeltaRequestModel
-        {
-            Add = [new SelectionReadOnlyRequestModel { Id = newUserId, Manage = true }],
-            Update = [new SelectionReadOnlyRequestModel { Id = updatedUserId }],
-            Remove = [removedUserId]
-        };
+        var add = new List<SelectionReadOnlyRequestModel> { new() { Id = newUserId, Manage = true } };
+        var update = new List<SelectionReadOnlyRequestModel> { new() { Id = updatedUserId } };
+        var remove = new List<Guid> { removedUserId };
 
-        await sutProvider.Sut.PatchCollectionUserAccessAsync(orgId, collection.Id, model);
+        await sutProvider.Sut.PatchUserAccessAsync(orgId, [collection.Id], add, update, remove, new ClaimsPrincipal());
 
         await sutProvider.GetDependency<IAuthorizationService>().Received(1).AuthorizeAsync(
             Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(),
@@ -109,74 +99,62 @@ public class CollectionUserControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PatchBulkCollectionUserAccessAsync_UnauthorizedForCreate_ThrowsAndNeverCallsCommand(
-        Guid orgId, Guid newUserId, SutProvider<CollectionUserController> sutProvider)
+    public async Task PatchUserAccessAsync_UnauthorizedForCreate_ThrowsAndNeverCallsCommand(
+        Guid orgId, Guid newUserId, SutProvider<CollectionUserEndpointsHandler> sutProvider)
     {
         var collectionA = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
         var collectionB = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
         ArrangeCollections(sutProvider, orgId, collectionA, collectionB);
         ArrangeAuthorization(sutProvider, CollectionUserOperations.Update, CollectionUserOperations.Delete);
 
-        var model = new BulkCollectionUserAccessDeltaRequestModel
-        {
-            CollectionIds = [collectionA.Id, collectionB.Id],
-            Add = [new SelectionReadOnlyRequestModel { Id = newUserId }]
-        };
+        var add = new List<SelectionReadOnlyRequestModel> { new() { Id = newUserId } };
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.PatchBulkCollectionUserAccessAsync(orgId, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchUserAccessAsync(
+            orgId, [collectionA.Id, collectionB.Id], add, [], [], new ClaimsPrincipal()));
 
         await sutProvider.GetDependency<IModifyCollectionUserAccessCommand>().DidNotReceiveWithAnyArgs()
             .ModifyAsync(default);
     }
 
     [Theory, BitAutoData]
-    public async Task PatchBulkCollectionUserAccessAsync_UnauthorizedForUpdate_ThrowsAndNeverCallsCommand(
-        Guid orgId, Guid updatedUserId, SutProvider<CollectionUserController> sutProvider)
+    public async Task PatchUserAccessAsync_UnauthorizedForUpdate_ThrowsAndNeverCallsCommand(
+        Guid orgId, Guid updatedUserId, SutProvider<CollectionUserEndpointsHandler> sutProvider)
     {
         var collectionA = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
         var collectionB = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
         ArrangeCollections(sutProvider, orgId, collectionA, collectionB);
         ArrangeAuthorization(sutProvider, CollectionUserOperations.Create, CollectionUserOperations.Delete);
 
-        var model = new BulkCollectionUserAccessDeltaRequestModel
-        {
-            CollectionIds = [collectionA.Id, collectionB.Id],
-            Update = [new SelectionReadOnlyRequestModel { Id = updatedUserId }]
-        };
+        var update = new List<SelectionReadOnlyRequestModel> { new() { Id = updatedUserId } };
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.PatchBulkCollectionUserAccessAsync(orgId, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchUserAccessAsync(
+            orgId, [collectionA.Id, collectionB.Id], [], update, [], new ClaimsPrincipal()));
 
         await sutProvider.GetDependency<IModifyCollectionUserAccessCommand>().DidNotReceiveWithAnyArgs()
             .ModifyAsync(default);
     }
 
     [Theory, BitAutoData]
-    public async Task PatchBulkCollectionUserAccessAsync_UnauthorizedForDelete_ThrowsAndNeverCallsCommand(
-        Guid orgId, Guid removedUserId, SutProvider<CollectionUserController> sutProvider)
+    public async Task PatchUserAccessAsync_UnauthorizedForDelete_ThrowsAndNeverCallsCommand(
+        Guid orgId, Guid removedUserId, SutProvider<CollectionUserEndpointsHandler> sutProvider)
     {
         var collectionA = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
         var collectionB = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
         ArrangeCollections(sutProvider, orgId, collectionA, collectionB);
         ArrangeAuthorization(sutProvider, CollectionUserOperations.Create, CollectionUserOperations.Update);
 
-        var model = new BulkCollectionUserAccessDeltaRequestModel
-        {
-            CollectionIds = [collectionA.Id, collectionB.Id],
-            Remove = [removedUserId]
-        };
+        var remove = new List<Guid> { removedUserId };
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.PatchBulkCollectionUserAccessAsync(orgId, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchUserAccessAsync(
+            orgId, [collectionA.Id, collectionB.Id], [], [], remove, new ClaimsPrincipal()));
 
         await sutProvider.GetDependency<IModifyCollectionUserAccessCommand>().DidNotReceiveWithAnyArgs()
             .ModifyAsync(default);
     }
 
     [Theory, BitAutoData]
-    public async Task PatchBulkCollectionUserAccessAsync_Authorized_AppliesSameDeltaToAllTargets(
-        Guid orgId, Guid newUserId, SutProvider<CollectionUserController> sutProvider)
+    public async Task PatchUserAccessAsync_Authorized_AppliesSameDeltaToAllTargets(
+        Guid orgId, Guid newUserId, SutProvider<CollectionUserEndpointsHandler> sutProvider)
     {
         var collectionA = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
         var collectionB = new Collection { Id = Guid.NewGuid(), OrganizationId = orgId };
@@ -184,13 +162,10 @@ public class CollectionUserControllerTests
         ArrangeAuthorization(sutProvider, CollectionUserOperations.Create);
         ArrangeCommandSucceeds(sutProvider);
 
-        var model = new BulkCollectionUserAccessDeltaRequestModel
-        {
-            CollectionIds = [collectionA.Id, collectionB.Id],
-            Add = [new SelectionReadOnlyRequestModel { Id = newUserId, Manage = true }]
-        };
+        var add = new List<SelectionReadOnlyRequestModel> { new() { Id = newUserId, Manage = true } };
 
-        await sutProvider.Sut.PatchBulkCollectionUserAccessAsync(orgId, model);
+        await sutProvider.Sut.PatchUserAccessAsync(
+            orgId, [collectionA.Id, collectionB.Id], add, [], [], new ClaimsPrincipal());
 
         await sutProvider.GetDependency<IModifyCollectionUserAccessCommand>().Received(1).ModifyAsync(
             Arg.Is<ModifyCollectionUserAccessRequest>(r =>
@@ -199,7 +174,7 @@ public class CollectionUserControllerTests
     }
 
     private static void ArrangeCollections(
-        SutProvider<CollectionUserController> sutProvider, Guid organizationId, params Collection[] collections)
+        SutProvider<CollectionUserEndpointsHandler> sutProvider, Guid organizationId, params Collection[] collections)
     {
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByOrganizationIdWithAccessAsync(organizationId)
@@ -210,9 +185,9 @@ public class CollectionUserControllerTests
     }
 
     // Only the given operations succeed authorization; any other requirement fails. This lets tests prove
-    // *which* operation the controller actually checked, instead of a blanket succeed/fail for every requirement.
+    // *which* operation the handler actually checked, instead of a blanket succeed/fail for every requirement.
     private static void ArrangeAuthorization(
-        SutProvider<CollectionUserController> sutProvider, params CollectionUserOperationRequirement[] succeedingOperations) =>
+        SutProvider<CollectionUserEndpointsHandler> sutProvider, params CollectionUserOperationRequirement[] succeedingOperations) =>
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
             .Returns(callInfo =>
@@ -223,7 +198,7 @@ public class CollectionUserControllerTests
                     : AuthorizationResult.Failed();
             });
 
-    private static void ArrangeCommandSucceeds(SutProvider<CollectionUserController> sutProvider) =>
+    private static void ArrangeCommandSucceeds(SutProvider<CollectionUserEndpointsHandler> sutProvider) =>
         sutProvider.GetDependency<IModifyCollectionUserAccessCommand>()
             .ModifyAsync(Arg.Any<ModifyCollectionUserAccessRequest>())
             .Returns(new CommandResult(new None()));
