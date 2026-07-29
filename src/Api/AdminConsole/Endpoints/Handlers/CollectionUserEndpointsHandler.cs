@@ -32,11 +32,24 @@ public class CollectionUserEndpointsHandler(
         var updateIds = update.Select(u => u.Id).ToHashSet();
         var removeIds = remove.ToHashSet();
 
-        var organizationCollections = await collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
-        var targets = organizationCollections
-            .Where(c => collectionIds.Contains(c.Item1.Id))
-            .Select(c => new CollectionUserAccessTarget(c.Item1, c.Item2))
-            .ToList();
+        // A single collection is resolved directly instead of pulling the whole organization's access graph.
+        List<CollectionUserAccessTarget> targets;
+        if (collectionIds.Count == 1)
+        {
+            var (collection, accessDetails) = await collectionRepository.GetByIdWithAccessAsync(collectionIds.Single());
+            targets = collection is not null && collection.OrganizationId == orgId
+                ? [new CollectionUserAccessTarget(collection, accessDetails)]
+                : [];
+        }
+        else
+        {
+            var organizationCollections = await collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
+            targets = organizationCollections
+                .Where(c => collectionIds.Contains(c.Item1.Id))
+                .Select(c => new CollectionUserAccessTarget(c.Item1, c.Item2))
+                .ToList();
+        }
+
         if (targets.Count != collectionIds.Count)
         {
             throw new NotFoundException();

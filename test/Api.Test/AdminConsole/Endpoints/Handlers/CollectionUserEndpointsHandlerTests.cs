@@ -176,12 +176,24 @@ public class CollectionUserEndpointsHandlerTests
     private static void ArrangeCollections(
         SutProvider<CollectionUserEndpointsHandler> sutProvider, Guid organizationId, params Collection[] collections)
     {
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByOrganizationIdWithAccessAsync(organizationId)
+        var repository = sutProvider.GetDependency<ICollectionRepository>();
+
+        repository.GetManyByOrganizationIdWithAccessAsync(organizationId)
             .Returns(collections
                 .Select(c => new Tuple<Collection, CollectionAccessDetails>(
                     c, new CollectionAccessDetails { Users = [], Groups = [] }))
                 .ToList());
+
+        // The single-collection route resolves via GetByIdWithAccessAsync instead. Default to "not found"
+        // for any id, then override with the real collection for each one actually arranged.
+        repository.GetByIdWithAccessAsync(Arg.Any<Guid>())
+            .Returns(new Tuple<Collection?, CollectionAccessDetails>(null, new CollectionAccessDetails { Users = [], Groups = [] }));
+        foreach (var collection in collections)
+        {
+            repository.GetByIdWithAccessAsync(collection.Id)
+                .Returns(new Tuple<Collection?, CollectionAccessDetails>(
+                    collection, new CollectionAccessDetails { Users = [], Groups = [] }));
+        }
     }
 
     // Only the given operations succeed authorization; any other requirement fails. This lets tests prove
