@@ -168,7 +168,7 @@ public class EventServiceTests
     [BitAutoData(false, true)]
     [BitAutoData(true, false)]
     [BitAutoData(false, false)]
-    public async Task LogOrganizationEvent_WithAbility_WhenDisabledOrEventsOff_DoesNotWriteEvent(
+    public async Task LogOrganizationEvent_WithAbility_WhenOrgDoesNotHaveAbility_DoesNotLog(
         bool enabled, bool useEvents, OrganizationAbility organizationAbility, EventType eventType,
         SutProvider<EventService> sutProvider)
     {
