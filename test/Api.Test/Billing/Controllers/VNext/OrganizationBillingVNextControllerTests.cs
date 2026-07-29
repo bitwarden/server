@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Bit.Api.Billing.Controllers.VNext;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
@@ -173,13 +174,20 @@ public class OrganizationBillingVNextControllerTests
     public void AnnualUpgradeOfferEndpoints_AreGatedOnTheirOwnFlag(string methodName)
     {
         // RequireFeature throws FeatureUnavailableException, which derives from NotFoundException,
-        // so a flag-off environment answers 404 on both endpoints. RequireFeatureAttribute keeps its
-        // flag key in a private field with no public accessor, so this can only confirm the
-        // attribute is present, not which key it carries.
+        // so a flag-off environment answers 404 on both endpoints. RequireFeatureAttribute exposes
+        // no public accessor for the flag key it carries, but the field is still readable by
+        // reflection, and pinning the key here is worth that coupling: without it, nothing on the
+        // server confirms these endpoints are gated on their own flag rather than some other
+        // program's.
         var method = typeof(OrganizationBillingVNextController).GetMethod(methodName);
 
         Assert.NotNull(method);
         var attribute = method.GetCustomAttributes<RequireFeatureAttribute>().SingleOrDefault();
         Assert.NotNull(attribute);
+
+        var featureFlagKeyField = typeof(RequireFeatureAttribute).GetField(
+            "_featureFlagKey", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(featureFlagKeyField);
+        Assert.Equal(FeatureFlagKeys.PM38333_AnnualBillingSavings, featureFlagKeyField.GetValue(attribute));
     }
 }

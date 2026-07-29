@@ -103,6 +103,34 @@ public class GetAnnualUpgradeOfferQueryTests
             });
     }
 
+    // Opt-in variant of SetupPreviews for tests that need the coupon on the subscription to
+    // actually influence the totals Stripe hands back, rather than the fixed totals above, which
+    // ignore whatever the calculator puts on InvoiceCreatePreviewOptions.Discounts entirely. Looks
+    // the discount up by coupon ID against the subscription's own discounts and subtracts its fixed
+    // amount once per invoice, mirroring real Stripe behaviour where a fixed amount comes off one
+    // invoice regardless of billing interval.
+    private void SetupPreviewsWithDiscounts(Subscription subscription, long monthlyTotal, long annualTotal)
+    {
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(callInfo =>
+            {
+                var options = callInfo.Arg<InvoiceCreatePreviewOptions>();
+                var isMonthly = options.SubscriptionDetails.Items
+                    .All(item => _subscriptionPriceIds.Contains(item.Price));
+                var total = isMonthly ? monthlyTotal : annualTotal;
+
+                var amountOff = (options.Discounts ?? [])
+                    .Sum(discount => subscription.Discounts?
+                        .FirstOrDefault(d => d.Coupon?.Id == discount.Coupon)
+                        ?.Coupon?.AmountOff ?? 0);
+
+                return Task.FromResult(new Invoice
+                {
+                    Total = total - amountOff
+                });
+            });
+    }
+
     private static SubscriptionSchedule AttachSchedule(
         Subscription subscription, string id, Dictionary<string, string>? phaseMetadata)
     {
@@ -469,7 +497,10 @@ public class GetAnnualUpgradeOfferQueryTests
                 Coupon = new Coupon { Id = "big", AmountOff = 10_000, Duration = "forever", Currency = "usd" }
             }
         ];
-        SetupPreviews(monthlyTotal: 10_000, annualTotal: 130_000);
+        // Pre-discount, annual is comfortably cheaper (1800 vs. 1200 annualized); the $100 coupon
+        // coming off every one of twelve monthly invoices, but only once off the annual invoice, is
+        // what flips the comparison and proves the coupon reached Stripe.
+        SetupPreviewsWithDiscounts(subscription, monthlyTotal: 15_000, annualTotal: 120_000);
 
         Assert.Null(await _query.Run(organization));
     }

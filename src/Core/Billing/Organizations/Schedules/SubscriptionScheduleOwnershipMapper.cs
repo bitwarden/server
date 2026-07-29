@@ -28,10 +28,11 @@ public static class SubscriptionScheduleOwnershipMapper
     /// </summary>
     /// <returns>
     /// Null when the subscription reports a schedule ID but the caller did not expand it. Null is
-    /// deliberately not <see cref="OrganizationSubscriptionScheduleOwnership.None"/>: None means
-    /// nothing is attached, and a caller told that would release nothing and then create a second
-    /// schedule, which Stripe rejects because it permits one active schedule per subscription.
-    /// Callers choose the posture, so a page load can suppress quietly while a mutation refuses.
+    /// deliberately not <see cref="OrganizationSubscriptionScheduleOwnership.None"/>: None covers
+    /// two cases, nothing attached at all and a schedule attached but not in the Active status, and
+    /// in either one a caller told None would release nothing and then create a second schedule,
+    /// which Stripe rejects because it permits one active schedule per subscription. Callers choose
+    /// the posture, so a page load can suppress quietly while a mutation refuses.
     /// </returns>
     public static OrganizationSubscriptionScheduleOwnershipResult? MapOrNull(Subscription subscription) =>
         string.IsNullOrEmpty(subscription.ScheduleId)

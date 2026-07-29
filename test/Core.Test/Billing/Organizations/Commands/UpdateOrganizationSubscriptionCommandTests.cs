@@ -1828,11 +1828,11 @@ public class UpdateOrganizationSubscriptionCommandTests
     [Fact]
     public async Task Run_ActiveScheduleNotAnnualUpgrade_NoCohort_LeavesScheduleUntouched()
     {
-        // The org's plan type resolves an annual-latest target, but the active schedule does NOT
-        // carry the annual-latest seat price, so it is not an annual-upgrade schedule and the annual
-        // resolver returns null. With no cohort assignment, cohort resolution also returns null, so the
-        // schedule is not a Bitwarden migration schedule: it is left untouched and the subscription is
-        // updated directly (PM-40537).
+        // The org's plan type resolves an annual-latest target, but the active schedule carries no
+        // annual-upgrade phase metadata marker, so it is not an annual-upgrade schedule and the
+        // annual resolver returns null. With no cohort assignment, cohort resolution also returns
+        // null, so the schedule is not a Bitwarden migration schedule: it is left untouched and the
+        // subscription is updated directly (PM-40537).
         var organization = CreateOrganization();
         organization.PlanType = PlanType.EnterpriseMonthly;
 
@@ -1847,8 +1847,8 @@ public class UpdateOrganizationSubscriptionCommandTests
         SetupGetSubscription(organization, subscription);
         SetupUpdateSubscription(subscription);
 
-        // Single monthly-only phase: no annual-latest seat price anywhere, so annual-upgrade
-        // detection returns false.
+        // Single monthly-only phase with no phase metadata at all, so annual-upgrade detection,
+        // which reads the annual-upgrade metadata key rather than price content, returns false.
         var schedule = CreateMockSchedule(subscription.Id, [(monthlySeat, 5)]);
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
