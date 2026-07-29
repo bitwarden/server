@@ -51,4 +51,15 @@ internal static class UserSeeder
 
         return (user, keys);
     }
+
+    /// <summary>
+    /// Applies billing gateway identity to a user so it resembles a real premium/billed user.
+    /// Only non-null values are set; nulls leave the field unchanged.
+    /// </summary>
+    internal static void ApplyBilling(User user, GatewayType? gateway, string? gatewayCustomerId, string? gatewaySubscriptionId)
+    {
+        user.Gateway = gateway ?? user.Gateway;
+        user.GatewayCustomerId = gatewayCustomerId ?? user.GatewayCustomerId;
+        user.GatewaySubscriptionId = gatewaySubscriptionId ?? user.GatewaySubscriptionId;
+    }
 }

@@ -184,6 +184,7 @@ public class UpdatePremiumStorageCommand(
                     Items = BuildPhaseItemsWithStorage(phase1.Items, storagePriceId, additionalStorageGb),
                     Discounts = phase1.Discounts?.Select(d =>
                         new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                    Metadata = phase1.Metadata,
                     ProrationBehavior = phase1.ProrationBehavior
                 });
             }
@@ -211,6 +212,7 @@ public class UpdatePremiumStorageCommand(
                         ? []
                         : (subscription.Customer?.Discount).MergeDiscountCouponIds(
                             phase2.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
+                    Metadata = phase2.Metadata,
                     ProrationBehavior = phase2.ProrationBehavior
                 });
             }
