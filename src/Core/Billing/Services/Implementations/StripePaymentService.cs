@@ -770,7 +770,8 @@ public class StripePaymentService : IStripePaymentService
     /// </summary>
     private async Task EnsureDiscountCouponAppliesToAsync(Discount discount)
     {
-        if (discount.Source?.Coupon is not { Id: not null and not "" } coupon)
+        // Skip the refetch when there's no coupon or applies_to is already populated.
+        if (discount.Source?.Coupon is not { Id: not null and not "" } coupon || coupon.AppliesTo != null)
         {
             return;
         }
@@ -782,9 +783,21 @@ public class StripePaymentService : IStripePaymentService
         }
     }
 
-    private async Task<Coupon> FetchCouponWithAppliesToAsync(string couponId) =>
-        await _stripeAdapter.GetCouponAsync(couponId,
-            new CouponGetOptions { Expand = ["applies_to"] });
+    private async Task<Coupon> FetchCouponWithAppliesToAsync(string couponId)
+    {
+        // A subscription/customer can still reference a coupon that was later deleted in
+        // Stripe, and GetCouponAsync throws on a missing coupon. Fail soft here — the
+        // caller leaves AppliesTo null rather than surfacing a Stripe error.
+        try
+        {
+            return await _stripeAdapter.GetCouponAsync(couponId,
+                new CouponGetOptions { Expand = ["applies_to"] });
+        }
+        catch (StripeException)
+        {
+            return null;
+        }
+    }
 
     public async Task<bool> HasSecretsManagerStandalone(Organization organization) =>
         await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,

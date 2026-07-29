@@ -269,10 +269,15 @@ public class GetBitwardenSubscriptionQuery(
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        var enriched = await Task.WhenAll(uniqueIds.Select(id =>
-            stripeAdapter.GetCouponAsync(id, new CouponGetOptions { Expand = ["applies_to"] })));
+        // Defensive fetch: a subscription can still reference a coupon that was later
+        // deleted in Stripe, and GetCouponAsync throws on a missing coupon — one
+        // deleted coupon would otherwise fail the whole batch. Drop the nulls instead.
+        var enriched = await Task.WhenAll(uniqueIds.Select(TryGetCouponAsync));
 
-        return [.. enriched.Where(coupon => coupon is not null)];
+        return enriched
+            .Where(coupon => coupon is not null)
+            .Select(coupon => coupon!)
+            .ToList();
     }
 
     private static (Coupon? CartLevel, List<Coupon> ProductLevel) PartitionCouponsByScope(
@@ -368,6 +373,21 @@ public class GetBitwardenSubscriptionQuery(
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
         {
             logger.LogError("Subscription ({SubscriptionID}) for User ({UserID}) was not found", user.GatewaySubscriptionId, user.Id);
+            return null;
+        }
+    }
+
+    private async Task<Coupon?> TryGetCouponAsync(string couponId)
+    {
+        try
+        {
+            return await stripeAdapter.GetCouponAsync(couponId, new CouponGetOptions { Expand = ["applies_to"] });
+        }
+        catch (StripeException stripeException)
+        {
+            logger.LogWarning(
+                "GetBitwardenSubscriptionQuery: Could not retrieve coupon ({CouponId}) | Code = {Code}",
+                couponId, stripeException.StripeError?.Code);
             return null;
         }
     }
