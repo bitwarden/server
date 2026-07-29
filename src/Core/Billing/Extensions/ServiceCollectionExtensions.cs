@@ -7,7 +7,6 @@ using Bit.Core.Billing.Organizations.PlanMigration.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Utilities;
 using Bit.Core.Billing.Organizations.Queries;
-using Bit.Core.Billing.Organizations.Schedules.Queries;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment;
 using Bit.Core.Billing.Portal.Commands;
@@ -57,7 +56,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
         services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
         services.AddTransient<IGetChurnOfferCohortMembershipQuery, GetChurnOfferCohortMembershipQuery>();
-        services.AddTransient<IGetOrganizationSubscriptionScheduleOwnershipQuery, GetOrganizationSubscriptionScheduleOwnershipQuery>();
         services.AddTransient<IGetAnnualUpgradeOfferQuery, GetAnnualUpgradeOfferQuery>();
         services.AddTransient<IGetPendingAnnualUpgradeQuery, GetPendingAnnualUpgradeQuery>();
         services.AddTransient<IRedeemAnnualUpgradeOfferCommand, RedeemAnnualUpgradeOfferCommand>();
