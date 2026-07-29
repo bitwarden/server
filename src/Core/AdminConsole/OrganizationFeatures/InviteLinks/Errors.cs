@@ -39,7 +39,7 @@ public record SeatAddFailed()
     : BadRequestError("Unable to join this organization right now. Please contact your organization administrator.");
 
 public record OnlyOneFreeOrganizationAdminAllowed()
-    : BadRequestError("You can only be an admin of one free organization.");
+    : BadRequestError("You can only be an admin of 1 free organization vault.");
 
 public record ProviderUsersCannotAcceptInviteLink()
     : BadRequestError("Provider users cannot join organizations via invite link.");

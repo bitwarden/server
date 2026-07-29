@@ -3,6 +3,7 @@
 
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
@@ -123,7 +124,7 @@ public class CloudOrganizationSignUpCommand(
                 await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
             if (adminCount > 0)
             {
-                throw new BadRequestException("You can only be an admin of one free organization.");
+                throw new BadRequestException(new FreeOrgAdminLimitError().Message);
             }
         }
         else if (plan.Type != PlanType.Free)

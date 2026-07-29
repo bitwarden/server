@@ -80,7 +80,7 @@ public class ConfirmOrganizationUserCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
-        Assert.Contains("User can only be an admin of one free organization.", exception.Message);
+        Assert.Contains(new UserFreeOrgAdminLimitError().Message, exception.Message);
     }
 
     [Theory]

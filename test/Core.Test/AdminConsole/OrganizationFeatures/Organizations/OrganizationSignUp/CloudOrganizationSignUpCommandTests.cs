@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
@@ -304,7 +305,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains("You can only be an admin of one free organization.", exception.Message);
+        Assert.Contains(new FreeOrgAdminLimitError().Message, exception.Message);
     }
 
     [Theory]

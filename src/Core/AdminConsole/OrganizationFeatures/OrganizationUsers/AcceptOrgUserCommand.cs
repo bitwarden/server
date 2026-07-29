@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
@@ -150,7 +151,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
                     user.Id);
                 if (adminCount > 0)
                 {
-                    throw new BadRequestException("You can only be an admin of one free organization.");
+                    throw new BadRequestException(new FreeOrgAdminLimitError().Message);
                 }
             }
         }

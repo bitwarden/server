@@ -152,7 +152,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
                     var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
                     if (adminCount > 0)
                     {
-                        throw new BadRequestException("User can only be an admin of one free organization.");
+                        throw new BadRequestException(new UserFreeOrgAdminLimitError().Message);
                     }
                 }
 
