@@ -37,7 +37,6 @@ public class SendsController : Controller
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
     private readonly ISendOwnerQuery _sendOwnerQuery;
     private readonly ILogger<SendsController> _logger;
-    private readonly IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IEventService _eventService;
@@ -52,7 +51,6 @@ public class SendsController : Controller
         ISendOwnerQuery sendOwnerQuery,
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
-        IFeatureService featureService,
         IPushNotificationService pushNotificationService,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         IEventService eventService,
@@ -67,7 +65,6 @@ public class SendsController : Controller
         _sendOwnerQuery = sendOwnerQuery;
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
-        _featureService = featureService;
         _pushNotificationService = pushNotificationService;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _eventService = eventService;
@@ -129,8 +126,7 @@ public class SendsController : Controller
             sendResponse.CreatorIdentifier = creator.Email;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
-            && send.UserId.HasValue
+        if (send.UserId.HasValue
             && send.Type == SendType.Text)
         {
             var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
@@ -194,7 +190,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
+        if (send.UserId.HasValue)
         {
             var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
                 send.UserId.Value, accessorEmail: null);
@@ -311,8 +307,7 @@ public class SendsController : Controller
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
-            && send.UserId.HasValue
+        if (send.UserId.HasValue
             && send.Type == SendType.Text)
         {
             var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
@@ -351,7 +346,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
+        if (send.UserId.HasValue)
         {
             var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
                 send.UserId.Value,
