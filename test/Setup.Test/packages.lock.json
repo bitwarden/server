@@ -1437,8 +1437,8 @@
       },
       "YamlDotNet": {
         "type": "Transitive",
-        "resolved": "11.2.1",
-        "contentHash": "tBt8K+korVfrjH9wyDEhiLKxbs8qoLCLIFwvYgkSUuMC9//w3z0cFQ8LQAI/5MCKq+BMil0cfRTRvPeE7eXhQw=="
+        "resolved": "18.1.0",
+        "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
       },
       "YubicoDotNetClient": {
         "type": "Transitive",
@@ -1552,7 +1552,7 @@
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "Migrator": "[2026.7.0, )",
-          "YamlDotNet": "[11.2.1, 11.2.1]"
+          "YamlDotNet": "[18.1.0, 18.1.0]"
         }
       }
     }
