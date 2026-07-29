@@ -2,8 +2,8 @@
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
+using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Organizations.Schedules.Enums;
-using Bit.Core.Billing.Organizations.Schedules.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
@@ -16,7 +16,6 @@ public class GetAnnualUpgradeOfferQuery(
     ILogger<GetAnnualUpgradeOfferQuery> logger,
     IFeatureService featureService,
     IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
-    IGetOrganizationSubscriptionScheduleOwnershipQuery getScheduleOwnershipQuery,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : IGetAnnualUpgradeOfferQuery
 {
@@ -79,7 +78,17 @@ public class GetAnnualUpgradeOfferQuery(
             return null;
         }
 
-        var ownership = await getScheduleOwnershipQuery.Run(organization, subscription);
+        var ownership = SubscriptionScheduleOwnershipMapper.MapOrNull(subscription);
+        if (ownership is null)
+        {
+            // A caller contract violation rather than a data condition, but this sits on the
+            // cancellation dialog's page load, so the offer hides quietly instead of breaking it.
+            logger.LogError(
+                "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; suppressing the annual upgrade offer",
+                nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id, subscription.ScheduleId);
+            return null;
+        }
+
         switch (ownership.Ownership)
         {
             // A redeemed organization keeps its monthly PlanType until renewal, so the annual
@@ -92,11 +101,13 @@ public class GetAnnualUpgradeOfferQuery(
 
             // Redeeming would have to release a schedule Bitwarden did not create, for example a
             // negotiated renewal built by hand in the Stripe Dashboard. Never show an offer whose
-            // redemption we would refuse.
+            // redemption we would refuse. The metadata keys go in the log, keys only, because they
+            // are what tells a hand-built schedule apart from one of ours that lost its marker.
             case OrganizationSubscriptionScheduleOwnership.Foreign:
                 logger.LogWarning(
-                    "{Query}: Organization ({OrganizationId}) has an unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}); suppressing the annual upgrade offer",
-                    nameof(GetAnnualUpgradeOfferQuery), organization.Id, ownership.Schedule?.Id, subscription.Id);
+                    "{Query}: Organization ({OrganizationId}) has an unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}); phase metadata keys present: {MetadataKeys}; suppressing the annual upgrade offer",
+                    nameof(GetAnnualUpgradeOfferQuery), organization.Id, ownership.Schedule?.Id, subscription.Id,
+                    string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(ownership.Schedule)));
                 return null;
         }
 

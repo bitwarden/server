@@ -5,9 +5,7 @@ using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
-using Bit.Core.Billing.Organizations.Schedules.Models;
-using Bit.Core.Billing.Organizations.Schedules.Queries;
+using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
@@ -26,8 +24,6 @@ public class GetAnnualUpgradeOfferQueryTests
     private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IGetChurnOfferCohortMembershipQuery _getChurnOfferCohortMembershipQuery =
         Substitute.For<IGetChurnOfferCohortMembershipQuery>();
-    private readonly IGetOrganizationSubscriptionScheduleOwnershipQuery _getScheduleOwnershipQuery =
-        Substitute.For<IGetOrganizationSubscriptionScheduleOwnershipQuery>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ILogger<GetAnnualUpgradeOfferQuery> _logger =
@@ -49,12 +45,9 @@ public class GetAnnualUpgradeOfferQueryTests
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(_currentPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(_annualLatestPlan);
-        _getScheduleOwnershipQuery.Run(Arg.Any<Organization>(), Arg.Any<Subscription>())
-            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
-                OrganizationSubscriptionScheduleOwnership.None, null));
         _query = new GetAnnualUpgradeOfferQuery(
             _logger, _featureService, _getChurnOfferCohortMembershipQuery,
-            _getScheduleOwnershipQuery, _pricingClient, _stripeAdapter);
+            _pricingClient, _stripeAdapter);
     }
 
     private static Organization CreateOrganization(PlanType planType) => new()
@@ -84,6 +77,20 @@ public class GetAnnualUpgradeOfferQueryTests
         Quantity = quantity,
         Price = new Price { Id = priceId, ProductId = $"prod_{priceId}" }
     };
+
+    private static SubscriptionSchedule AttachSchedule(
+        Subscription subscription, string id, Dictionary<string, string>? phaseMetadata)
+    {
+        var schedule = new SubscriptionSchedule
+        {
+            Id = id,
+            Status = SubscriptionScheduleStatus.Active,
+            Phases = [new SubscriptionSchedulePhase { Metadata = phaseMetadata }]
+        };
+        subscription.ScheduleId = id;
+        subscription.Schedule = schedule;
+        return schedule;
+    }
 
     [Fact]
     public async Task Run_FlagDisabled_ReturnsNull_WithoutAnyLookups()
@@ -261,10 +268,10 @@ public class GetAnnualUpgradeOfferQueryTests
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
         var subscription = SetupSubscription(organization,
             SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
-        _getScheduleOwnershipQuery.Run(organization, subscription)
-            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
-                OrganizationSubscriptionScheduleOwnership.Foreign,
-                new SubscriptionSchedule { Id = "sub_sched_finance" }));
+        AttachSchedule(subscription, "sub_sched_negotiated", new Dictionary<string, string>
+        {
+            ["negotiated_term"] = "3y"
+        });
 
         Assert.Null(await _query.Run(organization));
     }
@@ -275,10 +282,10 @@ public class GetAnnualUpgradeOfferQueryTests
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
         var subscription = SetupSubscription(organization,
             SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
-        _getScheduleOwnershipQuery.Run(organization, subscription)
-            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
-                OrganizationSubscriptionScheduleOwnership.AnnualUpgrade,
-                new SubscriptionSchedule { Id = "sub_sched_annual" }));
+        AttachSchedule(subscription, "sub_sched_annual", new Dictionary<string, string>
+        {
+            [MetadataKeys.AnnualUpgrade] = nameof(PlanType.TeamsMonthly2020)
+        });
 
         Assert.Null(await _query.Run(organization));
     }
@@ -289,12 +296,45 @@ public class GetAnnualUpgradeOfferQueryTests
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
         var subscription = SetupSubscription(organization,
             SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
-        _getScheduleOwnershipQuery.Run(organization, subscription)
-            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
-                OrganizationSubscriptionScheduleOwnership.PriceMigration,
-                new SubscriptionSchedule { Id = "sub_sched_migration" }));
+        AttachSchedule(subscription, "sub_sched_migration", new Dictionary<string, string>
+        {
+            [MetadataKeys.MigrationCohortId] = Guid.NewGuid().ToString()
+        });
 
         Assert.NotNull(await _query.Run(organization));
+    }
+
+    [Fact]
+    public async Task Run_UnexpandedSchedule_ReturnsNull_AndLogsAnError()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        subscription.ScheduleId = "sub_sched_unread";
+        subscription.Schedule = null;
+
+        Assert.Null(await _query.Run(organization));
+        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Error, default, default!, default, default!);
+    }
+
+    [Fact]
+    public async Task Run_ScheduleCarryingAnnualLatestSeatPriceWithoutMetadata_ReturnsNull()
+    {
+        // Pins that the offer is no longer suppressed on price ID content. Such a schedule is now
+        // Foreign, which also suppresses, but for the right reason and with the right log.
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        var schedule = AttachSchedule(subscription, "sub_sched_content", phaseMetadata: null);
+        schedule.Phases[0].Items =
+        [
+            new SubscriptionSchedulePhaseItem
+            {
+                PriceId = _annualLatestPlan.PasswordManager.StripeSeatPlanId
+            }
+        ];
+
+        Assert.Null(await _query.Run(organization));
     }
 
     [Fact]
