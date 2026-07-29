@@ -734,7 +734,7 @@ public class SetInitialPasswordRequestModelTests
         // Act
         var result = model.ToUser(existingUser);
 
-        // Assert — KDF mapped from MPAD, user.Key from MPUD, public/private from legacy Keys
+        // Assert — KDF mapped from MPUD, user.Key from MPUD, public/private from legacy Keys
         Assert.Same(existingUser, result);
         Assert.Equal("hint", result.MasterPasswordHint);
         Assert.Equal(kdfType, result.Kdf);
