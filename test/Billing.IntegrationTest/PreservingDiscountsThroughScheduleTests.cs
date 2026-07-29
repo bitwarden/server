@@ -18,8 +18,8 @@ namespace Bit.Billing.IntegrationTest;
 /// <c>UpdateBillingAddressCommand</c> business path) share the same expand contract but require a
 /// migration cohort + <c>PM35215</c> + a legacy source plan to schedule, so they're left to unit tests.
 /// </summary>
-public class PreservingDiscountsThroughScheduleTests(DeferredPriceMigrationFixture fixture)
-    : IClassFixture<DeferredPriceMigrationFixture>
+public class PreservingDiscountsThroughScheduleTests(StripeTestsFixture fixture)
+    : IClassFixture<StripeTestsFixture>
 {
     [BillingFact]
     public async Task StorageChange_WithActiveScheduleAndCustomerCoupon_PreservesCouponInFuturePhase()
