@@ -53,8 +53,9 @@ public class StripeWebhookTests(StripeWebhookTestsFixture fixture) : IClassFixtu
             await fixture.PrepareOrganizationOwnerAsync("webhook-sm-trial-removal@example.com", PlanType.EnterpriseAnnually);
         var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
 
-        // Attach the SM-standalone trial coupon to the (PM-only) subscription, as signup would.
-        await fixture.SeedAndAttachSubscriptionCouponAsync(subscriptionId, "sm-standalone", percentOff: 100);
+        // Attach the standing SM-standalone trial coupon to the (PM-only) subscription, as signup
+        // would. sm-standalone is a shared/live account fixture — attach it, never recreate it.
+        await fixture.AttachSubscriptionCouponAsync(subscriptionId, "sm-standalone");
 
         // Simulate a subscription.updated where the PREVIOUS attributes carried an SM seat item and the
         // current (live) subscription does not — i.e. Secrets Manager was just removed.
@@ -107,8 +108,9 @@ public class StripeWebhookTests(StripeWebhookTestsFixture fixture) : IClassFixtu
         var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
         var customerId = await fixture.GetOrganizationGatewayCustomerIdAsync(organizationId);
 
-        // Attach the SM-standalone coupon at the customer level.
-        await fixture.SeedAndAttachCustomerCouponAsync(customerId, "sm-standalone", percentOff: 100);
+        // Attach the standing SM-standalone coupon at the customer level. sm-standalone is a
+        // shared/live account fixture — attach it, never recreate it.
+        await fixture.AttachCustomerCouponAndVerifyAsync(customerId, "sm-standalone");
 
         var secretsManagerSeatPlanId = await fixture.GetSecretsManagerSeatPlanIdAsync(PlanType.EnterpriseAnnually);
 

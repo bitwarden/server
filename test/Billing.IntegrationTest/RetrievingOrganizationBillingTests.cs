@@ -59,17 +59,15 @@ public class RetrievingOrganizationBillingTests(StripeTestsFixture fixture) : IC
         // reads `d.Source.Coupon.Id`, and checks `Coupon.AppliesTo.Products`. This
         // exercises the (still 4-level) sub-level discount expand end-to-end — the
         // regression detector for whether AppliesTo survives the SDK bump's read path.
+        // sm-standalone is a standing/shared account coupon (the live app keys off its literal id),
+        // so we attach the existing one rather than recreate it; its applies_to already covers the
+        // Password Manager products, so it intersects this Enterprise org's PM product for (c).
         var (client, _, organizationId, _) =
             await fixture.PrepareOrganizationOwnerAsync("metadata-sm-standalone@example.com");
 
         var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
-        var productId = await fixture.GetOrganizationFirstProductIdAsync(organizationId);
 
-        await fixture.SeedAndAttachSubscriptionCouponAsync(
-            subscriptionId,
-            "sm-standalone",
-            percentOff: 100,
-            scopedToProductId: productId);
+        await fixture.AttachSubscriptionCouponAsync(subscriptionId, "sm-standalone");
 
         var response = await client.GetAsync($"/organizations/{organizationId}/billing/vnext/metadata");
         await Assert.SuccessResponseAsync(response);

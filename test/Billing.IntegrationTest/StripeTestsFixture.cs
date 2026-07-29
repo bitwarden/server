@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Collections.Concurrent;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using Bit.Api.IntegrationTest.Factories;
@@ -30,6 +31,23 @@ public class StripeTestsFixture : IAsyncDisposable
 {
     public ApiApplicationFactory Api { get; }
     public AdminApplicationFactory Admin { get; }
+
+    // Every test-created coupon id is tracked here and deleted in DisposeAsync so runs don't
+    // accumulate coupons on the shared Stripe test account. Concurrent because tests parallel-fire.
+    // Reserved ids are deliberately never tracked (see EnsureSecretsManagerStandaloneCouponAsync).
+    private readonly ConcurrentBag<string> _createdCouponIds = [];
+
+    // Production coupon ids the live app keys off (StripeConstants.CouponIDs).
+    private static readonly IReadOnlySet<string> ReservedCouponIds = new HashSet<string>(StringComparer.Ordinal)
+    {
+        StripeConstants.CouponIDs.LegacyMSPDiscount,
+        StripeConstants.CouponIDs.SecretsManagerStandalone,
+        StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+        StripeConstants.CouponIDs.Milestone3SubscriptionDiscount,
+        StripeConstants.CouponIDs.MSPDiscounts.Open,
+        StripeConstants.CouponIDs.MSPDiscounts.Silver,
+        StripeConstants.CouponIDs.MSPDiscounts.Gold,
+    };
 
     public StripeTestsFixture()
     {
@@ -585,10 +603,11 @@ public class StripeTestsFixture : IAsyncDisposable
     /// </summary>
     public async Task<string> SeedNoPreviousSubscriptionsDiscountAsync(string couponId)
     {
+        AssertCouponIdIsNotReserved(couponId);
+
         var stripeClient = CreateStripeClient();
 
-        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
-        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* coupon doesn't exist yet — first run */ }
+        await TryDeleteCouponAsync(stripeClient, couponId);
 
         await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
         {
@@ -597,6 +616,7 @@ public class StripeTestsFixture : IAsyncDisposable
             PercentOff = 10,
             Duration = "once",
         });
+        _createdCouponIds.Add(couponId);
 
         using var scope = Api.Services.CreateScope();
         var repo = scope.ServiceProvider.GetRequiredService<ISubscriptionDiscountRepository>();
@@ -702,10 +722,11 @@ public class StripeTestsFixture : IAsyncDisposable
     /// </summary>
     public async Task<string> SeedChurnOnlyCohortAsync(Guid organizationId, string couponId)
     {
+        AssertCouponIdIsNotReserved(couponId);
+
         var stripeClient = CreateStripeClient();
 
-        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
-        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* coupon doesn't exist yet — first run */ }
+        await TryDeleteCouponAsync(stripeClient, couponId);
 
         await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
         {
@@ -715,6 +736,7 @@ public class StripeTestsFixture : IAsyncDisposable
             Duration = "repeating",
             DurationInMonths = 3,
         });
+        _createdCouponIds.Add(couponId);
 
         using var scope = Api.Services.CreateScope();
         var cohortRepository = scope.ServiceProvider
@@ -790,10 +812,11 @@ public class StripeTestsFixture : IAsyncDisposable
     /// </summary>
     public async Task<CouponAppliesTo?> CreateAndReloadProductScopedCouponAsync(string couponId)
     {
+        AssertCouponIdIsNotReserved(couponId);
+
         var stripeClient = CreateStripeClient();
 
-        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
-        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+        await TryDeleteCouponAsync(stripeClient, couponId);
 
         await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
         {
@@ -806,6 +829,7 @@ public class StripeTestsFixture : IAsyncDisposable
                 Products = [StripeConstants.ProductIDs.Premium],
             },
         });
+        _createdCouponIds.Add(couponId);
 
         // No Expand at all — the whole point is to prove applies_to is inline.
         // (Passing an empty array serializes as `expand=` on the wire, which
@@ -847,10 +871,11 @@ public class StripeTestsFixture : IAsyncDisposable
     public async Task<HttpClient> PreparePremiumUserWithProductScopedSubscriptionCouponAsync(
         string email, string couponId)
     {
+        AssertCouponIdIsNotReserved(couponId);
+
         var stripeClient = CreateStripeClient();
 
-        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
-        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+        await TryDeleteCouponAsync(stripeClient, couponId);
 
         await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
         {
@@ -863,6 +888,7 @@ public class StripeTestsFixture : IAsyncDisposable
                 Products = [StripeConstants.ProductIDs.Premium],
             },
         });
+        _createdCouponIds.Add(couponId);
 
         var client = await PreparePremiumUserAsync(email);
 
@@ -899,10 +925,11 @@ public class StripeTestsFixture : IAsyncDisposable
     public async Task<HttpClient> PreparePremiumUserWithProductScopedPhase2CouponAsync(
         string email, string couponId)
     {
+        AssertCouponIdIsNotReserved(couponId);
+
         var stripeClient = CreateStripeClient();
 
-        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
-        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+        await TryDeleteCouponAsync(stripeClient, couponId);
 
         await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
         {
@@ -915,6 +942,7 @@ public class StripeTestsFixture : IAsyncDisposable
                 Products = [StripeConstants.ProductIDs.Premium],
             },
         });
+        _createdCouponIds.Add(couponId);
 
         var client = await PreparePremiumUserAsync(email);
 
@@ -980,10 +1008,11 @@ public class StripeTestsFixture : IAsyncDisposable
         decimal percentOff,
         string? scopedToProductId = null)
     {
+        AssertCouponIdIsNotReserved(couponId);
+
         var stripeClient = CreateStripeClient();
 
-        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
-        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+        await TryDeleteCouponAsync(stripeClient, couponId);
 
         await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
         {
@@ -995,6 +1024,7 @@ public class StripeTestsFixture : IAsyncDisposable
                 ? new CouponAppliesToOptions { Products = [scopedToProductId] }
                 : null,
         });
+        _createdCouponIds.Add(couponId);
     }
 
     /// <summary>
@@ -1043,6 +1073,17 @@ public class StripeTestsFixture : IAsyncDisposable
         string? scopedToProductId = null)
     {
         await CreateStripeCouponAsync(couponId, percentOff, scopedToProductId);
+        await AttachCustomerCouponAndVerifyAsync(customerId, couponId);
+    }
+
+    /// <summary>
+    /// Attaches an already-created coupon to a customer and verifies it took effect. Separate from
+    /// creation so a reserved standing coupon (e.g. <c>sm-standalone</c>) can be attached without being
+    /// recreated. The verify guards against the raw-HTTP write silently no-op'ing if Stripe ever stops
+    /// honoring the legacy <c>Stripe-Version</c> header for this endpoint.
+    /// </summary>
+    public async Task AttachCustomerCouponAndVerifyAsync(string customerId, string couponId)
+    {
         await AttachCustomerCouponAsync(customerId, couponId);
 
         var stripeClient = CreateStripeClient();
@@ -1058,23 +1099,6 @@ public class StripeTestsFixture : IAsyncDisposable
                 $"Expected Discount.Source.Coupon.Id = '{couponId}', got '{customer.Discount?.Source?.Coupon?.Id ?? "<null>"}'. " +
                 $"Stripe may have stopped accepting the legacy Stripe-Version pinned in AttachCustomerCouponAsync.");
         }
-    }
-
-    /// <summary>
-    /// Fetches the org's Stripe subscription and returns the first line item's
-    /// product id. Used by tests that need to scope a coupon's
-    /// <c>applies_to.products</c> to a product actually present on the subscription
-    /// (e.g. the SM standalone metadata check's product-id intersection).
-    /// </summary>
-    public async Task<string> GetOrganizationFirstProductIdAsync(Guid organizationId)
-    {
-        var stripeClient = CreateStripeClient();
-        var subscriptionId = await GetOrganizationGatewaySubscriptionIdAsync(organizationId);
-        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId, new SubscriptionGetOptions
-        {
-            Expand = ["items.data.price.product"],
-        });
-        return subscription.Items.Data.First().Price.Product.Id;
     }
 
     /// <summary>
@@ -1109,7 +1133,16 @@ public class StripeTestsFixture : IAsyncDisposable
         string? scopedToProductId = null)
     {
         await CreateStripeCouponAsync(couponId, percentOff, scopedToProductId);
+        await AttachSubscriptionCouponAsync(subscriptionId, couponId);
+    }
 
+    /// <summary>
+    /// Attaches an already-created coupon to a subscription's Discounts list via the typed SDK.
+    /// Separate from creation so a reserved standing coupon (e.g. <c>sm-standalone</c>) can be
+    /// attached without being recreated.
+    /// </summary>
+    public async Task AttachSubscriptionCouponAsync(string subscriptionId, string couponId)
+    {
         var stripeClient = CreateStripeClient();
         await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, new SubscriptionUpdateOptions
         {
@@ -1215,8 +1248,8 @@ public class StripeTestsFixture : IAsyncDisposable
     /// <c>UpdatePremiumStorageCommand</c>, <c>UpdateBillingAddressCommand</c>, and
     /// <c>UpdateOrganizationSubscriptionCommand</c> require. Throws if the scheduler declines so the
     /// precondition fails loudly rather than leaving a test silently exercising the no-schedule path.
-    /// Requires <c>PM32645_DeferPriceMigrationToRenewal</c> enabled and (for premium) the subscriber
-    /// on the legacy price via <see cref="MovePremiumSubscriptionToLegacyPriceAsync"/>.
+    /// Requires (for premium) the subscriber on the legacy price via
+    /// <see cref="MovePremiumSubscriptionToLegacyPriceAsync"/>.
     /// </summary>
     public async Task CreateDeferredPriceIncreaseScheduleAsync(string subscriptionId)
     {
@@ -1234,8 +1267,8 @@ public class StripeTestsFixture : IAsyncDisposable
         {
             throw new InvalidOperationException(
                 $"IPriceIncreaseScheduler declined to create a schedule for subscription {subscriptionId}. " +
-                "Confirm the subscriber is on the legacy price (MovePremiumSubscriptionToLegacyPriceAsync), " +
-                "PM32645_DeferPriceMigrationToRenewal is enabled, and no active schedule already exists.");
+                "Confirm the subscriber is on the legacy price (MovePremiumSubscriptionToLegacyPriceAsync) " +
+                "and no active schedule already exists.");
         }
     }
 
@@ -1271,8 +1304,44 @@ public class StripeTestsFixture : IAsyncDisposable
             .ToList() ?? [];
     }
 
+    /// <summary>
+    /// Idempotent coupon delete: swallows <c>resource_missing</c> so it is safe to call
+    /// whether or not the coupon exists (delete-before-create and teardown both use it).
+    /// </summary>
+    private static async Task TryDeleteCouponAsync(StripeClient stripeClient, string couponId)
+    {
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* already gone */ }
+    }
+
+    /// <summary>
+    /// Throws if <paramref name="couponId"/> is a production coupon id the live app depends on.
+    /// Guards every test create path so a reserved coupon is never delete-and-recreated on the
+    /// shared Stripe account (create reserved coupons as standing fixtures instead — see
+    /// EnsureSecretsManagerStandaloneCouponAsync).
+    /// </summary>
+    private static void AssertCouponIdIsNotReserved(string couponId)
+    {
+        if (ReservedCouponIds.Contains(couponId))
+        {
+            throw new InvalidOperationException(
+                $"Refusing to create/replace the reserved coupon '{couponId}' on the shared Stripe account.");
+        }
+    }
+
     public virtual async ValueTask DisposeAsync()
     {
+        // Delete every coupon this fixture created so runs don't pollute the shared Stripe
+        // test account. Runs before factory disposal since it needs a live StripeClient.
+        // Reserved ids are never tracked, but filter them out defensively so teardown can
+        // never delete a shared/live coupon even if a future create path forgets to guard.
+        var couponIdsToDelete = _createdCouponIds.Distinct().Where(id => !ReservedCouponIds.Contains(id)).ToList();
+        if (couponIdsToDelete.Count > 0)
+        {
+            var stripeClient = CreateStripeClient();
+            await Task.WhenAll(couponIdsToDelete.Select(couponId => TryDeleteCouponAsync(stripeClient, couponId)));
+        }
+
         await Admin.DisposeAsync();
         await Api.DisposeAsync();
         GC.SuppressFinalize(this);
