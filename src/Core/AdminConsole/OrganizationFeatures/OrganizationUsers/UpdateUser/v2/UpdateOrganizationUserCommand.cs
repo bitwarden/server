@@ -64,7 +64,8 @@ public class UpdateOrganizationUserCommand(
             }
         }
 
-        if (request.IsEmailChanged() || request.IsNameChanged())
+        var emailChanged = request.IsEmailChanged();
+        if (emailChanged || request.IsNameChanged())
         {
             var commandError = await TryApplyAccountChangesAsync(request);
             if (commandError is not null)
@@ -89,7 +90,10 @@ public class UpdateOrganizationUserCommand(
                 request.DefaultUserCollectionName!);
         }
 
-        await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
+        var eventType = emailChanged
+            ? EventType.OrganizationUser_AdminChangedEmail
+            : EventType.OrganizationUser_Updated;
+        await eventService.LogOrganizationUserEventAsync(organizationUser, eventType);
 
         return new None();
     }
