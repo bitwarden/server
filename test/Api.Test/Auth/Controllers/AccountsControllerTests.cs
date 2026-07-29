@@ -1103,7 +1103,6 @@ public class AccountsControllerTests : IDisposable
     }
 
     // V1 encryption with new data types (transitional path — modern client carries MPAD/MPUD + legacy Keys, V2 MP JIT flag off)
-    // TODO: removal gated by https://bitwarden.atlassian.net/browse/PM-27327 (MP V2 JIT flag).
     [Theory]
     [BitAutoData]
     public async Task PostSetPasswordAsync_V1_NewClientMpJit_UsesMpadMpudValues_ShouldCallV1CommandAsync(
