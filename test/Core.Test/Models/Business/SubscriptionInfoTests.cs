@@ -30,6 +30,43 @@ public class SubscriptionInfoTests
     }
 
     [Fact]
+    public void BillingSubscriptionItem_AddonFlag_DerivedFromPriceMetadata()
+    {
+        // Arrange - the add-on flag lives on the price's metadata (production shape)
+        var subscriptionItem = new SubscriptionItem
+        {
+            Price = new Price { Id = "storage-gb-monthly", Metadata = new Dictionary<string, string> { { "isAddOn", "true" } } },
+            Plan = new Plan { Id = "storage-gb-monthly", ProductId = "prod_storage", Nickname = "Additional Storage GB", Amount = 50, Interval = "month" },
+            Quantity = 3
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingSubscription.BillingSubscriptionItem(subscriptionItem);
+
+        // Assert
+        Assert.True(result.AddonSubscriptionItem);
+    }
+
+    [Fact]
+    public void BillingSubscriptionItem_AddonFlag_IgnoresItemMetadata()
+    {
+        // Arrange - isAddOn on the subscription item's own metadata must be ignored (never set in production)
+        var subscriptionItem = new SubscriptionItem
+        {
+            Price = new Price { Id = "teams-seat", Metadata = new Dictionary<string, string>() },
+            Plan = new Plan { Id = "teams-seat", ProductId = "prod_teams", Nickname = "Teams Organization Seat", Amount = 400, Interval = "month" },
+            Quantity = 5,
+            Metadata = new Dictionary<string, string> { { "isAddOn", "true" } }
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingSubscription.BillingSubscriptionItem(subscriptionItem);
+
+        // Assert
+        Assert.False(result.AddonSubscriptionItem);
+    }
+
+    [Fact]
     public void BillingSubscriptionItem_NullAmount_SetsToZero()
     {
         // Arrange - SubscriptionItem with Plan but null Amount

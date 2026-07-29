@@ -355,7 +355,10 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         Assert.Equal(StatusCodes.Status204NoContent, sendEmailVerificationResponseHttpContext.Response.StatusCode);
         Assert.NotNull(RegistrationTokens[requestModel.Email]);
 
-        // Now we call the finish registration endpoint with the email verification token
+        // Now we call the finish registration endpoint with the email verification token.
+        // SalesAssistedToken must be null: GetTokenType() checks it before EmailVerificationToken,
+        // so an AutoFixture-generated value would shadow the intended token type and cause a 400.
+        requestModel.SalesAssistedToken = null;
         requestModel.EmailVerificationToken = RegistrationTokens[requestModel.Email];
 
         var postRegisterFinishHttpContext = await PostRegisterFinishAsync(requestModel);

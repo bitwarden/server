@@ -1,10 +1,10 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -21,7 +21,7 @@ public class GetPendingAutoConfirmUsersQueryTests
         Guid organizationId,
         SutProvider<GetPendingAutoConfirmUsersQuery> sutProvider)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns((OrganizationAbility?)null);
 
@@ -38,7 +38,7 @@ public class GetPendingAutoConfirmUsersQueryTests
         Guid organizationId,
         SutProvider<GetPendingAutoConfirmUsersQuery> sutProvider)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = false });
 
@@ -56,7 +56,7 @@ public class GetPendingAutoConfirmUsersQueryTests
         [Policy(PolicyType.AutomaticUserConfirmation, false)] PolicyStatus disabledPolicy,
         SutProvider<GetPendingAutoConfirmUsersQuery> sutProvider)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = true });
 

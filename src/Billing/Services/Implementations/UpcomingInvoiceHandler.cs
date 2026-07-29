@@ -6,13 +6,14 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
@@ -23,7 +24,6 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
-using Stripe.TestHelpers;
 using Event = Stripe.Event;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
@@ -175,34 +175,6 @@ public class UpcomingInvoiceHandler(
         Customer customer,
         string eventId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            var isBusinessUse = organization.PlanType.GetProductTier() != ProductTierType.Families;
-            if (isBusinessUse)
-            {
-                var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
-                switch (customer)
-                {
-                    case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                        when determinedTaxExemptStatus != customerTaxExemptStatus:
-                        try
-                        {
-                            await stripeAdapter.UpdateCustomerAsync(subscription.CustomerId,
-                                new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                        }
-                        catch (Exception exception)
-                        {
-                            logger.LogError(
-                                exception,
-                                "Failed to set organization's ({OrganizationID}) to the required tax exemption while processing event with ID {EventID}",
-                                organization.Id,
-                                eventId);
-                        }
-                        break;
-                }
-            }
-        }
-
         if (!subscription.AutomaticTax.Enabled)
         {
             try
@@ -240,7 +212,7 @@ public class UpcomingInvoiceHandler(
         {
             ProductTierType.Families =>
                 ScheduleFamiliesPriceMigrationAsync(organization, @event, subscription, plan),
-            ProductTierType.Teams or ProductTierType.Enterprise =>
+            ProductTierType.Teams or ProductTierType.Enterprise or ProductTierType.TeamsStarter =>
                 ScheduleBusinessPlanPriceMigrationAsync(organization, @event, subscription),
             _ => Task.FromResult(false)
         };
@@ -270,67 +242,14 @@ public class UpcomingInvoiceHandler(
 
         try
         {
-            if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+            var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
+
+            // A false result means no new schedule was created — typically because an earlier upcoming-invoice
+            // event for this renewal already deferred the migration and sent its renewal email. Return true so
+            // the caller skips the generic upcoming-invoice email instead of sending a duplicate.
+            if (!scheduled)
             {
-                var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
-                if (!scheduled)
-                {
-                    return true;
-                }
-            }
-            else
-            {
-                organization.PlanType = familiesPlan.Type;
-                organization.Plan = familiesPlan.Name;
-                organization.UsersGetPremium = familiesPlan.UsersGetPremium;
-                organization.Seats = familiesPlan.PasswordManager.BaseSeats;
-
-                var options = new SubscriptionUpdateOptions
-                {
-                    Items =
-                    [
-                        new SubscriptionItemOptions
-                        {
-                            Id = passwordManagerItem.Id,
-                            Price = familiesPlan.PasswordManager.StripePlanId
-                        }
-                    ],
-                    ProrationBehavior = ProrationBehavior.None
-                };
-
-                if (plan.Type == PlanType.FamiliesAnnually2019)
-                {
-                    options.Discounts =
-                    [
-                        new SubscriptionDiscountOptions { Coupon = CouponIDs.Milestone3SubscriptionDiscount }
-                    ];
-
-                    var premiumAccessAddOnItem = subscription.Items.FirstOrDefault(item =>
-                        item.Price.Id == plan.PasswordManager.StripePremiumAccessPlanId);
-
-                    if (premiumAccessAddOnItem != null)
-                    {
-                        options.Items.Add(new SubscriptionItemOptions
-                        {
-                            Id = premiumAccessAddOnItem.Id,
-                            Deleted = true
-                        });
-                    }
-
-                    var seatAddOnItem = subscription.Items.FirstOrDefault(item => item.Price.Id == "personal-org-seat-annually");
-
-                    if (seatAddOnItem != null)
-                    {
-                        options.Items.Add(new SubscriptionItemOptions
-                        {
-                            Id = seatAddOnItem.Id,
-                            Deleted = true
-                        });
-                    }
-                }
-
-                await organizationRepository.ReplaceAsync(organization);
-                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
+                return true;
             }
 
             await SendFamiliesRenewalEmailAsync(organization, familiesPlan, plan);
@@ -367,10 +286,7 @@ public class UpcomingInvoiceHandler(
                 return false;
             }
 
-            if (subscription.TestClock != null)
-            {
-                await WaitForTestClockToAdvanceAsync(subscription.TestClock);
-            }
+            await stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
 
             var migrationScheduled = await priceIncreaseScheduler.ScheduleForSubscription(subscription);
 
@@ -421,7 +337,8 @@ public class UpcomingInvoiceHandler(
             var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
             var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
 
-            await SendBusinessRenewalEmailAsync(organization, subscription, sourcePlan, targetPlan, cohort);
+            await SendBusinessRenewalEmailAsync(
+                organization, subscription, sourcePlan, targetPlan, cohort, migrationPath.SeatCountPolicy);
         }
         catch (Exception exception)
         {
@@ -441,7 +358,8 @@ public class UpcomingInvoiceHandler(
         Subscription subscription,
         Plan sourcePlan,
         Plan targetPlan,
-        OrganizationPlanMigrationCohort cohort)
+        OrganizationPlanMigrationCohort cohort,
+        SeatCountPolicy seatCountPolicy)
     {
         var renewalDate = subscription.GetCurrentPeriodEnd();
         if (renewalDate is null)
@@ -456,7 +374,7 @@ public class UpcomingInvoiceHandler(
         }
 
         var culture = new CultureInfo("en-US");
-        var seats = ResolveSeatCount(subscription, sourcePlan, organization);
+        var seats = await ResolveSeatCountAsync(subscription, sourcePlan, organization, seatCountPolicy);
 
         // SeatPrice is a per-year figure on annual plans and a per-month figure on monthly plans. The per-user
         // monthly line always shows a monthly rate (annual ÷ 12); the recurring total is quoted in the plan's own
@@ -493,7 +411,9 @@ public class UpcomingInvoiceHandler(
                 PerUserMonthlyPrice = FormatCurrency(perUserMonthly, culture),
                 IsAnnual = targetPlan.IsAnnual,
                 TotalPrice = FormatCurrency(total, culture),
-                DiscountLines = [.. discounts.Select(discount => discount.Display)]
+                DiscountLines = [.. discounts.Select(discount => discount.Display)],
+                ProactiveDiscountMonths = discounts
+                    .FirstOrDefault(discount => discount.CouponId == cohort.ProactiveDiscountCouponCode)?.Months ?? 0
             }
         });
     }
@@ -503,8 +423,26 @@ public class UpcomingInvoiceHandler(
             ? amount.ToString("C0", culture)
             : amount.ToString("C2", culture);
 
-    private int ResolveSeatCount(Subscription subscription, Plan sourcePlan, Organization organization)
+    private async Task<int> ResolveSeatCountAsync(
+        Subscription subscription, Plan sourcePlan, Organization organization, SeatCountPolicy seatCountPolicy)
     {
+        // A Packaged source's line items don't reflect the true seat total, so resolve the quote from
+        // actual usage to match what the scheduler bills.
+        if (sourcePlan.IsPackagedMigrationSource(seatCountPolicy))
+        {
+            var occupied = (await organizationRepository
+                .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
+            var passwordManagerSeats = sourcePlan.ResolveMigratedSeatCount(occupied, organization.Seats);
+
+            // Floor the quote on the Stripe SM seat line so the email matches the billed PM seats (SM <= PM).
+            var secretsManagerSeatQuantity = subscription.Items.Data
+                .FirstOrDefault(item =>
+                    sourcePlan.SecretsManager is not null &&
+                    item.Price?.Id == sourcePlan.SecretsManager.StripeSeatPlanId)?.Quantity ?? 0;
+
+            return (int)Math.Max((long)passwordManagerSeats, secretsManagerSeatQuantity);
+        }
+
         var seatItem = subscription.Items.Data
             .FirstOrDefault(item => item.Price?.Id == sourcePlan.PasswordManager.StripeSeatPlanId);
 
@@ -522,7 +460,7 @@ public class UpcomingInvoiceHandler(
         return (int)(seats ?? 0);
     }
 
-    private sealed record Discount(bool IsPercentage, decimal Value, string Display);
+    private sealed record Discount(bool IsPercentage, decimal Value, string Display, string CouponId, long Months);
 
     private async Task<List<Discount>> ResolveDiscountsAsync(
         OrganizationPlanMigrationCohort cohort,
@@ -535,15 +473,19 @@ public class UpcomingInvoiceHandler(
 
         Discount? MapCoupon(Coupon? coupon, string couponId)
         {
+            var months = coupon?.DurationInMonths ?? 0;
+
             if (coupon?.PercentOff is { } percentOff)
             {
-                return new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%");
+                return new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%",
+                    CouponId: couponId, Months: months);
             }
 
             if (coupon?.AmountOff is { } amountOffMinorUnits)
             {
                 var amountOff = amountOffMinorUnits / 100M;
-                return new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture));
+                return new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture),
+                    CouponId: couponId, Months: months);
             }
 
             logger.LogError(
@@ -659,19 +601,6 @@ public class UpcomingInvoiceHandler(
         return discounts;
     }
 
-    private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
-    {
-        while (testClock.Status != "ready")
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2));
-            testClock = await stripeAdapter.GetTestClockAsync(testClock.Id);
-            if (testClock.Status == "internal_failure")
-            {
-                throw new Exception("Stripe Test Clock encountered an internal failure");
-            }
-        }
-    }
-
     #endregion
 
     #region Premium Users
@@ -761,29 +690,14 @@ public class UpcomingInvoiceHandler(
 
         try
         {
-            if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+            var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
+
+            // A false result means no new schedule was created — typically because an earlier upcoming-invoice
+            // event for this renewal already deferred the migration and sent its renewal email. Return true so
+            // the caller skips the generic upcoming-invoice email instead of sending a duplicate.
+            if (!scheduled)
             {
-                var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
-                if (!scheduled)
-                {
-                    return true;
-                }
-            }
-            else
-            {
-                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
-                    new SubscriptionUpdateOptions
-                    {
-                        Items =
-                        [
-                            new SubscriptionItemOptions { Id = premiumItem.Id, Price = newPlan.Seat.StripePriceId }
-                        ],
-                        Discounts =
-                        [
-                            new SubscriptionDiscountOptions { Coupon = CouponIDs.Milestone2SubscriptionDiscount }
-                        ],
-                        ProrationBehavior = ProrationBehavior.None
-                    });
+                return true;
             }
 
             await SendPremiumRenewalEmailAsync(user, newPlan);
@@ -834,30 +748,6 @@ public class UpcomingInvoiceHandler(
         Customer customer,
         string eventId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
-            switch (customer)
-            {
-                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                    when determinedTaxExemptStatus != customerTaxExemptStatus:
-                    try
-                    {
-                        await stripeAdapter.UpdateCustomerAsync(subscription.CustomerId,
-                            new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                    }
-                    catch (Exception exception)
-                    {
-                        logger.LogError(
-                            exception,
-                            "Failed to set provider's ({ProviderID}) to the required tax exemption while processing event with ID {EventID}",
-                            provider.Id,
-                            eventId);
-                    }
-                    break;
-            }
-        }
-
         if (!subscription.AutomaticTax.Enabled)
         {
             try
@@ -922,71 +812,70 @@ public class UpcomingInvoiceHandler(
 
     private async Task EnableAutomaticTaxAsync(Subscription subscription)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+        var activeSchedule = schedules.Data.FirstOrDefault(s =>
+            s.SubscriptionId == subscription.Id && s.Status == SubscriptionScheduleStatus.Active);
+
+        if (activeSchedule != null)
         {
-            var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-                new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+            var phases = new List<SubscriptionSchedulePhaseOptions>();
 
-            var activeSchedule = schedules.Data.FirstOrDefault(s =>
-                s.SubscriptionId == subscription.Id && s.Status == SubscriptionScheduleStatus.Active);
-
-            if (activeSchedule != null)
+            for (var i = 0; i < activeSchedule.Phases.Count; i++)
             {
-                var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
-                var phases = new List<SubscriptionSchedulePhaseOptions>();
+                var phase = activeSchedule.Phases[i];
 
-                for (var i = 0; i < activeSchedule.Phases.Count; i++)
+                // Skip phases that have already completed
+                if (phase.EndDate <= now)
                 {
-                    var phase = activeSchedule.Phases[i];
+                    continue;
+                }
 
-                    // Skip phases that have already completed
-                    if (phase.EndDate <= now)
+                // When a phase's predecessor has ended, the phase is already active and
+                // its one-time migration discount has been applied and consumed.
+                // Re-including it would cause Stripe to re-apply it.
+                var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
+
+                // Gate on StartDate > now, not !discountConsumed (false for the active phase 0),
+                // so we never re-stack the customer coupon onto the already-billing current period.
+                var customerDiscount = phase.StartDate > now ? subscription.Customer?.Discount : null;
+
+                phases.Add(new SubscriptionSchedulePhaseOptions
+                {
+                    StartDate = phase.StartDate,
+                    EndDate = phase.EndDate,
+                    Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
                     {
-                        continue;
+                        Price = item.PriceId,
+                        Quantity = item.Quantity
+                    }).ToList(),
+                    Discounts = discountConsumed
+                        ? []
+                        : customerDiscount.MergeDiscountCouponIds(
+                            phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
+                    ProrationBehavior = phase.ProrationBehavior,
+                    AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                    {
+                        Enabled = true
                     }
+                });
+            }
 
-                    // When a phase's predecessor has ended, the phase is already active and
-                    // its one-time migration discount has been applied and consumed.
-                    // Re-including it would cause Stripe to re-apply it.
-                    var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
-
-                    phases.Add(new SubscriptionSchedulePhaseOptions
+            await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                new SubscriptionScheduleUpdateOptions
+                {
+                    DefaultSettings = new SubscriptionScheduleDefaultSettingsOptions
                     {
-                        StartDate = phase.StartDate,
-                        EndDate = phase.EndDate,
-                        Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
-                        {
-                            Price = item.PriceId,
-                            Quantity = item.Quantity
-                        }).ToList(),
-                        Discounts = discountConsumed
-                            ? []
-                            : phase.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                            {
-                                Coupon = d.CouponId
-                            }).ToList(),
-                        ProrationBehavior = phase.ProrationBehavior,
-                        AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                        AutomaticTax = new SubscriptionScheduleDefaultSettingsAutomaticTaxOptions
                         {
                             Enabled = true
                         }
-                    });
-                }
-
-                await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
-                    new SubscriptionScheduleUpdateOptions
-                    {
-                        DefaultSettings = new SubscriptionScheduleDefaultSettingsOptions
-                        {
-                            AutomaticTax = new SubscriptionScheduleDefaultSettingsAutomaticTaxOptions
-                            {
-                                Enabled = true
-                            }
-                        },
-                        Phases = phases
-                    });
-                return;
-            }
+                    },
+                    Phases = phases
+                });
+            return;
         }
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,

@@ -541,4 +541,99 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceHandlerTests
         Assert.True(result.IsError);
         Assert.IsType<UserNotCompliantWithSingleOrganization>(result.AsError);
     }
+
+    [Theory, BitAutoData]
+    public async Task IsOrganizationCompliantAsync_StagedUserExcluded_FromSingleOrgCheck(
+        Guid organizationId,
+        Guid confirmedUserId,
+        Guid stagedUserId,
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
+    {
+        // Arrange - staged users are not subject to policy and must be excluded from the single-org check
+        var confirmedUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            UserId = confirmedUserId,
+            Status = OrganizationUserStatusType.Confirmed
+        };
+
+        var stagedUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            UserId = stagedUserId,
+            Status = OrganizationUserStatusType.Staged
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns([confirmedUser, stagedUser]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([]);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([]);
+
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
+
+        // Act
+        var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+
+        // Only the confirmed user is checked for single-org compliance; the staged user is excluded.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .GetManyByManyUsersAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Count() == 1 && ids.Contains(confirmedUserId)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsOrganizationCompliantAsync_UserInAnotherOrgWithStagedStatus_ReturnsValid(
+        Guid organizationId,
+        Guid userId,
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
+    {
+        // Arrange - a staged membership in another org is not a single-org conflict
+        var orgUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            UserId = userId,
+            Status = OrganizationUserStatusType.Confirmed
+        };
+
+        var otherOrgUser = new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            UserId = userId,
+            Status = OrganizationUserStatusType.Staged
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns([orgUser]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([otherOrgUser]);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([]);
+
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
+
+        // Act
+        var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+    }
 }

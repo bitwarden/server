@@ -18,7 +18,7 @@ public static class GlobalSettingsFactory
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
-            .AddUserSecrets("bitwarden-Api")
+            .AddUserSecrets("bitwarden-seeder-utility")
             .AddEnvironmentVariables();
 
         var configuration = configBuilder.Build();

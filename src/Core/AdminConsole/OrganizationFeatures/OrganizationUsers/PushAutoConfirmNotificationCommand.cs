@@ -1,11 +1,11 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
@@ -13,24 +13,24 @@ public class PushAutoConfirmNotificationCommand : IPushAutoConfirmNotificationCo
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IPolicyQuery _policyQuery;
 
     public PushAutoConfirmNotificationCommand(
         IOrganizationUserRepository organizationUserRepository,
         IPushNotificationService pushNotificationService,
-        IApplicationCacheService applicationCacheService,
-        IPolicyQuery policyQuery)
+        IPolicyQuery policyQuery,
+        IOrganizationAbilityCacheService organizationAbilityCacheService)
     {
         _organizationUserRepository = organizationUserRepository;
         _pushNotificationService = pushNotificationService;
-        _applicationCacheService = applicationCacheService;
         _policyQuery = policyQuery;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
     }
 
     public async Task PushAsync(Guid userId, Guid organizationId)
     {
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
         if (orgAbility is not { UseAutomaticUserConfirmation: true })
         {
             return;

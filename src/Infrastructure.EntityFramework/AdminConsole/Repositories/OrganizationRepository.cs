@@ -127,43 +127,6 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         }
     }
 
-    public async Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync()
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            return await GetDbSet(dbContext)
-            .Select(e => new OrganizationAbility
-            {
-                Enabled = e.Enabled,
-                Id = e.Id,
-                Use2fa = e.Use2fa,
-                UseEvents = e.UseEvents,
-                UsersGetPremium = e.UsersGetPremium,
-                Using2fa = e.Use2fa && e.TwoFactorProviders != null,
-                UseSso = e.UseSso,
-                UseKeyConnector = e.UseKeyConnector,
-                UseResetPassword = e.UseResetPassword,
-                UseScim = e.UseScim,
-                UseCustomPermissions = e.UseCustomPermissions,
-                UsePolicies = e.UsePolicies,
-                LimitCollectionCreation = e.LimitCollectionCreation,
-                LimitCollectionDeletion = e.LimitCollectionDeletion,
-                LimitItemDeletion = e.LimitItemDeletion,
-                AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                UseRiskInsights = e.UseRiskInsights,
-                UseOrganizationDomains = e.UseOrganizationDomains,
-                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
-                UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
-                UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
-                UsePhishingBlocker = e.UsePhishingBlocker,
-                UseMyItems = e.UseMyItems,
-                UseInviteLinks = e.UseInviteLinks,
-                UsePam = e.UsePam
-            }).ToListAsync();
-        }
-    }
-
 #nullable enable
     public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
     {
@@ -387,7 +350,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                           od.DomainName == userWithDomain.EmailDomain &&
                           od.VerifiedDate != null &&
                           o.Enabled == true &&
-                          ou.Status != OrganizationUserStatusType.Invited
+                          (ou.Status == OrganizationUserStatusType.Accepted ||
+                           ou.Status == OrganizationUserStatusType.Confirmed ||
+                           ou.Status == OrganizationUserStatusType.Revoked)
                     select o;
 
         return await query.ToArrayAsync();
@@ -447,7 +412,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         {
             var dbContext = GetDatabaseContext(scope);
             var users = await dbContext.OrganizationUsers
-                .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
+                .Where(ou => ou.OrganizationId == organizationId &&
+                    (ou.Status == OrganizationUserStatusType.Invited ||
+                     ou.Status == OrganizationUserStatusType.Accepted ||
+                     ou.Status == OrganizationUserStatusType.Confirmed))
                 .CountAsync();
 
             var sponsored = await dbContext.OrganizationSponsorships

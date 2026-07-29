@@ -2,16 +2,20 @@
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -23,6 +27,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Stripe;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Admin.Test.AdminConsole.Controllers;
@@ -989,7 +994,7 @@ public class OrganizationsControllerTests
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Any<Organization>());
         // Downstream pipeline must still run after a cohort write failure -- the ability cache
         // would otherwise be stale relative to the just-replaced organization.
-        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>().Received(1)
             .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o => o.Id == organization.Id));
     }
 
@@ -1285,6 +1290,225 @@ public class OrganizationsControllerTests
             .DeleteAsync(default);
     }
 
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_MigrationCohortAssignment_MismatchedIdResubmitted_NoChange(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Regression for PM-39237: once the GET renders the mismatched cohort as the selected option,
+        // a no-touch save posts the real id back. submittedCohortId == existing.CohortId must hit the
+        // NoChange short-circuit so the assignment is not silently deleted.
+        var cohortId = Guid.NewGuid();
+        var existing = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = cohortId,
+        };
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.TeamsMonthly,
+            MigrationCohortId = cohortId,
+        };
+
+        StubCohortAccessAllowed(sutProvider);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(existing);
+
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_MigrationCohortAssignment_MismatchClearedToNull_Deletes(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Intentionally clearing a mismatched assignment to "(Not assigned)" must delete the row.
+        var existing = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = Guid.NewGuid(),
+        };
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.TeamsMonthly,
+            MigrationCohortId = null,
+        };
+
+        StubCohortAccessAllowed(sutProvider);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(existing);
+
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .Received(1)
+            .DeleteAsync(existing);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_MigrationCohortAssignment_MismatchSwitchedToValid_DeletesThenCreates(
+        Organization organization,
+        OrganizationPlanMigrationCohort targetCohort,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Switching a mismatched assignment to a plan-compatible cohort must delete the old row and
+        // create the new one, in that order (UNIQUE(OrganizationId)).
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        targetCohort.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
+        var existing = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = Guid.NewGuid(),
+        };
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually2020,
+            MigrationCohortId = targetCohort.Id,
+        };
+
+        StubCohortAccessAllowed(sutProvider);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(existing);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(targetCohort.Id)
+            .Returns(targetCohort);
+
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        var assignmentRepo = sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        Received.InOrder(() =>
+        {
+            assignmentRepo.DeleteAsync(existing);
+            assignmentRepo.CreateAsync(Arg.Is<OrganizationPlanMigrationCohortAssignment>(a =>
+                a.OrganizationId == organization.Id
+                && a.CohortId == targetCohort.Id
+                && a.Id != existing.Id));
+        });
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_MigrationCohortAssignment_MismatchSwitchedToDifferentMismatch_Blocked(
+        Organization organization,
+        OrganizationPlanMigrationCohort targetCohort,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Switching from one mismatched cohort to another mismatched cohort must be rejected by the
+        // compatibility guard, leaving both rows untouched.
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        targetCohort.MigrationPathId = MigrationPathId.Enterprise2020MonthlyToCurrent;
+        var existing = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = Guid.NewGuid(),
+        };
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually2020,
+            MigrationCohortId = targetCohort.Id,
+        };
+
+        StubCohortAccessAllowed(sutProvider);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(existing);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(targetCohort.Id)
+            .Returns(targetCohort);
+        sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Edit", redirect.ActionName);
+        Assert.Equal(
+            "The selected migration cohort is not compatible with this organization's plan.",
+            sutProvider.Sut.TempData["Error"]);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_MigrationCohortAssignment_LockedMismatch_SurfacesLockMessage(
+        Organization organization,
+        Guid newCohortId,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // A locked, mismatched assignment must surface the lock message when a different cohort is
+        // submitted; the lock guard takes precedence and no rows change.
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        var locked = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = Guid.NewGuid(),
+            MigratedDate = DateTime.UtcNow,
+        };
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually2020,
+            MigrationCohortId = newCohortId,
+        };
+
+        StubCohortAccessAllowed(sutProvider);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(locked);
+        sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Edit", redirect.ActionName);
+        Assert.Equal(
+            "This organization's migration cohort is locked because its assignment has already entered the migration pipeline.",
+            sutProvider.Sut.TempData["Error"]);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default);
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
     #endregion
 
     #region Edit (GET)
@@ -1525,6 +1749,276 @@ public class OrganizationsControllerTests
         Assert.Equal(
             new[] { matching.Id, pathless.Id },
             model.AvailableMigrationCohorts.Select(c => c.Id));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_MismatchedAssignment_IncludesAssignedCohortAndFlagsMismatch(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // A bulk assignment (PM-36963) can assign a plan-mismatched cohort that the plan-compatible
+        // GetManyAsync filter excludes. The GET must still include it so the dropdown round-trips the
+        // id (otherwise a no-touch save posts null and silently deletes the assignment), and flag the
+        // mismatch so the view can label it.
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        var mismatched = new OrganizationPlanMigrationCohort
+        {
+            Id = Guid.NewGuid(),
+            Name = "Mismatched",
+            MigrationPathId = MigrationPathId.Enterprise2020MonthlyToCurrent,
+        };
+        var pathless = new OrganizationPlanMigrationCohort
+        {
+            Id = Guid.NewGuid(),
+            Name = "Pathless",
+            MigrationPathId = null,
+        };
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = mismatched.Id,
+        };
+        StubEditGetDependencies(sutProvider, organization, assignment,
+            availableCohorts: [pathless]);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(mismatched.Id)
+            .Returns(mismatched);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.NotNull(model.AvailableMigrationCohorts);
+        Assert.Contains(model.AvailableMigrationCohorts, c => c.Id == mismatched.Id);
+        Assert.Equal(mismatched.Id, model.MigrationCohortId);
+        Assert.True(model.MigrationCohortMismatch);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1)
+            .GetByIdAsync(mismatched.Id);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_MatchingAssignment_FlagFalse(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // A plan-compatible assignment is already surfaced by GetManyAsync, so the GET must not
+        // perform the fallback lookup and must leave the mismatch flag false.
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        var matching = new OrganizationPlanMigrationCohort
+        {
+            Id = Guid.NewGuid(),
+            Name = "Matches",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+        };
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = matching.Id,
+        };
+        StubEditGetDependencies(sutProvider, organization, assignment,
+            availableCohorts: [matching]);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.False(model.MigrationCohortMismatch);
+        Assert.Equal(assignment.CohortId, model.MigrationCohortId);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByIdAsync(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_MismatchedAssignment_CohortDeleted_SurfacesOrphan(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // If the assigned cohort was deleted out from under the assignment, the GET must not throw and
+        // must surface the orphan (flag true, id preserved) so the view can round-trip the id. It must not
+        // silently render "(Not assigned)", which a no-touch save would delete.
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        var assignedId = Guid.NewGuid();
+        var pathless = new OrganizationPlanMigrationCohort
+        {
+            Id = Guid.NewGuid(),
+            Name = "Pathless",
+            MigrationPathId = null,
+        };
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = assignedId,
+        };
+        StubEditGetDependencies(sutProvider, organization, assignment,
+            availableCohorts: [pathless]);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(assignedId)
+            .Returns((OrganizationPlanMigrationCohort)null);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Equal(assignedId, model.MigrationCohortId);
+        Assert.True(model.MigrationCohortOrphaned);
+        Assert.False(model.MigrationCohortMismatch);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_MigrationCohortAssignment_OrphanedCohortResubmitted_DoesNotDelete(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Regression: when the assigned cohort was deleted, the view round-trips the orphan id. A no-touch
+        // save posts that id back, so the resolver short-circuits to NoChange and the row is preserved.
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        var orphanId = Guid.NewGuid();
+        var existing = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = orphanId,
+        };
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually2020,
+            MigrationCohortId = orphanId,
+        };
+        StubCohortAccessAllowed(sutProvider);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(existing);
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_BillingLoadThrows_StillRendersPageWithWarning(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // PM-38874: a deleted Stripe customer makes GetBillingAsync throw. The page must still
+        // render so an admin can correct the Gateway Customer ID rather than being locked out.
+        StubEditGetDependencies(sutProvider, organization, currentAssignment: null);
+
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingAsync(organization)
+            .ThrowsAsync(new StripeException
+            {
+                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing }
+            });
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Null(model.BillingInfo);
+        Assert.Null(model.BillingHistoryInfo);
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.Equal(
+            "Billing information could not be loaded. The Stripe customer may have been deleted. " +
+            "You can still edit the organization and set a valid Gateway Customer ID.",
+            (string)sutProvider.Sut.TempData["Warning"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_BillingHistoryLoadThrows_StillRendersPageWithWarning(
+        Organization organization,
+        BillingInfo billingInfo,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // PM-38874: GetBillingAsync can succeed while GetBillingHistoryAsync throws. The catch must
+        // reset both values so the billing section is hidden and the page renders, rather than
+        // falling through with a non-null BillingInfo and a null BillingHistoryInfo (which would NRE).
+        StubEditGetDependencies(sutProvider, organization, currentAssignment: null);
+
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingAsync(organization)
+            .Returns(billingInfo);
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingHistoryAsync(organization)
+            .ThrowsAsync(new StripeException
+            {
+                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing }
+            });
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Null(model.BillingInfo);
+        Assert.Null(model.BillingHistoryInfo);
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.Equal(
+            "Billing information could not be loaded. The Stripe customer may have been deleted. " +
+            "You can still edit the organization and set a valid Gateway Customer ID.",
+            (string)sutProvider.Sut.TempData["Warning"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_BillingLoadThrowsUnexpectedError_StillRendersPageWithErrorToast(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // PM-38874: a billing-load failure that is NOT a missing Stripe customer (resource_missing)
+        // must fall through to the generic catch, which surfaces a neutral error toast rather than
+        // asserting the customer was deleted.
+        StubEditGetDependencies(sutProvider, organization, currentAssignment: null);
+
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingAsync(organization)
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "api_error" } });
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Null(model.BillingInfo);
+        Assert.Null(model.BillingHistoryInfo);
+        Assert.False(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Error"));
+        Assert.Equal(
+            "Billing information could not be loaded. You can still edit the organization or try reloading the page. " +
+            "Contact support if the problem persists.",
+            (string)sutProvider.Sut.TempData["Error"]);
     }
 
     #endregion

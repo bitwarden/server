@@ -44,6 +44,7 @@ public static class UserServiceCollectionExtensions
     private static void AddUserEmailCommands(this IServiceCollection services)
     {
         services.AddScoped<IChangeEmailCommand, ChangeEmailCommand>();
+        services.AddScoped<ISelfServiceChangeEmailCommand, SelfServiceChangeEmailCommand>();
     }
 
     private static void AddUserApiKeyCommands(this IServiceCollection services)

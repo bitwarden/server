@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
@@ -1212,12 +1213,12 @@ public class UpdateSecretsManagerSubscriptionCommandTests
                 Arg.Any<IEnumerable<string>>());
 
         await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
-        await sutProvider.GetDependency<IApplicationCacheService>().DidNotReceiveWithAnyArgs().UpsertOrganizationAbilityAsync(default);
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>().DidNotReceiveWithAnyArgs().UpsertOrganizationAbilityAsync(default);
     }
 
     private void AssertUpdatedOrganization(Func<Organization> organizationMatcher, SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organizationMatcher());
-        sutProvider.GetDependency<IApplicationCacheService>().Received(1).UpsertOrganizationAbilityAsync(organizationMatcher());
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().Received(1).UpsertOrganizationAbilityAsync(organizationMatcher());
     }
 }

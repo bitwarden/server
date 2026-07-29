@@ -1,16 +1,15 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -35,26 +34,22 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
     public const string PlanDisabledErrorMessage = "Password Manager Plan is disabled.";
     public const string AdditionalSeatsNegativeErrorMessage = "You can't subtract Password Manager seats!";
 
-    private readonly ICurrentContext _currentContext;
     private readonly IPricingClient _pricingClient;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ICollectionRepository _collectionRepository;
 
-    public ProviderClientOrganizationSignUpCommand(
-        ICurrentContext currentContext,
-        IPricingClient pricingClient,
+    public ProviderClientOrganizationSignUpCommand(IPricingClient pricingClient,
         IOrganizationRepository organizationRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         ICollectionRepository collectionRepository)
     {
-        _currentContext = currentContext;
         _pricingClient = pricingClient;
         _organizationRepository = organizationRepository;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _collectionRepository = collectionRepository;
     }
 
@@ -90,6 +85,7 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
             UsersGetPremium = plan.UsersGetPremium,
             UseCustomPermissions = plan.HasCustomPermissions,
             UseScim = plan.HasScim,
+            UseRiskInsights = plan.HasRiskInsights,
             Plan = plan.Name,
             Gateway = GatewayType.Stripe,
             ReferenceData = signup.Owner.ReferenceData,
@@ -144,7 +140,7 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
                 Type = OrganizationApiKeyType.Default,
                 RevisionDate = DateTime.UtcNow,
             });
-            await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
             Collection defaultCollection = null;
             if (!string.IsNullOrWhiteSpace(collectionName))
@@ -167,7 +163,7 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
             if (organization.Id != default)
             {
                 await _organizationRepository.DeleteAsync(organization);
-                await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
+                await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
             }
 
             throw;

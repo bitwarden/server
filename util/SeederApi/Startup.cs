@@ -1,4 +1,7 @@
 ﻿using System.Globalization;
+using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.SeederApi.Extensions;
 using Bit.SeederApi.Utilities;
@@ -28,6 +31,8 @@ public class Startup
 
         services.AddCustomDataProtectionServices(Environment, globalSettings);
 
+        services.AddDistributedCache(globalSettings);
+
         services.AddTokenizers();
         services.AddDatabaseRepositories(globalSettings);
         services.AddTestPlayIdTracking(globalSettings);
@@ -36,6 +41,11 @@ public class Startup
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services.AddScoped<IPasswordHasher<Core.Entities.User>, PasswordHasher<Core.Entities.User>>();
+
+        services.AddLicenseServices();
+        services.TryAddSingleton<IMailService, NoopMailService>();
+        services.AddPush(globalSettings);
+        services.TryAddSingleton<ILicensingService, LicensingService>();
 
         services.AddSeederApiServices();
         services.AddScenes();

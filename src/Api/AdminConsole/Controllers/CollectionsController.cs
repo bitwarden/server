@@ -175,8 +175,14 @@ public class CollectionsController : Controller
             return new CollectionAccessDetailsResponseModel(collection);
         }
 
-        // If we have a user, fetch the latest collection permission details
-        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
+        // If we have a user, fetch the latest collection permission details including groups/users
+        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, true);
+
+        var canReadWithAccess = (await _authorizationService.AuthorizeAsync(User, collectionWithPermissions, BulkCollectionOperations.ReadWithAccess)).Succeeded;
+        if (!canReadWithAccess)
+        {
+            return new CollectionAccessDetailsResponseModel(collection);
+        }
 
         return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
     }
@@ -200,8 +206,14 @@ public class CollectionsController : Controller
             return new CollectionAccessDetailsResponseModel(collection);
         }
 
-        // If we have a user, fetch the latest collection permission details
-        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
+        // If we have a user, fetch the latest collection permission details including groups/users
+        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, true);
+
+        var canReadWithAccess = (await _authorizationService.AuthorizeAsync(User, collectionWithPermissions, BulkCollectionOperations.ReadWithAccess)).Succeeded;
+        if (!canReadWithAccess)
+        {
+            return new CollectionAccessDetailsResponseModel(collection);
+        }
 
         return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
     }

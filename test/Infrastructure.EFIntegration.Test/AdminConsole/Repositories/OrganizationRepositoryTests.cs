@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
@@ -144,20 +143,6 @@ public class OrganizationRepositoryTests
         returnedOrgs.Concat(await sqlOrganizationRepo.GetManyByEnabledAsync());
 
         Assert.True(returnedOrgs.All(o => o.Enabled));
-    }
-
-    // testing data matches here would require manipulating all organization abilities in the db
-    [CiSkippedTheory, EfOrganizationAutoData]
-    public async Task GetManyAbilitiesAsync_Works(SqlRepo.OrganizationRepository sqlOrganizationRepo, List<EfRepo.OrganizationRepository> suts)
-    {
-        var list = new List<OrganizationAbility>();
-        foreach (var sut in suts)
-        {
-            list.Concat(await sut.GetManyAbilitiesAsync());
-        }
-
-        list.Concat(await sqlOrganizationRepo.GetManyAbilitiesAsync());
-        Assert.True(list.All(x => x.GetType() == typeof(OrganizationAbility)));
     }
 
     [CiSkippedTheory, EfOrganizationUserAutoData]

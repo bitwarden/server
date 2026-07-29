@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -30,7 +31,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IEventService _eventService;
     private readonly IFeatureService _featureService;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
@@ -44,7 +45,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         IServiceAccountRepository serviceAccountRepository,
         IGlobalSettings globalSettings,
         IOrganizationRepository organizationRepository,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IEventService eventService,
         IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
         IFeatureService featureService,
@@ -57,7 +58,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _serviceAccountRepository = serviceAccountRepository;
         _globalSettings = globalSettings;
         _organizationRepository = organizationRepository;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _eventService = eventService;
         _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
         _featureService = featureService;
@@ -442,7 +443,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
     {
         await _organizationRepository.ReplaceAsync(org);
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
+        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(org);
 
         if (orgEvent.HasValue)
         {

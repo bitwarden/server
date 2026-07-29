@@ -51,6 +51,9 @@ public class OrganizationArgs : IArgumentModel
     [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
     public string? Password { get; set; }
 
+    [Option("owner-email", Description = "Override the organization owner email (default: owner@<domain>). Must not already exist in the User table; add --mangle to make repeat runs unique.")]
+    public string? OwnerEmail { get; set; }
+
     [Option("plan-type", Description = "Billing plan type: free, teams-monthly, teams-annually, enterprise-monthly, enterprise-annually, teams-starter, families-annually. Defaults to enterprise-annually.")]
     public string PlanType { get; set; } = "enterprise-annually";
 
@@ -105,6 +108,11 @@ public class OrganizationArgs : IArgumentModel
         {
             throw new ArgumentException("KDF iterations must be at least 5,000.");
         }
+
+        if (!string.IsNullOrWhiteSpace(OwnerEmail) && !OwnerEmail.Contains('@'))
+        {
+            throw new ArgumentException("--owner-email must be a valid email address (must contain '@').");
+        }
     }
 
     public OrganizationVaultOptions ToOptions() => new()
@@ -121,6 +129,7 @@ public class OrganizationArgs : IArgumentModel
         Region = ParseGeographicRegion(Region),
         Density = DensityProfiles.Parse(Density),
         Password = Password,
+        OwnerEmail = OwnerEmail,
         PlanType = PlanFeatures.Parse(PlanType),
         KdfIterations = KdfIterations,
         Overrides = new()

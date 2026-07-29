@@ -160,9 +160,9 @@ public class Program
 
     private static void Update(Application application)
     {
-        // This portion of code checks for multiple certs in the Identity.pfx PKCS12 bag.  If found, it generates
-        // a new cert and bag to replace the old Identity.pfx.  This fixes an issue that came up as a result of
-        // moving the project to .NET 5.
+        // Rebuilds identity.pfx when it holds more than one certificate or uses RC2-40 encryption,
+        // which OpenSSL 3 can only read with the legacy provider. We read with -legacy and export
+        // without it so the file is rewritten with AES-256. The existing key and certificate are preserved.
         _context.Install.IdentityCertPassword = Helpers.GetValueFromEnvFile(_context.App, "global", "globalSettings__identityServer__certificatePassword");
         var certOutput = Helpers.Exec(
             "openssl",
@@ -170,19 +170,23 @@ public class Program
                 "pkcs12",
                 "-nokeys",
                 "-info",
+                "-legacy",
                 "-in",
                 $"{application.RootDirectory}/identity/identity.pfx",
                 "-passin",
                 $"pass:{_context.Install.IdentityCertPassword}",
             ],
             returnStdout: true,
-            returnStderr: false);
+            returnStderr: true);
 
         var certCount = certOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .Count(line => line.Contains("-----BEGIN CERTIFICATE-----"));
 
-        if (certCount > 1)
+        // openssl reports the encryption algorithm on stderr, so we check it for the legacy marker.
+        var isLegacyEncrypted = certOutput.Contains("pbeWithSHA1");
+
+        if (certCount > 1 || isLegacyEncrypted)
         {
             // Extract key from identity.pfx
             Helpers.Exec(
@@ -191,6 +195,7 @@ public class Program
                     "pkcs12",
                     "-in",
                     $"{application.RootDirectory}/identity/identity.pfx",
+                    "-legacy",
                     "-nocerts",
                     "-nodes",
                     "-out",
@@ -208,6 +213,7 @@ public class Program
                     "pkcs12",
                     "-in",
                     $"{application.RootDirectory}/identity/identity.pfx",
+                    "-legacy",
                     "-clcerts",
                     "-nokeys",
                     "-out",

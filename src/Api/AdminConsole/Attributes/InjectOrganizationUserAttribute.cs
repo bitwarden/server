@@ -67,9 +67,8 @@ public class OrganizationUserModelBinder : IModelBinder
             throw new BadRequestException("Route parameter 'orgId' or 'organizationId' is missing or invalid.");
         }
 
-        var routeValues = bindingContext.ActionContext.RouteData.Values;
-        if (!routeValues.TryGetValue(attr.OrganizationUserIdRouteParam, out var idValue)
-            || !Guid.TryParse(idValue?.ToString(), out var orgUserId))
+        var orgUserId = bindingContext.HttpContext.TryGetRouteParameterAsGuid(attr.OrganizationUserIdRouteParam);
+        if (orgUserId is null)
         {
             throw new BadRequestException(
                 $"Route parameter '{attr.OrganizationUserIdRouteParam}' is missing or invalid.");
@@ -78,7 +77,7 @@ public class OrganizationUserModelBinder : IModelBinder
         var repo = bindingContext.HttpContext.RequestServices
             .GetRequiredService<IOrganizationUserRepository>();
 
-        var organizationUser = await repo.GetByIdAsync(orgUserId);
+        var organizationUser = await repo.GetByIdAsync(orgUserId.Value);
         if (organizationUser is null || organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();

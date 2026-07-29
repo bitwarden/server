@@ -5,6 +5,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>e0dba0c6-d131-43bd-9143-2260f11a14ad</UserSecretsId>
+    <!--
+       Aspire pulls in different packages based on current computers arch so to avoid this from constantly changing
+       We just disable it since this is a project for development only it's acceptable to lack it on this project
+       https://github.com/microsoft/aspire/issues/6184
+    -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <PropertyGroup Label="Aspire AppHost Community Plugin settings">

@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
@@ -7,7 +8,6 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -64,9 +64,8 @@ public class UpgradePremiumToOrganizationCommand(
     ICollectionRepository collectionRepository,
     IBraintreeService braintreeService,
     IGetPaymentMethodQuery getPaymentMethodQuery,
-    IApplicationCacheService applicationCacheService,
-    IPushNotificationService pushNotificationService,
-    IFeatureService featureService)
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
+    IPushNotificationService pushNotificationService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
@@ -137,11 +136,6 @@ public class UpgradePremiumToOrganizationCommand(
                 PostalCode = billingAddress.PostalCode
             }
         };
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            addressUpdateOptions.TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
-        }
 
         var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId, addressUpdateOptions);
 
@@ -263,6 +257,7 @@ public class UpgradePremiumToOrganizationCommand(
             UsersGetPremium = targetPlan.UsersGetPremium,
             UseCustomPermissions = targetPlan.HasCustomPermissions,
             UseScim = targetPlan.HasScim,
+            UseRiskInsights = targetPlan.HasRiskInsights,
             Plan = targetPlan.Name,
             Gateway = GatewayType.Stripe,
             Enabled = true,
@@ -332,7 +327,7 @@ public class UpgradePremiumToOrganizationCommand(
         });
 
         // Update cache
-        await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        await organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
         // Create OrganizationUser for the upgrading user as owner
         var organizationUser = new OrganizationUser

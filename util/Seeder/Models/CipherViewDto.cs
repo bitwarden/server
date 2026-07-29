@@ -339,33 +339,43 @@ public record SshKeyViewDto
 /// </summary>
 public record BankAccountViewDto
 {
+    [EncryptProperty]
     [JsonPropertyName("bankName")]
     public string? BankName { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("nameOnAccount")]
     public string? NameOnAccount { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("accountType")]
     public string? AccountType { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("accountNumber")]
     public string? AccountNumber { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("routingNumber")]
     public string? RoutingNumber { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("branchNumber")]
     public string? BranchNumber { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("pin")]
     public string? Pin { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("swiftCode")]
     public string? SwiftCode { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("iban")]
     public string? Iban { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("bankContactPhone")]
     public string? BankContactPhone { get; init; }
 }
@@ -375,36 +385,47 @@ public record BankAccountViewDto
 /// </summary>
 public record DriversLicenseViewDto
 {
+    [EncryptProperty]
     [JsonPropertyName("firstName")]
     public string? FirstName { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("middleName")]
     public string? MiddleName { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("lastName")]
     public string? LastName { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("dateOfBirth")]
     public string? DateOfBirth { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("licenseNumber")]
     public string? LicenseNumber { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("issuingCountry")]
     public string? IssuingCountry { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("issuingState")]
     public string? IssuingState { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("issueDate")]
     public string? IssueDate { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("issuingAuthority")]
     public string? IssuingAuthority { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("expirationDate")]
     public string? ExpirationDate { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("licenseClass")]
     public string? LicenseClass { get; init; }
 }
@@ -414,42 +435,55 @@ public record DriversLicenseViewDto
 /// </summary>
 public record PassportViewDto
 {
+    [EncryptProperty]
     [JsonPropertyName("surname")]
     public string? Surname { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("givenName")]
     public string? GivenName { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("dateOfBirth")]
     public string? DateOfBirth { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("sex")]
     public string? Sex { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("birthPlace")]
     public string? BirthPlace { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("nationality")]
     public string? Nationality { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("passportNumber")]
     public string? PassportNumber { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("passportType")]
     public string? PassportType { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("issuingCountry")]
     public string? IssuingCountry { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("issuingAuthority")]
     public string? IssuingAuthority { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("issueDate")]
     public string? IssueDate { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("expirationDate")]
     public string? ExpirationDate { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("nationalIdentificationNumber")]
     public string? NationalIdentificationNumber { get; init; }
 }

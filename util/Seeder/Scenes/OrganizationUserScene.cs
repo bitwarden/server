@@ -37,6 +37,7 @@ public class OrganizationUserScene(
         [Required]
         public required OrganizationUserStatusType OrganizationUserStatusType { get; set; }
         public Permissions? Permissions { get; set; }
+        public bool AccessSecretsManager { get; set; }
     }
 
     public async Task<SceneResult<OrganizationUserSceneResult>> SeedAsync(Request request)
@@ -44,7 +45,7 @@ public class OrganizationUserScene(
         var user = await userRepository.GetByIdAsync(request.UserId);
         if (user == null)
         {
-            throw new Exception($"User with ID {request.UserId} not found.");
+            throw new InvalidOperationException($"User with ID {request.UserId} not found.");
         }
 
         var requiresKey = request.OrganizationUserStatusType is OrganizationUserStatusType.Confirmed
@@ -76,6 +77,8 @@ public class OrganizationUserScene(
         {
             organizationUser.SetPermissions(request.Permissions ?? new Permissions());
         }
+
+        organizationUser.AccessSecretsManager = request.AccessSecretsManager;
 
         await organizationUserRepository.CreateAsync(organizationUser);
 

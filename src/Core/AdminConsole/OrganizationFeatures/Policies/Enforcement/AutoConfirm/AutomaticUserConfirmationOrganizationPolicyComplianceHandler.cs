@@ -36,12 +36,13 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceHandler(
         ICollection<OrganizationUserUserDetails> organizationUsers)
     {
         var userIds = organizationUsers
-            .Where(u => u.UserId is not null && u.Status != OrganizationUserStatusType.Invited)
+            .Where(u => u.UserId is not null &&
+                        u.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked)
             .Select(u => u.UserId!.Value);
 
         var hasNonCompliantUser = (await organizationUserRepository.GetManyByManyUsersAsync(userIds))
             .Any(uo => uo.OrganizationId != request.OrganizationId
-                       && uo.Status != OrganizationUserStatusType.Invited);
+                       && uo.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked);
 
         return hasNonCompliantUser ? new UserNotCompliantWithSingleOrganization() : null;
     }

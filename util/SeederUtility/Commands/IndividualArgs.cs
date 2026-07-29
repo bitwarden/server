@@ -30,6 +30,9 @@ public class IndividualArgs : IArgumentModel
     [Option("kdf-iterations", Description = "KDF iteration count (default: 5000). Use 600000 for production-realistic e2e testing.")]
     public int KdfIterations { get; set; } = 5_000;
 
+    [Option("self-hosted", Description = "Write a user license file to LicenseDirectory after seeding (required for self-hosted premium validation)")]
+    public bool SelfHosted { get; set; }
+
     [Option("mangle", Description = "Enable ID mangling for test isolation")]
     public bool Mangle { get; set; }
 
@@ -69,6 +72,7 @@ public class IndividualArgs : IArgumentModel
         Premium = string.Equals(Subscription, "premium", StringComparison.OrdinalIgnoreCase),
         GenerateVault = Vault,
         Password = Password,
-        KdfIterations = KdfIterations
+        KdfIterations = KdfIterations,
+        SelfHosted = SelfHosted
     };
 }

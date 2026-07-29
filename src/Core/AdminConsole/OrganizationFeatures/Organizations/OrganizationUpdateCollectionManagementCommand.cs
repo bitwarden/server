@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Enums;
@@ -12,18 +13,18 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 public class OrganizationUpdateCollectionManagementCommand : IOrganizationUpdateCollectionManagementCommand
 {
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IEventService _eventService;
     private readonly IPushNotificationService _pushNotificationService;
 
     public OrganizationUpdateCollectionManagementCommand(
         IOrganizationRepository organizationRepository,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IEventService eventService,
         IPushNotificationService pushNotificationService)
     {
         _organizationRepository = organizationRepository;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _eventService = eventService;
         _pushNotificationService = pushNotificationService;
     }
@@ -45,7 +46,7 @@ public class OrganizationUpdateCollectionManagementCommand : IOrganizationUpdate
         existingOrganization.RevisionDate = DateTime.UtcNow;
 
         await _organizationRepository.ReplaceAsync(existingOrganization);
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(existingOrganization);
+        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(existingOrganization);
 
         if (loggingActions.Any())
         {
