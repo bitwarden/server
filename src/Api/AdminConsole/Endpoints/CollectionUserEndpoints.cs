@@ -1,9 +1,7 @@
 ﻿using System.Security.Claims;
-using Bit.Api.AdminConsole.Endpoints.Filters;
 using Bit.Api.AdminConsole.Endpoints.Handlers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Core;
-using Bit.Core.Auth.Identity;
 
 namespace Bit.Api.AdminConsole.Endpoints;
 
@@ -15,10 +13,8 @@ public static class CollectionUserEndpoints
 {
     public static void MapCollectionUserEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("organizations/{orgId:guid}/collections");
-        group.RequireAuthorization(Policies.Application);
+        var group = endpoints.MapGroup("organizations/{orgId:guid}/collections").WithAdminConsoleDefaults();
         group.RequireFeature(FeatureFlagKeys.PM12473CollectionUserAccessEndpoint);
-        group.AddEndpointFilter<AdminConsoleExceptionHandlerEndpointFilter>();
 
         group.MapPatch("{id:guid}/users",
             (Guid orgId, Guid id, CollectionUserAccessDeltaRequestModel model, ClaimsPrincipal user,
