@@ -185,6 +185,7 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddAdminConsoleEndpointHandlers();
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
