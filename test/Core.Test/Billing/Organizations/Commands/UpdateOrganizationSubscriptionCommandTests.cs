@@ -1606,9 +1606,13 @@ public class UpdateOrganizationSubscriptionCommandTests
         var subscription = CreateSubscription(items: [(monthlySeat, "si_1", 5)]);
         SetupGetSubscription(organization, subscription);
 
-        // No cohort assignment (default). Phase 2 carries the annual seat price, marking this as an
-        // annual-upgrade schedule.
-        var schedule = CreateMockSchedule(subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)]);
+        // No cohort assignment (default). The phase metadata marks this as an annual-upgrade schedule.
+        var schedule = CreateMockSchedule(
+            subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)],
+            phaseMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.AnnualUpgrade] = nameof(PlanType.EnterpriseMonthly)
+            });
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
 
@@ -1647,7 +1651,12 @@ public class UpdateOrganizationSubscriptionCommandTests
         var subscription = CreateSubscription(items: [(monthlySeat, "si_1", 5)]);
         SetupGetSubscription(organization, subscription);
 
-        var schedule = CreateMockSchedule(subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)]);
+        var schedule = CreateMockSchedule(
+            subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)],
+            phaseMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.AnnualUpgrade] = nameof(PlanType.EnterpriseMonthly)
+            });
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
 
@@ -1690,7 +1699,11 @@ public class UpdateOrganizationSubscriptionCommandTests
         var schedule = CreateMockSchedule(
             subscription.Id,
             [(monthlySeat, 5), (monthlyStorage, 2)],
-            [(annualSeat, 5), (annualStorage, 2)]);
+            [(annualSeat, 5), (annualStorage, 2)],
+            phaseMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.AnnualUpgrade] = nameof(PlanType.EnterpriseMonthly)
+            });
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
 
@@ -1733,7 +1746,11 @@ public class UpdateOrganizationSubscriptionCommandTests
         var schedule = CreateMockSchedule(
             subscription.Id,
             [(monthlySeat, 5), (monthlySa, 3)],
-            [(annualSeat, 5), (annualSa, 3)]);
+            [(annualSeat, 5), (annualSa, 3)],
+            phaseMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.AnnualUpgrade] = nameof(PlanType.EnterpriseMonthly)
+            });
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
 
@@ -1779,8 +1796,14 @@ public class UpdateOrganizationSubscriptionCommandTests
         var subscription = CreateSubscription(items: [(monthlySeat, "si_1", 5)]);
         SetupGetSubscription(organization, subscription);
 
-        // Phase 1 is monthly, phase 2 carries the annual-latest seat price (annual-upgrade shape).
-        var schedule = CreateMockSchedule(subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)]);
+        // Phase 1 is monthly, phase 2 carries the annual-latest seat price (annual-upgrade shape),
+        // and the phase metadata marks this as an annual-upgrade schedule.
+        var schedule = CreateMockSchedule(
+            subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)],
+            phaseMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.AnnualUpgrade] = nameof(PlanType.EnterpriseMonthly)
+            });
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
 
@@ -1844,6 +1867,46 @@ public class UpdateOrganizationSubscriptionCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.Items.Any(i => i.Price == monthlySeat && i.Quantity == 10)));
+    }
+
+    [Fact]
+    public async Task Run_ScheduleCarryingAnnualSeatPriceWithoutMetadata_DoesNotTakeTheAnnualUpgradePath()
+    {
+        var organization = CreateOrganization();
+        organization.PlanType = PlanType.EnterpriseMonthly;
+
+        var currentPlan = MockPlans.Get(PlanType.EnterpriseMonthly);
+        var annualPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(annualPlan);
+
+        var monthlySeat = currentPlan.PasswordManager.StripeSeatPlanId;
+        var annualSeat = annualPlan.PasswordManager.StripeSeatPlanId;
+
+        var subscription = CreateSubscription(items: [(monthlySeat, "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        // No metadata on either phase and no cohort assignment, so this is a schedule built outside
+        // Bitwarden's code that happens to carry an annual price. It must fall through to the direct
+        // subscription update rather than being rewritten.
+        var schedule = CreateMockSchedule(subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)]);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(monthlySeat, 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionScheduleAsync(default!, default!);
+        await _stripeAdapter.ReceivedWithAnyArgs(1)
+            .UpdateSubscriptionAsync(default!, default!);
     }
 
     [Fact]
@@ -2179,7 +2242,8 @@ public class UpdateOrganizationSubscriptionCommandTests
         string subscriptionId,
         (string priceId, long quantity)[] phase1Items,
         (string priceId, long quantity)[]? phase2Items = null,
-        bool phase2Active = false)
+        bool phase2Active = false,
+        Dictionary<string, string>? phaseMetadata = null)
     {
         var phase1Start = phase2Active ? DateTime.UtcNow.AddYears(-1) : DateTime.UtcNow;
         var phase1End = phase2Active ? DateTime.UtcNow.AddDays(-1) : DateTime.UtcNow.AddYears(1);
@@ -2192,7 +2256,8 @@ public class UpdateOrganizationSubscriptionCommandTests
                 EndDate = phase1End,
                 Items = phase1Items.Select(i =>
                     new SubscriptionSchedulePhaseItem { PriceId = i.priceId, Quantity = i.quantity }).ToList(),
-                ProrationBehavior = ProrationBehavior.None
+                ProrationBehavior = ProrationBehavior.None,
+                Metadata = phaseMetadata,
             }
         };
 
@@ -2204,7 +2269,8 @@ public class UpdateOrganizationSubscriptionCommandTests
                 EndDate = phase1End.AddYears(1),
                 Items = phase2Items.Select(i =>
                     new SubscriptionSchedulePhaseItem { PriceId = i.priceId, Quantity = i.quantity }).ToList(),
-                ProrationBehavior = ProrationBehavior.None
+                ProrationBehavior = ProrationBehavior.None,
+                Metadata = phaseMetadata,
             });
         }
 
