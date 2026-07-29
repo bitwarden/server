@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Test.Billing.Mocks;
-using Bit.Core.Test.Billing.Mocks.Plans;
 using Xunit;
 
 namespace Bit.Core.Test.Billing.Organizations.PlanMigration;
@@ -275,89 +274,5 @@ public class OrganizationPlanMigrationPriceMapperTests
 
         Assert.Equal(target.SecretsManager.StripeServiceAccountPlanId, result);
         Assert.NotEqual(source.SecretsManager.StripeServiceAccountPlanId, result);
-    }
-
-    [Fact]
-    public void MapWithPricesOrNull_PasswordManagerSeat_ReturnsBothUnitPrices()
-    {
-        var source = new Teams2020Plan(isAnnual: false);
-        var target = new TeamsPlan(isAnnual: true);
-
-        var mapping = OrganizationPlanMigrationPriceMapper.MapWithPricesOrNull(
-            source.PasswordManager.StripeSeatPlanId, source, target);
-
-        Assert.NotNull(mapping);
-        Assert.Equal(target.PasswordManager.StripeSeatPlanId, mapping!.Value.TargetPriceId);
-        Assert.Equal(source.PasswordManager.SeatPrice, mapping.Value.SourceUnitPrice);
-        Assert.Equal(target.PasswordManager.SeatPrice, mapping.Value.TargetUnitPrice);
-    }
-
-    [Fact]
-    public void MapWithPricesOrNull_Storage_ReturnsStoragePrices()
-    {
-        var source = new Teams2020Plan(isAnnual: false);
-        var target = new TeamsPlan(isAnnual: true);
-
-        var mapping = OrganizationPlanMigrationPriceMapper.MapWithPricesOrNull(
-            source.PasswordManager.StripeStoragePlanId, source, target);
-
-        Assert.NotNull(mapping);
-        Assert.Equal(target.PasswordManager.StripeStoragePlanId, mapping!.Value.TargetPriceId);
-        Assert.Equal(source.PasswordManager.AdditionalStoragePricePerGb, mapping.Value.SourceUnitPrice);
-        Assert.Equal(target.PasswordManager.AdditionalStoragePricePerGb, mapping.Value.TargetUnitPrice);
-    }
-
-    [Fact]
-    public void MapWithPricesOrNull_SecretsManagerSeat_ReturnsSecretsManagerPrices()
-    {
-        var source = new Teams2020Plan(isAnnual: false);
-        var target = new TeamsPlan(isAnnual: true);
-
-        var mapping = OrganizationPlanMigrationPriceMapper.MapWithPricesOrNull(
-            source.SecretsManager.StripeSeatPlanId, source, target);
-
-        Assert.NotNull(mapping);
-        Assert.Equal(target.SecretsManager.StripeSeatPlanId, mapping!.Value.TargetPriceId);
-        Assert.Equal(source.SecretsManager.SeatPrice, mapping.Value.SourceUnitPrice);
-        Assert.Equal(target.SecretsManager.SeatPrice, mapping.Value.TargetUnitPrice);
-    }
-
-    [Fact]
-    public void MapWithPricesOrNull_ServiceAccount_ReturnsServiceAccountPrices()
-    {
-        var source = new Teams2020Plan(isAnnual: false);
-        var target = new TeamsPlan(isAnnual: true);
-
-        var mapping = OrganizationPlanMigrationPriceMapper.MapWithPricesOrNull(
-            source.SecretsManager.StripeServiceAccountPlanId, source, target);
-
-        Assert.NotNull(mapping);
-        Assert.Equal(target.SecretsManager.StripeServiceAccountPlanId, mapping!.Value.TargetPriceId);
-        Assert.Equal(source.SecretsManager.AdditionalPricePerServiceAccount, mapping.Value.SourceUnitPrice);
-        Assert.Equal(target.SecretsManager.AdditionalPricePerServiceAccount, mapping.Value.TargetUnitPrice);
-    }
-
-    [Fact]
-    public void MapWithPricesOrNull_UnknownPriceId_ReturnsNull()
-    {
-        var source = new Teams2020Plan(isAnnual: false);
-        var target = new TeamsPlan(isAnnual: true);
-
-        Assert.Null(OrganizationPlanMigrationPriceMapper.MapWithPricesOrNull("price_unknown", source, target));
-    }
-
-    [Fact]
-    public void MapWithPricesOrNull_PackagedBase_ReturnsNullEvenThoughMapOrNullSucceeds()
-    {
-        // A Packaged source holds a flat base price in StripePlanId. MapOrNull deliberately maps it
-        // onto the target's per-seat price for schedule construction, but there is no honest
-        // per-unit comparison to quote from, so the savings path must refuse it.
-        var source = new TeamsStarterPlan();
-        var target = new TeamsPlan(isAnnual: true);
-
-        Assert.NotNull(OrganizationPlanMigrationPriceMapper.MapOrNull(
-            source.PasswordManager.StripePlanId, source, target));
-        Assert.Null(OrganizationPlanMigrationPriceMapper.MapWithPricesOrNull(
-            source.PasswordManager.StripePlanId, source, target));
     }
 }

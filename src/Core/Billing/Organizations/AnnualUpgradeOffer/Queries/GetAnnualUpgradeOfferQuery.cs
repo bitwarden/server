@@ -21,8 +21,8 @@ public class GetAnnualUpgradeOfferQuery(
     [
         "schedule",
         "customer",
-        "customer.discount.coupon.applies_to",
-        "discounts.coupon.applies_to",
+        "customer.discount.coupon",
+        "discounts.coupon",
         "items.data.discounts.coupon"
     ];
 
@@ -101,7 +101,33 @@ public class GetAnnualUpgradeOfferQuery(
                 return null;
         }
 
-        var savings = AnnualUpgradeSavingsCalculator.Calculate(subscription, currentPlan, annualLatestPlan);
+        var previewRequests = AnnualUpgradeSavingsCalculator.BuildPreviewRequestsOrNull(
+            subscription, currentPlan, annualLatestPlan);
+        if (previewRequests is null)
+        {
+            return null;
+        }
+
+        AnnualUpgradeSavings? savings;
+        try
+        {
+            // Two previews rather than one, because the monthly side has to be priced under the
+            // same explicit coupon set as the annual one. Reading the natural upcoming invoice for
+            // the monthly side would save a call but surrender control of that set and let
+            // proration and one-off invoice items into the figure.
+            var monthlyPreview = await stripeAdapter.CreateInvoicePreviewAsync(previewRequests.Value.Monthly);
+            var annualPreview = await stripeAdapter.CreateInvoicePreviewAsync(previewRequests.Value.Annual);
+            savings = AnnualUpgradeSavingsCalculator.SavingsFromPreviews(monthlyPreview, annualPreview);
+        }
+        catch (Exception exception)
+        {
+            // Same posture as an unmappable line: no offer beats a wrong dollar figure.
+            logger.LogError(exception,
+                "{Query}: Failed to preview the annual upgrade invoices for Organization ({OrganizationId}) on subscription ({SubscriptionId}); suppressing the annual upgrade offer",
+                nameof(GetAnnualUpgradeOfferQuery), organization.Id, subscription.Id);
+            return null;
+        }
+
         if (savings is null)
         {
             return null;

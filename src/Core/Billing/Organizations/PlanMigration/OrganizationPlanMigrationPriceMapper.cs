@@ -3,14 +3,6 @@ using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Organizations.PlanMigration;
 
-/// <summary>
-/// A source price ID resolved onto the target plan, with the catalog unit price on both sides.
-/// </summary>
-internal readonly record struct PlanPriceMapping(
-    string TargetPriceId,
-    decimal SourceUnitPrice,
-    decimal TargetUnitPrice);
-
 internal static class OrganizationPlanMigrationPriceMapper
 {
     /// <summary>
@@ -34,31 +26,6 @@ internal static class OrganizationPlanMigrationPriceMapper
             return sourcePriceId;
         }
         return MapOrNull(sourcePriceId, source, target) ?? sourcePriceId;
-    }
-
-    /// <summary>
-    /// Resolves the target price ID together with the catalog unit price on both sides. Returns
-    /// null when the price ID does not map, when the target plan lacks the slot, or when the slot
-    /// carries no per-unit price to compare (a Packaged base price).
-    /// </summary>
-    public static PlanPriceMapping? MapWithPricesOrNull(string sourcePriceId, Plan source, Plan target)
-    {
-        var slot = ResolveSlot(sourcePriceId, source);
-        if (slot is null || slot == PlanPriceSlot.PasswordManagerPackagedBase)
-        {
-            return null;
-        }
-
-        var targetPriceId = TargetPriceId(slot.Value, source, target);
-        var sourceUnitPrice = UnitPrice(slot.Value, source);
-        var targetUnitPrice = UnitPrice(slot.Value, target);
-
-        if (targetPriceId is null || sourceUnitPrice is null || targetUnitPrice is null)
-        {
-            return null;
-        }
-
-        return new PlanPriceMapping(targetPriceId, sourceUnitPrice.Value, targetUnitPrice.Value);
     }
 
     private static PlanPriceSlot? ResolveSlot(string sourcePriceId, Plan source) => sourcePriceId switch
@@ -91,15 +58,6 @@ internal static class OrganizationPlanMigrationPriceMapper
             target.SecretsManager.StripeSeatPlanId,
         PlanPriceSlot.SecretsManagerServiceAccount when source.SecretsManager is not null && target.SecretsManager is not null =>
             target.SecretsManager.StripeServiceAccountPlanId,
-        _ => null
-    };
-
-    private static decimal? UnitPrice(PlanPriceSlot slot, Plan plan) => slot switch
-    {
-        PlanPriceSlot.PasswordManagerSeat => plan.PasswordManager.SeatPrice,
-        PlanPriceSlot.PasswordManagerStorage => plan.PasswordManager.AdditionalStoragePricePerGb,
-        PlanPriceSlot.SecretsManagerSeat => plan.SecretsManager?.SeatPrice,
-        PlanPriceSlot.SecretsManagerServiceAccount => plan.SecretsManager?.AdditionalPricePerServiceAccount,
         _ => null
     };
 }

@@ -53,6 +53,11 @@ public class GetAnnualUpgradeOfferQueryTests
         GatewaySubscriptionId = "sub_123"
     };
 
+    // Populated by SetupSubscription with the price IDs actually on the subscription, so
+    // SetupPreviews can tell the monthly-side preview call from the annual-side one without
+    // assuming which plan a given test builds its line items from.
+    private readonly HashSet<string> _subscriptionPriceIds = [];
+
     private Subscription SetupSubscription(Organization organization, params SubscriptionItem[] items)
     {
         var subscription = new Subscription
@@ -62,6 +67,11 @@ public class GetAnnualUpgradeOfferQueryTests
             Currency = "usd",
             Items = new StripeList<SubscriptionItem> { Data = [.. items] }
         };
+        _subscriptionPriceIds.Clear();
+        foreach (var priceId in items.Select(item => item.Price?.Id).OfType<string>())
+        {
+            _subscriptionPriceIds.Add(priceId);
+        }
         _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
         return subscription;
@@ -73,6 +83,25 @@ public class GetAnnualUpgradeOfferQueryTests
         Quantity = quantity,
         Price = new Price { Id = priceId, ProductId = $"prod_{priceId}" }
     };
+
+    // Stripe prices both sides now, so tests state the totals it returns rather than deriving them
+    // from the plan catalog. Minor units, matching the API. The monthly side is priced on the
+    // subscription's own price IDs unchanged, so a preview request is the monthly one exactly when
+    // every item on it matches a price already on the subscription.
+    private void SetupPreviews(long monthlyTotal, long annualTotal)
+    {
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(callInfo =>
+            {
+                var options = callInfo.Arg<InvoiceCreatePreviewOptions>();
+                var isMonthly = options.SubscriptionDetails.Items
+                    .All(item => _subscriptionPriceIds.Contains(item.Price));
+                return Task.FromResult(new Invoice
+                {
+                    Total = isMonthly ? monthlyTotal : annualTotal
+                });
+            });
+    }
 
     private static SubscriptionSchedule AttachSchedule(
         Subscription subscription, string id, Dictionary<string, string>? phaseMetadata)
@@ -145,16 +174,14 @@ public class GetAnnualUpgradeOfferQueryTests
         // not the occupied-seat count.
         SetupSubscription(organization,
             new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 20 });
+        SetupPreviews(monthlyTotal: 8_000, annualTotal: 72_000);
 
         var result = await _query.Run(organization);
 
         Assert.NotNull(result);
-        var expectedCurrentAnnualCost = monthlyPlan.PasswordManager.SeatPrice * 20 * 12;
-        var expectedNewAnnualCost = annualPlan.PasswordManager.SeatPrice * 20;
-        Assert.Equal(expectedCurrentAnnualCost, result.CurrentAnnualCost);
-        Assert.Equal(expectedNewAnnualCost, result.NewAnnualCost);
-        Assert.Equal(expectedCurrentAnnualCost - expectedNewAnnualCost, result.Savings);
-        Assert.True(result.Savings > 0);
+        Assert.Equal(960m, result.CurrentAnnualCost);
+        Assert.Equal(720m, result.NewAnnualCost);
+        Assert.Equal(240m, result.Savings);
     }
 
     [Fact]
@@ -162,9 +189,8 @@ public class GetAnnualUpgradeOfferQueryTests
     {
         // An org still on a legacy monthly vintage (e.g. pending a Track A price migration) has
         // savings computed against the annual-latest plan -- the same target the migration program
-        // would move it to -- not the legacy-vintage annual plan. At current pricing the legacy
-        // Enterprise 2020 monthly rate ($6/seat/mo = $72/seat/yr) equals the annual-latest rate
-        // ($72/seat/yr), so there are no positive savings and no offer is returned.
+        // would move it to -- not the legacy-vintage annual plan. The previews come back equal, so
+        // there are no positive savings and no offer is returned.
         var organization = CreateOrganization(PlanType.EnterpriseMonthly2020);
         _getChurnOfferCohortMembershipQuery.Run(organization).Returns((ChurnOfferCohortMembership?)null);
 
@@ -175,6 +201,9 @@ public class GetAnnualUpgradeOfferQueryTests
 
         SetupSubscription(organization,
             new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 5 });
+        // Annualizing the monthly preview (x12) lands on the same figure as the annual preview, so
+        // the comparison nets to zero and no offer is returned.
+        SetupPreviews(monthlyTotal: 3_000, annualTotal: 36_000);
 
         var result = await _query.Run(organization);
 
@@ -238,11 +267,12 @@ public class GetAnnualUpgradeOfferQueryTests
         SetupSubscription(organization,
             new SubscriptionItem { Price = null, Quantity = 1 },
             new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 20 });
+        SetupPreviews(monthlyTotal: 8_000, annualTotal: 72_000);
 
         var result = await _query.Run(organization);
 
         Assert.NotNull(result);
-        Assert.Equal(monthlyPlan.PasswordManager.SeatPrice * 20 * 12, result.CurrentAnnualCost);
+        Assert.Equal(960m, result.CurrentAnnualCost);
     }
 
     [Fact]
@@ -283,6 +313,7 @@ public class GetAnnualUpgradeOfferQueryTests
         {
             [MetadataKeys.MigrationCohortId] = Guid.NewGuid().ToString()
         });
+        SetupPreviews(monthlyTotal: 3_000, annualTotal: 30_000);
 
         Assert.NotNull(await _query.Run(organization));
     }
@@ -345,9 +376,12 @@ public class GetAnnualUpgradeOfferQueryTests
             Arg.Is<SubscriptionGetOptions>(options =>
                 options.Expand.Contains("schedule") &&
                 options.Expand.Contains("customer") &&
-                options.Expand.Contains("customer.discount.coupon.applies_to") &&
-                options.Expand.Contains("discounts.coupon.applies_to") &&
-                options.Expand.Contains("items.data.discounts.coupon")));
+                options.Expand.Contains("customer.discount.coupon") &&
+                options.Expand.Contains("discounts.coupon") &&
+                options.Expand.Contains("items.data.discounts.coupon") &&
+                // Nothing reads Coupon.AppliesTo any more; Stripe evaluates product scope inside
+                // the previews. Leaving the expansion in place would suggest otherwise.
+                !options.Expand.Any(expansion => expansion.EndsWith("applies_to"))));
     }
 
     [Fact]
@@ -357,14 +391,17 @@ public class GetAnnualUpgradeOfferQueryTests
         SetupSubscription(organization,
             SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5),
             SeatItem(_currentPlan.SecretsManager.StripeSeatPlanId, 3));
+        SetupPreviews(monthlyTotal: 5_000, annualTotal: 40_000);
 
         var result = await _query.Run(organization);
 
-        var expectedMonthly =
-            _currentPlan.PasswordManager.SeatPrice * 5 +
-            _currentPlan.SecretsManager.SeatPrice * 3;
         Assert.NotNull(result);
-        Assert.Equal(expectedMonthly * 12, result!.CurrentAnnualCost);
+        Assert.Equal(600m, result!.CurrentAnnualCost);
+
+        // Both figures come from one preview call each; the SM line rides along on whichever side
+        // it belongs to rather than needing separate handling.
+        await _stripeAdapter.Received(2).CreateInvoicePreviewAsync(
+            Arg.Is<InvoiceCreatePreviewOptions>(options => options.SubscriptionDetails.Items.Count == 2));
     }
 
     [Fact]
@@ -432,7 +469,78 @@ public class GetAnnualUpgradeOfferQueryTests
                 Coupon = new Coupon { Id = "big", AmountOff = 10_000, Duration = "forever", Currency = "usd" }
             }
         ];
+        SetupPreviews(monthlyTotal: 10_000, annualTotal: 130_000);
 
         Assert.Null(await _query.Run(organization));
+    }
+
+    [Fact]
+    public async Task Run_IssuesTwoPreviews_MonthlyOnItsOwnPricesAndAnnualOnTheMappedOnes()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        SetupPreviews(monthlyTotal: 2_000, annualTotal: 18_000);
+
+        await _query.Run(organization);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
+            Arg.Is<InvoiceCreatePreviewOptions>(options =>
+                options.SubscriptionDetails.Items.Count == 1 &&
+                options.SubscriptionDetails.Items[0].Price ==
+                    _currentPlan.PasswordManager.StripeSeatPlanId &&
+                options.SubscriptionDetails.Items[0].Quantity == 5 &&
+                options.AutomaticTax.Enabled == false));
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
+            Arg.Is<InvoiceCreatePreviewOptions>(options =>
+                options.SubscriptionDetails.Items.Count == 1 &&
+                options.SubscriptionDetails.Items[0].Price ==
+                    _annualLatestPlan.PasswordManager.StripeSeatPlanId &&
+                options.SubscriptionDetails.Items[0].Quantity == 5 &&
+                options.AutomaticTax.Enabled == false));
+    }
+
+    [Fact]
+    public async Task Run_PreviewThrows_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns<Invoice>(_ => throw new StripeException
+            {
+                StripeError = new StripeError { Code = ErrorCodes.InvoiceUpcomingNone }
+            });
+
+        Assert.Null(await _query.Run(organization));
+        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Error, default, default!, default, default!);
+    }
+
+    [Fact]
+    public async Task Run_UnmappableLineItem_SuppressesBeforeAnyPreview()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5),
+            SeatItem("price_sponsorship", 1));
+
+        Assert.Null(await _query.Run(organization));
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateInvoicePreviewAsync(default!);
+    }
+
+    [Fact]
+    public async Task Run_ForeignSchedule_SuppressesBeforeAnyPreview()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        AttachSchedule(subscription, "sub_sched_negotiated", new Dictionary<string, string>
+        {
+            ["negotiated_term"] = "3y"
+        });
+
+        Assert.Null(await _query.Run(organization));
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateInvoicePreviewAsync(default!);
     }
 }
