@@ -4,8 +4,8 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration;
+using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Organizations.Schedules.Enums;
-using Bit.Core.Billing.Organizations.Schedules.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
@@ -19,7 +19,6 @@ using static StripeConstants;
 public class RedeemAnnualUpgradeOfferCommand(
     ILogger<RedeemAnnualUpgradeOfferCommand> logger,
     IGetAnnualUpgradeOfferQuery getOfferQuery,
-    IGetOrganizationSubscriptionScheduleOwnershipQuery getScheduleOwnershipQuery,
     IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter)
@@ -98,6 +97,12 @@ public class RedeemAnnualUpgradeOfferCommand(
             // renewal. The savings quote assumes it survives. Copy by coupon ID rather than
             // promotion code: promotion codes carrying a minimum-amount restriction cannot be
             // applied to a future schedule phase.
+            // Verified against the Stripe API: a product-restricted coupon copied onto a phase item
+            // whose price sits outside its scope is accepted, appears on the phase as a real
+            // discount object, and then applies zero to that line. So copying can only help. If the
+            // coupon covers the annual product the customer keeps it, and if it does not Stripe
+            // applies nothing, which the savings previews already reported to the quote. Dropping
+            // the copy would be the harmful change, removing a discount Stripe would have honoured.
             var itemDiscounts = item.Discounts?
                 .Where(discount => !string.IsNullOrEmpty(discount?.Coupon?.Id))
                 .Select(discount => new SubscriptionSchedulePhaseItemDiscountOptions
@@ -120,12 +125,21 @@ public class RedeemAnnualUpgradeOfferCommand(
         // unlike a seat change, this operation has no way to proceed while leaving it intact.
         // The offer query suppresses this case at page load, so reaching here means a schedule
         // appeared between the offer being shown and the redemption being submitted.
-        var ownership = await getScheduleOwnershipQuery.Run(organization, subscription);
+        var ownership = SubscriptionScheduleOwnershipMapper.MapOrNull(subscription);
+        if (ownership is null)
+        {
+            _logger.LogError(
+                "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; refusing to rebuild its schedule",
+                CommandName, subscription.Id, organization.Id, subscription.ScheduleId);
+            return DefaultConflict;
+        }
+
         if (ownership.Ownership == OrganizationSubscriptionScheduleOwnership.Foreign)
         {
             _logger.LogWarning(
-                "{Command}: Refusing to release unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}) for Organization ({OrganizationId})",
-                CommandName, ownership.Schedule?.Id, subscription.Id, organization.Id);
+                "{Command}: Refusing to release unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}) for Organization ({OrganizationId}); phase metadata keys present: {MetadataKeys}",
+                CommandName, ownership.Schedule?.Id, subscription.Id, organization.Id,
+                string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(ownership.Schedule)));
             return DefaultConflict;
         }
 
@@ -141,6 +155,14 @@ public class RedeemAnnualUpgradeOfferCommand(
         try
         {
             var phase1 = schedule.Phases[0];
+
+            // Both phases carry the marker, matching how PriceIncreaseScheduler stamps its cohort
+            // keys identically on phase 1 and phase 2. The value records which monthly plan the
+            // schedule came from; only presence is read, so the value exists for triage.
+            var annualUpgradeMetadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.AnnualUpgrade] = organization.PlanType.ToString()
+            };
 
             // Phase 1 is the in-flight phase; Stripe rejects the update unless it
             // round-trips unchanged, including any discounts already on it, whether at the
@@ -171,6 +193,7 @@ public class RedeemAnnualUpgradeOfferCommand(
                         Coupon = d.CouponId
                     })
                 ] : null,
+                Metadata = annualUpgradeMetadata,
                 ProrationBehavior = ProrationBehavior.None
             };
 
@@ -196,6 +219,7 @@ public class RedeemAnnualUpgradeOfferCommand(
                 EndDate = phase1.EndDate.AddYears(1),
                 Items = phase2Items,
                 Discounts = phase2Discounts is { Count: > 0 } ? phase2Discounts : null,
+                Metadata = annualUpgradeMetadata,
                 ProrationBehavior = ProrationBehavior.None
             };
 

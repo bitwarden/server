@@ -4,9 +4,8 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
+using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Organizations.Schedules.Enums;
-using Bit.Core.Billing.Organizations.Schedules.Models;
-using Bit.Core.Billing.Organizations.Schedules.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
@@ -25,8 +24,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
     private static readonly DateTime _phase1End = new(2026, 8, 6, 0, 0, 0, DateTimeKind.Utc);
 
     private readonly IGetAnnualUpgradeOfferQuery _getOfferQuery = Substitute.For<IGetAnnualUpgradeOfferQuery>();
-    private readonly IGetOrganizationSubscriptionScheduleOwnershipQuery _getScheduleOwnershipQuery =
-        Substitute.For<IGetOrganizationSubscriptionScheduleOwnershipQuery>();
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
@@ -34,14 +31,9 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
     public RedeemAnnualUpgradeOfferCommandTests()
     {
-        _getScheduleOwnershipQuery.Run(Arg.Any<Organization>(), Arg.Any<Subscription>())
-            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
-                OrganizationSubscriptionScheduleOwnership.None, null));
-
         _command = new RedeemAnnualUpgradeOfferCommand(
             Substitute.For<ILogger<RedeemAnnualUpgradeOfferCommand>>(),
             _getOfferQuery,
-            _getScheduleOwnershipQuery,
             _priceIncreaseScheduler,
             _pricingClient,
             _stripeAdapter);
@@ -454,18 +446,36 @@ public class RedeemAnnualUpgradeOfferCommandTests
     [Fact]
     public async Task Run_ForeignSchedule_ReturnsConflictWithoutMutatingStripe()
     {
-        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
         var subscription = SetupSubscription(organization);
-        _getScheduleOwnershipQuery.Run(organization, subscription)
-            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
-                OrganizationSubscriptionScheduleOwnership.Foreign,
-                new SubscriptionSchedule { Id = "sub_sched_finance" }));
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_negotiated",
+            Status = SubscriptionScheduleStatus.Active,
+            Phases = [new SubscriptionSchedulePhase { Metadata = new Dictionary<string, string>() }]
+        };
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT2);
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().Release(default!, default!, default);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default, default);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleAsync(default!);
+    }
+
+    [Fact]
+    public async Task Run_UnexpandedSchedule_ReturnsConflictWithoutMutatingStripe()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var subscription = SetupSubscription(organization);
+        subscription.ScheduleId = "sub_sched_unread";
+        subscription.Schedule = null;
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT2);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default, default);
         await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleAsync(default!);
     }
 
@@ -476,15 +486,28 @@ public class RedeemAnnualUpgradeOfferCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
         var (subscription, _) = SetupRedeemableSubscription(organization, []);
-        var migrationSchedule = new SubscriptionSchedule { Id = "sub_sched_migration" };
-        _getScheduleOwnershipQuery.Run(organization, subscription)
-            .Returns(new OrganizationSubscriptionScheduleOwnershipResult(
-                OrganizationSubscriptionScheduleOwnership.PriceMigration, migrationSchedule));
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_migration",
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        [MetadataKeys.MigrationCohortId] = Guid.NewGuid().ToString()
+                    }
+                }
+            ]
+        };
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(migrationSchedule, organization.Id, subscription.Id);
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(schedule, organization.Id, subscription.Id);
     }
 
     [Fact]
@@ -690,5 +713,66 @@ public class RedeemAnnualUpgradeOfferCommandTests
             Arg.Is<SubscriptionScheduleUpdateOptions>(options =>
                 options.Phases[0].Items[0].Discounts != null &&
                 options.Phases[0].Items[0].Discounts.Any(d => d.Coupon == "line-coupon")));
+    }
+
+    [Fact]
+    public async Task Run_StampsAnnualUpgradeMetadataOnBothPhases()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var (_, schedule) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 5 }]);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Any<string>(),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(options =>
+                options.Phases.Count == 2 &&
+                options.Phases.All(phase =>
+                    phase.Metadata != null &&
+                    phase.Metadata[MetadataKeys.AnnualUpgrade] == nameof(PlanType.TeamsMonthly))));
+    }
+
+    [Fact]
+    public async Task Run_ScheduleItCreates_ClassifiesAsAnnualUpgrade()
+    {
+        // Round-trips the marker through the mapper so the write and the read cannot drift apart.
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 5 }]);
+
+        SubscriptionScheduleUpdateOptions? captured = null;
+        await _stripeAdapter.UpdateSubscriptionScheduleAsync(
+            Arg.Any<string>(),
+            Arg.Do<SubscriptionScheduleUpdateOptions>(options => captured = options));
+
+        await _command.Run(organization);
+
+        Assert.NotNull(captured);
+        var asSchedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_created",
+            Status = SubscriptionScheduleStatus.Active,
+            Phases = [.. captured.Phases.Select(phase => new SubscriptionSchedulePhase
+            {
+                Metadata = phase.Metadata,
+                Items = [.. phase.Items.Select(item => new SubscriptionSchedulePhaseItem { PriceId = item.Price })]
+            })]
+        };
+
+        Assert.Equal(
+            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade,
+            SubscriptionScheduleOwnershipMapper.Map(asSchedule).Ownership);
     }
 }
