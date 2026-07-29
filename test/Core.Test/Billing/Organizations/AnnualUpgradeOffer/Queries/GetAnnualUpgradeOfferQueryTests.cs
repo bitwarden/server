@@ -335,6 +335,18 @@ public class GetAnnualUpgradeOfferQueryTests
         ];
 
         Assert.Null(await _query.Run(organization));
+
+        // Content-based classification would have logged this as an already-redeemed
+        // AnnualUpgrade schedule at Information. Pin the Warning-level, unrecognized-schedule
+        // log that only the Foreign classification produces, so a revert back to inspecting
+        // price IDs would fail this test rather than pass it unnoticed.
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString()!.Contains("unrecognized schedule") &&
+                o.ToString()!.Contains("sub_sched_content")),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
