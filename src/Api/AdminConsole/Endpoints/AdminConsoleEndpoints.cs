@@ -17,6 +17,7 @@ public static class AdminConsoleEndpoints
     {
         group.RequireAuthorization(Policies.Application);
         group.AddEndpointFilter<AdminConsoleExceptionHandlerEndpointFilter>();
+        group.WithGroupName("internal");
         return group;
     }
 }
