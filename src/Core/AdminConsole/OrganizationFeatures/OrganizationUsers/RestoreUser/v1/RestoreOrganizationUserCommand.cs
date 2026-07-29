@@ -166,7 +166,7 @@ public class RestoreOrganizationUserCommand(
                 x.Value.PlanType == PlanType.Free))
         {
             throw new BadRequestException(
-                "User is an owner/admin of another free organization. Please have them upgrade to a paid plan to restore their account.");
+                new UserCannotBeRestoredFreeOrgAdminLimit().Message);
         }
     }
 
@@ -335,8 +335,7 @@ public class RestoreOrganizationUserCommand(
 
         if (singleOrgError is not null && !twoFactorCompliant)
         {
-            throw new BadRequestException(user.Email +
-                                          " is not compliant with the single organization and two-step login policy");
+            throw new BadRequestException(new UserCannotBeRestoredNotCompliantWithPolicies(user.Email).Message);
         }
 
         if (singleOrgError is not null)

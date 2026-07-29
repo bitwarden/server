@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -130,8 +131,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You cannot join this organization until you enable two-step login on your user account.",
-            exception.Message);
+        Assert.Equal(new TwoFactorRequiredForMembership().Message, exception.Message);
     }
 
     [Theory]
@@ -248,7 +248,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You can only be an admin of one free organization.", exception.Message);
+        Assert.Equal(new FreeOrgAdminLimitError().Message, exception.Message);
     }
 
     // AcceptOrgUserByOrgIdAsync tests --------------------------------------------------------------------------------
