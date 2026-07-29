@@ -1,5 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Endpoints.Filters;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,29 +22,40 @@ public class AdminConsoleExceptionHandlerEndpointFilterTests
     }
 
     [Fact]
-    public async Task InvokeAsync_NextThrowsNotFoundException_ReturnsNotFoundProblem()
+    public async Task InvokeAsync_NextThrowsNotFoundException_ReturnsNotFound()
     {
         var context = CreateContext();
 
         var result = await new AdminConsoleExceptionHandlerEndpointFilter().InvokeAsync(
             context, _ => throw new NotFoundException());
 
-        var problem = Assert.IsType<ProblemHttpResult>(result);
-        Assert.Equal(StatusCodes.Status404NotFound, problem.StatusCode);
-        Assert.Equal("Resource not found.", problem.ProblemDetails.Title);
+        var notFound = Assert.IsType<NotFound<ErrorResponseModel>>(result);
+        Assert.Equal("Resource not found.", notFound.Value.Message);
     }
 
     [Fact]
-    public async Task InvokeAsync_NextThrowsUnexpectedException_ReturnsInternalServerErrorProblemAndLogs()
+    public async Task InvokeAsync_NextThrowsBadRequestException_ReturnsBadRequest()
+    {
+        var context = CreateContext();
+
+        var result = await new AdminConsoleExceptionHandlerEndpointFilter().InvokeAsync(
+            context, _ => throw new BadRequestException("Requested collections must belong to the same organization."));
+
+        var badRequest = Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+        Assert.Equal("Requested collections must belong to the same organization.", badRequest.Value.Message);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NextThrowsUnexpectedException_ReturnsInternalServerErrorAndLogs()
     {
         var context = CreateContext("PatchCollectionUserAccess");
 
         var result = await new AdminConsoleExceptionHandlerEndpointFilter().InvokeAsync(
             context, _ => throw new InvalidOperationException());
 
-        var problem = Assert.IsType<ProblemHttpResult>(result);
-        Assert.Equal(StatusCodes.Status500InternalServerError, problem.StatusCode);
-        Assert.Equal("An error has occurred.", problem.ProblemDetails.Title);
+        var json = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status500InternalServerError, json.StatusCode);
+        Assert.Equal("An error has occurred.", json.Value.Message);
     }
 
     private static EndpointFilterInvocationContext CreateContext(string? endpointDisplayName = null)

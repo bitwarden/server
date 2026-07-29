@@ -1,9 +1,11 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 
 namespace Bit.Api.AdminConsole.Endpoints.Filters;
 
 /// <summary>
-/// Turns exceptions thrown by admin console Minimal API endpoints into RFC 7807 problem responses.
+/// Turns exceptions thrown by admin console Minimal API endpoints into the same ErrorResponseModel shape
+/// every other Bitwarden endpoint already returns.
 /// </summary>
 public class AdminConsoleExceptionHandlerEndpointFilter : IEndpointFilter
 {
@@ -15,15 +17,19 @@ public class AdminConsoleExceptionHandlerEndpointFilter : IEndpointFilter
         }
         catch (NotFoundException)
         {
-            return TypedResults.Problem(title: "Resource not found.", statusCode: StatusCodes.Status404NotFound);
+            return TypedResults.NotFound(new ErrorResponseModel("Resource not found."));
+        }
+        catch (BadRequestException badRequestException)
+        {
+            return TypedResults.BadRequest(new ErrorResponseModel(badRequestException.Message));
         }
         catch (Exception exception)
         {
             var endpointName = context.HttpContext.GetEndpoint()?.DisplayName;
             context.HttpContext.RequestServices.GetRequiredService<ILogger<AdminConsoleExceptionHandlerEndpointFilter>>()
                 .LogError(exception, "Unhandled exception in {EndpointName}", endpointName);
-            return TypedResults.Problem(
-                title: "An error has occurred.", statusCode: StatusCodes.Status500InternalServerError);
+            return TypedResults.Json(
+                new ErrorResponseModel("An error has occurred."), statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 }
