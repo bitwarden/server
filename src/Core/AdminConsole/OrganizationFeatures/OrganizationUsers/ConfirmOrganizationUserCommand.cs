@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -78,7 +79,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
         if (!result.Any())
         {
-            throw new BadRequestException("User not valid.");
+            throw new BadRequestException(new ConfirmUserNotValidError().Message);
         }
 
         var (orgUser, error) = result[0];
@@ -235,7 +236,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
         if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
         {
-            throw new BadRequestException("User does not have two-step login enabled.");
+            throw new BadRequestException(new UserDoesNotHaveTwoFactorEnabled().Message);
         }
     }
 

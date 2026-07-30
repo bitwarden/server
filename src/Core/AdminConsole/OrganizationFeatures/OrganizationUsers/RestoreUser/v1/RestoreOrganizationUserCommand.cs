@@ -37,19 +37,19 @@ public class RestoreOrganizationUserCommand(
     {
         if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId.Value)
         {
-            throw new BadRequestException("You cannot restore yourself.");
+            throw new BadRequestException(new CannotRestoreYourselfError().Message);
         }
 
         if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
             !await currentContext.OrganizationOwner(organizationUser.OrganizationId))
         {
-            throw new BadRequestException("Only owners can restore other owners.");
+            throw new BadRequestException(new OnlyOwnersCanRestoreOwnersError().Message);
         }
 
         if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
             !await currentContext.OrganizationAdmin(organizationUser.OrganizationId))
         {
-            throw new BadRequestException("Custom users can not restore admins.");
+            throw new BadRequestException(new CustomUsersCannotRestoreAdminsError().Message);
         }
 
         await RepositoryRestoreUserAsync(organizationUser, defaultCollectionName);
@@ -77,7 +77,7 @@ public class RestoreOrganizationUserCommand(
     {
         if (organizationUser.Status != OrganizationUserStatusType.Revoked)
         {
-            throw new BadRequestException("Already active.");
+            throw new BadRequestException(new AlreadyActiveError().Message);
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
@@ -180,7 +180,7 @@ public class RestoreOrganizationUserCommand(
 
         if (filteredUsers.Count == 0)
         {
-            throw new BadRequestException("Users invalid.");
+            throw new BadRequestException(new UsersInvalidError().Message);
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
@@ -212,24 +212,24 @@ public class RestoreOrganizationUserCommand(
             {
                 if (organizationUser.Status != OrganizationUserStatusType.Revoked)
                 {
-                    throw new BadRequestException("Already active.");
+                    throw new BadRequestException(new AlreadyActiveError().Message);
                 }
 
                 if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId)
                 {
-                    throw new BadRequestException("You cannot restore yourself.");
+                    throw new BadRequestException(new CannotRestoreYourselfError().Message);
                 }
 
                 if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
                     !restoringUserIsOwner)
                 {
-                    throw new BadRequestException("Only owners can restore other owners.");
+                    throw new BadRequestException(new OnlyOwnersCanRestoreOwnersError().Message);
                 }
 
                 if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
                     !restoringUserIsAdminOrHigher)
                 {
-                    throw new BadRequestException("Custom users can not restore admins.");
+                    throw new BadRequestException(new CustomUsersCannotRestoreAdminsError().Message);
                 }
 
                 var twoFactorIsEnabled = organizationUser.UserId.HasValue
@@ -352,7 +352,7 @@ public class RestoreOrganizationUserCommand(
 
         if (!twoFactorCompliant)
         {
-            throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
+            throw new BadRequestException(new UserNotCompliantWithTwoFactorPolicyError(user.Email).Message);
         }
 
         var policyRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(

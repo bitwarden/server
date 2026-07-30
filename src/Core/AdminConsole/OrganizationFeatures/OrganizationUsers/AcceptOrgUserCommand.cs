@@ -56,7 +56,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null)
         {
-            throw new BadRequestException("User invalid.");
+            throw new BadRequestException(new OrganizationUserNotFoundError().Message);
         }
 
         var tokenValidationError = OrgUserInviteTokenable.ValidateOrgUserInvite(
@@ -73,15 +73,15 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         {
             if (orgUser.Status == OrganizationUserStatusType.Accepted)
             {
-                throw new BadRequestException("Invitation already accepted. You will receive an email when your organization membership is confirmed.");
+                throw new BadRequestException(new InvitationAlreadyAcceptedError().Message);
             }
-            throw new BadRequestException("You are already part of this organization.");
+            throw new BadRequestException(new AlreadyPartOfOrganizationError().Message);
         }
 
         if (string.IsNullOrWhiteSpace(orgUser.Email) ||
             !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
         {
-            throw new BadRequestException("User email does not match invite.");
+            throw new BadRequestException(new EmailMismatchError().Message);
         }
 
         var organizationUser = await AcceptOrgUserAsync(orgUser, user, userService);
@@ -101,13 +101,13 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier);
         if (org == null)
         {
-            throw new BadRequestException("Organization invalid.");
+            throw new BadRequestException(new OrganizationNotFoundError().Message);
         }
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
         if (orgUser == null)
         {
-            throw new BadRequestException("User not found within organization.");
+            throw new BadRequestException(new UserNotFoundInOrganizationError().Message);
         }
 
         return await AcceptOrgUserAsync(orgUser, user, userService);
@@ -118,13 +118,13 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
         {
-            throw new BadRequestException("Organization invalid.");
+            throw new BadRequestException(new OrganizationNotFoundError().Message);
         }
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
         if (orgUser == null)
         {
-            throw new BadRequestException("User not found within organization.");
+            throw new BadRequestException(new UserNotFoundInOrganizationError().Message);
         }
 
         return await AcceptOrgUserAsync(orgUser, user, userService);
@@ -142,7 +142,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         if (orgUser.Status != OrganizationUserStatusType.Invited)
         {
-            throw new BadRequestException("Already accepted.");
+            throw new BadRequestException(new AlreadyAcceptedError().Message);
         }
 
         if (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)

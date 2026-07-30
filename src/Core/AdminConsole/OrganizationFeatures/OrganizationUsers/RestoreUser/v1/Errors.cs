@@ -7,3 +7,9 @@ public record UserCannotBeRestoredNotCompliantWithPolicies(string Email)
 
 public record UserCannotBeRestoredFreeOrgAdminLimit()
     : BadRequestError("User is an owner / admin of another free organization vault. Please have them upgrade to a paid plan to restore their account.");
+public record CannotRestoreYourselfError() : BadRequestError("You cannot restore yourself.");
+public record OnlyOwnersCanRestoreOwnersError() : BadRequestError("Only owners can restore other owners.");
+public record CustomUsersCannotRestoreAdminsError() : BadRequestError("Custom users can not restore admins.");
+public record AlreadyActiveError() : BadRequestError("Already active.");
+public record UsersInvalidError() : BadRequestError("Users invalid.");
+public record UserNotCompliantWithTwoFactorPolicyError(string Email) : BadRequestError($"{Email} is not compliant with the two-step login policy");

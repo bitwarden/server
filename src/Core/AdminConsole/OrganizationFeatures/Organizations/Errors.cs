@@ -20,3 +20,8 @@ public record LeaveOrgSsoBlockedError() : BadRequestError("Your organization sin
 public record LeaveOrgClaimedAccountError() : BadRequestError("You can't leave this organization vault because your account is claimed. Contact your admin for more information.");
 public record CannotDeleteClaimedAccountError() : BadRequestError("You cannot delete accounts owned by an organization. Contact your admin for additional details.");
 public record CannotPurgeClaimedAccountError() : BadRequestError("You cannot purge accounts owned by an organization. Contact your admin for additional details.");
+public record InvitationAlreadyAcceptedError() : BadRequestError("Invitation already accepted. You will receive an email when your organization membership is confirmed.");
+public record AlreadyPartOfOrganizationError() : BadRequestError("You are already part of this organization.");
+public record UserNotFoundInOrganizationError() : BadRequestError("User not found within organization.");
+public record AlreadyAcceptedError() : BadRequestError("Already accepted.");
+public record ConfirmUserNotValidError() : BadRequestError("User not valid.");
