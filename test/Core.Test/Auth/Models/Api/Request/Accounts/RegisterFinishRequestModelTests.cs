@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -10,6 +11,8 @@ namespace Bit.Core.Test.Auth.Models.Api.Request.Accounts;
 
 public class RegisterFinishRequestModelTests
 {
+    private const string TestUserKeyId = "0123456789abcdef0123456789abcdef";
+
     private static List<System.ComponentModel.DataAnnotations.ValidationResult> Validate(RegisterFinishRequestModel model)
     {
         var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
@@ -185,6 +188,7 @@ public class RegisterFinishRequestModelTests
                 Kdf = kdfRequest,
                 MasterKeyWrappedUserKey = userSymmetricKey,
                 Salt = email.ToLowerInvariant().Trim(),
+                UserKeyId = TestUserKeyId,
             },
             AccountKeys = accountKeysRequest
         };
@@ -204,6 +208,7 @@ public class RegisterFinishRequestModelTests
         Assert.Equal(legacyData.UserAccountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey, userAsymmetricKeys.EncryptedPrivateKey);
         Assert.Equal(legacyData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
         Assert.Null(legacyData.Salt);
+        Assert.Null(legacyData.UserKeyId);
 
 
         Assert.True(newData.IsV2Encryption());
@@ -212,6 +217,7 @@ public class RegisterFinishRequestModelTests
         Assert.Equal(newData.Salt, email.ToLowerInvariant());
         Assert.Equal(newData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
         Assert.Equal(newData.UserAccountKeysData, accountKeysRequest.ToAccountKeysData());
+        Assert.Equal(KeyId.FromHexEncodedString(TestUserKeyId), newData.UserKeyId);
     }
 
     [Theory]
@@ -315,6 +321,71 @@ public class RegisterFinishRequestModelTests
 
         // Assert
         Assert.Equal("explicit-salt-value", resultUser.MasterPasswordSalt);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ToUser_WithMasterPasswordUnlockUserKeyId_MapsUserKeyId(string email, string masterPasswordHint,
+        KeysRequestModel userAsymmetricKeys)
+    {
+        // Arrange
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHint = masterPasswordHint,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = KdfConstants.PBKDF2_ITERATIONS.Default
+                },
+                MasterKeyWrappedUserKey = "wrapped-key",
+                Salt = "explicit-salt-value",
+                UserKeyId = TestUserKeyId
+            }
+        };
+
+        // Act
+        var resultUser = model.ToUser(false);
+
+        // Assert
+        Assert.Equal(TestUserKeyId, resultUser.UserKeyId);
+        Assert.Equal(KeyId.FromHexEncodedString(TestUserKeyId), resultUser.GetUserKeyId());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ToUser_WithoutUserKeyId_LeavesUserKeyIdNull(string email, string masterPasswordHint,
+        KeysRequestModel userAsymmetricKeys)
+    {
+        // Arrange
+        // Clients that predate the user-key-id field omit it; those accounts keep using the
+        // backfill endpoint instead of recording a key id at registration.
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHint = masterPasswordHint,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = KdfConstants.PBKDF2_ITERATIONS.Default
+                },
+                MasterKeyWrappedUserKey = "wrapped-key",
+                Salt = "explicit-salt-value"
+            }
+        };
+
+        // Act
+        var resultUser = model.ToUser(false);
+
+        // Assert
+        Assert.Null(resultUser.UserKeyId);
+        Assert.Null(resultUser.GetUserKeyId());
     }
 
     [Fact]

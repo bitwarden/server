@@ -88,7 +88,8 @@ public class RegisterFinishRequestModel : IValidatableObject
                 KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory,
                 KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism,
                 MasterPasswordSalt = MasterPasswordUnlock?.Salt,
-                Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey
+                Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey,
+                UserKeyId = KeyId.FromHexEncodedString(MasterPasswordUnlock?.UserKeyId)?.ToString()
             };
 
             user = UserAsymmetricKeys?.ToUser(user)!;
