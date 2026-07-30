@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Bit.ExceptionHandling.Test;
@@ -49,12 +49,12 @@ public class ExceptionHandlerEndpointFilterTests
         /// </summary>
         public static async Task<TestApp> CreateAsync(Func<IResult> handler, bool isDevelopment = false)
         {
-            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions
             {
                 EnvironmentName = isDevelopment ? Environments.Development : Environments.Production,
             });
-            builder.Logging.ClearProviders();
             builder.WebHost.UseTestServer();
+            builder.Services.AddRouting();
             var app = builder.Build();
 
             app.MapGet("/test", handler).WithBasicExceptionHandling();
