@@ -73,10 +73,6 @@ public class ExceptionHandlerEndpointFilterTests
         return JsonSerializer.Deserialize<JsonElement>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
     }
 
-    // -------------------------------------------------------------------------
-    // Exception → status code mapping
-    // -------------------------------------------------------------------------
-
     [Fact]
     public async Task BadRequestException_Returns400WithExceptionMessage()
     {
@@ -212,10 +208,6 @@ public class ExceptionHandlerEndpointFilterTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    // -------------------------------------------------------------------------
-    // Development vs production exception detail exposure
-    // -------------------------------------------------------------------------
-
     [Fact]
     public async Task DevelopmentEnvironment_ExposesExceptionDetails()
     {
@@ -244,10 +236,6 @@ public class ExceptionHandlerEndpointFilterTests
             !body.TryGetProperty("exceptionMessage", out var val) || val.ValueKind == JsonValueKind.Null,
             "exceptionMessage must not be present in production responses");
     }
-
-    // -------------------------------------------------------------------------
-    // ProducesResponseTypeMetadata registration
-    // -------------------------------------------------------------------------
 
     [Theory]
     [InlineData(StatusCodes.Status400BadRequest)]
