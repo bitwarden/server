@@ -27,7 +27,7 @@ public record OrganizationAccessRevoked(string OrgName)
     : BadRequestError($"Your access to the {OrgName} vault has been revoked.");
 
 public record AlreadyOrganizationMember(string OrgName)
-    : BadRequestError($"You're already a member of {OrgName}");
+    : BadRequestError($"You're already a member of {OrgName}.");
 
 public record ResetPasswordKeyRequired()
     : BadRequestError("Master Password reset is required, but not provided.");

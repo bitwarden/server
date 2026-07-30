@@ -38,19 +38,19 @@ public class RestoreOrganizationUserCommand(
     {
         if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId.Value)
         {
-            throw new BadRequestException(new CannotRestoreYourselfError().Message);
+            throw new BadRequestException(new CannotRestoreYourself().Message);
         }
 
         if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
             !await currentContext.OrganizationOwner(organizationUser.OrganizationId))
         {
-            throw new BadRequestException(new OnlyOwnersCanRestoreOwnersError().Message);
+            throw new BadRequestException(new OnlyOwnersCanRestoreOwners().Message);
         }
 
         if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
             !await currentContext.OrganizationAdmin(organizationUser.OrganizationId))
         {
-            throw new BadRequestException(new CustomUsersCannotRestoreAdminsError().Message);
+            throw new BadRequestException(new CustomUsersCannotRestoreAdmins().Message);
         }
 
         await RepositoryRestoreUserAsync(organizationUser, defaultCollectionName);
@@ -78,7 +78,7 @@ public class RestoreOrganizationUserCommand(
     {
         if (organizationUser.Status != OrganizationUserStatusType.Revoked)
         {
-            throw new BadRequestException(new AlreadyActiveError().Message);
+            throw new BadRequestException(new AlreadyActive().Message);
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
@@ -181,7 +181,7 @@ public class RestoreOrganizationUserCommand(
 
         if (filteredUsers.Count == 0)
         {
-            throw new BadRequestException(new UsersInvalidError().Message);
+            throw new BadRequestException(new UsersInvalid().Message);
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
@@ -213,24 +213,24 @@ public class RestoreOrganizationUserCommand(
             {
                 if (organizationUser.Status != OrganizationUserStatusType.Revoked)
                 {
-                    throw new BadRequestException(new AlreadyActiveError().Message);
+                    throw new BadRequestException(new AlreadyActive().Message);
                 }
 
                 if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId)
                 {
-                    throw new BadRequestException(new CannotRestoreYourselfError().Message);
+                    throw new BadRequestException(new CannotRestoreYourself().Message);
                 }
 
                 if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
                     !restoringUserIsOwner)
                 {
-                    throw new BadRequestException(new OnlyOwnersCanRestoreOwnersError().Message);
+                    throw new BadRequestException(new OnlyOwnersCanRestoreOwners().Message);
                 }
 
                 if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
                     !restoringUserIsAdminOrHigher)
                 {
-                    throw new BadRequestException(new CustomUsersCannotRestoreAdminsError().Message);
+                    throw new BadRequestException(new CustomUsersCannotRestoreAdmins().Message);
                 }
 
                 var twoFactorIsEnabled = organizationUser.UserId.HasValue
@@ -353,7 +353,7 @@ public class RestoreOrganizationUserCommand(
 
         if (!twoFactorCompliant)
         {
-            throw new BadRequestException(new UserNotCompliantWithTwoFactorPolicyError(user.Email).Message);
+            throw new BadRequestException(new UserNotCompliantWithTwoFactorPolicy(user.Email).Message);
         }
 
         var policyRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
@@ -368,8 +368,8 @@ public class RestoreOrganizationUserCommand(
             {
                 var message = error switch
                 {
-                    UserCannotBelongToAnotherOrganization => new UserCannotBeRestoredAutoConfirmMemberOfAnotherOrg(user.Email).Message,
-                    OtherOrganizationDoesNotAllowOtherMembership => new UserCannotBeRestoredAutoConfirmForbiddenByOtherOrg(user.Email).Message,
+                    UserCannotBelongToAnotherOrganization => new UserCannotBeRestoredMemberOfAnotherOrg(user.Email).Message,
+                    OtherOrganizationDoesNotAllowOtherMembership => new UserCannotBeRestoredForbiddenByOtherOrg(user.Email).Message,
                     _ => error.Message
                 };
                 return new BadRequestException(message);

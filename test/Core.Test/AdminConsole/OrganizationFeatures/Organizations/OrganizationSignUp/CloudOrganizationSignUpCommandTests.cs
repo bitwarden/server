@@ -208,7 +208,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains("Secrets Manager is unsupported because your organization has a Managed Service Provider.", exception.Message);
+        Assert.Contains(new SecretsManagerMspUnsupportedError().Message, exception.Message);
     }
 
     [Theory]
@@ -230,7 +230,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains("Plan does not allow additional Machine Accounts.", exception.Message);
+        Assert.Contains(new PlanDoesNotAllowAdditionalMachineAccountsError().Message, exception.Message);
     }
 
     [Theory]
@@ -251,7 +251,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats", exception.Message);
+        Assert.Contains(new SecretsManagerSeatsMustNotExceedPasswordManagerSeatsError().Message, exception.Message);
     }
 
     [Theory]
@@ -272,7 +272,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains("You can't subtract Machine Accounts!", exception.Message);
+        Assert.Contains(new CannotSubtractMachineAccountsError().Message, exception.Message);
     }
 
     [Theory]
@@ -398,7 +398,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Equal("Trial length must be between 0 and 30 days.", ex.Message);
+        Assert.Equal(new TrialLengthOutOfRangeError().Message, ex.Message);
     }
 
     [Theory]
@@ -416,7 +416,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Equal("Trial length must be between 0 and 30 days.", ex.Message);
+        Assert.Equal(new TrialLengthOutOfRangeError().Message, ex.Message);
     }
 
     [Theory]

@@ -76,7 +76,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 [],
                 includeProvider: false))
         {
-            throw new BadRequestException(new OrgMustHaveConfirmedOwnerError().Message);
+            throw new BadRequestException(new OrgMustHaveConfirmedOwner().Message);
         }
 
         var organizationOwnerEmails =

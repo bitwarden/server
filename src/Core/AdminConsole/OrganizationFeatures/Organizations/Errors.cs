@@ -9,8 +9,8 @@ public record OrganizationHasKeysError() : BadRequestError("Organization already
 public record EmailMismatchError() : BadRequestError("User email does not match invite.");
 public record FreeOrgAdminLimitError() : BadRequestError("You can only be an admin of 1 free organization vault.");
 public record UserFreeOrgAdminLimitError() : BadRequestError("User can only be an admin of 1 free organization vault.");
-public record SingleOrgPolicyViolationError() : BadRequestError("You cannot join this organization because you are a member of another organization which forbids it.");
-public record TwoFactorRequiredError() : BadRequestError("You cannot join this organization until you enable two-step login on your user account.");
+public record SingleOrgPolicyViolationError() : BadRequestError("You cannot join this organization vault because you are a member of another organization which forbids it.");
+public record TwoFactorRequiredError() : BadRequestError("You cannot join this organization vault until you enable two-step login on your user account.");
 public record OrganizationUserNotFoundError() : NotFoundError("User invalid.");
 public record OrganizationNotFoundError() : NotFoundError("Organization invalid.");
 public record OrganizationMismatchError() : BadRequestError("User does not belong to this organization.");

@@ -767,7 +767,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Contains(new UserCannotBeRestoredAutoConfirmMemberOfAnotherOrg(user.Email).Message, exception.Message);
+        Assert.Contains(new UserCannotBeRestoredMemberOfAnotherOrg(user.Email).Message, exception.Message);
         await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .DidNotReceiveWithAnyArgs()
             .DeleteAllByUserIdAsync(Arg.Any<Guid>());

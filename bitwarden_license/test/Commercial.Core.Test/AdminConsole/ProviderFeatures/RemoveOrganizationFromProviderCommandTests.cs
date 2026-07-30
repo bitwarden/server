@@ -87,7 +87,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization));
 
-        Assert.Equal(new OrgMustHaveConfirmedOwnerError().Message, exception.Message);
+        Assert.Equal(new OrgMustHaveConfirmedOwner().Message, exception.Message);
     }
 
     [Theory, BitAutoData]

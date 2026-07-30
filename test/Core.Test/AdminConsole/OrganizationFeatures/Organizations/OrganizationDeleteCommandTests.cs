@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -53,7 +54,7 @@ public class OrganizationDeleteCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DeleteAsync(organization));
 
-        Assert.Contains("You cannot delete an organization vault that is using Key Connector.", exception.Message);
+        Assert.Contains(new CannotDeleteOrganizationWithKeyConnectorError().Message, exception.Message);
 
         await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default);
         await organizationAbilityCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);

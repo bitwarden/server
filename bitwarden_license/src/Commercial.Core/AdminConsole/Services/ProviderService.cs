@@ -132,7 +132,7 @@ public class ProviderService : IProviderService
         if (organizationAutoConfirmPolicyRequirement
             .CannotCreateProvider())
         {
-            throw new BadRequestException(new ProviderUsersCannotJoin().Message);
+            throw new BadRequestException(new UserCannotJoinProvider().Message);
         }
 
         var customer = await _providerBillingService.SetupCustomer(provider, paymentMethod, billingAddress);
@@ -273,7 +273,7 @@ public class ProviderService : IProviderService
         if (organizationAutoConfirmPolicyRequirement
             .CannotJoinProvider())
         {
-            throw new BadRequestException(new ProviderUsersCannotJoin().Message);
+            throw new BadRequestException(new UserCannotJoinProvider().Message);
         }
 
         providerUser.Status = ProviderUserStatusType.Accepted;
@@ -327,7 +327,7 @@ public class ProviderService : IProviderService
                 if (organizationAutoConfirmPolicyRequirement
                     .CannotJoinProvider())
                 {
-                    result.Add(Tuple.Create(providerUser, new ProviderUsersCannotJoin().Message));
+                    result.Add(Tuple.Create(providerUser, new UserCannotJoinProvider().Message));
                     continue;
                 }
 
