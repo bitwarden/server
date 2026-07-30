@@ -726,6 +726,13 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
+        {
+            // Without a payment method on file we cannot auto-purchase additional seats, so this is
+            // effectively a seat limit for the organization until a payment method is added.
+            return (false, "Seat limit has been reached. Add a payment method to purchase additional seats.");
+        }
+
         var subscription = await _paymentService.GetSubscriptionAsync(organization);
         if (subscription?.Subscription?.Status == StripeConstants.SubscriptionStatus.Canceled)
         {

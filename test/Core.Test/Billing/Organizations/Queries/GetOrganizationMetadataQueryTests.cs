@@ -53,6 +53,44 @@ public class GetOrganizationMetadataQueryTests
     }
 
     [Theory, BitAutoData]
+    public async Task Run_NoGatewayCustomerId_ReturnsHasPaymentMethodFalse(
+        Organization organization,
+        SutProvider<GetOrganizationMetadataQuery> sutProvider)
+    {
+        organization.GatewaySubscriptionId = null;
+        organization.GatewayCustomerId = null;
+
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 10, Sponsored = 0 });
+
+        var result = await sutProvider.Sut.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.False(result.HasPaymentMethod);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithGatewayCustomerId_ReturnsHasPaymentMethodTrue(
+        Organization organization,
+        SutProvider<GetOrganizationMetadataQuery> sutProvider)
+    {
+        organization.GatewaySubscriptionId = null;
+        organization.GatewayCustomerId = "cus_123";
+
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 10, Sponsored = 0 });
+
+        var result = await sutProvider.Sut.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.True(result.HasPaymentMethod);
+    }
+
+    [Theory, BitAutoData]
     public async Task Run_NullCustomer_ReturnsDefaultWithOccupiedSeats(
         Organization organization,
         SutProvider<GetOrganizationMetadataQuery> sutProvider)

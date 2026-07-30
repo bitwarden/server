@@ -28,12 +28,14 @@ public class GetOrganizationMetadataQuery(
         }
 
         var orgOccupiedSeats = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        var hasPaymentMethod = !string.IsNullOrWhiteSpace(organization.GatewayCustomerId);
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return OrganizationMetadata.Default with
             {
-                OrganizationOccupiedSeats = orgOccupiedSeats.Total
+                OrganizationOccupiedSeats = orgOccupiedSeats.Total,
+                HasPaymentMethod = hasPaymentMethod
             };
         }
 
@@ -48,7 +50,8 @@ public class GetOrganizationMetadataQuery(
         {
             return OrganizationMetadata.Default with
             {
-                OrganizationOccupiedSeats = orgOccupiedSeats.Total
+                OrganizationOccupiedSeats = orgOccupiedSeats.Total,
+                HasPaymentMethod = hasPaymentMethod
             };
         }
 
@@ -56,7 +59,8 @@ public class GetOrganizationMetadataQuery(
 
         return new OrganizationMetadata(
             isOnSecretsManagerStandalone,
-            orgOccupiedSeats.Total);
+            orgOccupiedSeats.Total,
+            hasPaymentMethod);
     }
 
     private async Task<bool> IsOnSecretsManagerStandalone(

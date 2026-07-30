@@ -832,6 +832,21 @@ public class OrganizationServiceTests
         Assert.Contains("Seat limit has been reached. Contact your provider to purchase additional seats.", failureMessage);
     }
 
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task CanScaleAsync_FailsWithNoPaymentMethod(
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
+
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
+
+        Assert.False(result);
+        Assert.Contains("Seat limit has been reached. Add a payment method to purchase additional seats.", failureMessage);
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceive().GetSubscriptionAsync(organization);
+    }
+
 
     [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
