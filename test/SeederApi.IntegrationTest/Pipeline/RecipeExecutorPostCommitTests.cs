@@ -199,7 +199,7 @@ public sealed class RecipeExecutorPostCommitTests : IDisposable
 
     private static User NewUser() => new()
     {
-        Id = CoreHelpers.GenerateComb(),
+        Id = CombGuid.Generate(),
         Email = $"post-commit-{Guid.NewGuid():N}@bw.example",
         SecurityStamp = Guid.NewGuid().ToString(),
         ApiKey = "test-api-key",
