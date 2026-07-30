@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,11 +15,11 @@ namespace Bit.Core.Utilities;
 internal sealed class ExceptionHandlerEndpointFilter : IEndpointFilter
 {
     private readonly ILogger<ExceptionHandlerEndpointFilter> _logger;
-    private readonly IWebHostEnvironment _environment;
+    private readonly IHostEnvironment _environment;
 
     public ExceptionHandlerEndpointFilter(
         ILogger<ExceptionHandlerEndpointFilter> logger,
-        IWebHostEnvironment environment)
+        IHostEnvironment environment)
     {
         _logger = logger;
         _environment = environment;
