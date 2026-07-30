@@ -32,19 +32,18 @@ public class SalesAssistedTrialController(
         // here, on the initial GET — never as property initializers on the model itself — so a
         // POST redisplay always reflects exactly what the user submitted, never a reasserted
         // default (see Products, which has no hidden-input fallback for an all-unchecked submit).
-        return View(new SalesTrialInviteModel
+        return View(new SalesAssistedTrialInviteModel
         {
             ProductTier = ProductTierType.Enterprise,
             Products = new List<ProductType> { ProductType.PasswordManager },
-            TrialLength = 30,
-            PaymentOptional = true
+            TrialLength = 30
         });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Org_InitiateSalesAssistedTrial)]
-    public async Task<IActionResult> Index(SalesTrialInviteModel model)
+    public async Task<IActionResult> Index(SalesAssistedTrialInviteModel model)
     {
         if (!ModelState.IsValid)
         {
@@ -61,8 +60,7 @@ public class SalesAssistedTrialController(
                 senderEmail,
                 model.ProductTier,
                 model.Products,
-                model.TrialLength,
-                model.PaymentOptional);
+                model.TrialLength);
         }
         catch (BadRequestException ex)
         {

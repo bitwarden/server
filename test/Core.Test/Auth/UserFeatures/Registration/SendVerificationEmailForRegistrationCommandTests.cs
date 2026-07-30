@@ -52,7 +52,7 @@ public class SendVerificationEmailForRegistrationCommandTests
         // Assert
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendRegistrationVerificationEmailAsync(email, mockedToken, null);
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null, null);
         Assert.Null(result);
     }
 
@@ -91,7 +91,7 @@ public class SendVerificationEmailForRegistrationCommandTests
         // Assert
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendRegistrationVerificationEmailAsync(email, mockedToken, fromMarketing);
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, fromMarketing, null);
         Assert.Null(result);
     }
 
@@ -128,7 +128,7 @@ public class SendVerificationEmailForRegistrationCommandTests
         // Assert
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendRegistrationVerificationEmailAsync(email, mockedToken, null);
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null, null);
         Assert.Null(result);
     }
 
@@ -302,5 +302,79 @@ public class SendVerificationEmailForRegistrationCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.Run(email, name, receiveMarketingEmails, null));
         Assert.Equal("Invalid email address format.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_WhenNewUserAndSealedOpenOrgInviteDataProvided_ForwardsSealedDataToMailService(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var sealedOpenOrgInviteData = "opaque-base64url-sealed-data";
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .ReturnsNull();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = true;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        var mockedToken = "token";
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(mockedToken);
+
+        // Act
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, sealedOpenOrgInviteData);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null, sealedOpenOrgInviteData);
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_WhenExistingUserAndSealedOpenOrgInviteDataProvided_SilentlyDiscardsSealedData(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails)
+    {
+        // Existing-user branch: response mirrors the new-user path with the sealed data dropped (anti-enumeration).
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var sealedOpenOrgInviteData = "opaque-base64url-sealed-data";
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .Returns(new User());
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = true;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        // Act
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, sealedOpenOrgInviteData);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+        Assert.Null(result);
     }
 }

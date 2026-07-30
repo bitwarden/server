@@ -60,7 +60,7 @@ public class Startup
         services.AddEventWriteServices(globalSettings);
         services.AddScoped<IEventService, EventService>();
 
-        services.AddOptionality();
+        services.ApplyServerCompatibilityLayer();
 
         // Mvc
         services.AddMvc(config =>
@@ -113,6 +113,10 @@ public class Startup
 
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
+
+        // Gates endpoints carrying IFeatureMetadata; required in any app that
+        // routes requests through endpoints tagged with [RequireFeature].
+        app.UseFeatureFlagChecks();
 
         // Add MVC to the request pipeline.
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());

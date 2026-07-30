@@ -46,6 +46,7 @@ public class ConfirmOrganizationInviteLinkCommand(
         var validationResult = await confirmOrganizationInviteLinkValidator.ValidateAsync(
             new ConfirmOrganizationInviteLinkValidationRequest
             {
+                OrganizationId = request.OrganizationId,
                 Code = request.Code,
                 User = user,
             });

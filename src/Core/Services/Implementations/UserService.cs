@@ -62,7 +62,6 @@ public class UserService : UserManager<User>, IUserService
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IFeatureService _featureService;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
@@ -96,7 +95,6 @@ public class UserService : UserManager<User>, IUserService
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IFeatureService featureService,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
@@ -134,7 +132,6 @@ public class UserService : UserManager<User>, IUserService
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
-        _featureService = featureService;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
@@ -267,17 +264,10 @@ public class UserService : UserManager<User>, IUserService
         {
             try
             {
-                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-                {
-                    await _subscriberService.CancelSubscription(
-                        user,
-                        cancelImmediately: false,
-                        offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
-                }
-                else
-                {
-                    await CancelPremiumAsync(user);
-                }
+                await _subscriberService.CancelSubscription(
+                    user,
+                    cancelImmediately: false,
+                    offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
             }
             catch (GatewayException) { }
             catch (BillingException) { }
@@ -798,18 +788,6 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
     }
 
-    //TODO: Remove with the deletion of PM32645_DeferPriceMigrationToRenewal feature flag
-    public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
-    {
-        var eop = endOfPeriod.GetValueOrDefault(true);
-        if (!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
-            user.PremiumExpirationDate.Value < DateTime.UtcNow)
-        {
-            eop = false;
-        }
-        await _paymentService.CancelSubscriptionAsync(user, eop);
-    }
-
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
     {
         var user = await _userRepository.GetByIdAsync(userId);
@@ -822,7 +800,9 @@ public class UserService : UserManager<User>, IUserService
         {
             user.Premium = true;
             user.PremiumExpirationDate = expirationDate;
-            user.RevisionDate = DateTime.UtcNow;
+            // Bump AccountRevisionDate so clients' revision-gated syncs pick up the
+            // premium change even when the one-time push notification is missed.
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
     }
@@ -839,7 +819,9 @@ public class UserService : UserManager<User>, IUserService
         {
             user.Premium = false;
             user.PremiumExpirationDate = expirationDate;
-            user.RevisionDate = DateTime.UtcNow;
+            // Bump AccountRevisionDate so clients' revision-gated syncs pick up the
+            // premium change even when the one-time push notification is missed.
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
     }
