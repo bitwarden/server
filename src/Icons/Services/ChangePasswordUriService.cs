@@ -29,15 +29,17 @@ public class ChangePasswordUriService : IChangePasswordUriService
         try
         {
             var hasReliableStatusCode = await HasReliableHttpStatusCode(domain);
-            var wellKnownChangePasswordUrl = await GetWellKnownChangePasswordUrl(domain);
-
-            if (hasReliableStatusCode && wellKnownChangePasswordUrl != null)
+            if (!hasReliableStatusCode)
             {
-                return ChangePasswordUriResult.Found(wellKnownChangePasswordUrl);
+                // Status codes are unreliable, so a 200 on the well-known URL would be meaningless:
+                // a definitive "not supported". Skip the second probe.
+                return ChangePasswordUriResult.NotSupported;
             }
 
-            // Probes completed but criteria not met: definitive "not supported", safe to cache.
-            return ChangePasswordUriResult.NotSupported;
+            var wellKnownChangePasswordUrl = await GetWellKnownChangePasswordUrl(domain);
+            return wellKnownChangePasswordUrl != null
+                ? ChangePasswordUriResult.Found(wellKnownChangePasswordUrl)
+                : ChangePasswordUriResult.NotSupported;
         }
         catch (Exception ex)
         {

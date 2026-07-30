@@ -68,6 +68,10 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
 
         Assert.Equal(ChangePasswordUriResultType.NotSupported, result.Type);
         Assert.Null(result.Uri);
+        // Unreliable status codes make Found impossible, so the well-known change-password probe
+        // must be skipped rather than issued as a wasted outbound request.
+        Assert.DoesNotContain(mockedHandler.CapturedRequests,
+            r => r.RequestUri!.AbsoluteUri.Contains("/.well-known/change-password"));
     }
 
     [Theory]
