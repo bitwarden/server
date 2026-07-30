@@ -415,6 +415,52 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         Assert.IsType<CryptographicException>(exception.InnerException);
     }
 
+
+    [Fact]
+    public async Task UnprotectCertificateCorrectPassword_NoFileName_Throws()
+    {
+        // This test shows what more than likely went wrong when we initially tried to update the config
+        // we staged the password which is a secret and it caused a deploy at a different time than the
+        // rest of the information on the unprotect certificate was in the config. That caused it to
+        // become an object but with a null `FileName` which led to an ArgumentNullException that was
+        // swallowed and `null` was returned. In our new fail-fast code this properly leads to an exception
+        // at startup.
+        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
+            .WithPortBinding(10000, true)
+            .Build();
+
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+
+        var certificates = await blobServiceClient.CreateBlobContainerAsync("certificates");
+        var dataProtection = await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection");
+
+        using var rsa = RSA.Create(2048);
+        var now = DateTimeOffset.UtcNow;
+        var certificate = new CertificateRequest("CN=New Dataprotected test certificate", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
+            .CreateSelfSigned(now, now.AddDays(365));
+
+        const string NewCertPassword = "Undergrad-Police0-Maturely-Countless";
+        await certificates.Value.UploadBlobAsync(
+            "mynewcert.pfx",
+            new BinaryData(certificate.Export(X509ContentType.Pfx, NewCertPassword))
+        );
+
+        await certificates.Value.UploadBlobAsync("dataprotection.pfx", new BinaryData(FakeInitialCert));
+        await dataProtection.Value.UploadBlobAsync("keys.xml", new BinaryData(KeysData));
+
+        var exception = Assert.Throws<ArgumentNullException>(() => CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password",  NewCertPassword },
+        }));
+        Assert.Contains("blobName", exception.ParamName);
+    }
+
     [Fact]
     public async Task ProtectionCertificateMissingFromBlobStorage_Throws()
     {
