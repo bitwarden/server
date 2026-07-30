@@ -8,11 +8,11 @@ namespace Bit.Seeder.Factories;
 
 internal static class OrganizationSeeder
 {
-    internal static Organization Create(string name, string domain, int seats, IManglerService manglerService, string? publicKey = null, string? privateKey = null, PlanType planType = PlanType.EnterpriseAnnually, Guid? id = null)
+    internal static Organization Create(string name, string domain, int seats, IManglerService manglerService, string? publicKey = null, string? privateKey = null, PlanType planType = PlanType.EnterpriseAnnually)
     {
         var org = new Organization
         {
-            Id = id ?? CombGuid.Generate(),
+            Id = CombGuid.Generate(),
             Identifier = manglerService.Mangle(domain),
             Name = manglerService.Mangle(name),
             BillingEmail = BillingEmailSeeder.DeriveBillingEmail(domain),
@@ -57,7 +57,7 @@ internal static class OrganizationExtensions
 
         return new OrganizationUser
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organization.Id,
             UserId = shouldLinkUserId ? user.Id : null,
             Email = shouldLinkUserId ? null : user.Email,
