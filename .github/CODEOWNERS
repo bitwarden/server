@@ -68,6 +68,8 @@ test/EventsProcessor.Test @bitwarden/team-data-insights-and-reporting-dev
 
 # Admin Console team
 **/AdminConsole @bitwarden/team-admin-console-dev
+src/Libraries/OrganizationAuthorization @bitwarden/team-admin-console-dev # extracted from src/Api/AdminConsole/Authorization, so it no longer matches the glob above
+test/Libraries/OrganizationAuthorization.Test @bitwarden/team-admin-console-dev
 bitwarden_license/src/Scim @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.IntegrationTest @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev

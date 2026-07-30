@@ -1,8 +1,8 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
@@ -106,7 +106,13 @@ public class OrganizationRequirementHandlerTests
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Request.RouteValues["orgId"] = orgIdRouteValue;
+
+        if (userId.HasValue)
+        {
+            httpContext.User = new ClaimsPrincipal(
+                new ClaimsIdentity([new Claim(JwtClaimTypes.Subject, userId.Value.ToString())]));
+        }
+
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext = httpContext;
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
     }
 }

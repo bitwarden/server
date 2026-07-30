@@ -1256,6 +1256,12 @@
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
         }
       },
+      "organizationauthorization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.7.2, )"
+        }
+      },
       "pam": {
         "type": "Project",
         "dependencies": {

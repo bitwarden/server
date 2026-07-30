@@ -1369,6 +1369,7 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
+          "OrganizationAuthorization": "[0.0.1, )",
           "Pam": "[2026.7.2, )",
           "SharedWeb": "[2026.7.2, )",
           "Swashbuckle.AspNetCore": "[10.1.7, 10.1.7]"
@@ -1529,6 +1530,12 @@
           "Core": "[2026.7.2, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
+        }
+      },
+      "organizationauthorization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.7.2, )"
         }
       },
       "pam": {
