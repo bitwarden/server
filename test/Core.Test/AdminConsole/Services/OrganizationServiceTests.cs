@@ -818,6 +818,7 @@ public class OrganizationServiceTests
         Organization organization,
         SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 10;
         var provider = new Provider
         {
             Enabled = true,
@@ -825,11 +826,38 @@ public class OrganizationServiceTests
         };
 
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 10, Sponsored = 0 });
 
         var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
 
         Assert.False(result);
-        Assert.Contains("Seat limit has been reached. Contact your provider to purchase additional seats.", failureMessage);
+        Assert.Contains("You've used 10 of 10 seats. Contact your provider to purchase additional seats.", failureMessage);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task CanScaleAsync_FailsOnBillableProvider(
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Seats = 5;
+        var provider = new Provider
+        {
+            Enabled = true,
+            Type = ProviderType.Msp,
+            Status = ProviderStatusType.Billable
+        };
+
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 5, Sponsored = 0 });
+
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
+
+        Assert.False(result);
+        Assert.Contains("You've used 5 of 5 seats. Please contact your provider to add more seats.", failureMessage);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]

@@ -717,12 +717,14 @@ public class OrganizationService : IOrganizationService
         {
             if (provider.IsBillable())
             {
-                return (false, "Seat limit has been reached. Please contact your provider to add more seats.");
+                return (false,
+                    await BuildSeatLimitMessageAsync(organization, "Please contact your provider to add more seats."));
             }
 
             if (provider.Type == ProviderType.Reseller)
             {
-                return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
+                return (false,
+                    await BuildSeatLimitMessageAsync(organization, "Contact your provider to purchase additional seats."));
             }
         }
 
@@ -747,6 +749,23 @@ public class OrganizationService : IOrganizationService
         }
 
         return (true, failureReason);
+    }
+
+    /// <summary>
+    /// Builds a "seat limit has been reached" failure message that includes how many of the
+    /// organization's seats are currently occupied, so the user isn't left guessing at their
+    /// actual usage. Falls back to a plain message if the organization has no fixed seat count
+    /// (e.g. unlimited-seat providers).
+    /// </summary>
+    private async Task<string> BuildSeatLimitMessageAsync(Organization organization, string actionMessage)
+    {
+        if (!organization.Seats.HasValue)
+        {
+            return $"Seat limit has been reached. {actionMessage}";
+        }
+
+        var seatCounts = await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        return $"You've used {seatCounts.Total} of {organization.Seats.Value} seats. {actionMessage}";
     }
 
     public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd)
