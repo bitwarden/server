@@ -13,17 +13,20 @@ public class ChangePasswordUriController : Controller
     private readonly IDomainMappingService _domainMappingService;
     private readonly IChangePasswordUriService _changePasswordService;
     private readonly ChangePasswordUriSettings _changePasswordSettings;
+    private readonly ILogger<ChangePasswordUriController> _logger;
 
     public ChangePasswordUriController(
         IMemoryCache memoryCache,
         IDomainMappingService domainMappingService,
         IChangePasswordUriService changePasswordService,
-        ChangePasswordUriSettings changePasswordUriSettings)
+        ChangePasswordUriSettings changePasswordUriSettings,
+        ILogger<ChangePasswordUriController> logger)
     {
         _memoryCache = memoryCache;
         _domainMappingService = domainMappingService;
         _changePasswordService = changePasswordService;
         _changePasswordSettings = changePasswordUriSettings;
+        _logger = logger;
     }
 
     [HttpGet("config")]
@@ -66,16 +69,21 @@ public class ChangePasswordUriController : Controller
         var result = await _changePasswordService.GetChangePasswordUri(domain);
 
         // Transient failure: don't cache, and set no-store so the edge doesn't pin a
-        // "no change-password URL" answer for every client behind that cache. The service
-        // logs the underlying exception.
+        // "no change-password URL" answer for every client behind that cache.
         if (result.Type == ChangePasswordUriResultType.LookupFailed)
         {
             SetCacheControl(definitive: false);
             return Ok(new ChangePasswordUriResponse(null));
         }
 
+        if (result.Uri == null)
+        {
+            _logger.LogWarning("Null result returned for {Domain}.", domain);
+        }
+
         if (_changePasswordSettings.CacheEnabled)
         {
+            _logger.LogInformation("Cache uri for {Domain}.", domain);
             _memoryCache.Set(mappedDomain, result.Uri, new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = new TimeSpan(_changePasswordSettings.CacheHours, 0, 0),

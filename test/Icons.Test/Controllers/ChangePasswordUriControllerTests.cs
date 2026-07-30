@@ -4,6 +4,7 @@ using Bit.Icons.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -22,6 +23,7 @@ public class ChangePasswordUriControllerTests
         CacheHours = 1,
         CacheSizeLimit = 100_000
     };
+    private readonly ILogger<ChangePasswordUriController> _logger = Substitute.For<ILogger<ChangePasswordUriController>>();
 
     public ChangePasswordUriControllerTests()
     {
@@ -29,7 +31,7 @@ public class ChangePasswordUriControllerTests
     }
 
     private ChangePasswordUriController CreateSut() =>
-        new(_memoryCache, _domainMappingService, _changePasswordService, _settings)
+        new(_memoryCache, _domainMappingService, _changePasswordService, _settings, _logger)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
