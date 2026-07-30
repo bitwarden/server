@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
 using Azure;
+using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues.Models;
@@ -136,11 +137,16 @@ public static class CoreHelpers
         }
     }
 
-    public async static Task<X509Certificate2?> GetBlobCertificateAsync(string connectionString, string container, string file, string password)
+    public static BlobServiceClient BuildBlobServiceClient(string connectionString, string serviceUri = "")
+    {
+        return SettingHasValue(serviceUri) ? new BlobServiceClient(new Uri(serviceUri), new WorkloadIdentityCredential()) : new BlobServiceClient(connectionString);
+    }
+
+    public async static Task<X509Certificate2?> GetBlobCertificateAsync(string connectionString, string container, string file, string password, string serviceUri = "")
     {
         try
         {
-            var blobServiceClient = new BlobServiceClient(connectionString);
+            var blobServiceClient = BuildBlobServiceClient(connectionString, serviceUri);
             var containerRef2 = blobServiceClient.GetBlobContainerClient(container);
             var blobRef = containerRef2.GetBlobClient(file);
 
@@ -645,11 +651,11 @@ public static class CoreHelpers
                 globalSettings.IdentityServer.CertificateThumbprint);
         }
         else if (!globalSettings.SelfHosted &&
-            SettingHasValue(globalSettings.Storage?.ConnectionString) &&
+                (SettingHasValue(globalSettings.Storage?.ConnectionString) || SettingHasValue(globalSettings.Storage?.ServiceUri)) &&
             SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
         {
             return GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
+                "identity.pfx", globalSettings.IdentityServer.CertificatePassword, globalSettings.Storage.ServiceUri).GetAwaiter().GetResult();
         }
         return null;
     }

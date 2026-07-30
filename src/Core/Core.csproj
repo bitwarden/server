@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <Sdk Name="Bitwarden.Server.Sdk" />
 
   <PropertyGroup>
@@ -30,6 +30,7 @@
     <PackageReference Include="AWSSDK.SQS" Version="[4.0.2.5]" />
     <PackageReference Include="Azure.Data.Tables" Version="[12.11.0]" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="[1.3.4]" />
+    <PackageReference Include="Azure.Identity" Version="[1.11.4]" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="[10.0.8]" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="[7.20.1]" />
     <PackageReference Include="Azure.Storage.Blobs" Version="[12.26.0]" />

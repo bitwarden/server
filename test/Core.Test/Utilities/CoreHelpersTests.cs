@@ -453,4 +453,32 @@ public class CoreHelpersTests
     {
         Assert.Equal("helloworld", CoreHelpers.ReplaceWhiteSpace(email, string.Empty));
     }
+
+    private const string _testConnectionString = "DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;EndpointSuffix=core.windows.net";
+    private const string _testServiceUri = "https://storageblob.blob.core.windows.net";
+
+    [Fact]
+    public void BuildBlobServiceClient_ServiceUriSet_UsesTokenCredential()
+    {
+        var client = CoreHelpers.BuildBlobServiceClient(_testConnectionString, _testServiceUri);
+
+        Assert.False(client.CanGenerateAccountSasUri);
+    }
+
+    [Fact]
+    public void BuildBlobServiceClient_ConnectionStringOnly_UsesSharedKey()
+    {
+        var client = CoreHelpers.BuildBlobServiceClient(_testConnectionString, "");
+
+        Assert.True(client.CanGenerateAccountSasUri);
+    }
+
+    [Fact]
+    public void BuildBlobServiceClient_ServiceUriPlaceholder_FallbackToConnectionString()
+    {
+        var client = CoreHelpers.BuildBlobServiceClient(_testConnectionString, "secret");
+
+        Assert.True(client.CanGenerateAccountSasUri);
+    }
+
 }

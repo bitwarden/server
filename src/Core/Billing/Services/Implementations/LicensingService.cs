@@ -98,11 +98,11 @@ public class LicensingService : ILicensingService
         {
             _creationCertificate = CoreHelpers.GetCertificate(_globalSettings.LicenseCertificatePath, _globalSettings.LicenseCertificatePassword);
         }
-        else if (CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
+        else if ((CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) || CoreHelpers.SettingHasValue(_globalSettings.Storage?.ServiceUri)) &&
             CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
         {
             _creationCertificate = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                "licensing.pfx", _globalSettings.LicenseCertificatePassword)
+                "licensing.pfx", _globalSettings.LicenseCertificatePassword, _globalSettings.Storage.ServiceUri)
                 .GetAwaiter().GetResult();
         }
         else
