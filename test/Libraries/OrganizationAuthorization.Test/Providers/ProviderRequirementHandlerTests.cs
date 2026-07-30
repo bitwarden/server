@@ -2,9 +2,9 @@
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Providers;
 using Bit.Core.AdminConsole.Context;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
@@ -104,13 +104,7 @@ public class ProviderRequirementHandlerTests
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Request.RouteValues["providerId"] = providerIdRouteValue;
-
-        if (userId.HasValue)
-        {
-            httpContext.User = new ClaimsPrincipal(
-                new ClaimsIdentity([new Claim(JwtClaimTypes.Subject, userId.Value.ToString())]));
-        }
-
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext = httpContext;
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
     }
 }

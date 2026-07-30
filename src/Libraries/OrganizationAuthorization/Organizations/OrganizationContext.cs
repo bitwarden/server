@@ -3,18 +3,18 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
+using Bit.Core.Services;
 
 // Note: do not move this into Core! See remarks below.
 namespace Bit.Api.AdminConsole.Authorization;
 
 /// <summary>
 /// Provides information about a user's membership or provider relationship with an organization.
-/// Used for authorization decisions in the web layer, usually called by an endpoint or authorization handler or attribute.
+/// Used for authorization decisions in the API layer, usually called by a controller or authorization handler or attribute.
 /// </summary>
 /// <remarks>
 /// This is intended to deprecate organization-related methods in <see cref="ICurrentContext"/>.
-/// It must not move into Core because it is closely tied to user claims and authentication, which is why it lives
-/// in this library instead — that keeps it reachable from any host without dragging authentication concerns into Core.
+/// It should remain in the API layer (not Core) because it is closely tied to user claims and authentication.
 /// </remarks>
 public interface IOrganizationContext
 {
@@ -44,6 +44,7 @@ public interface IOrganizationContext
 }
 
 public class OrganizationContext(
+    IUserService userService,
     IProviderUserRepository providerUserRepository) : IOrganizationContext
 {
     public const string NoUserIdError = "This method should only be called on the private api with a logged in user.";
@@ -63,7 +64,7 @@ public class OrganizationContext(
 
     public async Task<bool> IsProviderUserForOrganization(ClaimsPrincipal user, Guid organizationId)
     {
-        var userId = user.GetUserId();
+        var userId = userService.GetProperUserId(user);
         if (!userId.HasValue)
         {
             throw new InvalidOperationException(NoUserIdError);

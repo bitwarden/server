@@ -12,8 +12,8 @@ public static class OrganizationAuthorizationServiceCollectionExtensions
     /// so that any host can authorize endpoints with the requirements in this library.
     /// </summary>
     /// <remarks>
-    /// The host is still responsible for registering its data layer: these handlers resolve
-    /// <c>IProviderUserRepository</c> from the container.
+    /// The host is still responsible for registering Core's services: these handlers resolve
+    /// <c>IProviderUserRepository</c> and <c>IUserService</c> from the container.
     /// </remarks>
     public static IServiceCollection AddOrganizationAuthorization(this IServiceCollection services)
     {

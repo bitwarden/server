@@ -4,9 +4,9 @@ using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Duende.IdentityModel;
 using NSubstitute;
 using Xunit;
 
@@ -20,12 +20,16 @@ public class OrganizationContextTests
         Guid userId, Guid organizationId, Guid otherOrganizationId,
         SutProvider<OrganizationContext> sutProvider)
     {
-        var claimsPrincipal = PrincipalFor(userId);
+        var claimsPrincipal = new ClaimsPrincipal();
         var providerUserOrganizations = new List<ProviderUserOrganizationDetails>
         {
             new() { OrganizationId = organizationId },
             new() { OrganizationId = otherOrganizationId }
         };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(claimsPrincipal)
+            .Returns(userId);
 
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed)
@@ -60,7 +64,11 @@ public class OrganizationContextTests
         Guid userId, Guid organizationId,
         SutProvider<OrganizationContext> sutProvider)
     {
-        var claimsPrincipal = PrincipalFor(userId);
+        var claimsPrincipal = new ClaimsPrincipal();
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(claimsPrincipal)
+            .Returns(userId);
 
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed)
@@ -76,8 +84,11 @@ public class OrganizationContextTests
         Guid organizationId,
         SutProvider<OrganizationContext> sutProvider)
     {
-        // A principal with no 'sub' claim, e.g. an unauthenticated request
         var claimsPrincipal = new ClaimsPrincipal();
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(claimsPrincipal)
+            .Returns((Guid?)null);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             sutProvider.Sut.IsProviderUserForOrganization(claimsPrincipal, organizationId));
@@ -90,11 +101,15 @@ public class OrganizationContextTests
         Guid userId, Guid organizationId,
         SutProvider<OrganizationContext> sutProvider)
     {
-        var claimsPrincipal = PrincipalFor(userId);
+        var claimsPrincipal = new ClaimsPrincipal();
         var providerUserOrganizations = new List<ProviderUserOrganizationDetails>
         {
             new() { OrganizationId = organizationId }
         };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(claimsPrincipal)
+            .Returns(userId);
 
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed)
@@ -107,7 +122,4 @@ public class OrganizationContextTests
             .Received(1)
             .GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed);
     }
-
-    private static ClaimsPrincipal PrincipalFor(Guid userId)
-        => new(new ClaimsIdentity([new Claim(JwtClaimTypes.Subject, userId.ToString())]));
 }

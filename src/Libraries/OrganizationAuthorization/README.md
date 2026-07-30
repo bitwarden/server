@@ -64,12 +64,11 @@ prioritised for extraction. This library sits *above* Core rather than below it,
 | `Bit.Core.AdminConsole.Repositories.IProviderUserRepository` | The provider-for-organization database check |
 | `Bit.Core.AdminConsole.Models.Data.Provider.ProviderUserOrganizationDetails` | Result of that check |
 | `Bit.Core.AdminConsole.Enums.Provider.ProviderUserStatusType` | Filtering that check to confirmed provider users |
+| `Bit.Core.Services.IUserService` | Reading the authenticated user's ID out of their claims |
 
-`Duende.IdentityModel.JwtClaimTypes` also arrives transitively via Core.
-
-The claims models (`CurrentContextOrganization`, `CurrentContextProvider`, `Permissions`,
-`Claims`) are the pieces worth extracting first: they are plain data with no behaviour, and moving
-them below Core would leave only the repository dependency behind.
+Depending on Core is fine for now: unwinding it would mean extracting the Admin Console data models,
+identity, and organizations, which is a big-ish effort in its own right. This table exists so those
+pieces are known, not because they are queued up.
 
 ## What deliberately stayed in Api
 

@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 
@@ -13,7 +14,8 @@ namespace Bit.Api.AdminConsole.Authorization;
 /// </summary>
 public class OrganizationRequirementHandler(
     IHttpContextAccessor httpContextAccessor,
-    IProviderUserRepository providerUserRepository)
+    IProviderUserRepository providerUserRepository,
+    IUserService userService)
     : AuthorizationHandler<IOrganizationRequirement>
 {
     public const string NoHttpContextError = "This method should only be called in the context of an HTTP Request.";
@@ -30,7 +32,7 @@ public class OrganizationRequirementHandler(
         var organizationId = httpContext.GetOrganizationId();
         var organizationClaims = httpContext.User.GetCurrentContextOrganization(organizationId);
 
-        var userId = httpContext.User.GetUserId();
+        var userId = userService.GetProperUserId(httpContext.User);
         if (userId == null)
         {
             throw new InvalidOperationException(NoUserIdError);
