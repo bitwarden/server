@@ -289,11 +289,12 @@ public class AccountsController : Controller
         // for the full list of scenarios.
         if (model.HasAuthAndUnlockData())
         {
-            // TDE set-password — no feature-flag gate.
+            // TDE set-password (for TDE users who obtain the "manage account recovery" permission).
             // _tdeSetPasswordCommand handles both V1 and V2 TDE users (it sets the master password
             // without touching cryptographic state). The V2RegistrationTDEJIT flag governs SSO+TDE
-            // account creation, not set-password, so don't reference it here. A TDE user reaching
-            // this endpoint already has keys set up at registration time, regardless of the flag.
+            // account creation, not set-password, so don't reference it here (no feature-flag gate).
+            // A TDE user reaching this endpoint already has keys that were set up at registration time,
+            // regardless of the flag.
             if (model.IsTdeSetPasswordRequest())
             {
                 await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
