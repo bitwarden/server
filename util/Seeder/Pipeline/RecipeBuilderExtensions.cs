@@ -139,7 +139,7 @@ public static class RecipeBuilderExtensions
             throw new InvalidOperationException("SSO configuration requires a non-empty identifier.");
         }
 
-        builder.AddStep(_ => new CreateSsoConfigStep(identifier, provider, memberDecryptionType));
+        builder.AddAsyncStep(_ => new CreateSsoConfigStep(identifier, provider, memberDecryptionType));
         return builder;
     }
 
@@ -172,7 +172,7 @@ public static class RecipeBuilderExtensions
         builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb, true));
         if (selfHosted)
         {
-            builder.AddStep(sp => new GenerateSelfHostUserLicenseStep(sp.GetRequiredService<ILicensingService>()));
+            builder.AddAsyncStep(sp => new GenerateSelfHostUserLicenseStep(sp.GetRequiredService<ILicensingService>()));
         }
         return builder;
     }
@@ -396,7 +396,7 @@ public static class RecipeBuilderExtensions
                 "Cipher attachments require fixture ciphers. Call UseCiphers() or UsePersonalVaultCiphers() first.");
         }
 
-        builder.AddStep(_ => personal
+        builder.AddAsyncStep(_ => personal
             ? CreateCipherAttachmentsStep.ForPersonalVault(fixture)
             : CreateCipherAttachmentsStep.ForOrganization(fixture));
         return builder;
