@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -64,10 +65,9 @@ public class UpdateOrganizationUserCommand(
             }
         }
 
-        var emailChanged = request.IsEmailChanged();
-        if (emailChanged || request.IsNameChanged())
+        if (request.IsEmailChanged() || request.IsNameChanged())
         {
-            var commandError = await TryApplyAccountChangesAsync(request);
+            var commandError = await TryApplyAccountChangesAsync(request, organizationUser);
             if (commandError is not null)
             {
                 return commandError;
@@ -90,15 +90,12 @@ public class UpdateOrganizationUserCommand(
                 request.DefaultUserCollectionName!);
         }
 
-        var eventType = emailChanged
-            ? EventType.OrganizationUser_AdminChangedEmail
-            : EventType.OrganizationUser_Updated;
-        await eventService.LogOrganizationUserEventAsync(organizationUser, eventType);
+        await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
 
         return new None();
     }
 
-    private async Task<CommandError?> TryApplyAccountChangesAsync(UpdateOrganizationUserRequest request)
+    private async Task<CommandError?> TryApplyAccountChangesAsync(UpdateOrganizationUserRequest request, OrganizationUser organizationUser)
     {
         if (request.UserToUpdate is null)
         {
@@ -122,6 +119,7 @@ public class UpdateOrganizationUserCommand(
                 await changeEmailCommand.ChangeEmailAsync(request.UserToUpdate, request.NewEmail!);
 
                 await TrySendEmailChangedNotificationAsync(previousEmail, request);
+                await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminChangedEmail);
             }
             else
             {

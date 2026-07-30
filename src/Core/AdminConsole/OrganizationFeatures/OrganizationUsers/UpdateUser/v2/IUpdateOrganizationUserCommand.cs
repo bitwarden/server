@@ -12,7 +12,7 @@ public interface IUpdateOrganizationUserCommand
     /// <item>Autoscales the organization's Secrets Manager seats when enabling Secrets Manager requires more seats.</item>
     /// <item>Updates organization user along with collection access and groups</item>
     /// <item>Creates a default collection when the user is demoted from a privileged role and organization data ownership requires it.</item>
-    /// <item>Logs an <c>OrganizationUser_AdminChangedEmail</c> event if the member's email was changed, otherwise logs an <c>OrganizationUser_Updated</c> event.</item>
+    /// <item>Logs an <c>OrganizationUser_Updated</c> event. Additionally logs an <c>OrganizationUser_AdminChangedEmail</c> event if the member's email was changed.</item>
     /// </list>
     /// </summary>
     /// <param name="request">The user's current state, the requested changes, and the acting user.</param>

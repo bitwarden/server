@@ -59,6 +59,9 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminChangedEmail);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
     }
 
     [Theory]
