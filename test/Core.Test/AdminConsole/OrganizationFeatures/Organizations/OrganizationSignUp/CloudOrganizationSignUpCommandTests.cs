@@ -208,7 +208,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
+        Assert.Contains("Secrets Manager is unsupported because your organization has a Managed Service Provider.", exception.Message);
     }
 
     [Theory]

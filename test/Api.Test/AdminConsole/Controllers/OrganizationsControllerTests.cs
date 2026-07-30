@@ -68,7 +68,7 @@ public class OrganizationsControllerTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Leave(orgId));
 
-        Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
+        Assert.Contains("Your organization single sign-on settings prevent you from leaving.",
             exception.Message);
 
         await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs().UserLeaveAsync(default, default);

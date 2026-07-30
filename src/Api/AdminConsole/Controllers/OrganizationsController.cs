@@ -273,7 +273,7 @@ public class OrganizationsController : Controller
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector && user.UsesKeyConnector)
         {
-            throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
+            throw new BadRequestException("Your organization single sign-on settings prevent you from leaving.");
         }
 
         if ((await _userService.GetOrganizationsClaimingUserAsync(user.Id)).Any(x => x.Id == id))

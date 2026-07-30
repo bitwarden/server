@@ -53,7 +53,7 @@ public class OrganizationDeleteCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DeleteAsync(organization));
 
-        Assert.Contains("You cannot delete an Organization that is using Key Connector.", exception.Message);
+        Assert.Contains("You cannot delete an organization vault that is using Key Connector.", exception.Message);
 
         await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default);
         await organizationAbilityCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);

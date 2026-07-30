@@ -66,7 +66,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             organization == null ||
             providerOrganization.ProviderId != provider.Id)
         {
-            throw new BadRequestException("Failed to remove organization. Please contact support.");
+            throw new BadRequestException("Failed to remove organization vault. Please contact support.");
         }
 
         if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(

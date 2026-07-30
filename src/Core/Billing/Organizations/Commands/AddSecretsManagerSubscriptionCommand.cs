@@ -87,7 +87,7 @@ public class AddSecretsManagerSubscriptionCommand(
 
         if (provider is { Type: ProviderType.Msp })
         {
-            throw new BadRequestException("Organizations with a Managed Service Provider do not support Secrets Manager.");
+            throw new BadRequestException("Secrets Manager is unsupported because your organization has a Managed Service Provider.");
         }
     }
 

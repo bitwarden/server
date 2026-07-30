@@ -206,7 +206,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
                 organizationId, callingUserId, null, callingUserId));
 
-        Assert.Contains("Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.", exception.Message);
+        Assert.Contains("Due to an Enterprise policy, you are not allowed to withdraw from account recovery.", exception.Message);
     }
 
     private static void SetupOrgUser(

@@ -72,7 +72,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
         {
-            throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
+            throw new BadRequestException("You cannot delete an organization vault that is using Key Connector.");
         }
     }
 }

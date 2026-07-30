@@ -59,7 +59,7 @@ public class CloudOrganizationSignUpCommand(
             if (signup.IsFromProvider)
             {
                 throw new BadRequestException(
-                    "Organizations with a Managed Service Provider do not support Secrets Manager.");
+                    "Secrets Manager is unsupported because your organization has a Managed Service Provider.");
             }
             ValidateSecretsManagerPlan(plan, signup);
         }

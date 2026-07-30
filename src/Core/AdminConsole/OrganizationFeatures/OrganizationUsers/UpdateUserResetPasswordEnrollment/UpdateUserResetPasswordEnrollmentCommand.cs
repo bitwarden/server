@@ -64,7 +64,7 @@ public class UpdateUserResetPasswordEnrollmentCommand : IUpdateUserResetPassword
             if (data?.AutoEnrollEnabled ?? false)
             {
                 throw new BadRequestException(
-                    "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
+                    "Due to an Enterprise policy, you are not allowed to withdraw from account recovery.");
             }
         }
 
