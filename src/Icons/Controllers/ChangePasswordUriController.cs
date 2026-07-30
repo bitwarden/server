@@ -13,20 +13,17 @@ public class ChangePasswordUriController : Controller
     private readonly IDomainMappingService _domainMappingService;
     private readonly IChangePasswordUriService _changePasswordService;
     private readonly ChangePasswordUriSettings _changePasswordSettings;
-    private readonly ILogger<ChangePasswordUriController> _logger;
 
     public ChangePasswordUriController(
         IMemoryCache memoryCache,
         IDomainMappingService domainMappingService,
         IChangePasswordUriService changePasswordService,
-        ChangePasswordUriSettings changePasswordUriSettings,
-        ILogger<ChangePasswordUriController> logger)
+        ChangePasswordUriSettings changePasswordUriSettings)
     {
         _memoryCache = memoryCache;
         _domainMappingService = domainMappingService;
         _changePasswordService = changePasswordService;
         _changePasswordSettings = changePasswordUriSettings;
-        _logger = logger;
     }
 
     [HttpGet("config")]
@@ -69,10 +66,10 @@ public class ChangePasswordUriController : Controller
         var result = await _changePasswordService.GetChangePasswordUri(domain);
 
         // Transient failure: don't cache, and set no-store so the edge doesn't pin a
-        // "no change-password URL" answer for every client behind that cache.
+    // "no change-password URL" answer for every client behind that cache. The service
+    // logs the underlying exception.
         if (result.Type == ChangePasswordUriResultType.LookupFailed)
         {
-            _logger.LogDebug("Change-password lookup for {Domain} failed; not caching.", domain);
             SetCacheControl(definitive: false);
             return Ok(new ChangePasswordUriResponse(null));
         }
