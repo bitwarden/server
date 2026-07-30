@@ -79,6 +79,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Libraries\Data\Data.csproj" />
+    <ProjectReference Include="..\Libraries\SsrfProtection\SsrfProtection.csproj" />
   </ItemGroup>
 
   <ItemGroup>

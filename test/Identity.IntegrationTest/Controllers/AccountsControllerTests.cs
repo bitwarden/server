@@ -95,6 +95,87 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
     }
 
+    [Theory, BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WithSealedOpenOrgInviteData_ReturnsNoContent(string name, bool receiveMarketingEmails)
+    {
+        // Localized factory so we can inspect the mail service in isolation.
+        var localFactory = new IdentityApplicationFactory();
+
+        var email = $"test+register+sealed+{name}@email.com";
+        var sealedOpenOrgInviteData = "opaque-base64url-blob-representing-a-realistic-sdk-output";
+
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            SealedOpenOrgInviteData = sealedOpenOrgInviteData,
+        };
+
+        var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
+
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        // The passthrough must reach the mail service unchanged — the server never parses it.
+        await localFactory.GetService<Bit.Core.Services.IMailService>()
+            .Received(1)
+            .SendRegistrationVerificationEmailAsync(
+                Arg.Is<string>(e => e == email),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Is<string>(s => s == sealedOpenOrgInviteData));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WithOversizedSealedOpenOrgInviteData_ReturnsBadRequest(string name, bool receiveMarketingEmails)
+    {
+        var email = $"test+register+oversize+{name}@email.com";
+        // Length cap in the request model is 4096; 4097+ must be rejected by model validation.
+        var oversized = new string('A', 4097);
+
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            SealedOpenOrgInviteData = oversized,
+        };
+
+        var context = await _factory.PostRegisterSendEmailVerificationAsync(model);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WithSealedOpenOrgInviteData_ForExistingUser_SilentlyDiscardsSealedData(string name, bool receiveMarketingEmails)
+    {
+        // Existing user + sealed data → 204 with no mail sent (anti-enumeration).
+        var localFactory = new IdentityApplicationFactory();
+
+        var email = $"test+register+existing+{name}@email.com";
+        await CreateUserAsync(email, name, localFactory);
+
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            SealedOpenOrgInviteData = "opaque-base64url-blob",
+        };
+
+        var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
+
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        await localFactory.GetService<Bit.Core.Services.IMailService>()
+            .DidNotReceive()
+            .SendRegistrationVerificationEmailAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>());
+    }
+
 
     [Theory]
     [BitAutoData(true)]

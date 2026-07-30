@@ -1317,6 +1317,9 @@
       },
       "data": {
         "type": "Project"
+      },
+      "ssrfprotection": {
+        "type": "Project"
       }
     }
   }
