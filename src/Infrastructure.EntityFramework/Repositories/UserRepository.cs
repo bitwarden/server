@@ -14,6 +14,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
 {
+    // Carries the DbContext that owns the active UpdateUserData batch transaction so
+    // that delegates returned by SetMasterPassword/SetKeyConnectorUserKey/etc. can
+    // write through the same connection that owns the transaction. Without this, each
+    // delegate would open its own scope and SaveChangesAsync would auto-commit
+    // outside the outer transaction (see issue #7566).
+    private readonly AsyncLocal<DatabaseContext?> _activeBatchDbContext = new();
+
     public UserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
     { }
@@ -288,63 +295,77 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // Update user
-        var userEntity = await dbContext.Users.FindAsync(userId);
-        if (userEntity == null)
+        var previousBatchDbContext = _activeBatchDbContext.Value;
+        _activeBatchDbContext.Value = dbContext;
+        try
         {
-            throw new ArgumentException("User not found", nameof(userId));
-        }
-
-        // Update public key encryption key pair
-        var timestamp = DateTime.UtcNow;
-
-        userEntity.RevisionDate = timestamp;
-        userEntity.AccountRevisionDate = timestamp;
-
-        // V1 + V2 user crypto changes
-        userEntity.PublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.PublicKey;
-        userEntity.PrivateKey = accountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
-
-        userEntity.SecurityState = accountKeysData.SecurityStateData!.SecurityState;
-        userEntity.SecurityVersion = accountKeysData.SecurityStateData.SecurityVersion;
-        userEntity.SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
-
-        // Replace existing key-pair if it exists
-        var existingKeyPair = await dbContext.UserSignatureKeyPairs
-            .FirstOrDefaultAsync(x => x.UserId == userId);
-        if (existingKeyPair != null)
-        {
-            existingKeyPair.SignatureAlgorithm = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm;
-            existingKeyPair.SigningKey = accountKeysData.SignatureKeyPairData.WrappedSigningKey;
-            existingKeyPair.VerifyingKey = accountKeysData.SignatureKeyPairData.VerifyingKey;
-            existingKeyPair.RevisionDate = timestamp;
-        }
-        else
-        {
-            var newKeyPair = new UserSignatureKeyPair
+            // Update user
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
             {
-                UserId = userId,
-                SignatureAlgorithm = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm,
-                SigningKey = accountKeysData.SignatureKeyPairData.WrappedSigningKey,
-                VerifyingKey = accountKeysData.SignatureKeyPairData.VerifyingKey,
-                CreationDate = timestamp,
-                RevisionDate = timestamp
-            };
-            newKeyPair.SetNewId();
-            await dbContext.UserSignatureKeyPairs.AddAsync(newKeyPair);
-        }
-
-        await dbContext.SaveChangesAsync();
-
-        // Update additional user data within the same transaction
-        if (updateUserDataActions != null)
-        {
-            foreach (var action in updateUserDataActions)
-            {
-                await action();
+                throw new ArgumentException("User not found", nameof(userId));
             }
+
+            // Update public key encryption key pair
+            var timestamp = DateTime.UtcNow;
+
+            userEntity.RevisionDate = timestamp;
+            userEntity.AccountRevisionDate = timestamp;
+
+            // V1 + V2 user crypto changes
+            userEntity.PublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.PublicKey;
+            userEntity.PrivateKey = accountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
+
+            userEntity.SecurityState = accountKeysData.SecurityStateData!.SecurityState;
+            userEntity.SecurityVersion = accountKeysData.SecurityStateData.SecurityVersion;
+            userEntity.SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
+
+            // Replace existing key-pair if it exists
+            var existingKeyPair = await dbContext.UserSignatureKeyPairs
+                .FirstOrDefaultAsync(x => x.UserId == userId);
+            if (existingKeyPair != null)
+            {
+                existingKeyPair.SignatureAlgorithm = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm;
+                existingKeyPair.SigningKey = accountKeysData.SignatureKeyPairData.WrappedSigningKey;
+                existingKeyPair.VerifyingKey = accountKeysData.SignatureKeyPairData.VerifyingKey;
+                existingKeyPair.RevisionDate = timestamp;
+            }
+            else
+            {
+                var newKeyPair = new UserSignatureKeyPair
+                {
+                    UserId = userId,
+                    SignatureAlgorithm = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm,
+                    SigningKey = accountKeysData.SignatureKeyPairData.WrappedSigningKey,
+                    VerifyingKey = accountKeysData.SignatureKeyPairData.VerifyingKey,
+                    CreationDate = timestamp,
+                    RevisionDate = timestamp
+                };
+                newKeyPair.SetNewId();
+                await dbContext.UserSignatureKeyPairs.AddAsync(newKeyPair);
+            }
+
+            await dbContext.SaveChangesAsync();
+
+            // Update additional user data within the same transaction
+            if (updateUserDataActions != null)
+            {
+                foreach (var action in updateUserDataActions)
+                {
+                    await action();
+                }
+            }
+            await transaction.CommitAsync();
         }
-        await transaction.CommitAsync();
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        finally
+        {
+            _activeBatchDbContext.Value = previousBatchDbContext;
+        }
     }
 
     public async Task<IEnumerable<Core.Entities.User>> GetManyAsync(IEnumerable<Guid> ids)
@@ -511,11 +532,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
     {
-        return async (_, _) =>
+        return (_, _) => RunUserDataActionAsync(async dbContext =>
         {
-            using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
-
             var userEntity = await dbContext.Users.FindAsync(userId);
             if (userEntity == null)
             {
@@ -535,17 +553,14 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.AccountRevisionDate = timestamp;
 
             await dbContext.SaveChangesAsync();
-        };
+        });
     }
 
     public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
         string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint)
     {
-        return async (_, _) =>
+        return (_, _) => RunUserDataActionAsync(async dbContext =>
         {
-            using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
-
             var userEntity = await dbContext.Users.FindAsync(userId);
             if (userEntity == null)
             {
@@ -569,7 +584,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             // is persisted.
             // userEntity.LastPasswordChangeDate = timestamp; This needs adding in PM-34905
             await dbContext.SaveChangesAsync();
-        };
+        });
     }
 
     public async Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions)
@@ -579,21 +594,32 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        foreach (var action in updateUserDataActions)
+        var previousBatchDbContext = _activeBatchDbContext.Value;
+        _activeBatchDbContext.Value = dbContext;
+        try
         {
-            await action();
-        }
+            foreach (var action in updateUserDataActions)
+            {
+                await action();
+            }
 
-        await transaction.CommitAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        finally
+        {
+            _activeBatchDbContext.Value = previousBatchDbContext;
+        }
     }
 
     public UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData)
     {
-        return async (_, _) =>
+        return (_, _) => RunUserDataActionAsync(async dbContext =>
         {
-            using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
-
             var userEntity = await dbContext.Users.FindAsync(userId) ?? throw new ArgumentException("User not found", nameof(userId));
             var timestamp = DateTime.UtcNow;
 
@@ -607,7 +633,25 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.AccountRevisionDate = timestamp;
 
             await dbContext.SaveChangesAsync();
-        };
+        });
+    }
+
+    // If a batch transaction is active (UpdateUserDataAsync or
+    // SetV2AccountCryptographicStateAsync), reuse its DbContext so the write joins
+    // the open transaction. Otherwise fall back to a fresh scope so the delegate
+    // can also be invoked standalone.
+    private async Task RunUserDataActionAsync(Func<DatabaseContext, Task> work)
+    {
+        var batchDbContext = _activeBatchDbContext.Value;
+        if (batchDbContext != null)
+        {
+            await work(batchDbContext);
+            return;
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        await work(dbContext);
     }
 
     private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)

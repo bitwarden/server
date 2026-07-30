@@ -714,6 +714,52 @@ public class UserRepositoryTests
         Assert.Equal(originalEmail.ToLowerInvariant().Trim(), updatedUser.MasterPasswordSalt);
     }
 
+    // Regression test for issue #7566. The IUserRepository contract states that
+    // every action passed to UpdateUserDataAsync executes inside a single transaction;
+    // a partial commit could otherwise leave a user with a new master-password hash
+    // but an old master-key-wrapped user key, which would lock them out of their vault.
+    [Theory, DatabaseData]
+    public async Task UpdateUserDataAsync_WhenSubsequentActionThrows_RollsBackPriorWrites(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        Assert.Null(user.MasterPassword);
+        Assert.Null(user.Key);
+
+        var unlockData = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType.Argon2id,
+                Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+                Memory = AuthConstants.ARGON2_MEMORY.Default,
+                Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+            },
+            MasterKeyWrappedUserKey = "should-not-persist-wrapped-key",
+            Salt = "should-not-persist-salt"
+        };
+
+        var setMasterPasswordAction = userRepository.SetMasterPassword(
+            user.Id, unlockData, "should-not-persist-hash", "should-not-persist-hint");
+
+        UpdateUserData faultingAction = (_, _) =>
+            throw new InvalidOperationException("Forced batch failure for rollback test.");
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => userRepository.UpdateUserDataAsync([setMasterPasswordAction, faultingAction]));
+
+        // Assert: the prior delegate's write was rolled back; the user is still in
+        // its initial state.
+        var reloaded = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(reloaded);
+        Assert.Null(reloaded.MasterPassword);
+        Assert.Null(reloaded.MasterPasswordHint);
+        Assert.Null(reloaded.Key);
+        Assert.Null(reloaded.MasterPasswordSalt);
+    }
+
     [Theory, DatabaseData]
     public async Task UpdateUserKeyAndEncryptedDataV2Async_UpdatesAllUserFields(IUserRepository userRepository)
     {
