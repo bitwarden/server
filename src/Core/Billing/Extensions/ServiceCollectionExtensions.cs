@@ -3,6 +3,7 @@ using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
+using Bit.Core.Billing.Organizations.PlanMigration.Services;
 using Bit.Core.Billing.Organizations.PlanMigration.Utilities;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
@@ -36,6 +37,8 @@ public static class ServiceCollectionExtensions
         services.AddLicenseOperations();
         services.AddPricingClient();
         services.AddTransient<IPriceIncreaseScheduler, PriceIncreaseScheduler>();
+        services.AddTransient<IBusinessPlanRenewalNotificationService, BusinessPlanRenewalNotificationService>();
+        services.AddTransient<IBusinessPlanMigrationCoordinator, BusinessPlanMigrationCoordinator>();
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddPremiumCommands();

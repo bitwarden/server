@@ -33,4 +33,5 @@ public sealed record OrganizationOverrides
     public bool? UseInviteLinks { get; init; }
     public bool? SyncSeats { get; init; }
     public bool? UsePasswordManager { get; init; }
+    public bool? UsePam { get; init; }
 }
