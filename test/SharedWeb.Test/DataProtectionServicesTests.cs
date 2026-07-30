@@ -109,6 +109,44 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     }
 
     [Fact]
+    public async Task StorageManaged_PersistsUnwrappedKeysWithoutAcquiringCertificates()
+    {
+        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
+            .WithPortBinding(10000, true)
+            .Build();
+
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+        var dataProtection = (await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection")).Value;
+        var configuration = new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:KeyProtectionPolicy", "StorageManaged" },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Unusable-Protection-Password" },
+            { "GlobalSettings:DataProtection:BlobName", "missing-protection-certificate.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "missing-unprotect-certificate.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Unusable-Unprotect-Password" },
+        };
+
+        string protectedData;
+        using (var firstApp = CreateApp(configuration))
+        {
+            protectedData = GetProtector(firstApp).Protect("StorageManagedData");
+        }
+
+        var keyRingBlob = dataProtection.GetBlobClient("keys.xml");
+        Assert.True((await keyRingBlob.ExistsAsync()).Value);
+        var keyRing = (await keyRingBlob.DownloadContentAsync()).Value.Content.ToString();
+        Assert.DoesNotContain("encryptedSecret", keyRing);
+
+        using var secondApp = CreateApp(configuration);
+        Assert.Equal("StorageManagedData", GetProtector(secondApp).Unprotect(protectedData));
+    }
+
+    [Fact]
     public async Task UnprotectsSavedData()
     {
         // This shows a somewhat realistic example of how our production cert setup works. We have a cert
@@ -449,13 +487,9 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     [Fact]
     public void ThumbprintPlaceholder_InDevelopment_DoesNotThrow()
     {
-        // In local development, developers often have a placeholder thumbprint like "____"
-        // in their config because no real cert exists on their machine. The previous
-        // implementation threw InvalidOperationException at startup whenever GetCertificate
-        // returned null, even in Development — making local development impossible with a
-        // thumbprint configured. The current implementation defers the null check to the
-        // non-development guard further down, so Development environments start up cleanly
-        // and data protection simply uses its ephemeral default storage.
+        // Development does not use certificate key wrapping, so certificate acquisition is
+        // skipped entirely. Placeholder thumbprints therefore do not prevent local startup,
+        // and data protection retains its existing Development persistence behavior.
         using var services = CreateApp(
             new Dictionary<string, string?>
             {
