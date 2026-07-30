@@ -239,6 +239,7 @@ public static class FeatureFlagKeys
     public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
     public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
     public const string FedRampGovRegion = "fedramp-gov-region";
+    public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
 
     /* Tools Team */
     /// <summary>

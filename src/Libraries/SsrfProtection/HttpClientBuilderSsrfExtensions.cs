@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -39,11 +40,14 @@ public static class HttpClientBuilderSsrfExtensions
         {
             switch (handler)
             {
+                case SocketsHttpHandler socketsHttpHandler:
+                    socketsHttpHandler.AllowAutoRedirect = false;
+                    break;
                 case HttpClientHandler httpClientHandler:
                     httpClientHandler.AllowAutoRedirect = false;
                     break;
-                case SocketsHttpHandler socketsHttpHandler:
-                    socketsHttpHandler.AllowAutoRedirect = false;
+                default:
+                    Debug.Fail($"Expected SocketsHttpHandler or HttpClientHandler but got {handler.GetType().Name}.");
                     break;
             }
         });
