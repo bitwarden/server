@@ -20,26 +20,26 @@ public record InviteLinkNotFound()
 public record EmailNotVerified()
     : BadRequestError("You must verify your email address before joining an organization.");
 
-public record EmailDomainNotAllowed()
-    : BadRequestError("Your email domain is not allowed to join this organization.");
+public record EmailDomainNotAllowed(string OrgName)
+    : BadRequestError($"You're not allowed to join the {OrgName} vault with your email domain.");
 
-public record OrganizationAccessRevoked()
-    : BadRequestError("Your organization access has been revoked.");
+public record OrganizationAccessRevoked(string OrgName)
+    : BadRequestError($"Your access to the {OrgName} vault has been revoked.");
 
-public record AlreadyOrganizationMember()
-    : BadRequestError("You are already a member of this organization.");
+public record AlreadyOrganizationMember(string OrgName)
+    : BadRequestError($"You're already a member of {OrgName}");
 
 public record ResetPasswordKeyRequired()
     : BadRequestError("Master Password reset is required, but not provided.");
 
-public record OrganizationHasNoAvailableSeats()
-    : BadRequestError("This organization has no available seats.");
+public record OrganizationHasNoAvailableSeats(string OrgName)
+    : BadRequestError($"The {OrgName} vault has no available seats.");
 
 public record SeatAddFailed()
-    : BadRequestError("Unable to join this organization right now. Please contact your organization administrator.");
+    : BadRequestError("Unable to join this vault right now. Please contact your organization admin.");
 
 public record OnlyOneFreeOrganizationAdminAllowed()
     : BadRequestError("You can only be an admin of 1 free organization vault.");
 
 public record ProviderUsersCannotAcceptInviteLink()
-    : BadRequestError("Provider users cannot join organizations via invite link.");
+    : BadRequestError("Provider users cannot join organization vaults via invite link.");

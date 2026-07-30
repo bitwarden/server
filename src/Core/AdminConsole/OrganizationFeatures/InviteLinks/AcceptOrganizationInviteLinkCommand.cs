@@ -66,7 +66,7 @@ public class AcceptOrganizationInviteLinkCommand(
 
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
         {
-            return new EmailDomainNotAllowed();
+            return new EmailDomainNotAllowed(organization.Name);
         }
 
         // Provider users cannot accept invite links
@@ -77,7 +77,7 @@ public class AcceptOrganizationInviteLinkCommand(
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
-        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser);
+        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser, organization.Name);
         if (membershipStatusError is not null)
         {
             return membershipStatusError;
@@ -138,11 +138,11 @@ public class AcceptOrganizationInviteLinkCommand(
         return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 
-    private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser) =>
+    private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser, string orgName) =>
         existingOrganizationUser?.Status switch
         {
-            OrganizationUserStatusType.Revoked => new OrganizationAccessRevoked(),
-            OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed => new AlreadyOrganizationMember(),
+            OrganizationUserStatusType.Revoked => new OrganizationAccessRevoked(orgName),
+            OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed => new AlreadyOrganizationMember(orgName),
             _ => null
         };
 
@@ -175,7 +175,7 @@ public class AcceptOrganizationInviteLinkCommand(
         var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
         if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
         {
-            return new OrganizationHasNoAvailableSeats();
+            return new OrganizationHasNoAvailableSeats(organization.Name);
         }
 
         var seatExpansionError = await TryExpandSeatsAsync(organization, occupiedSeatCount);

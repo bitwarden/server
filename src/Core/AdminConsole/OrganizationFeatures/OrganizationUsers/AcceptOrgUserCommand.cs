@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -132,9 +133,11 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     public async Task<OrganizationUser> AcceptOrgUserAsync(OrganizationUser orgUser, User user,
         IUserService userService)
     {
+        var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
+
         if (orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            throw new BadRequestException("Your organization access has been revoked.");
+            throw new BadRequestException(new OrganizationAccessRevoked(org?.Name ?? string.Empty).Message);
         }
 
         if (orgUser.Status != OrganizationUserStatusType.Invited)
@@ -144,7 +147,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         if (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
         {
-            var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
             if (org.PlanType == PlanType.Free)
             {
                 var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -90,7 +91,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("Your organization access has been revoked.", exception.Message);
+        Assert.Equal(new OrganizationAccessRevoked(org.Name).Message, exception.Message);
     }
 
     [Theory]
