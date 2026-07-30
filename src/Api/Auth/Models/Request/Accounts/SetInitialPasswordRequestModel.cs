@@ -80,6 +80,16 @@ public class SetInitialPasswordRequestModel : IValidatableObject
                 [nameof(AccountKeys), nameof(Keys)]);
         }
 
+        // If both MPAD and legacy MasterPasswordHash are present, they must agree — reject
+        // ambiguous input rather than silently letting one win via the ?? fallback.
+        if (MasterPasswordAuthentication != null && MasterPasswordHash != null
+            && MasterPasswordAuthentication.MasterPasswordAuthenticationHash != MasterPasswordHash)
+        {
+            yield return new ValidationResult(
+                $"{nameof(MasterPasswordAuthentication.MasterPasswordAuthenticationHash)} and {nameof(MasterPasswordHash)} are both present but differ. Provide only one.",
+                [nameof(MasterPasswordAuthentication), nameof(MasterPasswordHash)]);
+        }
+
         if (HasAuthAndUnlockData())
         {
             // Validate KDF equality, salt equality, and KDF settings on the new-shape MPAD/MPUD fields

@@ -385,6 +385,88 @@ public class SetInitialPasswordRequestModelTests
             r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.Keys)));
     }
 
+    [Theory]
+    [BitAutoData]
+    public void Validate_WithMpadAndLegacyMasterPasswordHash_Differing_ReturnsValidationError(string orgIdentifier)
+    {
+        // Arrange — both MPAD and legacy MasterPasswordHash present with different values
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            MasterPasswordHash = "legacyHash",
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterPasswordAuthenticationHash = "differentHash",
+                Salt = "salt"
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterKeyWrappedUserKey = "wrappedKey",
+                Salt = "salt"
+            }
+        };
+
+        // Act
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert
+        Assert.Contains(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("both present but differ") &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.MasterPasswordAuthentication)) &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.MasterPasswordHash)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Validate_WithMpadAndLegacyMasterPasswordHash_Matching_ReturnsNoMismatchError(string orgIdentifier)
+    {
+        // Arrange — both present with the same value
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            MasterPasswordHash = "sameHash",
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterPasswordAuthenticationHash = "sameHash",
+                Salt = "salt"
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterKeyWrappedUserKey = "wrappedKey",
+                Salt = "salt"
+            }
+        };
+
+        // Act
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert — no mismatch error (other validation may still pass/fail, but not this rule)
+        Assert.DoesNotContain(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("both present but differ"));
+    }
+
     #endregion
 
     #region HasAuthAndUnlockData Tests
