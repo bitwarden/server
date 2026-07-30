@@ -17,6 +17,13 @@ public record ConfirmInviteLinkNotAvailable()
     public string Type => "invite_link_not_available";
 }
 
+public record ConfirmInviteLinkConfirmationNotSupported()
+    : InviteLinkConfirmationNotSupported(), IValidationError
+{
+    public string PropertyName => "code";
+    public string Type => "invite_link_confirmation_not_supported";
+}
+
 public record ConfirmEmailDomainNotAllowed()
     : EmailDomainNotAllowed(), IValidationError
 {

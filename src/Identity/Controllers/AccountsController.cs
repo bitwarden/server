@@ -103,7 +103,7 @@ public class AccountsController : Controller
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
-            model.ReceiveMarketingEmails, model.FromMarketing);
+            model.ReceiveMarketingEmails, model.FromMarketing, model.SealedOpenOrgInviteData);
 
         if (token != null)
         {
