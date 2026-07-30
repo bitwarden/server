@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -363,9 +364,16 @@ public class RestoreOrganizationUserCommand(
             policyRequirement);
 
         var badRequestException = validationResult.Match(
-            error => new BadRequestException(user.Email +
-                                             " is not compliant with the automatic user confirmation policy: " +
-                                             error.Message),
+            error =>
+            {
+                var message = error switch
+                {
+                    UserCannotBelongToAnotherOrganization => new UserCannotBeRestoredAutoConfirmMemberOfAnotherOrg(user.Email).Message,
+                    OtherOrganizationDoesNotAllowOtherMembership => new UserCannotBeRestoredAutoConfirmForbiddenByOtherOrg(user.Email).Message,
+                    _ => error.Message
+                };
+                return new BadRequestException(message);
+            },
             _ => null);
 
         if (badRequestException is not null)

@@ -761,13 +761,13 @@ public class RestoreOrganizationUserCommandTests
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user),
-                new UserCannotBelongToAnotherOrganization(string.Empty)));
+                new UserCannotBelongToAnotherOrganization(user.Email)));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Contains("is not compliant with the automatic user confirmation policy", exception.Message);
+        Assert.Contains(new UserCannotBeRestoredAutoConfirmMemberOfAnotherOrg(user.Email).Message, exception.Message);
         await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .DidNotReceiveWithAnyArgs()
             .DeleteAllByUserIdAsync(Arg.Any<Guid>());

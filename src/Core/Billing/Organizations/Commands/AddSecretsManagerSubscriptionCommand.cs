@@ -111,12 +111,12 @@ public class AddSecretsManagerSubscriptionCommand(
 
         if (!plan.SecretsManager.HasAdditionalServiceAccountOption && additionalServiceAccounts > 0)
         {
-            throw new BadRequestException(new AddSecretsManagerPlanDoesNotAllowAdditionalMachineAccountsError().Message);
+            throw new BadRequestException(new PlanDoesNotAllowAdditionalMachineAccountsError().Message);
         }
 
         if (additionalSmSeats > organization.Seats.GetValueOrDefault())
         {
-            throw new BadRequestException(new AddSecretsManagerCannotExceedPasswordManagerSeatsError().Message);
+            throw new BadRequestException(new SecretsManagerSeatsMustNotExceedPasswordManagerSeatsError().Message);
         }
 
         if (additionalServiceAccounts < 0)
@@ -126,7 +126,7 @@ public class AddSecretsManagerSubscriptionCommand(
 
         if (!plan.SecretsManager.HasAdditionalSeatsOption && additionalSmSeats > 0)
         {
-            throw new BadRequestException(new AddSecretsManagerPlanDoesNotAllowAdditionalUsersError().Message);
+            throw new BadRequestException(new PlanDoesNotAllowAdditionalUsersError().Message);
         }
 
         if (plan.SecretsManager.MaxAdditionalSeats.HasValue &&

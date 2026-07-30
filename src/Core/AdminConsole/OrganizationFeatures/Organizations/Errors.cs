@@ -46,13 +46,3 @@ public record PlanNullError(string ProductType) : BadRequestError($"{ProductType
 public record PlanNotFoundError(string ProductType) : BadRequestError($"{ProductType} Plan not found.");
 public record CannotSubtractProductSeatsError(string ProductType) : BadRequestError($"You can't subtract {ProductType} seats!");
 public record TrialLengthOutOfRangeError() : BadRequestError("Trial length must be between 0 and 30 days.");
-public record OrganizationAlreadyUsesSecretsManagerError() : BadRequestError("Organization already uses Secrets Manager.");
-public record OrganizationPlanDoesNotSupportSecretsManagerError() : BadRequestError("Organization's plan does not support Secrets Manager.");
-public record SecretsManagerPaymentMethodNotFoundError() : ConflictError("No payment method found.");
-public record SecretsManagerSubscriptionNotFoundError() : ConflictError("No subscription found.");
-public record CannotAddSecretsManagerWithNegativeSeatsError() : BadRequestError("You cannot add Secrets Manager with a negative number of seats.");
-public record AtLeastOneSecretsManagerSeatRequiredError() : BadRequestError("At least one Secrets Manager seat is required.");
-public record AddSecretsManagerPlanDoesNotAllowAdditionalMachineAccountsError() : BadRequestError("Plan does not allow additional Machine Accounts.");
-public record AddSecretsManagerCannotExceedPasswordManagerSeatsError() : BadRequestError("You cannot have more Secrets Manager seats than Password Manager seats.");
-public record CannotAddSecretsManagerWithNegativeMachineAccountsError() : BadRequestError("You cannot add Secrets Manager with a negative number of Machine Accounts.");
-public record AddSecretsManagerPlanDoesNotAllowAdditionalUsersError() : BadRequestError("Plan does not allow additional users.");

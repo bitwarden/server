@@ -13,3 +13,5 @@ public record CustomUsersCannotRestoreAdminsError() : BadRequestError("Custom us
 public record AlreadyActiveError() : BadRequestError("Already active.");
 public record UsersInvalidError() : BadRequestError("Users invalid.");
 public record UserNotCompliantWithTwoFactorPolicyError(string Email) : BadRequestError($"{Email} is not compliant with the two-step login policy");
+public record UserCannotBeRestoredAutoConfirmMemberOfAnotherOrg(string Email) : BadRequestError($"{Email} cannot be restored until they leave all other organization vaults.");
+public record UserCannotBeRestoredAutoConfirmForbiddenByOtherOrg(string Email) : BadRequestError($"{Email} cannot be restored because they are a member of another organization which forbids it.");
