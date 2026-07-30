@@ -748,6 +748,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
         Assert.Equal(request.UnlockMethodData.MasterPasswordUnlockData!.MasterKeyWrappedUserKey, userNewState.Key);
+        Assert.Equal(request.UserKeyId, userNewState.UserKeyId);
         Assert.Equal(request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.SignedPublicKey,
             userNewState.SignedPublicKey);
         Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityState, userNewState.SecurityState);
@@ -761,6 +762,23 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             signatureKeyPair.WrappedSigningKey);
         Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.VerifyingKey,
             signatureKeyPair.VerifyingKey);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_MasterPasswordUnlockKeyIdMismatch_BadRequest(
+        RotateUserKeysRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, true);
+        SetupMasterPasswordRotateUserAccount(request, user);
+        request.UserKeyId = "0123456789abcdef0123456789abcdef";
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(user.UserKeyId, userNewState.UserKeyId);
     }
 
     [Theory]
@@ -1044,7 +1062,8 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
                     Parallelism = user.KdfParallelism
                 },
                 MasterKeyWrappedUserKey = _mockEncryptedType7String,
-                Salt = user.Email.ToLowerInvariant().Trim()
+                Salt = user.Email.ToLowerInvariant().Trim(),
+                UserKeyId = request.UserKeyId
             }
         };
         SetupCommonRotate(request, upgradeToken);
