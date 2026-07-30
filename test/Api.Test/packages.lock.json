@@ -1895,7 +1895,8 @@
         "dependencies": {
           "Core": "[2026.8.0, )",
           "HttpExtensions": "[2026.8.0, )",
-          "OrganizationAuthorization": "[0.0.1, )"
+          "OrganizationAuthorization": "[0.0.1, )",
+          "Pam.Domain": "[2026.8.0, )"
         }
       },
       "pam.domain": {
