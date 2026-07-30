@@ -199,6 +199,107 @@ public class SendInvoicePriceMigrationJobTests
     }
 
     [Fact]
+    public async Task ExecuteJobAsync_SubscriptionCancelsAtPeriodEnd_SkipsOrganization()
+    {
+        // Arrange: the customer asked to end the subscription — migrating would email them a renewal
+        // price change and create a schedule extending a year past the cancellation.
+        var organizationId = Guid.NewGuid();
+        var organization = Organization(organizationId, "sub_123");
+        var subscription = Subscription("sub_123", StripeConstants.CollectionMethod.SendInvoice,
+            DateTime.UtcNow.AddDays(10));
+        subscription.CancelAtPeriodEnd = true;
+
+        _cohortAssignmentRepository.GetSendInvoiceCandidatesInWindowAsync(Arg.Any<int>(), Arg.Any<int>())
+            .Returns([Assignment(organizationId)]);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        // Act
+        await _sut.Execute(CreateContext());
+
+        // Assert
+        await _businessPlanMigrationCoordinator.DidNotReceiveWithAnyArgs().ExecuteAsync(default, default);
+    }
+
+    [Fact]
+    public async Task ExecuteJobAsync_SubscriptionHasFutureCancelAt_SkipsOrganization()
+    {
+        // Arrange: a future-dated cancel_at does not always surface as CancelAtPeriodEnd but still
+        // means the subscription will not renew.
+        var organizationId = Guid.NewGuid();
+        var organization = Organization(organizationId, "sub_123");
+        var subscription = Subscription("sub_123", StripeConstants.CollectionMethod.SendInvoice,
+            DateTime.UtcNow.AddDays(10));
+        subscription.CancelAt = DateTime.UtcNow.AddDays(10);
+
+        _cohortAssignmentRepository.GetSendInvoiceCandidatesInWindowAsync(Arg.Any<int>(), Arg.Any<int>())
+            .Returns([Assignment(organizationId)]);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        // Act
+        await _sut.Execute(CreateContext());
+
+        // Assert
+        await _businessPlanMigrationCoordinator.DidNotReceiveWithAnyArgs().ExecuteAsync(default, default);
+    }
+
+    [Theory]
+    [InlineData(StripeConstants.SubscriptionStatus.Canceled)]
+    [InlineData(StripeConstants.SubscriptionStatus.Unpaid)]
+    [InlineData(StripeConstants.SubscriptionStatus.Incomplete)]
+    [InlineData(StripeConstants.SubscriptionStatus.IncompleteExpired)]
+    [InlineData(StripeConstants.SubscriptionStatus.Paused)]
+    public async Task ExecuteJobAsync_SubscriptionInNonRenewingStatus_SkipsOrganization(string status)
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var organization = Organization(organizationId, "sub_123");
+        var subscription = Subscription("sub_123", StripeConstants.CollectionMethod.SendInvoice,
+            DateTime.UtcNow.AddDays(10));
+        subscription.Status = status;
+
+        _cohortAssignmentRepository.GetSendInvoiceCandidatesInWindowAsync(Arg.Any<int>(), Arg.Any<int>())
+            .Returns([Assignment(organizationId)]);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        // Act
+        await _sut.Execute(CreateContext());
+
+        // Assert
+        await _businessPlanMigrationCoordinator.DidNotReceiveWithAnyArgs().ExecuteAsync(default, default);
+    }
+
+    [Theory]
+    [InlineData(StripeConstants.SubscriptionStatus.Trialing)]
+    [InlineData(StripeConstants.SubscriptionStatus.PastDue)]
+    public async Task ExecuteJobAsync_SubscriptionInRenewingNonActiveStatus_InvokesCoordinator(string status)
+    {
+        // Arrange: past_due stays eligible for parity with the webhook path — Stripe still emits
+        // invoice.upcoming for past_due subscriptions, and send-invoice customers routinely sit
+        // past_due between invoice issue and payment.
+        var organizationId = Guid.NewGuid();
+        var organization = Organization(organizationId, "sub_123");
+        var subscription = Subscription("sub_123", StripeConstants.CollectionMethod.SendInvoice,
+            DateTime.UtcNow.AddDays(10));
+        subscription.Status = status;
+
+        _cohortAssignmentRepository.GetSendInvoiceCandidatesInWindowAsync(Arg.Any<int>(), Arg.Any<int>())
+            .Returns([Assignment(organizationId)]);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _businessPlanMigrationCoordinator.ExecuteAsync(organization, subscription)
+            .Returns(BusinessPlanMigrationResult.Completed);
+
+        // Act
+        await _sut.Execute(CreateContext());
+
+        // Assert
+        await _businessPlanMigrationCoordinator.Received(1).ExecuteAsync(organization, subscription);
+    }
+
+    [Fact]
     public async Task ExecuteJobAsync_RenewalDateBeforeWindow_SkipsOrganization()
     {
         // Arrange
@@ -260,6 +361,7 @@ public class SendInvoicePriceMigrationJobTests
         {
             Id = "sub_123",
             CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
+            Status = StripeConstants.SubscriptionStatus.Active,
             Items = new StripeList<SubscriptionItem> { Data = [] }
         };
 
@@ -689,6 +791,7 @@ public class SendInvoicePriceMigrationJobTests
         {
             Id = id,
             CollectionMethod = collectionMethod,
+            Status = StripeConstants.SubscriptionStatus.Active,
             Items = new StripeList<SubscriptionItem>
             {
                 Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }]

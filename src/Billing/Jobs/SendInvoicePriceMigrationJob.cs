@@ -176,8 +176,8 @@ public class SendInvoicePriceMigrationJob(
     /// <summary>
     /// Re-verifies eligibility against the live subscription. Selection reads
     /// <see cref="Organization.ExpirationDate"/>, which is editable from the Admin Portal and can drift
-    /// from Stripe, and cannot filter on collection method at all (it is not stored locally), so both
-    /// are confirmed here before committing.
+    /// from Stripe, and cannot see collection method or cancellation state at all (neither is stored
+    /// locally), so all of it is confirmed here before committing.
     /// </summary>
     private bool IsStillEligible(Organization organization, Subscription subscription)
     {
@@ -186,6 +186,19 @@ public class SendInvoicePriceMigrationJob(
             _logger.LogInformation(
                 "Subscription ({SubscriptionId}) for Organization ({OrganizationId}) no longer uses the '{CollectionMethod}' collection method; skipping send-invoice price migration",
                 subscription.Id, organization.Id, StripeConstants.CollectionMethod.SendInvoice);
+            return false;
+        }
+
+        if (subscription.CancelAtPeriodEnd ||
+            subscription.CancelAt.HasValue ||
+            subscription.Status is not (StripeConstants.SubscriptionStatus.Active
+                or StripeConstants.SubscriptionStatus.Trialing
+                or StripeConstants.SubscriptionStatus.PastDue))
+        {
+            _logger.LogInformation(
+                "Subscription ({SubscriptionId}) for Organization ({OrganizationId}) is not renewing (status '{Status}', cancel at period end: {CancelAtPeriodEnd}, cancel at: {CancelAt}); skipping send-invoice price migration",
+                subscription.Id, organization.Id, subscription.Status, subscription.CancelAtPeriodEnd,
+                subscription.CancelAt);
             return false;
         }
 
