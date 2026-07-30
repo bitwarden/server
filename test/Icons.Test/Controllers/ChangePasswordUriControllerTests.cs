@@ -37,7 +37,7 @@ public class ChangePasswordUriControllerTests
         };
 
     [Fact]
-    public async Task Get_WhenLookupFails_DoesNotCacheAndReprobes()
+    public async Task Get_WhenLookupFails_CachesBrieflyAndDoesNotReprobeWithinWindow()
     {
         _changePasswordService.GetChangePasswordUri(_uri).Returns(ChangePasswordUriResult.LookupFailed);
         var sut = CreateSut();
@@ -45,10 +45,27 @@ public class ChangePasswordUriControllerTests
         var first = await sut.Get(_uri);
         var second = await sut.Get(_uri);
 
-        // A failed lookup must not be cached, so every request re-probes the service.
-        await _changePasswordService.Received(2).GetChangePasswordUri(_uri);
+        // A failure is cached briefly to bound the probe rate, so a second request within the
+        // window is served from cache rather than re-probing.
+        await _changePasswordService.Received(1).GetChangePasswordUri(_uri);
         Assert.Null(GetResponseUri(first));
         Assert.Null(GetResponseUri(second));
+    }
+
+    [Fact]
+    public async Task Get_WhenLookupFailsServedFromCache_StillSetsNoStore()
+    {
+        _changePasswordService.GetChangePasswordUri(_uri).Returns(ChangePasswordUriResult.LookupFailed);
+        var sut = CreateSut();
+
+        await sut.Get(_uri);          // populate the short negative cache
+        await sut.Get(_uri);          // served from cache
+
+        // A cached failure must still tell the edge not to store it.
+        var cacheControl = sut.Response.GetTypedHeaders().CacheControl;
+        Assert.NotNull(cacheControl);
+        Assert.True(cacheControl!.NoStore);
+        Assert.False(cacheControl.Public);
     }
 
     [Fact]

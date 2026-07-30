@@ -60,34 +60,45 @@ public class ChangePasswordUriController : Controller
         var domain = validUri.Host;
 
         var mappedDomain = _domainMappingService.MapDomain(domain);
-        if (_changePasswordSettings.CacheEnabled && _memoryCache.TryGetValue(mappedDomain, out string? cachedUri))
+        if (_changePasswordSettings.CacheEnabled &&
+            _memoryCache.TryGetValue(mappedDomain, out ChangePasswordUriResult? cached) && cached != null)
         {
-            SetCacheControl(definitive: true);
-            return Ok(new ChangePasswordUriResponse(cachedUri));
+            return BuildResponse(cached);
         }
 
         var result = await _changePasswordService.GetChangePasswordUri(domain);
 
-        // Transient failure: don't cache, and set no-store so the edge doesn't pin a
-        // "no change-password URL" answer for every client behind that cache.
         if (result.Type == ChangePasswordUriResultType.LookupFailed)
         {
-            _logger.LogWarning("Change-password lookup failed for {Domain}; not caching.", domain);
-            SetCacheControl(definitive: false);
-            return Ok(new ChangePasswordUriResponse(null));
+            _logger.LogDebug("Change-password lookup for {Domain} failed; caching briefly.", domain);
         }
 
         if (_changePasswordSettings.CacheEnabled)
         {
-            _memoryCache.Set(mappedDomain, result.Uri, new MemoryCacheEntryOptions
+            var isFailure = result.Type == ChangePasswordUriResultType.LookupFailed;
+            _memoryCache.Set(mappedDomain, result, new MemoryCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = new TimeSpan(_changePasswordSettings.CacheHours, 0, 0),
+                // Cache a transient failure only briefly — long enough to bound the outbound probe
+                // rate for a persistently-failing domain, short enough to recover quickly. Definitive
+                // answers use the configured window.
+                AbsoluteExpirationRelativeToNow = isFailure
+                    ? TimeSpan.FromMinutes(1)
+                    : new TimeSpan(_changePasswordSettings.CacheHours, 0, 0),
                 Size = result.Uri?.Length ?? 0,
-                Priority = result.Uri == null ? CacheItemPriority.High : CacheItemPriority.Normal
+                Priority = isFailure ? CacheItemPriority.Low
+                    : result.Uri == null ? CacheItemPriority.High
+                    : CacheItemPriority.Normal
             });
         }
 
-        SetCacheControl(definitive: true);
+        return BuildResponse(result);
+    }
+
+    private IActionResult BuildResponse(ChangePasswordUriResult result)
+    {
+        // A failed lookup must never be stored by the edge — even when served from the origin's
+        // short negative cache — so only definitive answers get an edge cache window.
+        SetCacheControl(definitive: result.Type != ChangePasswordUriResultType.LookupFailed);
         return Ok(new ChangePasswordUriResponse(result.Uri));
     }
 

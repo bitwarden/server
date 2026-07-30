@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Bit.Icons.Services;
 using Bit.Test.Common.MockedHttpClient;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -33,7 +34,7 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
         var mockHttpFactory = Substitute.For<IHttpClientFactory>();
         mockHttpFactory.CreateClient("ChangePasswordUri").Returns(mockedHandler.ToHttpClient());
 
-        var service = new ChangePasswordUriService(mockHttpFactory);
+        var service = new ChangePasswordUriService(mockHttpFactory, Substitute.For<ILogger<ChangePasswordUriService>>());
 
         var result = await service.GetChangePasswordUri(domain);
 
@@ -61,7 +62,7 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
         var httpClient = mockedHandler.ToHttpClient();
         mockHttpFactory.CreateClient("ChangePasswordUri").Returns(httpClient);
 
-        var service = new ChangePasswordUriService(mockHttpFactory);
+        var service = new ChangePasswordUriService(mockHttpFactory, Substitute.For<ILogger<ChangePasswordUriService>>());
 
         var result = await service.GetChangePasswordUri(domain);
 
@@ -89,7 +90,7 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
         var httpClient = mockedHandler.ToHttpClient();
         mockHttpFactory.CreateClient("ChangePasswordUri").Returns(httpClient);
 
-        var service = new ChangePasswordUriService(mockHttpFactory);
+        var service = new ChangePasswordUriService(mockHttpFactory, Substitute.For<ILogger<ChangePasswordUriService>>());
 
         var result = await service.GetChangePasswordUri(domain);
 
@@ -106,7 +107,7 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
         using var httpClient = new HttpClient(new ThrowingHttpMessageHandler());
         mockHttpFactory.CreateClient("ChangePasswordUri").Returns(httpClient);
 
-        var service = new ChangePasswordUriService(mockHttpFactory);
+        var service = new ChangePasswordUriService(mockHttpFactory, Substitute.For<ILogger<ChangePasswordUriService>>());
 
         var result = await service.GetChangePasswordUri(domain);
 
@@ -119,7 +120,7 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
     public async Task GetChangePasswordUri_WhenDomainIsNullOrEmpty_ReturnsNotSupported(string domain)
     {
         var mockHttpFactory = Substitute.For<IHttpClientFactory>();
-        var service = new ChangePasswordUriService(mockHttpFactory);
+        var service = new ChangePasswordUriService(mockHttpFactory, Substitute.For<ILogger<ChangePasswordUriService>>());
 
         var result = await service.GetChangePasswordUri(domain);
 

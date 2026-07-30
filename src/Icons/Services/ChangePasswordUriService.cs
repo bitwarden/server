@@ -1,12 +1,16 @@
-﻿namespace Bit.Icons.Services;
+﻿using Microsoft.Extensions.Logging;
+
+namespace Bit.Icons.Services;
 
 public class ChangePasswordUriService : IChangePasswordUriService
 {
     private readonly HttpClient _httpClient;
+    private readonly ILogger<ChangePasswordUriService> _logger;
 
-    public ChangePasswordUriService(IHttpClientFactory httpClientFactory)
+    public ChangePasswordUriService(IHttpClientFactory httpClientFactory, ILogger<ChangePasswordUriService> logger)
     {
         _httpClient = httpClientFactory.CreateClient("ChangePasswordUri");
+        _logger = logger;
     }
 
     /// <summary>
@@ -37,10 +41,11 @@ public class ChangePasswordUriService : IChangePasswordUriService
             // Probes completed but criteria not met: definitive "not supported", safe to cache.
             return ChangePasswordUriResult.NotSupported;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Transient probe failure (DNS, timeout, connection reset, SSRF block): not a
-            // definitive answer, so surface it rather than caching it as "not supported".
+            // Transient probe failure (DNS, timeout, connection reset, SSRF block): not a definitive
+            // answer, so surface it rather than caching it as "not supported".
+            _logger.LogWarning(ex, "Change-password lookup failed for {Domain}.", domain);
             return ChangePasswordUriResult.LookupFailed;
         }
     }
