@@ -1490,6 +1490,7 @@
           "Bitwarden.Server.Sdk.Features": "[1.1.0, )",
           "Braintree": "[5.36.0, 5.36.0]",
           "CsvHelper": "[33.1.0, 33.1.0]",
+          "Data": "[0.0.1, )",
           "DnsClient": "[1.8.0, 1.8.0]",
           "Duende.IdentityServer": "[7.4.6, 7.4.6]",
           "DuoUniversal": "[1.3.1, 1.3.1]",
@@ -1526,6 +1527,7 @@
           "RabbitMQ.Client": "[7.1.2, 7.1.2]",
           "SendGrid": "[9.29.3, 9.29.3]",
           "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]",
+          "SsrfProtection": "[0.0.1, )",
           "Stripe.net": "[48.5.0, 48.5.0]",
           "YubicoDotNetClient": "[1.2.0, 1.2.0]",
           "ZiggyCreatures.FusionCache": "[2.0.2, 2.0.2]",
@@ -1533,10 +1535,13 @@
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
       },
+      "data": {
+        "type": "Project"
+      },
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.0, )",
+          "Core": "[2026.7.2, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -1544,12 +1549,15 @@
       "setup": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.0, )",
+          "Core": "[2026.7.2, )",
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
-          "Migrator": "[2026.7.0, )",
+          "Migrator": "[2026.7.2, )",
           "YamlDotNet": "[11.2.1, 11.2.1]"
         }
+      },
+      "ssrfprotection": {
+        "type": "Project"
       }
     }
   }

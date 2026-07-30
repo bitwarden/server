@@ -43,6 +43,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
@@ -95,6 +96,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommandVNext;
+    private readonly IGlobalSettings _globalSettings;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -132,7 +134,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
         IGetOrganizationInviteCommand getOrganizationInviteCommand,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
-        V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext)
+        V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
+        IGlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -171,6 +174,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _getOrganizationInviteCommand = getOrganizationInviteCommand;
         _featureService = featureService;
         _updateOrganizationUserCommandVNext = updateOrganizationUserCommandVNext;
+        _globalSettings = globalSettings;
     }
 
     [HttpGet("{id}")]
@@ -442,12 +446,14 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 model.AccessSecretsManager,
                 collectionAccessToSave,
                 groupsToSave,
+                model.Email,
+                model.Name,
+                model.DefaultUserCollectionName,
                 new StandardUser(
                     userId,
                     await _currentContext.OrganizationOwner(organization.Id),
                     actingContext?.Type,
-                    actingContext?.Permissions),
-                model.DefaultUserCollectionName);
+                    actingContext?.Permissions));
 
             var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
             return Handle(result);
@@ -769,12 +775,16 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new BadRequestException("Users invalid.");
         }
 
-        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(orgId,
-            orgUsers.Count);
+        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(orgId, orgUsers.Count);
         if (additionalSmSeatsRequired > 0)
         {
+            // Self-hosted instances can't autoscale their Stripe subscription, so reject before touching billing.
+            if (_globalSettings.SelfHosted)
+            {
+                throw new BadRequestException("Cannot autoscale on a self-hosted instance.");
+            }
+
             var organization = await _organizationRepository.GetByIdAsync(orgId);
-            // TODO: https://bitwarden.atlassian.net/browse/PM-17000
             var plan = await _pricingClient.GetPlanOrThrow(organization!.PlanType);
             var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                 .AdjustSeats(additionalSmSeatsRequired);
@@ -787,15 +797,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         }
 
         await _organizationUserRepository.ReplaceManyAsync(orgUsers);
-    }
-
-    [HttpPatch("enable-secrets-manager")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task PatchBulkEnableSecretsManagerAsync(Guid orgId,
-        [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        await BulkEnableSecretsManagerAsync(orgId, model);
     }
 
     [HttpPost("{id}/auto-confirm")]
