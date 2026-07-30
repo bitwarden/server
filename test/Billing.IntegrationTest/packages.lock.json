@@ -2101,7 +2101,8 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.7.2, )",
-          "HttpExtensions": "[2026.7.2, )"
+          "HttpExtensions": "[2026.7.2, )",
+          "Pam.Domain": "[2026.7.2, )"
         }
       },
       "pam.domain": {
