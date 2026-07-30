@@ -66,8 +66,8 @@ public class ChangePasswordUriController : Controller
         var result = await _changePasswordService.GetChangePasswordUri(domain);
 
         // Transient failure: don't cache, and set no-store so the edge doesn't pin a
-    // "no change-password URL" answer for every client behind that cache. The service
-    // logs the underlying exception.
+        // "no change-password URL" answer for every client behind that cache. The service
+        // logs the underlying exception.
         if (result.Type == ChangePasswordUriResultType.LookupFailed)
         {
             SetCacheControl(definitive: false);
