@@ -21,6 +21,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
     IPolicyQuery policyQuery,
     IOrganizationUserRepository organizationUserRepository,
     IProviderUserRepository providerUserRepository,
+    IUserRepository userRepository,
     IAutomaticUserConfirmationPolicyEnforcementHandler autoConfirmPolicyEnforcementValidator) : IBulkAutomaticallyConfirmOrganizationUsersValidator
 {
     public async Task<IEnumerable<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>>> ValidateManyAsync(
@@ -63,7 +64,8 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
             requireTwoFactorByUserId,
             autoConfirmPolicyByUserId,
             orgUserCountByUserId,
-            providerUserIds
+            providerUserIds,
+            emailByUserId
         ) = await FetchBulkDataAsync(orgId, userIds);
 
         // Org-level check: the policy must be enabled for the organization.
@@ -78,7 +80,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
         // Per-user validation using bulk-fetched data — pure mapping, no side effects.
         var bulkResults = validRequests
             .Select(r => ValidateRequest(r, orgId, isTwoFactorEnabledByUserId, requireTwoFactorByUserId,
-                autoConfirmPolicyByUserId, providerUserIds, orgUserCountByUserId));
+                autoConfirmPolicyByUserId, providerUserIds, orgUserCountByUserId, emailByUserId));
 
         return bulkResults.Concat(structuralResults.Where(r => r.IsError));
     }
@@ -94,7 +96,8 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
         Dictionary<Guid, RequireTwoFactorPolicyRequirement> requireTwoFactorByUserId,
         Dictionary<Guid, AutomaticUserConfirmationPolicyRequirement> autoConfirmPolicyByUserId,
         HashSet<Guid> providerUserIds,
-        Dictionary<Guid, int> orgUserCountByUserId)
+        Dictionary<Guid, int> orgUserCountByUserId,
+        Dictionary<Guid, string> emailByUserId)
     {
         var userId = request.OrganizationUser!.UserId!.Value;
 
@@ -113,7 +116,8 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
                 autoConfirmPolicyRequirement, orgId, providerUserIds.Contains(userId), orgMembershipCount);
             if (violation is not null)
             {
-                return Invalid(request, WithEmail(violation, request.OrganizationUser?.Email));
+                emailByUserId.TryGetValue(userId, out var email);
+                return Invalid(request, WithEmail(violation, email));
             }
         }
 
@@ -175,7 +179,8 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
         Dictionary<Guid, RequireTwoFactorPolicyRequirement> RequireTwoFactorByUserId,
         Dictionary<Guid, AutomaticUserConfirmationPolicyRequirement> AutoConfirmPolicyByUserId,
         Dictionary<Guid, int> OrgUserCountByUserId,
-        HashSet<Guid> ProviderUserIds
+        HashSet<Guid> ProviderUserIds,
+        Dictionary<Guid, string> EmailByUserId
     )> FetchBulkDataAsync(Guid orgId, IReadOnlyCollection<Guid> userIds)
     {
         var policyTask = policyQuery.RunAsync(orgId, PolicyType.AutomaticUserConfirmation);
@@ -184,8 +189,9 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
         var autoConfirmTask = policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(userIds);
         var orgUsersTask = organizationUserRepository.GetManyByManyUsersAsync(userIds);
         var providerUsersTask = providerUserRepository.GetManyByManyUsersAsync(userIds);
+        var usersTask = userRepository.GetManyAsync(userIds);
 
-        await Task.WhenAll(policyTask, twoFactorTask, requireTwoFactorTask, autoConfirmTask, orgUsersTask, providerUsersTask);
+        await Task.WhenAll(policyTask, twoFactorTask, requireTwoFactorTask, autoConfirmTask, orgUsersTask, providerUsersTask, usersTask);
 
         return (
             policyTask.Result,
@@ -193,7 +199,8 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
             requireTwoFactorTask.Result.ToDictionary(r => r.UserId, r => r.Requirement),
             autoConfirmTask.Result.ToDictionary(r => r.UserId, r => r.Requirement),
             orgUsersTask.Result.GroupBy(ou => ou.UserId!.Value).ToDictionary(g => g.Key, g => g.Count()),
-            providerUsersTask.Result.Select(pu => pu.UserId!.Value).ToHashSet()
+            providerUsersTask.Result.Select(pu => pu.UserId!.Value).ToHashSet(),
+            usersTask.Result.ToDictionary(u => u.Id, u => u.Email)
         );
     }
 }

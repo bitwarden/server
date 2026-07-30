@@ -12,5 +12,4 @@ public record UserCannotBelongToAnotherOrganization(string Email) : BadRequestEr
 public record OtherOrganizationDoesNotAllowOtherMembership(string Email) : BadRequestError($"Cannot confirm {Email} because they are a member of another organization which forbids it.");
 public record AutomaticallyConfirmUsersPolicyIsNotEnabled() : BadRequestError("Cannot confirm this member because the Automatically Confirm Users policy is not enabled.");
 public record ProviderUsersCannotJoin() : BadRequestError("This member belongs to an organization vault that has automatically confirm invited users enabled. Members with the Provider user type can't join additional organization vaults.");
-public record UserCannotJoinProvider() : BadRequestError("This member belongs to an organization vault that has automatically confirm invited users enabled. Members with the Provider user type can't join additional organization vaults.");
 public record CurrentOrganizationUserIsNotPresentInRequest() : BadRequestError("The current organization user does not exist in the request.");

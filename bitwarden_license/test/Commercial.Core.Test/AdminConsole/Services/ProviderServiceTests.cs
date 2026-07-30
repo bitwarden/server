@@ -154,7 +154,7 @@ public class ProviderServiceTests
             sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, tokenizedPaymentMethod,
                 billingAddress));
 
-        Assert.Equal(new UserCannotJoinProvider().Message, exception.Message);
+        Assert.Equal(new ProviderUsersCannotJoin().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -677,7 +677,7 @@ public class ProviderServiceTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token));
 
-        Assert.Equal(new UserCannotJoinProvider().Message, exception.Message);
+        Assert.Equal(new ProviderUsersCannotJoin().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -798,7 +798,7 @@ public class ProviderServiceTests
 
         // Assert
         Assert.Single(result);
-        Assert.Equal(new UserCannotJoinProvider().Message, result[0].Item2);
+        Assert.Equal(new ProviderUsersCannotJoin().Message, result[0].Item2);
 
         // Verify user was not confirmed
         await providerUserRepository.DidNotReceive().ReplaceAsync(Arg.Any<ProviderUser>());

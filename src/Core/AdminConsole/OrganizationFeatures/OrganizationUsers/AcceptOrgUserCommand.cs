@@ -177,8 +177,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         if (adminEmails.Count > 0)
         {
-            var organization = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
-            await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
+            await _mailService.SendOrganizationAcceptedEmailAsync(org, user.Email, adminEmails);
         }
 
         await _pushAutoConfirmNotificationCommand.PushAsync(user.Id, orgUser.OrganizationId);

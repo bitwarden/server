@@ -59,7 +59,7 @@ public class CloudOrganizationSignUpCommand(
             if (signup.IsFromProvider)
             {
                 throw new BadRequestException(
-                    "Secrets Manager is unsupported because your organization has a Managed Service Provider.");
+                    new SecretsManagerMspUnsupportedError().Message);
             }
             ValidateSecretsManagerPlan(plan, signup);
         }
@@ -144,39 +144,38 @@ public class CloudOrganizationSignUpCommand(
 
         if (plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats <= 0)
         {
-            throw new BadRequestException($"You do not have any Password Manager seats!");
+            throw new BadRequestException(new NoPasswordManagerSeatsError().Message);
         }
 
         if (upgrade.AdditionalSeats < 0)
         {
-            throw new BadRequestException($"You can't subtract Password Manager seats!");
+            throw new BadRequestException(new CannotSubtractPasswordManagerSeatsError().Message);
         }
 
         if (!plan.PasswordManager.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
         {
-            throw new BadRequestException("Plan does not allow additional storage.");
+            throw new BadRequestException(new PlanDoesNotAllowAdditionalStorageError().Message);
         }
 
         if (upgrade.AdditionalStorageGb < 0)
         {
-            throw new BadRequestException("You can't subtract storage!");
+            throw new BadRequestException(new CannotSubtractStorageError().Message);
         }
 
         if (!plan.PasswordManager.HasPremiumAccessOption && upgrade.PremiumAccessAddon)
         {
-            throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
+            throw new BadRequestException(new PlanDoesNotAllowPremiumAccessAddonError().Message);
         }
 
         if (!plan.PasswordManager.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
         {
-            throw new BadRequestException("Plan does not allow additional users.");
+            throw new BadRequestException(new PlanDoesNotAllowAdditionalUsersError().Message);
         }
 
         if (plan.PasswordManager.HasAdditionalSeatsOption && plan.PasswordManager.MaxAdditionalSeats.HasValue &&
             upgrade.AdditionalSeats > plan.PasswordManager.MaxAdditionalSeats.Value)
         {
-            throw new BadRequestException($"Selected plan allows a maximum of " +
-                                          $"{plan.PasswordManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+            throw new BadRequestException(new PlanMaxAdditionalUsersExceededError(plan.PasswordManager.MaxAdditionalSeats.GetValueOrDefault(0)).Message);
         }
     }
 
@@ -184,19 +183,19 @@ public class CloudOrganizationSignUpCommand(
     {
         if (plan.SupportsSecretsManager == false)
         {
-            throw new BadRequestException("Invalid Secrets Manager plan selected.");
+            throw new BadRequestException(new InvalidSecretsManagerPlanError().Message);
         }
 
         ValidatePlan(plan, upgrade.AdditionalSmSeats.GetValueOrDefault(), "Secrets Manager");
 
         if (plan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats <= 0)
         {
-            throw new BadRequestException($"You do not have any Secrets Manager seats!");
+            throw new BadRequestException(new NoSecretsManagerSeatsError().Message);
         }
 
         if (!plan.SecretsManager.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
-            throw new BadRequestException("Plan does not allow additional Machine Accounts.");
+            throw new BadRequestException(new PlanDoesNotAllowAdditionalMachineAccountsError().Message);
         }
 
         if ((plan.ProductTier == ProductTierType.TeamsStarter &&
@@ -204,22 +203,21 @@ public class CloudOrganizationSignUpCommand(
             (plan.ProductTier != ProductTierType.TeamsStarter &&
              upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
         {
-            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
+            throw new BadRequestException(new SecretsManagerSeatsMustNotExceedPasswordManagerSeatsError().Message);
         }
 
         if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
         {
-            throw new BadRequestException("You can't subtract Machine Accounts!");
+            throw new BadRequestException(new CannotSubtractMachineAccountsError().Message);
         }
 
         switch (plan.SecretsManager.HasAdditionalSeatsOption)
         {
             case false when upgrade.AdditionalSmSeats > 0:
-                throw new BadRequestException("Plan does not allow additional users.");
+                throw new BadRequestException(new PlanDoesNotAllowAdditionalUsersError().Message);
             case true when plan.SecretsManager.MaxAdditionalSeats.HasValue &&
                            upgrade.AdditionalSmSeats > plan.SecretsManager.MaxAdditionalSeats.Value:
-                throw new BadRequestException($"Selected plan allows a maximum of " +
-                                              $"{plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+                throw new BadRequestException(new PlanMaxAdditionalUsersExceededError(plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)).Message);
         }
     }
 
@@ -227,17 +225,17 @@ public class CloudOrganizationSignUpCommand(
     {
         if (plan is null)
         {
-            throw new BadRequestException($"{productType} Plan was null.");
+            throw new BadRequestException(new PlanNullError(productType).Message);
         }
 
         if (plan.Disabled)
         {
-            throw new BadRequestException($"{productType} Plan not found.");
+            throw new BadRequestException(new PlanNotFoundError(productType).Message);
         }
 
         if (additionalSeats < 0)
         {
-            throw new BadRequestException($"You can't subtract {productType} seats!");
+            throw new BadRequestException(new CannotSubtractProductSeatsError(productType).Message);
         }
     }
 
@@ -351,7 +349,7 @@ public class CloudOrganizationSignUpCommand(
     {
         if (signup.TrialLength is < 0 or > 30)
         {
-            throw new BadRequestException("Trial length must be between 0 and 30 days.");
+            throw new BadRequestException(new TrialLengthOutOfRangeError().Message);
         }
     }
 }

@@ -2,7 +2,9 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -31,7 +33,7 @@ public class RemoveOrganizationFromProviderCommandTests
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RemoveOrganizationFromProvider(null, null, null));
 
-        Assert.Equal("Failed to remove organization vault. Please contact support.", exception.Message);
+        Assert.Equal(new FailedToRemoveOrganizationFromProviderError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -41,7 +43,7 @@ public class RemoveOrganizationFromProviderCommandTests
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RemoveOrganizationFromProvider(provider, null, null));
 
-        Assert.Equal("Failed to remove organization vault. Please contact support.", exception.Message);
+        Assert.Equal(new FailedToRemoveOrganizationFromProviderError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -53,7 +55,7 @@ public class RemoveOrganizationFromProviderCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RemoveOrganizationFromProvider(
             provider, providerOrganization, null));
 
-        Assert.Equal("Failed to remove organization vault. Please contact support.", exception.Message);
+        Assert.Equal(new FailedToRemoveOrganizationFromProviderError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -65,7 +67,7 @@ public class RemoveOrganizationFromProviderCommandTests
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization));
 
-        Assert.Equal("Failed to remove organization vault. Please contact support.", exception.Message);
+        Assert.Equal(new FailedToRemoveOrganizationFromProviderError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -85,7 +87,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization));
 
-        Assert.Equal("Organization must have at least one confirmed owner.", exception.Message);
+        Assert.Equal(new OrgMustHaveConfirmedOwnerError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
