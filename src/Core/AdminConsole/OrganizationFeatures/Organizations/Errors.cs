@@ -14,3 +14,9 @@ public record TwoFactorRequiredError() : BadRequestError("You cannot join this o
 public record OrganizationUserNotFoundError() : NotFoundError("User invalid.");
 public record OrganizationNotFoundError() : NotFoundError("Organization invalid.");
 public record OrganizationMismatchError() : BadRequestError("User does not belong to this organization.");
+public record PremiumLicenseError() : BadRequestError("Premium licenses cannot be applied to an organization vault. Upload this license from your personal account Settings page.");
+public record LicenseAlreadyInUseError() : BadRequestError("License is already in use by another organization vault.");
+public record LeaveOrgSsoBlockedError() : BadRequestError("Your organization single sign-on settings prevent you from leaving.");
+public record LeaveOrgClaimedAccountError() : BadRequestError("You can't leave this organization vault because your account is claimed. Contact your admin for more information.");
+public record CannotDeleteClaimedAccountError() : BadRequestError("You cannot delete accounts owned by an organization. Contact your admin for additional details.");
+public record CannotPurgeClaimedAccountError() : BadRequestError("You cannot purge accounts owned by an organization. Contact your admin for additional details.");
