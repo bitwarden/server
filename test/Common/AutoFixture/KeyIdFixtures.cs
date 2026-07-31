@@ -1,4 +1,5 @@
 ﻿using AutoFixture;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
@@ -39,6 +40,8 @@ public class KeyIdCustomization : ICustomization
         fixture.Customize<User>(composer => composer
             .With(o => o.UserKeyId, _hexEncodedKeyId));
         fixture.Customize<MasterPasswordUnlockDataRequestModel>(composer => composer
+            .With(o => o.UserKeyId, _hexEncodedKeyId));
+        fixture.Customize<KeysRequestModel>(composer => composer
             .With(o => o.UserKeyId, _hexEncodedKeyId));
     }
 }

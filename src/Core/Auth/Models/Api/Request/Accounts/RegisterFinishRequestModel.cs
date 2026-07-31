@@ -88,8 +88,8 @@ public class RegisterFinishRequestModel : IValidatableObject
                 KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory,
                 KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism,
                 MasterPasswordSalt = MasterPasswordUnlock?.Salt,
-                Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey,
-                UserKeyId = KeyId.FromHexEncodedString(MasterPasswordUnlock?.UserKeyId)?.ToString()
+                Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey
+                // Note: V1 register flows do not set the UserKeyId and the clients have to set it later
             };
 
             user = UserAsymmetricKeys?.ToUser(user)!;

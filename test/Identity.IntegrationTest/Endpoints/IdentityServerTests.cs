@@ -94,11 +94,26 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task RegisterFinish_WithV1Encryption_PersistsSuppliedUserKeyId(RegisterFinishRequestModel requestModel)
+    public async Task RegisterFinish_WithV1Encryption_IgnoresSuppliedUserKeyId(RegisterFinishRequestModel requestModel)
     {
-        // Clearing AccountKeys leaves UserAsymmetricKeys as the account cryptographic state, which
-        // is what makes this a V1 registration. V1 persists the key id through User_Create only.
+        // Clearing AccountKeys leaves UserAsymmetricKeys as the account cryptographic state, which is
+        // what makes this a V1 registration. Only V2 flows establish a key id, so V1 drops one even when
+        // the client sends it; the account picks one up from the backfill endpoint on a later sync.
         requestModel.AccountKeys = null;
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
+        SetMasterPasswordUnlockAndAuthentication(requestModel, TestUserKeyId);
+        var localFactory = new IdentityApplicationFactory();
+
+        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
+
+        Assert.Null(user.UserKeyId);
+    }
+
+    [Theory, BitAutoData, SignatureKeyPairRequestModelCustomize, RegisterFinishRequestModelCustomize]
+    public async Task RegisterFinish_WithV2Encryption_PersistsSuppliedUserKeyId(RegisterFinishRequestModel requestModel)
+    {
+        // AccountKeys is left populated so the registration resolves to V2 encryption, which persists
+        // the key id through UpdateMasterPasswordUnlockData.
         requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         SetMasterPasswordUnlockAndAuthentication(requestModel, TestUserKeyId);
         var localFactory = new IdentityApplicationFactory();
@@ -109,23 +124,9 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData, SignatureKeyPairRequestModelCustomize, RegisterFinishRequestModelCustomize]
-    public async Task RegisterFinish_WithV2Encryption_PersistsSuppliedUserKeyId(RegisterFinishRequestModel requestModel)
+    public async Task RegisterFinish_WithV2EncryptionAndNoUserKeyId_LeavesUserKeyIdUnset(
+        RegisterFinishRequestModel requestModel)
     {
-        // AccountKeys is left populated so the registration resolves to V2 encryption, which persists
-        // the key id through UpdateMasterPasswordUnlockData rather than User_Create.
-        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
-        SetMasterPasswordUnlockAndAuthentication(requestModel, TestUserKeyId);
-        var localFactory = new IdentityApplicationFactory();
-
-        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
-
-        Assert.Equal(TestUserKeyId, user.UserKeyId);
-    }
-
-    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task RegisterFinish_WithoutUserKeyId_LeavesUserKeyIdUnset(RegisterFinishRequestModel requestModel)
-    {
-        requestModel.AccountKeys = null;
         requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         SetMasterPasswordUnlockAndAuthentication(requestModel, userKeyId: null);
         var localFactory = new IdentityApplicationFactory();

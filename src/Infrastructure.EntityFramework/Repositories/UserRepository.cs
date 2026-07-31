@@ -617,6 +617,27 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     }
 
     /// <inheritdoc />
+    public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
+    {
+        return async (_, _) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            userEntity.UserKeyId = userKeyId.ToString();
+            userEntity.RevisionDate = DateTime.UtcNow;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
+    /// <inheritdoc />
     public async Task<bool> TrySetUserKeyIdAsync(Guid userId, KeyId userKeyId)
     {
         using var scope = ServiceScopeFactory.CreateScope();

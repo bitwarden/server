@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
@@ -460,7 +461,8 @@ public class AccountsKeyManagementControllerTests
                 AccountPublicKey = "public-key",
                 UserKeyEncryptedAccountPrivateKey = "encrypted-private-key"
             },
-            OrgIdentifier = "test-org"
+            OrgIdentifier = "test-org",
+            UserKeyId = "0123456789abcdef0123456789abcdef"
         };
 
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
@@ -477,7 +479,63 @@ public class AccountsKeyManagementControllerTests
                     Assert.Equal(request.AccountKeys.UserKeyEncryptedAccountPrivateKey,
                         data.AccountKeys.UserKeyEncryptedAccountPrivateKey);
                     Assert.Equal(request.OrgIdentifier, data.OrgIdentifier);
+                    Assert.Equal(KeyId.FromHexEncodedString(request.UserKeyId), data.UserKeyId);
                 }));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_V2_NoUserKeyId_PassesNullThrough(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User expectedUser)
+    {
+        // A client that predates the key id field sends none, and the request stays valid V2 — the key
+        // id is deliberately not part of IsV2Request().
+        var request = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "wrapped-user-key",
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "public-key",
+                UserKeyEncryptedAccountPrivateKey = "encrypted-private-key"
+            },
+            OrgIdentifier = "test-org",
+            UserKeyId = null
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+
+        await sutProvider.Sut.PostSetKeyConnectorKeyAsync(request);
+
+        await sutProvider.GetDependency<ISetKeyConnectorKeyCommand>().Received(1)
+            .SetKeyConnectorKeyForUserAsync(Arg.Is(expectedUser),
+                Arg.Do<KeyConnectorKeysData>(data => Assert.Null(data.UserKeyId)));
+    }
+
+    [Theory]
+    [BitAutoData("not-hex")]
+    [BitAutoData("0123456789ABCDEF0123456789ABCDEF")]
+    [BitAutoData("0123456789abcdef")]
+    public void SetKeyConnectorKeyRequestModel_MalformedUserKeyId_FailsValidation(string userKeyId)
+    {
+        var request = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "wrapped-user-key",
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "public-key",
+                UserKeyEncryptedAccountPrivateKey = "encrypted-private-key"
+            },
+            OrgIdentifier = "test-org",
+            UserKeyId = userKeyId
+        };
+
+        var results = new List<ValidationResult>();
+        var isValid = Validator.TryValidateObject(request, new ValidationContext(request), results, true);
+
+        Assert.False(isValid);
+        Assert.Contains(results, result => result.MemberNames.Contains(nameof(request.UserKeyId)));
     }
 
     [Theory]

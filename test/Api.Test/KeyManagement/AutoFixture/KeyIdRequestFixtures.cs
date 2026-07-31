@@ -30,6 +30,8 @@ internal class KeyIdRequestCustomization : ICustomization
             .With(o => o.UserKeyId, _hexEncodedKeyId));
         fixture.Customize<SetUserKeyIdRequestModel>(composer => composer
             .With(o => o.UserKeyId, _hexEncodedKeyId));
+        fixture.Customize<SetKeyConnectorKeyRequestModel>(composer => composer
+            .With(o => o.UserKeyId, _hexEncodedKeyId));
     }
 }
 

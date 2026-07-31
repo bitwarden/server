@@ -2,6 +2,7 @@
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
@@ -1066,6 +1067,100 @@ public class UserRepositoryTests
         Assert.NotNull(updatedUser);
         Assert.Equal(userKeyId, updatedUser.UserKeyId);
     }
+
+    [Theory, DatabaseData]
+    public async Task SetUserKeyId_StoresKeyIdInTheSameTransactionAsTheAccountKeys(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        });
+
+        // Act
+        // This is how the TDE set-keys and Key Connector set-keys flows compose the write.
+        await userRepository.SetV2AccountCryptographicStateAsync(user.Id, BuildV2AccountKeysData(),
+            [userRepository.SetUserKeyId(user.Id, KeyId.FromHexEncodedString(userKeyId)!)]);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(userKeyId, updatedUser.UserKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetUserKeyId_OverwritesAnExistingKeyId(IUserRepository userRepository, Database database)
+    {
+        // Arrange
+        // Unconditional, unlike TrySetUserKeyIdAsync — the caller establishes the user key, so its key id
+        // wins over whatever a previous backfill recorded.
+        const string replacementUserKeyId = "0123456789abcdef0123456789abcdef";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            UserKeyId = "fedcba9876543210fedcba9876543210"
+        });
+
+        // Act
+        var task = userRepository.SetUserKeyId(user.Id, KeyId.FromHexEncodedString(replacementUserKeyId)!);
+        await RunUpdateUserDataAsync(task, database);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(replacementUserKeyId, updatedUser.UserKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetV2AccountCryptographicStateAsync_WithoutKeyIdDelegate_LeavesUserKeyIdUnchanged(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        // A client that predates the key id field adds no delegate, so an existing key id survives rather
+        // than being cleared.
+        const string existingUserKeyId = "fedcba9876543210fedcba9876543210";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            UserKeyId = existingUserKeyId
+        });
+
+        // Act
+        await userRepository.SetV2AccountCryptographicStateAsync(user.Id, BuildV2AccountKeysData());
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(existingUserKeyId, updatedUser.UserKeyId);
+    }
+
+    private static UserAccountKeysData BuildV2AccountKeysData() => new()
+    {
+        PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+            "wrapped-private-key",
+            "public-key",
+            "signed-public-key"),
+        SignatureKeyPairData = new SignatureKeyPairData(
+            SignatureAlgorithm.Ed25519,
+            "wrapped-signing-key",
+            "verifying-key"),
+        SecurityStateData = new SecurityStateData
+        {
+            SecurityState = "security-state",
+            SecurityVersion = 2
+        }
+    };
 
     private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
     {

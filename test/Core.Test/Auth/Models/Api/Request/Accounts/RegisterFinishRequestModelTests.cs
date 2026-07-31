@@ -325,10 +325,12 @@ public class RegisterFinishRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void ToUser_WithMasterPasswordUnlockUserKeyId_MapsUserKeyId(string email, string masterPasswordHint,
+    public void ToUser_V1Encryption_DoesNotSetUserKeyIdEvenWhenSupplied(string email, string masterPasswordHint,
         KeysRequestModel userAsymmetricKeys)
     {
         // Arrange
+        // Only V2 flows establish a user key id. A V1 registration ignores one even if the client sends
+        // it, and the account picks one up from the backfill endpoint on a later sync.
         var model = new RegisterFinishRequestModel
         {
             Email = email,
@@ -344,39 +346,6 @@ public class RegisterFinishRequestModelTests
                 MasterKeyWrappedUserKey = "wrapped-key",
                 Salt = "explicit-salt-value",
                 UserKeyId = TestUserKeyId
-            }
-        };
-
-        // Act
-        var resultUser = model.ToUser(false);
-
-        // Assert
-        Assert.Equal(TestUserKeyId, resultUser.UserKeyId);
-        Assert.Equal(KeyId.FromHexEncodedString(TestUserKeyId), resultUser.GetUserKeyId());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void ToUser_WithoutUserKeyId_LeavesUserKeyIdNull(string email, string masterPasswordHint,
-        KeysRequestModel userAsymmetricKeys)
-    {
-        // Arrange
-        // Clients that predate the user-key-id field omit it; those accounts keep using the
-        // backfill endpoint instead of recording a key id at registration.
-        var model = new RegisterFinishRequestModel
-        {
-            Email = email,
-            MasterPasswordHint = masterPasswordHint,
-            UserAsymmetricKeys = userAsymmetricKeys,
-            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
-            {
-                Kdf = new KdfRequestModel
-                {
-                    KdfType = KdfType.PBKDF2_SHA256,
-                    Iterations = KdfConstants.PBKDF2_ITERATIONS.Default
-                },
-                MasterKeyWrappedUserKey = "wrapped-key",
-                Salt = "explicit-salt-value"
             }
         };
 

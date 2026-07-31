@@ -525,7 +525,15 @@ public class AccountsController : Controller
             {
                 throw new BadRequestException("AccountKeys are only supported for V2 encryption.");
             }
-            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData);
+            // A client that predates the key id field sends none. The account then picks one up from the
+            // backfill endpoint on a later sync rather than at enrollment.
+            var userKeyId = KeyId.FromHexEncodedString(model.UserKeyId);
+            var updateUserDataTasks = userKeyId == null
+                ? null
+                : new UpdateUserData[] { _userRepository.SetUserKeyId(user.Id, userKeyId) };
+
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData,
+                updateUserDataTasks);
             return new KeysResponseModel(accountKeysData, user.Key);
         }
         else

@@ -160,7 +160,7 @@ internal class MasterPasswordService(
         }
 
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
-        ValidateUserKeyUnchangedForUser(user, updateExistingData.MasterPasswordUnlock);
+        updateExistingData.MasterPasswordUnlock.ValidateUserKeyUnchangedForUser(user);
 
         // Always override the master password hint, even if it's null
         user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
@@ -197,7 +197,7 @@ internal class MasterPasswordService(
 
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
         ApplyKdfStateOnUser(user, updateExistingData.MasterPasswordUnlock.Kdf);
-        ValidateUserKeyUnchangedForUser(user, updateExistingData.MasterPasswordUnlock);
+        updateExistingData.MasterPasswordUnlock.ValidateUserKeyUnchangedForUser(user);
 
         // Always override the master password hint, even if it's null
         user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
@@ -320,14 +320,6 @@ internal class MasterPasswordService(
         if (masterPasswordUnlock.ContainedKeyId() != null)
         {
             user.SetUserKeyId(masterPasswordUnlock.ContainedKeyId()!);
-        }
-    }
-
-    private static void ValidateUserKeyUnchangedForUser(User user, MasterPasswordUnlockData masterPasswordUnlock)
-    {
-        if (masterPasswordUnlock.UserKeyId != null && user.GetUserKeyId() != null && masterPasswordUnlock.ContainedKeyId() != user.GetUserKeyId())
-        {
-            throw new BadRequestException("Master password unlock data must not change the user key.");
         }
     }
 

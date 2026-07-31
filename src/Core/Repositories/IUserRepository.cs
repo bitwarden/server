@@ -96,6 +96,17 @@ public interface IUserRepository : IRepository<User, Guid>
     UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData);
 
     /// <summary>
+    /// Sets the user key id for a user, overwriting any existing value.
+    /// <para>
+    /// For flows that establish the user key itself, where the supplied key id is authoritative. Use
+    /// <see cref="TrySetUserKeyIdAsync"/> instead to backfill an account whose key id is not yet known.
+    /// </para>
+    /// </summary>
+    /// <param name="userId">The user identifier.</param>
+    /// <param name="userKeyId">Key id of the user key being established.</param>
+    UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId);
+
+    /// <summary>
     /// Sets the user key id for a user, but only if the user does not already have one.
     /// </summary>
     /// 
