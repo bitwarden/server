@@ -1437,6 +1437,7 @@
           "DnsClient": "[1.8.0, 1.8.0]",
           "Duende.IdentityServer": "[7.4.6, 7.4.6]",
           "DuoUniversal": "[1.3.1, 1.3.1]",
+          "ExceptionHandling": "[0.0.1, )",
           "Fido2.AspNet": "[3.0.1, 3.0.1]",
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "MailKit": "[4.17.0, 4.17.0]",
@@ -1479,6 +1480,15 @@
         }
       },
       "data": {
+        "type": "Project"
+      },
+      "exceptionhandling": {
+        "type": "Project",
+        "dependencies": {
+          "HttpExtensions": "[2026.7.2, )"
+        }
+      },
+      "httpextensions": {
         "type": "Project"
       },
       "ssrfprotection": {
