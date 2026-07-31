@@ -172,10 +172,10 @@ public class PreviewOrganizationTaxCommandTests
         {
             Country = "GB",
             PostalCode = "SW1A 1AA",
-            TaxId = new TaxID("gb_vat", "123456789")
+            TaxId = new TaxID(TaxIdType.EUVAT, "123456789")
         };
 
-        _taxService.GetStripeTaxCode("GB", "123456789").Returns((string?)null);
+        _taxService.GetStripeTaxCode("GB", "123456789").Returns("gb_vat");
 
         var plan = new EnterprisePlan(true);
         _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);

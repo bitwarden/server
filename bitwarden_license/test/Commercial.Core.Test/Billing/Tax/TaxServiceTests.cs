@@ -131,6 +131,7 @@ public class TaxServiceTests
     [BitAutoData("AE", "123456789012345", "ae_trn")]
     [BitAutoData("GB", "XI123456789", "eu_vat")]
     [BitAutoData("GB", "GB123456789", "gb_vat")]
+    [BitAutoData("GB", "123456789", "gb_vat")]
     [BitAutoData("US", "12-3456789", "us_ein")]
     [BitAutoData("UY", "123456789012", "uy_ruc")]
     [BitAutoData("UZ", "123456789", "uz_tin")]
@@ -151,7 +152,7 @@ public class TaxServiceTests
 
     [Theory]
     [BitAutoData("MK", "MK1234567890123")]
-    [BitAutoData("GB", "123456789")]
+    [BitAutoData("GB", "12345678")]
     public void GetStripeTaxCode_WithUnsupportedCountryOrNonMatchingTaxId_ReturnsNull(
         string country,
         string taxId,
