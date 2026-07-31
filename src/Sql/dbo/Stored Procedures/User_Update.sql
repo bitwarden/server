@@ -48,7 +48,7 @@
     @V2UpgradeToken VARCHAR(MAX) = NULL,
     @MasterPasswordSalt NVARCHAR(256) = NULL,
     @LastApiKeyRotationDate DATETIME2(7) = NULL,
-    @UserKeyId VARCHAR(64) = NULL
+    @UserKeyId VARCHAR(32) = NULL
 AS
 BEGIN
     SET NOCOUNT ON

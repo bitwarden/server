@@ -6,7 +6,7 @@
     @RevisionDate DATETIME2(7),
     @AccountRevisionDate DATETIME2(7) = NULL,
     @LastKeyRotationDate DATETIME2(7) = NULL,
-    @UserKeyId VARCHAR(64) = NULL
+    @UserKeyId VARCHAR(32) = NULL
 AS
 BEGIN
     SET NOCOUNT ON

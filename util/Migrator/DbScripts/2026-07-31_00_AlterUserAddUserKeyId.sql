@@ -1,6 +1,6 @@
 IF COL_LENGTH('[dbo].[User]', 'UserKeyId') IS NULL
 BEGIN
-    ALTER TABLE [dbo].[User] ADD [UserKeyId] VARCHAR(64) NULL;
+    ALTER TABLE [dbo].[User] ADD [UserKeyId] VARCHAR(32) NULL;
 END
 GO
 

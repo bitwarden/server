@@ -2226,8 +2226,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("varchar(32)");
 
                     b.Property<string>("UserKeyId")
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)");
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("tinyint(1)");

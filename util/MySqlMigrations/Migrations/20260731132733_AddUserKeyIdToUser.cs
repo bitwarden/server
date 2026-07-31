@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations;
+namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class AddUserKeyIdToUser : Migration
@@ -13,9 +13,10 @@ public partial class AddUserKeyIdToUser : Migration
         migrationBuilder.AddColumn<string>(
             name: "UserKeyId",
             table: "User",
-            type: "character varying(64)",
-            maxLength: 64,
-            nullable: true);
+            type: "varchar(32)",
+            maxLength: 32,
+            nullable: true)
+            .Annotation("MySql:CharSet", "utf8mb4");
     }
 
     /// <inheritdoc />

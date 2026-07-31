@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class AddUserKeyIdToUser : Migration
@@ -13,8 +13,8 @@ public partial class AddUserKeyIdToUser : Migration
         migrationBuilder.AddColumn<string>(
             name: "UserKeyId",
             table: "User",
-            type: "TEXT",
-            maxLength: 64,
+            type: "character varying(32)",
+            maxLength: 32,
             nullable: true);
     }
 

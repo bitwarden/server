@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.SqliteMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class AddUserKeyIdToUser : Migration
@@ -13,10 +13,9 @@ public partial class AddUserKeyIdToUser : Migration
         migrationBuilder.AddColumn<string>(
             name: "UserKeyId",
             table: "User",
-            type: "varchar(64)",
-            maxLength: 64,
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
+            type: "TEXT",
+            maxLength: 32,
+            nullable: true);
     }
 
     /// <inheritdoc />
