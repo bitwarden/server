@@ -525,6 +525,30 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
+    public async Task Run_NonActiveSchedule_ReleasesNothingButStillDropsCohortAssignment()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
+        var (subscription, _) = SetupRedeemableSubscription(organization, []);
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_canceled",
+            Status = SubscriptionScheduleStatus.Canceled,
+            Phases = []
+        };
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        // Stripe rejects releasing a schedule that is not active, so the attachment must reach
+        // ReleaseSchedule as null while the cohort assignment still drops.
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id, subscription.Id);
+    }
+
+    [Fact]
     public async Task Run_ItemLevelDiscounts_CopiedOntoPhaseTwoItems()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
@@ -737,6 +761,32 @@ public class RedeemAnnualUpgradeOfferCommandTests
                 options.Phases.All(phase =>
                     phase.Metadata != null &&
                     phase.Metadata[MetadataKeys.AnnualUpgrade] == nameof(PlanType.TeamsMonthly))));
+    }
+
+    [Fact]
+    public async Task Run_Phase2MetadataCarriesOnlyTheMarker()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var (subscription, _) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 5 }]);
+        subscription.Metadata = new Dictionary<string, string> { ["organizationId"] = organization.Id.ToString() };
+
+        await _command.Run(organization);
+
+        var options = (SubscriptionScheduleUpdateOptions)_stripeAdapter
+            .ReceivedCalls()
+            .Single(call => call.GetMethodInfo().Name == nameof(IStripeAdapter.UpdateSubscriptionScheduleAsync))
+            .GetArguments()[1]!;
+
+        Assert.NotSame(options.Phases[0].Metadata, options.Phases[1].Metadata);
+        Assert.Equal(
+            new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = organization.PlanType.ToString() },
+            options.Phases[1].Metadata);
     }
 
     [Fact]

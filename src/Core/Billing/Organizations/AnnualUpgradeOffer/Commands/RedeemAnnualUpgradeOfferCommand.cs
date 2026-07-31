@@ -92,17 +92,8 @@ public class RedeemAnnualUpgradeOfferCommand(
                 return DefaultConflict;
             }
 
-            // A coupon bound to a single line does not travel with the customer or subscription
-            // discounts, so it has to be copied onto the phase item explicitly or it disappears at
-            // renewal. The savings quote assumes it survives. Copy by coupon ID rather than
-            // promotion code: promotion codes carrying a minimum-amount restriction cannot be
-            // applied to a future schedule phase.
-            // Verified against the Stripe API: a product-restricted coupon copied onto a phase item
-            // whose price sits outside its scope is accepted, appears on the phase as a real
-            // discount object, and then applies zero to that line. So copying can only help. If the
-            // coupon covers the annual product the customer keeps it, and if it does not Stripe
-            // applies nothing, which the savings previews already reported to the quote. Dropping
-            // the copy would be the harmful change, removing a discount Stripe would have honoured.
+            // An item-bound coupon does not travel with the customer or subscription discounts.
+            // Out-of-scope coupons are accepted and applied as zero, so copying can only help.
             var itemDiscounts = item.Discounts?
                 .Where(discount => !string.IsNullOrEmpty(discount?.Coupon?.Id))
                 .Select(discount => new SubscriptionSchedulePhaseItemDiscountOptions
@@ -119,35 +110,33 @@ public class RedeemAnnualUpgradeOfferCommand(
             });
         }
 
-        // Stripe permits one active schedule per subscription, so the switch can only be built by
-        // releasing whatever is there. A schedule Bitwarden did not create, for example a
-        // negotiated renewal built by hand in the Stripe Dashboard, must never be released:
-        // unlike a seat change, this operation has no way to proceed while leaving it intact.
-        // The offer query suppresses this case at page load, so reaching here means a schedule
-        // appeared between the offer being shown and the redemption being submitted.
+        // Backstop for the race between page load, where the offer query suppresses this, and here.
         var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
-        if (ownership == OrganizationSubscriptionScheduleOwnership.Unexpanded)
+
+        switch (ownership)
         {
-            _logger.LogError(
-                "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; refusing to rebuild its schedule",
-                CommandName, subscription.Id, organization.Id, subscription.ScheduleId);
-            return DefaultConflict;
+            case OrganizationSubscriptionScheduleOwnership.Unexpanded:
+                _logger.LogError(
+                    "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; refusing to rebuild its schedule",
+                    CommandName, subscription.Id, organization.Id, subscription.ScheduleId);
+                return DefaultConflict;
+
+            case OrganizationSubscriptionScheduleOwnership.Foreign:
+                _logger.LogWarning(
+                    "{Command}: Refusing to release unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}) for Organization ({OrganizationId}); phase metadata keys present: {MetadataKeys}",
+                    CommandName, subscription.ScheduleId, subscription.Id, organization.Id,
+                    string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(subscription.Schedule)));
+                return DefaultConflict;
         }
 
-        if (ownership == OrganizationSubscriptionScheduleOwnership.Foreign)
-        {
-            _logger.LogWarning(
-                "{Command}: Refusing to release unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}) for Organization ({OrganizationId}); phase metadata keys present: {MetadataKeys}",
-                CommandName, subscription.Schedule?.Id, subscription.Id, organization.Id,
-                string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(subscription.Schedule)));
-            return DefaultConflict;
-        }
+        // Releasing a price-migration schedule is intended: annual-latest is where the migration was
+        // heading anyway. Passing the organization also drops its cohort assignment row, which is
+        // required even when no schedule exists, because assignment precedes scheduling.
+        var scheduleToRelease = ownership == OrganizationSubscriptionScheduleOwnership.None
+            ? null
+            : subscription.Schedule;
 
-        // Releasing a Track A price-migration schedule is intended: the organization moves straight
-        // to the annual-latest plan, which reaches the same destination the migration would have.
-        // Passing organizationId also drops the cohort assignment row so the organization leaves
-        // the migration cohort, accepting that it may lose a proactive migration discount.
-        await priceIncreaseScheduler.ReleaseSchedule(subscription.Schedule, organization.Id, subscription.Id);
+        await priceIncreaseScheduler.ReleaseSchedule(scheduleToRelease, organization.Id, subscription.Id);
 
         var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
             new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
@@ -156,17 +145,11 @@ public class RedeemAnnualUpgradeOfferCommand(
         {
             var phase1 = schedule.Phases[0];
 
-            // Both phases carry the marker, matching how PriceIncreaseScheduler stamps its cohort
-            // keys identically on phase 1 and phase 2. The value records which monthly plan the
-            // schedule came from; only presence is read, so the value exists for triage.
-            var annualUpgradeMetadata = new Dictionary<string, string>
-            {
-                [MetadataKeys.AnnualUpgrade] = organization.PlanType.ToString()
-            };
+            // Both phases carry the marker; only presence is read.
+            var sourcePlanType = organization.PlanType.ToString();
 
-            // Phase 1 is the in-flight phase; Stripe rejects the update unless it
-            // round-trips unchanged, including any discounts already on it, whether at the
-            // phase level or bound to an individual item.
+            // Phase 1 must round-trip its discounts. Omitting them is accepted by Stripe and
+            // silently strips them from the live subscription.
             var phase1Options = new SubscriptionSchedulePhaseOptions
             {
                 StartDate = phase1.StartDate,
@@ -193,16 +176,13 @@ public class RedeemAnnualUpgradeOfferCommand(
                         Coupon = d.CouponId
                     })
                 ] : null,
-                Metadata = annualUpgradeMetadata,
+                Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = sourcePlanType },
                 ProrationBehavior = ProrationBehavior.None
             };
 
-            // Customer-level and subscription-level discounts do not stack: Stripe only applies the
-            // customer's when the subscription has none of its own. Carry the subscription's
-            // coupons when it has them, and otherwise leave the array unspecified so the phase
-            // inherits the customer coupon, which is exactly what the subscription bills under
-            // today. Merging both would start applying a customer coupon Stripe is suppressing,
-            // quietly enlarging the organization's discount at renewal.
+            // Customer and subscription discounts never stack, so carry the subscription's own and
+            // otherwise leave it unspecified to inherit the customer's. The quote models a subset
+            // of this on purpose: it counts only forever coupons.
             var phase2Discounts = subscription.Discounts?
                 .Where(discount => !string.IsNullOrEmpty(discount?.Coupon?.Id))
                 .Select(discount => new SubscriptionSchedulePhaseDiscountOptions
@@ -219,7 +199,7 @@ public class RedeemAnnualUpgradeOfferCommand(
                 EndDate = phase1.EndDate.AddYears(1),
                 Items = phase2Items,
                 Discounts = phase2Discounts is { Count: > 0 } ? phase2Discounts : null,
-                Metadata = annualUpgradeMetadata,
+                Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = sourcePlanType },
                 ProrationBehavior = ProrationBehavior.None
             };
 
