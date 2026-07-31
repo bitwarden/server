@@ -72,6 +72,7 @@ public class MasterPasswordUnlockDataTests
 
         var exception = Assert.Throws<BadRequestException>(
             () => BuildUnlockData(DifferentKeyId).ValidateUserKeyIdUnchangedForUser(user));
+
         Assert.Equal("Invalid user key id.", exception.Message);
     }
 
@@ -93,5 +94,13 @@ public class MasterPasswordUnlockDataTests
         BuildUnlockData(StoredKeyId).ValidateUserKeyIdUnchangedForUser(user);
 
         Assert.Equal(StoredKeyId, user.UserKeyId);
+    }
+
+    [Fact]
+    public void Equals_ComparesKeyIdByValue()
+    {
+        Assert.Equal(BuildUnlockData(StoredKeyId), BuildUnlockData(StoredKeyId));
+        Assert.NotEqual(BuildUnlockData(StoredKeyId), BuildUnlockData(DifferentKeyId));
+        Assert.NotEqual(BuildUnlockData(StoredKeyId), BuildUnlockData(null));
     }
 }

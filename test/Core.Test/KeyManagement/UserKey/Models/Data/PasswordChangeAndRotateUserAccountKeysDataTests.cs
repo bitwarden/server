@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -9,6 +10,8 @@ namespace Bit.Core.Test.KeyManagement.UserKey.Models.Data;
 
 public class PasswordChangeAndRotateUserAccountKeysDataTests
 {
+    private const string _keyIdA = "0123456789abcdef0123456789abcdef";
+    private const string _keyIdB = "fedcba9876543210fedcba9876543210";
     private const string _mockOldMasterKeyAuthenticationHash = "hash";
     private const string _mockMasterPasswordAuthenticationHash = "mockAuthenticationHash";
     private const string _mockMasterKeyWrappedUserKey = "mockMasterKeyWrappedUserKey";
@@ -28,7 +31,8 @@ public class PasswordChangeAndRotateUserAccountKeysDataTests
         user.KdfParallelism = ValidKdf.Parallelism;
     }
 
-    private static PasswordChangeAndRotateUserAccountKeysData CreateValidModel(string salt, KdfSettings kdf) =>
+    private static PasswordChangeAndRotateUserAccountKeysData CreateValidModel(string salt, KdfSettings kdf,
+        string? unlockUserKeyId = null, string? rotationUserKeyId = null) =>
         new()
         {
             OldMasterKeyAuthenticationHash = _mockOldMasterKeyAuthenticationHash,
@@ -44,7 +48,8 @@ public class PasswordChangeAndRotateUserAccountKeysDataTests
                 {
                     Kdf = kdf,
                     MasterKeyWrappedUserKey = _mockMasterKeyWrappedUserKey,
-                    Salt = salt
+                    Salt = salt,
+                    UserKeyId = KeyId.FromHexEncodedString(unlockUserKeyId)
                 },
             BaseData = new BaseRotateUserAccountKeysData
             {
@@ -59,7 +64,8 @@ public class PasswordChangeAndRotateUserAccountKeysDataTests
                 DeviceKeys = [],
                 Ciphers = [],
                 Folders = [],
-                Sends = []
+                Sends = [],
+                UserKeyId = KeyId.FromHexEncodedString(rotationUserKeyId)
             }
         };
 
@@ -71,6 +77,38 @@ public class PasswordChangeAndRotateUserAccountKeysDataTests
         var model = CreateValidModel(user.Email, ValidKdf);
 
         model.ValidateForUser(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ValidateForUser_UnlockKeyIdMatchesRotationKeyId_DoesNotThrow(User user)
+    {
+        SetupValidUser(user);
+        var model = CreateValidModel(user.Email, ValidKdf, _keyIdA, _keyIdA);
+
+        model.ValidateForUser(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ValidateForUser_UnlockKeyIdDiffersFromRotationKeyId_ThrowsBadRequestException(User user)
+    {
+        SetupValidUser(user);
+        var model = CreateValidModel(user.Email, ValidKdf, _keyIdB, _keyIdA);
+
+        Assert.Throws<BadRequestException>(() => model.ValidateForUser(user));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ValidateForUser_UnlockKeyIdWithoutRotationKeyId_ThrowsBadRequestException(User user)
+    {
+        // The rotation's key id is the only one persisted, so a request that reports one solely in
+        // its unlock data must not pass as if the key id were tracked.
+        SetupValidUser(user);
+        var model = CreateValidModel(user.Email, ValidKdf, _keyIdA, null);
+
+        Assert.Throws<BadRequestException>(() => model.ValidateForUser(user));
     }
 
     [Theory]
