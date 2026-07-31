@@ -74,22 +74,6 @@ public class AccessRuleRepository : Repository<AccessRule, Guid>, IAccessRuleRep
         return rules;
     }
 
-    public async Task SetCollectionAssociationsAsync(Guid organizationId, Guid accessRuleId,
-        IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear)
-    {
-        using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
-            $"[{Schema}].[Collection_SetAccessRuleAssociations]",
-            new
-            {
-                AccessRuleId = accessRuleId,
-                OrganizationId = organizationId,
-                ToAssign = collectionIdsToAssign.ToGuidIdArrayTVP(),
-                ToClear = collectionIdsToClear.ToGuidIdArrayTVP(),
-            },
-            commandType: CommandType.StoredProcedure);
-    }
-
     private sealed class CollectionAccessRuleMapping
     {
         public Guid AccessRuleId { get; set; }

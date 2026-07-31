@@ -92,4 +92,14 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
     Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
 
+    /// <summary>
+    /// Points the given collections at the access rule and clears the rule from any collections that should no
+    /// longer reference it. Both sets are scoped to the organization.
+    /// </summary>
+    /// <param name="organizationId">The organization that owns the access rule and collections.</param>
+    /// <param name="accessRuleId">The access rule to associate.</param>
+    /// <param name="collectionIdsToAssign">Collections that should reference the access rule.</param>
+    /// <param name="collectionIdsToClear">Collections whose reference to the access rule should be removed.</param>
+    Task SetAccessRuleAssociationsAsync(Guid organizationId, Guid accessRuleId,
+        IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear);
 }
