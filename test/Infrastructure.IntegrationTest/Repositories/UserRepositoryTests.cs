@@ -927,6 +927,206 @@ public class UserRepositoryTests
         Assert.Equal(userKeyId, updatedUser.UserKeyId);
     }
 
+
+    [Theory, DatabaseData]
+    public async Task TrySetUserKeyIdAsync_WhenUnset_StoresKeyId(IUserRepository userRepository)
+    {
+        // Arrange
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        });
+
+        // Act
+        var stored = await userRepository.TrySetUserKeyIdAsync(user.Id,
+            KeyId.FromHexEncodedString(userKeyId));
+
+        // Assert
+        Assert.True(stored);
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(userKeyId, updatedUser.UserKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task TrySetUserKeyIdAsync_WhenAlreadySet_ReturnsFalseAndLeavesValueUnchanged(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        const string originalUserKeyId = "0123456789abcdef0123456789abcdef";
+        const string replacementUserKeyId = "fedcba9876543210fedcba9876543210";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            UserKeyId = originalUserKeyId
+        });
+
+        // Act
+        var stored = await userRepository.TrySetUserKeyIdAsync(user.Id,
+            KeyId.FromHexEncodedString(replacementUserKeyId));
+
+        // Assert
+        Assert.False(stored);
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(originalUserKeyId, updatedUser.UserKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task TrySetUserKeyIdAsync_WhenUserDoesNotExist_ReturnsFalse(IUserRepository userRepository)
+    {
+        // Act
+        var stored = await userRepository.TrySetUserKeyIdAsync(Guid.NewGuid(),
+            KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef"));
+
+        // Assert
+        Assert.False(stored);
+    }
+
+    /// <summary>
+    /// The account has no key id yet, so the one the request carries is new information and is recorded.
+    /// All four providers must agree on this.
+    /// </summary>
+    [Theory, DatabaseData]
+    public async Task SetMasterPassword_WhenUserKeyIdUnset_StoresIt(
+        IUserRepository userRepository, Database database)
+    {
+        // Arrange
+        const string userKeyId = "fedcba9876543210fedcba9876543210";
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        });
+
+        var masterPasswordUnlockData = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType.PBKDF2_SHA256,
+                Iterations = KdfConstants.PBKDF2_ITERATIONS.Default
+            },
+            MasterKeyWrappedUserKey = "wrapped-user-key",
+            Salt = email.ToLowerInvariant().Trim(),
+            UserKeyId = KeyId.FromHexEncodedString(userKeyId)
+        };
+
+        // Act
+        var task = userRepository.SetMasterPassword(user.Id, masterPasswordUnlockData, "newHash", "hint");
+        await RunUpdateUserDataAsync(task, database);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(userKeyId, updatedUser.UserKeyId);
+    }
+
+    /// <summary>
+    /// Setting a master password re-wraps the existing user key rather than replacing it, so the write
+    /// is fill-only: a request naming a different key does not rename the key the account is already
+    /// known to use. All four providers must agree on this.
+    /// </summary>
+    [Theory, DatabaseData]
+    public async Task SetMasterPassword_WhenUserKeyIdAlreadySet_LeavesItUnchanged(
+        IUserRepository userRepository, Database database)
+    {
+        // Arrange
+        const string storedUserKeyId = "0123456789abcdef0123456789abcdef";
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            UserKeyId = storedUserKeyId
+        });
+
+        var masterPasswordUnlockData = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType.PBKDF2_SHA256,
+                Iterations = KdfConstants.PBKDF2_ITERATIONS.Default
+            },
+            MasterKeyWrappedUserKey = "wrapped-user-key",
+            Salt = email.ToLowerInvariant().Trim(),
+            UserKeyId = KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210")
+        };
+
+        // Act
+        var task = userRepository.SetMasterPassword(user.Id, masterPasswordUnlockData, "newHash", "hint");
+        await RunUpdateUserDataAsync(task, database);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(storedUserKeyId, updatedUser.UserKeyId);
+        // The rest of the write still landed.
+        Assert.Equal("wrapped-user-key", updatedUser.Key);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetUserKeyId_StoresKeyIdInTheSameTransactionAsTheAccountKeys(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        });
+
+        // Act
+        // This is how the TDE set-keys and Key Connector set-keys flows compose the write.
+        await userRepository.SetV2AccountCryptographicStateAsync(user.Id, BuildV2AccountKeysData(),
+            [userRepository.SetUserKeyId(user.Id, KeyId.FromHexEncodedString(userKeyId)!)]);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(userKeyId, updatedUser.UserKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetUserKeyId_OverwritesAnExistingKeyId(IUserRepository userRepository, Database database)
+    {
+        // Arrange
+        // Unconditional, unlike TrySetUserKeyIdAsync — the caller establishes the user key, so its key id
+        // wins over whatever a previous backfill recorded.
+        const string replacementUserKeyId = "0123456789abcdef0123456789abcdef";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            UserKeyId = "fedcba9876543210fedcba9876543210"
+        });
+
+        // Act
+        var task = userRepository.SetUserKeyId(user.Id, KeyId.FromHexEncodedString(replacementUserKeyId)!);
+        await RunUpdateUserDataAsync(task, database);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(replacementUserKeyId, updatedUser.UserKeyId);
+    }
+
     [Theory, DatabaseData]
     public async Task SetV2AccountCryptographicStateAsync_RunsDelegatesInTheCallerTransaction(
         IUserRepository userRepository)

@@ -22,4 +22,10 @@ public class BaseRotateUserAccountKeysData
     public required IEnumerable<Cipher> Ciphers { get; set; }
     public required IEnumerable<Folder> Folders { get; set; }
     public required IReadOnlyList<Send> Sends { get; set; }
+
+    /// <summary>
+    /// Key id of the new user key this rotation sets, when the client supplied it. This is the
+    /// authoritative key id of the request: it is the value persisted as the account's key id.
+    /// </summary>
+    public KeyId? UserKeyId { get; set; }
 }
