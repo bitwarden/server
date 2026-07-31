@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Pam.Controllers;
 using Bit.Api.Vault.Models.Response;
-using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -9,6 +8,7 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Models.Data;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -47,12 +47,15 @@ public class CipherLeaseControllerTests
     public async Task GetCipher_LeasedCipher_ReturnsFullData(
         Guid id, Guid organizationId, User user, SutProvider<CipherLeaseController> sutProvider)
     {
+        // A blob-encrypted (SDK-wrapped) data blob, identified by its top-level "format_version" key, skips
+        // legacy field-level JSON parsing entirely (see Cipher.IsDataBlobEncrypted), so it round-trips untouched.
+        const string blob = "{\"format_version\":1,\"wrapped_cek\":\"abc\",\"envelope\":\"def\"}";
         var cipher = new CipherDetails
         {
             Id = id,
             OrganizationId = organizationId,
             Type = CipherType.Login,
-            Data = "2.iv|ct|mac",
+            Data = blob,
         };
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
@@ -71,7 +74,7 @@ public class CipherLeaseControllerTests
 
         Assert.IsAssignableFrom<CipherDetailsResponseModel>(result);
         Assert.Equal(id, result.Id);
-        Assert.Equal("2.iv|ct|mac", result.Data); // full data present
+        Assert.Equal(blob, result.Data); // full data present
         Assert.Null(result.PartialData);           // isPartial == false
     }
 #pragma warning restore CS0618

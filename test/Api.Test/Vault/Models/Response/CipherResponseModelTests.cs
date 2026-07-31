@@ -355,7 +355,7 @@ public class CipherResponseModelTests
     [Fact]
     public void Constructor_Partial_BlobEncryptedData_WithholdsData()
     {
-        const string opaque = "2.iv|ct|mac";
+        const string opaque = "{\"format_version\":1,\"wrapped_cek\":\"abc\",\"envelope\":\"def\"}";
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),

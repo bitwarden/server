@@ -10,6 +10,8 @@ internal static class AuditEndpoints
 {
     public static RouteGroupBuilder MapAuditEndpoints(this RouteGroupBuilder group)
     {
+        group.WithTags("Audit");
+
         group.MapGet("", (AuditEndpointsHandler handler, Guid orgId) => handler.GetTrail(orgId))
             .WithName("Pam_Audit_GetTrail");
 
