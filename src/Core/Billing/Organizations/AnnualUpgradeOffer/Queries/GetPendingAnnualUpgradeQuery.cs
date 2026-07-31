@@ -6,7 +6,6 @@ using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -40,19 +39,19 @@ public class GetPendingAnnualUpgradeQuery(
             return null;
         }
 
-        var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, logger, organization, nameof(GetPendingAnnualUpgradeQuery),
-            ["test_clock", "schedule.phases.items.price"]);
-        if (subscription is null || subscription.Status != SubscriptionStatus.Active)
-        {
-            return null;
-        }
-
         // Fail-closed on any error from here on: this query runs inline on page load, so a
         // pricing lookup failure must degrade to "no pending upgrade" rather
         // than 500 the page.
         try
         {
+            var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+                stripeAdapter, logger, organization, nameof(GetPendingAnnualUpgradeQuery),
+                ["test_clock", "schedule.phases.items.price"]);
+            if (subscription is null || subscription.Status != SubscriptionStatus.Active)
+            {
+                return null;
+            }
+
             var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
             if (ownership == OrganizationSubscriptionScheduleOwnership.Unexpanded)
             {
@@ -115,7 +114,7 @@ public class GetPendingAnnualUpgradeQuery(
                 EffectiveDate = upcomingPhase.StartDate
             };
         }
-        catch (Exception exception) when (exception is StripeException or BillingException or NotFoundException)
+        catch (Exception exception)
         {
             logger.LogWarning(
                 exception,

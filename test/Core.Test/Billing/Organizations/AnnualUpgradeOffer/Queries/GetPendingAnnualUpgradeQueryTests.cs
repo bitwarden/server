@@ -368,6 +368,18 @@ public class GetPendingAnnualUpgradeQueryTests
     }
 
     [Fact]
+    public async Task Run_SubscriptionRetrieveThrowsNonMissingStripeError_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "rate_limit" } });
+
+        var result = await _query.Run(organization);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public async Task Run_AttachedScheduleNotActive_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
