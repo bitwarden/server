@@ -128,8 +128,8 @@ public class UpdateOrganizationSubscriptionCommand(
         if (activeSchedule is { Phases.Count: > 0 })
         {
             // PM-40537: only rewrite schedules our code created, identified by phase metadata.
-            var schedulePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, activeSchedule)
-                                ?? await ResolveCohortMigrationPhasePlansAsync(organization, activeSchedule);
+            var schedulePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, subscription)
+                                ?? await ResolveCohortMigrationPhasePlansAsync(organization, subscription);
             if (schedulePlans is { } plans)
             {
                 var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
@@ -247,10 +247,10 @@ public class UpdateOrganizationSubscriptionCommand(
     // when this is not an annual-upgrade schedule, letting the caller fall back to cohort-migration
     // resolution.
     private async Task<(Plan source, Plan target)?> ResolveAnnualUpgradePhasePlansAsync(
-        Organization organization, SubscriptionSchedule activeSchedule)
+        Organization organization, Subscription subscription)
     {
-        var ownership = SubscriptionScheduleOwnershipMapper.Map(activeSchedule);
-        if (ownership.Ownership != OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
+        if (SubscriptionScheduleOwnershipMapper.Map(subscription) !=
+            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
         {
             return null;
         }
@@ -267,9 +267,9 @@ public class UpdateOrganizationSubscriptionCommand(
     }
 
     private async Task<(Plan source, Plan target)?> ResolveCohortMigrationPhasePlansAsync(
-        Organization organization, SubscriptionSchedule activeSchedule)
+        Organization organization, Subscription subscription)
     {
-        if (SubscriptionScheduleOwnershipMapper.Map(activeSchedule).Ownership !=
+        if (SubscriptionScheduleOwnershipMapper.Map(subscription) !=
             OrganizationSubscriptionScheduleOwnership.PriceMigration)
         {
             return null;

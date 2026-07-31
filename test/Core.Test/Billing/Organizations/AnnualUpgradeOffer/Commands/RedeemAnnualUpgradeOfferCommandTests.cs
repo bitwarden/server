@@ -773,6 +773,11 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         Assert.Equal(
             OrganizationSubscriptionScheduleOwnership.AnnualUpgrade,
-            SubscriptionScheduleOwnershipMapper.Map(asSchedule).Ownership);
+            SubscriptionScheduleOwnershipMapper.Map(new Subscription
+            {
+                Id = "sub_1",
+                ScheduleId = asSchedule.Id,
+                Schedule = asSchedule
+            }));
     }
 }

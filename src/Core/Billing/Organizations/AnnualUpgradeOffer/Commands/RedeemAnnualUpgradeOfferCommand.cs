@@ -125,8 +125,8 @@ public class RedeemAnnualUpgradeOfferCommand(
         // unlike a seat change, this operation has no way to proceed while leaving it intact.
         // The offer query suppresses this case at page load, so reaching here means a schedule
         // appeared between the offer being shown and the redemption being submitted.
-        var ownership = SubscriptionScheduleOwnershipMapper.MapOrNull(subscription);
-        if (ownership is null)
+        var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
+        if (ownership == OrganizationSubscriptionScheduleOwnership.Unexpanded)
         {
             _logger.LogError(
                 "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; refusing to rebuild its schedule",
@@ -134,12 +134,12 @@ public class RedeemAnnualUpgradeOfferCommand(
             return DefaultConflict;
         }
 
-        if (ownership.Ownership == OrganizationSubscriptionScheduleOwnership.Foreign)
+        if (ownership == OrganizationSubscriptionScheduleOwnership.Foreign)
         {
             _logger.LogWarning(
                 "{Command}: Refusing to release unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}) for Organization ({OrganizationId}); phase metadata keys present: {MetadataKeys}",
-                CommandName, ownership.Schedule?.Id, subscription.Id, organization.Id,
-                string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(ownership.Schedule)));
+                CommandName, subscription.Schedule?.Id, subscription.Id, organization.Id,
+                string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(subscription.Schedule)));
             return DefaultConflict;
         }
 
@@ -147,7 +147,7 @@ public class RedeemAnnualUpgradeOfferCommand(
         // to the annual-latest plan, which reaches the same destination the migration would have.
         // Passing organizationId also drops the cohort assignment row so the organization leaves
         // the migration cohort, accepting that it may lose a proactive migration discount.
-        await priceIncreaseScheduler.ReleaseSchedule(ownership.Schedule, organization.Id, subscription.Id);
+        await priceIncreaseScheduler.ReleaseSchedule(subscription.Schedule, organization.Id, subscription.Id);
 
         var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
             new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });

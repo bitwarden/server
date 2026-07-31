@@ -55,13 +55,13 @@ public class GetPendingAnnualUpgradeQuery(
         {
             var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
 
-            var ownership = SubscriptionScheduleOwnershipMapper.MapOrNull(subscription);
-            if (ownership is not { Ownership: OrganizationSubscriptionScheduleOwnership.AnnualUpgrade })
+            if (SubscriptionScheduleOwnershipMapper.Map(subscription) !=
+                OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
             {
                 return null;
             }
 
-            var activeSchedule = ownership.Schedule;
+            var activeSchedule = subscription.Schedule;
             if (activeSchedule is not { Phases.Count: > 0 })
             {
                 return null;
