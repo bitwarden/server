@@ -45,6 +45,11 @@ public class RedeemAnnualUpgradeOfferCommand(
             return DefaultConflict;
         }
 
+        if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
+        {
+            return new BadRequest("Offer is no longer available.");
+        }
+
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, _logger, organization, CommandName,
             ["discounts.coupon", "items.data.discounts.coupon", "schedule"]);

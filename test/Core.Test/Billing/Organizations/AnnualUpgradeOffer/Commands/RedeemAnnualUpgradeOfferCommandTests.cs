@@ -235,8 +235,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var result = await _command.Run(organization);
 
-        // The eligibility mapper classifies an unmappable line as a routine "offer expired"
-        // case, not an operator-facing conflict.
         Assert.True(result.IsT1);
         Assert.Equal("Offer is no longer available.", result.AsT1.Response);
         // A redemption that cannot be fully mapped must fail before the org's existing
@@ -427,7 +425,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_OfferValidButPlanTypeHasNoAnnualMapping_ReturnsConflict_WithoutFetchingSubscription()
+    public async Task Run_PlanTypeHasNoAnnualMapping_ReturnsConflict_WithoutFetchingSubscription()
     {
         // The org's plan type has no annual-latest mapping (e.g. it is already annual). The
         // command must fail closed with the default conflict before touching Stripe.
@@ -439,6 +437,21 @@ public class RedeemAnnualUpgradeOfferCommandTests
         Assert.Equal("We had a problem switching your billing to annual. Please contact support for assistance.", result.AsT2.Response);
         await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task Run_NoGatewaySubscriptionId_ReturnsOfferNoLongerAvailable_WithoutFetchingSubscription(string? gatewaySubscriptionId)
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        organization.GatewaySubscriptionId = gatewaySubscriptionId;
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT1);
+        Assert.Equal("Offer is no longer available.", result.AsT1.Response);
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
@@ -538,8 +551,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
     [Fact]
     public async Task Run_AnnualUpgradeSchedule_ReturnsOfferNoLongerAvailable_WithoutMutatingStripe()
     {
-        // AnnualUpgrade ownership means the org already redeemed; the eligibility mapper
-        // classifies this as AlreadyScheduled and refuses to touch the schedule again.
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
