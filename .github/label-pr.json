@@ -2,7 +2,15 @@
   "title_patterns": {
     "t:feature": ["feat", "feature", "tool"],
     "t:bugfix": ["fix", "bug", "bugfix"],
-    "t:tech-debt": ["refactor", "chore", "cleanup", "revert", "debt", "test", "perf"],
+    "t:tech-debt": [
+      "refactor",
+      "chore",
+      "cleanup",
+      "revert",
+      "debt",
+      "test",
+      "perf"
+    ],
     "t:docs": ["docs"],
     "t:ci": ["ci", "build", "chore(ci)"],
     "t:deps": ["deps", "[deps]"],
@@ -14,11 +22,7 @@
     "feature-flag": ["src/Core/Constants.cs"],
     "t:feature": ["src/Core/Constants.cs"],
     "t:tech-debt": [],
-    "t:ci": [
-      ".checkmarx/",
-      ".github/",
-      "scripts/"
-    ],
+    "t:ci": [".github/", "scripts/"],
     "t:docs": ["docs/", "README.md", "CONTRIBUTING.md", "SECURITY.md"],
     "t:deps": [
       "Directory.Build.props",
