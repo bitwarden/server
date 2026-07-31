@@ -243,9 +243,7 @@ public class AnnualUpgradeEligibilityMapperTests
     [Fact]
     public void Map_ForeignScheduleAndUnmappableLine_ReportsTheSchedule()
     {
-        // Schedule ownership is checked before line mapping; a negotiated schedule must win over an
-        // unmappable line, not just an unusable discount, or reordering the mapper would collapse
-        // this 409 into a 400 on exactly the subscription where that distinction is most expensive.
+        // Ownership is checked before line mapping, so a negotiated schedule keeps the 409.
         var subscription = SubscriptionWith(
             items: [Item("some-unmapped-price")],
             schedule: Schedule(new Dictionary<string, string> { ["negotiated_term"] = "3y" }));
