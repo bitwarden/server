@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
@@ -37,7 +38,12 @@ public class GetChurnMitigationOfferQuery(
         Organization organization,
         string churnDiscountCouponCode)
     {
-        var subscription = await TryGetSubscriptionAsync(organization);
+        // `test_clock` is included so the migration-cohort current_phase check is honest
+        // against test customers; `discount`/`discounts.coupon` give us the churn-only
+        // ineligibility surfaces without a second round-trip.
+        var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+            stripeAdapter, logger, organization, nameof(GetChurnMitigationOfferQuery),
+            ["customer", "test_clock", "discounts.coupon"]);
         if (subscription is null)
         {
             return null;
@@ -109,7 +115,12 @@ public class GetChurnMitigationOfferQuery(
             return null;
         }
 
-        var subscription = await TryGetSubscriptionAsync(organization);
+        // `test_clock` is included so the migration-cohort current_phase check is honest
+        // against test customers; `discount`/`discounts.coupon` give us the churn-only
+        // ineligibility surfaces without a second round-trip.
+        var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+            stripeAdapter, logger, organization, nameof(GetChurnMitigationOfferQuery),
+            ["customer", "test_clock", "discounts.coupon"]);
         if (subscription is null)
         {
             return null;
@@ -131,28 +142,6 @@ public class GetChurnMitigationOfferQuery(
         }
 
         return BuildOfferResult(coupon);
-    }
-
-    private async Task<Subscription?> TryGetSubscriptionAsync(Organization organization)
-    {
-        try
-        {
-            // `test_clock` is included so the migration-cohort current_phase check is honest
-            // against test customers; `discount`/`discounts.coupon` give us the churn-only
-            // ineligibility surfaces without a second round-trip.
-            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions
-                {
-                    Expand = ["customer", "test_clock", "discounts.coupon"]
-                });
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
-        {
-            logger.LogWarning(
-                "GetChurnMitigationOfferQuery: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
-                organization.GatewaySubscriptionId, organization.Id);
-            return null;
-        }
     }
 
     private async Task<ChurnMitigationOfferResult?> TryBuildOfferResultAsync(string couponId)

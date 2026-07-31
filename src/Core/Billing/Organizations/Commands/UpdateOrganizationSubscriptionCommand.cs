@@ -3,6 +3,7 @@ using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -72,7 +73,11 @@ public class UpdateOrganizationSubscriptionCommand(
         OrganizationSubscriptionChangeSet changeSet,
         Subscription? subscription = null) => HandleAsync<Subscription>(async () =>
     {
-        subscription = HasRequiredExpansions(subscription) ? subscription : await FetchSubscriptionAsync(organization);
+        subscription = HasRequiredExpansions(subscription)
+            ? subscription
+            : await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+                stripeAdapter, _logger, organization, CommandName,
+                ["customer", "test_clock", "schedule"]);
 
         if (subscription is null)
         {
@@ -223,23 +228,6 @@ public class UpdateOrganizationSubscriptionCommand(
     private static bool HasRequiredExpansions(Subscription? subscription) =>
         subscription is { Customer: not null } &&
         (string.IsNullOrEmpty(subscription.ScheduleId) || subscription.Schedule is not null);
-
-    private async Task<Subscription?> FetchSubscriptionAsync(Organization organization)
-    {
-        try
-        {
-            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
-            {
-                Expand = ["customer", "test_clock", "schedule"]
-            });
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
-        {
-            _logger.LogError("{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
-                CommandName, organization.GatewaySubscriptionId, organization.Id);
-            return null;
-        }
-    }
 
     // An annual-upgrade schedule (PM-38333) is recognised by the marker redemption stamps on its
     // phases. When recognised, source is the current monthly plan and target is the annual-latest
