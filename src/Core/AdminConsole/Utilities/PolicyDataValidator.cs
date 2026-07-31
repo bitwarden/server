@@ -40,6 +40,10 @@ public static class PolicyDataValidator
                 case PolicyType.ResetPassword:
                     CoreHelpers.LoadClassFromJsonData<ResetPasswordDataModel>(json);
                     break;
+                case PolicyType.FillAssist:
+                    var fillAssistData = CoreHelpers.LoadClassFromJsonData<FillAssistPolicyData>(json);
+                    ValidateModel(fillAssistData, policyType);
+                    break;
             }
 
             return json;
