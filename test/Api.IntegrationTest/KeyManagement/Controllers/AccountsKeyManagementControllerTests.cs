@@ -84,6 +84,70 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
+    public async Task PostUserKeyIdAsync_NotLoggedIn_Unauthorized(SetUserKeyIdRequestModel request)
+    {
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostUserKeyIdAsync_WhenUnset_BackfillsTheKeyId()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+        Assert.Null(user.UserKeyId);
+
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new SetUserKeyIdRequestModel { UserKeyId = userKeyId });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var updatedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(userKeyId, updatedUser.UserKeyId);
+    }
+
+    [Fact]
+    public async Task PostUserKeyIdAsync_WhenAlreadySet_BadRequest()
+    {
+        // The backfill is only allowed to fill a gap. A second caller must not be able to rename the
+        // key the account is already known to use.
+        await _loginHelper.LoginAsync(_ownerEmail);
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var first = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new SetUserKeyIdRequestModel { UserKeyId = userKeyId });
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new SetUserKeyIdRequestModel { UserKeyId = "fedcba9876543210fedcba9876543210" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var updatedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(userKeyId, updatedUser.UserKeyId);
+    }
+
+    [Theory]
+    [BitAutoData("not-hex")]
+    [BitAutoData("0123456789ABCDEF0123456789ABCDEF")]
+    [BitAutoData("")]
+    public async Task PostUserKeyIdAsync_MalformedKeyId_BadRequest(string userKeyId)
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new SetUserKeyIdRequestModel { UserKeyId = userKeyId });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var updatedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Null(updatedUser.UserKeyId);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task RegenerateKeysAsync_NotLoggedIn_Unauthorized(KeyRegenerationRequestModel request)
     {
         request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
