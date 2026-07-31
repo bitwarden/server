@@ -35,7 +35,17 @@ public async Task<UserResponseModel> Get(Guid orgId, Guid id) { ... }
 
 ```csharp
 endpoints.MapGroup("/organizations/{orgId:guid}/access-rules")
-    .RequireAuthorization(policy => policy.AddRequirements(new ManageAccessRulesRequirement()))
+    .RequireAuthorization(new AuthorizeAttribute<ManageAccessRulesRequirement>())
+    .MapAccessRuleEndpoints();
+```
+
+If an endpoint needs more than one requirement, use `AddRequirements` instead:
+
+```csharp
+endpoints.MapGroup("/organizations/{orgId:guid}/access-rules")
+    .RequireAuthorization(policy => policy
+        .AddRequirements(new ManageAccessRulesRequirement())
+        .AddRequirements(new SomeOtherRequirement()))
     .MapAccessRuleEndpoints();
 ```
 
