@@ -379,6 +379,20 @@ public class GetPendingAnnualUpgradeQueryTests
         Assert.Null(result);
     }
 
+    // Pins the widened catch clause: the old filter only covered StripeException, BillingException,
+    // and NotFoundException, so a future narrowing back to those types must fail this test.
+    [Fact]
+    public async Task Run_GuardedRegionThrowsNonStripeException_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new InvalidOperationException("unexpected"));
+
+        var result = await _query.Run(organization);
+
+        Assert.Null(result);
+    }
+
     [Fact]
     public async Task Run_AttachedScheduleNotActive_ReturnsNull()
     {
