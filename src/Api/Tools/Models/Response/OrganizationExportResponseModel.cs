@@ -7,6 +7,7 @@ using Bit.Api.Vault.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Tools.Models.Response;
@@ -18,9 +19,13 @@ public class OrganizationExportResponseModel : ResponseModel
     }
 
     public OrganizationExportResponseModel(IEnumerable<CipherOrganizationDetailsWithCollections> ciphers,
-        IEnumerable<Collection> collections, GlobalSettings globalSettings) : this()
+        IEnumerable<Collection> collections, GlobalSettings globalSettings, FullCipherAccess fullCipherAccess) : this()
     {
-        Ciphers = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, globalSettings));
+        // Under PAM credential leasing, a leasing-gated cipher the exporter cannot fully access is
+        // excluded from the export entirely — a partially-stripped export is not a usable backup.
+        Ciphers = ciphers
+            .Where(c => fullCipherAccess.Authorizes(c.Id))
+            .Select(c => new FullCipherMiniDetailsResponseModel(fullCipherAccess, c, globalSettings));
         Collections = collections.Select(c => new CollectionResponseModel(c));
     }
 
