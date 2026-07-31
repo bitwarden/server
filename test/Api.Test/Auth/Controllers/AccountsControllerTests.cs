@@ -984,12 +984,62 @@ public class AccountsControllerTests : IDisposable
         var result = await _sut.PostKeys(model);
 
         // Assert
+        // The key id is written by its own delegate in the same transaction as the account keys.
+        _userRepository.Received(1).SetUserKeyId(user.Id, KeyId.FromHexEncodedString(model.UserKeyId)!);
         await _userRepository.Received(1).SetV2AccountCryptographicStateAsync(
             user.Id,
-            Arg.Any<UserAccountKeysData>());
+            Arg.Any<UserAccountKeysData>(),
+            Arg.Is<IEnumerable<UpdateUserData>>(actions => actions.Count() == 1));
         await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(Arg.Any<User>());
         Assert.NotNull(result);
         Assert.Equal("keys", result.Object);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostKeys_WithAccountKeysAndNoUserKeyId_AddsNoKeyIdDelegate(
+        User user,
+        KeysRequestModel model)
+    {
+        // Arrange
+        // A client that predates the key id field sends none; the account picks one up later from the
+        // backfill endpoint rather than at enrollment.
+        user.PublicKey = null;
+        user.PrivateKey = null;
+        model.UserKeyId = null;
+        model.AccountKeys = new AccountKeysRequestModel
+        {
+            UserKeyEncryptedAccountPrivateKey = "wrapped-private-key",
+            AccountPublicKey = "public-key",
+            PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairRequestModel
+            {
+                PublicKey = "public-key",
+                WrappedPrivateKey = "wrapped-private-key",
+                SignedPublicKey = "signed-public-key"
+            },
+            SignatureKeyPair = new SignatureKeyPairRequestModel
+            {
+                VerifyingKey = "verifying-key",
+                SignatureAlgorithm = "ed25519",
+                WrappedSigningKey = "wrapped-signing-key"
+            },
+            SecurityState = new SecurityStateModel
+            {
+                SecurityState = "security-state",
+                SecurityVersion = 2
+            }
+        };
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        // Act
+        await _sut.PostKeys(model);
+
+        // Assert
+        _userRepository.DidNotReceiveWithAnyArgs().SetUserKeyId(Arg.Any<Guid>(), Arg.Any<KeyId>());
+        await _userRepository.Received(1).SetV2AccountCryptographicStateAsync(
+            user.Id,
+            Arg.Any<UserAccountKeysData>(),
+            null);
     }
 
     [Theory, BitAutoData]
@@ -1014,7 +1064,8 @@ public class AccountsControllerTests : IDisposable
             u.PublicKey == model.PublicKey &&
             u.PrivateKey == model.EncryptedPrivateKey));
         await _userRepository.DidNotReceiveWithAnyArgs()
-            .SetV2AccountCryptographicStateAsync(Arg.Any<Guid>(), Arg.Any<UserAccountKeysData>());
+            .SetV2AccountCryptographicStateAsync(Arg.Any<Guid>(), Arg.Any<UserAccountKeysData>(),
+                Arg.Any<IEnumerable<UpdateUserData>>());
         Assert.NotNull(result);
         Assert.Equal("keys", result.Object);
     }

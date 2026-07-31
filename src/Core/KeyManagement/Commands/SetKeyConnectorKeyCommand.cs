@@ -46,11 +46,20 @@ public class SetKeyConnectorKeyCommand : ISetKeyConnectorKeyCommand
             throw new BadRequestException("Cannot use Key Connector");
         }
 
-        var setKeyConnectorUserKeyTask =
-            _userRepository.SetKeyConnectorUserKey(user.Id, keyConnectorKeysData.KeyConnectorKeyWrappedUserKey);
+        var updateUserDataTasks = new List<UpdateUserData>
+        {
+            _userRepository.SetKeyConnectorUserKey(user.Id, keyConnectorKeysData.KeyConnectorKeyWrappedUserKey)
+        };
+
+        // A client that predates the key id field sends none. The account then picks one up from the
+        // backfill endpoint on a later sync rather than at registration.
+        if (keyConnectorKeysData.UserKeyId != null)
+        {
+            updateUserDataTasks.Add(_userRepository.SetUserKeyId(user.Id, keyConnectorKeysData.UserKeyId));
+        }
 
         await _userRepository.SetV2AccountCryptographicStateAsync(user.Id,
-            keyConnectorKeysData.AccountKeys.ToAccountKeysData(), [setKeyConnectorUserKeyTask]);
+            keyConnectorKeysData.AccountKeys.ToAccountKeysData(), updateUserDataTasks);
 
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 

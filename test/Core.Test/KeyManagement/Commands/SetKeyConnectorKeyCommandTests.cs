@@ -50,6 +50,8 @@ public class SetKeyConnectorKeyCommandTests
         var mockUpdateUserData = Substitute.For<UpdateUserData>();
         userRepository.SetKeyConnectorUserKey(user.Id, data.KeyConnectorKeyWrappedUserKey!)
             .Returns(mockUpdateUserData);
+        var mockSetUserKeyId = Substitute.For<UpdateUserData>();
+        userRepository.SetUserKeyId(user.Id, data.UserKeyId!).Returns(mockSetUserKeyId);
 
         // Act
         await sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, data);
@@ -73,8 +75,11 @@ public class SetKeyConnectorKeyCommandTests
                     data.SignatureKeyPairData.VerifyingKey == expectedAccountKeysData.SignatureKeyPairData.VerifyingKey &&
                     data.SecurityStateData!.SecurityState == expectedAccountKeysData.SecurityStateData!.SecurityState &&
                     data.SecurityStateData.SecurityVersion == expectedAccountKeysData.SecurityStateData.SecurityVersion),
+                // The key id is written by its own delegate in the same transaction as the account keys.
                 Arg.Is<IEnumerable<UpdateUserData>>(actions =>
-                    actions.Count() == 1 && actions.First() == mockUpdateUserData));
+                    actions.Count() == 2 &&
+                    actions.First() == mockUpdateUserData &&
+                    actions.Last() == mockSetUserKeyId));
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
@@ -83,6 +88,57 @@ public class SetKeyConnectorKeyCommandTests
         await sutProvider.GetDependency<IAcceptOrgUserCommand>()
             .Received(1)
             .AcceptOrgUserByOrgSsoIdAsync(data.OrgIdentifier, user, sutProvider.GetDependency<IUserService>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetKeyConnectorKeyForUserAsync_NoUserKeyId_AddsNoKeyIdDelegate(
+        User user,
+        KeyConnectorKeysData data,
+        SutProvider<SetKeyConnectorKeyCommand> sutProvider)
+    {
+        // Arrange
+        // A client that predates the key id field sends none, so the account is registered without one
+        // and picks one up later from the backfill endpoint.
+        data = new KeyConnectorKeysData
+        {
+            KeyConnectorKeyWrappedUserKey = data.KeyConnectorKeyWrappedUserKey,
+            AccountKeys = data.AccountKeys,
+            OrgIdentifier = data.OrgIdentifier,
+            UserKeyId = null
+        };
+        if (data.AccountKeys!.SignatureKeyPair != null)
+        {
+            data.AccountKeys.SignatureKeyPair.SignatureAlgorithm = "ed25519";
+        }
+
+        user.UsesKeyConnector = false;
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        var httpContext = Substitute.For<HttpContext>();
+        httpContext.User.Returns(new ClaimsPrincipal());
+        currentContext.HttpContext.Returns(httpContext);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), user, Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var mockUpdateUserData = Substitute.For<UpdateUserData>();
+        userRepository.SetKeyConnectorUserKey(user.Id, data.KeyConnectorKeyWrappedUserKey!)
+            .Returns(mockUpdateUserData);
+
+        // Act
+        await sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, data);
+
+        // Assert
+        userRepository.DidNotReceiveWithAnyArgs().SetUserKeyId(Arg.Any<Guid>(), Arg.Any<KeyId>());
+
+        await userRepository
+            .Received(1)
+            .SetV2AccountCryptographicStateAsync(
+                user.Id,
+                Arg.Any<UserAccountKeysData>(),
+                Arg.Is<IEnumerable<UpdateUserData>>(actions =>
+                    actions.Count() == 1 && actions.First() == mockUpdateUserData));
     }
 
     [Theory, BitAutoData]
@@ -112,7 +168,8 @@ public class SetKeyConnectorKeyCommandTests
 
         await sutProvider.GetDependency<IUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetV2AccountCryptographicStateAsync(Arg.Any<Guid>(), Arg.Any<UserAccountKeysData>(), Arg.Any<IEnumerable<UpdateUserData>>());
+            .SetV2AccountCryptographicStateAsync(Arg.Any<Guid>(), Arg.Any<UserAccountKeysData>(),
+                Arg.Any<IEnumerable<UpdateUserData>>());
 
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceiveWithAnyArgs()
