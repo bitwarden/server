@@ -3,6 +3,7 @@
 
 using System.Security.Claims;
 using System.Text.Json.Serialization;
+using Bit.Api.Billing.Models.Responses;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
@@ -249,40 +250,4 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     public DateTime? Expiration { get; set; }
 
     public bool ExemptFromBillingAutomation { get; set; }
-}
-
-public class PendingAnnualUpgradeResponseModel
-{
-    public PendingAnnualUpgradeResponseModel(PendingAnnualUpgrade pendingAnnualUpgrade)
-    {
-        Plan = new PlanResponseModel(pendingAnnualUpgrade.Plan);
-        LineItems = pendingAnnualUpgrade.LineItems
-            .Select(lineItem => new PendingAnnualUpgradeLineItemResponseModel(lineItem))
-            .ToList();
-        EffectiveDate = pendingAnnualUpgrade.EffectiveDate;
-    }
-
-    public PlanResponseModel Plan { get; set; }
-    public List<PendingAnnualUpgradeLineItemResponseModel> LineItems { get; set; }
-    public DateTime EffectiveDate { get; set; }
-}
-
-public class PendingAnnualUpgradeLineItemResponseModel
-{
-    public PendingAnnualUpgradeLineItemResponseModel(PendingAnnualUpgradeLineItem lineItem)
-    {
-        Name = lineItem.Name;
-        Amount = lineItem.Amount;
-        Quantity = lineItem.Quantity;
-        Interval = lineItem.Interval;
-        ProductId = lineItem.ProductId;
-        AddonSubscriptionItem = lineItem.AddonSubscriptionItem;
-    }
-
-    public string Name { get; set; }
-    public decimal Amount { get; set; }
-    public int Quantity { get; set; }
-    public string Interval { get; set; }
-    public string ProductId { get; set; }
-    public bool AddonSubscriptionItem { get; set; }
 }

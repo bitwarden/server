@@ -6,6 +6,7 @@ using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -89,23 +90,9 @@ public class GetPendingAnnualUpgradeQuery(
                 return null;
             }
 
-            var lineItems = new List<PendingAnnualUpgradeLineItem>();
-            foreach (var item in upcomingPhase.Items)
-            {
-                var price = item.Price;
-
-                lineItems.Add(new PendingAnnualUpgradeLineItem
-                {
-                    Name = price.Nickname,
-                    Amount = (price.UnitAmountDecimal ?? 0) / 100M,
-                    Quantity = (int)item.Quantity,
-                    Interval = price.Recurring?.Interval,
-                    ProductId = price.ProductId,
-                    AddonSubscriptionItem = price.Metadata != null &&
-                        price.Metadata.TryGetValue("isAddOn", out var value) &&
-                        bool.TryParse(value, out var isAddOn) && isAddOn
-                });
-            }
+            var lineItems = upcomingPhase.Items
+                .Select(item => new SubscriptionInfo.BillingSubscription.BillingSubscriptionItem(item))
+                .ToList();
 
             return new PendingAnnualUpgrade
             {

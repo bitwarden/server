@@ -463,7 +463,20 @@ public class OrganizationsControllerTests : IDisposable
         _getPendingAnnualUpgradeQuery.Run(organization).Returns(new PendingAnnualUpgrade
         {
             Plan = annualPlan,
-            LineItems = [new PendingAnnualUpgradeLineItem { Name = "Teams (Annually) Seat", Amount = 48m, Quantity = 5, Interval = "year" }],
+            LineItems =
+            [
+                new SubscriptionInfo.BillingSubscription.BillingSubscriptionItem(
+                    new SubscriptionSchedulePhaseItem
+                    {
+                        Quantity = 5,
+                        Price = new Price
+                        {
+                            Nickname = "Teams (Annually) Seat",
+                            UnitAmount = 4800,
+                            Recurring = new PriceRecurring { Interval = "year" }
+                        }
+                    })
+            ],
             EffectiveDate = effectiveDate
         });
 
@@ -514,7 +527,20 @@ public class OrganizationsControllerTests : IDisposable
         _getPendingAnnualUpgradeQuery.Run(organization).Returns(new PendingAnnualUpgrade
         {
             Plan = annualPlan,
-            LineItems = [new PendingAnnualUpgradeLineItem { Name = "Teams (Annually) Seat", Amount = 48m, Quantity = 5, Interval = "year" }],
+            LineItems =
+            [
+                new SubscriptionInfo.BillingSubscription.BillingSubscriptionItem(
+                    new SubscriptionSchedulePhaseItem
+                    {
+                        Quantity = 5,
+                        Price = new Price
+                        {
+                            Nickname = "Teams (Annually) Seat",
+                            UnitAmount = 4800,
+                            Recurring = new PriceRecurring { Interval = "year" }
+                        }
+                    })
+            ],
             EffectiveDate = effectiveDate
         });
 

@@ -84,6 +84,7 @@ public class GetPendingAnnualUpgradeQueryTests
                             Price = new Price
                             {
                                 Nickname = "Teams (Annually) Seat",
+                                UnitAmount = 4800,
                                 UnitAmountDecimal = 4800,
                                 ProductId = "prod_teams",
                                 Recurring = new PriceRecurring { Interval = "year" }
@@ -236,6 +237,7 @@ public class GetPendingAnnualUpgradeQueryTests
                             Price = new Price
                             {
                                 Nickname = "Teams (Annually) Seat",
+                                UnitAmount = 4800,
                                 UnitAmountDecimal = 4800,
                                 ProductId = "prod_teams",
                                 Recurring = new PriceRecurring { Interval = "year" }
@@ -449,6 +451,7 @@ public class GetPendingAnnualUpgradeQueryTests
                             Price = new Price
                             {
                                 Nickname = "Teams (Annually) Seat",
+                                UnitAmount = 4800,
                                 UnitAmountDecimal = 4800,
                                 ProductId = "prod_teams",
                                 Recurring = new PriceRecurring { Interval = "year" }
@@ -461,6 +464,7 @@ public class GetPendingAnnualUpgradeQueryTests
                             Price = new Price
                             {
                                 Nickname = "Premium add-on",
+                                UnitAmount = 1000,
                                 UnitAmountDecimal = 1000,
                                 ProductId = "prod_addon",
                                 Recurring = new PriceRecurring { Interval = "year" },
