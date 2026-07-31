@@ -12,6 +12,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
 
@@ -540,7 +541,27 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(schedule, organization.Id);
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(schedule);
+    }
+
+    [Fact]
+    public async Task Run_CreateScheduleThrows_PreservesCohortAssignment()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var monthlyPlan = new Teams2020Plan(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
+        var (subscription, _) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 1 }]);
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "api_error" } });
+
+        var result = await _command.Run(organization);
+
+        Assert.False(result.IsT0);
+        // The pre-create release must not carry the organization id, so the cohort assignment survives.
+        await _priceIncreaseScheduler.DidNotReceive().ReleaseSchedule(Arg.Any<SubscriptionSchedule?>(), organization.Id);
     }
 
     [Fact]

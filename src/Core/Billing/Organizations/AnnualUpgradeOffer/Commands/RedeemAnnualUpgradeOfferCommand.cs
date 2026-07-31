@@ -93,10 +93,27 @@ public class RedeemAnnualUpgradeOfferCommand(
                 OrganizationSubscriptionScheduleOwnership.PriceMigration => subscription.Schedule
         };
 
-        await priceIncreaseScheduler.ReleaseSchedule(scheduleToRelease, organization.Id);
+        // Stripe permits one active schedule per subscription, so the prior schedule has to go
+        // before the replacement can be created. The cohort assignment drop has no such ordering
+        // constraint, so it is deferred until the new schedule is configured (below); dropping it
+        // here would make a failed create unrecoverable.
+        await priceIncreaseScheduler.ReleaseSchedule(scheduleToRelease);
 
-        var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
-            new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
+        SubscriptionSchedule schedule;
+
+        try
+        {
+            schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
+                new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "{Command}: Failed to create annual-upgrade schedule for Organization ({OrganizationId}) after releasing schedule ({ReleasedScheduleId}). The organization keeps its migration cohort assignment; the released schedule must be re-created by hand.",
+                CommandName, organization.Id, scheduleToRelease?.Id);
+
+            throw;
+        }
 
         try
         {
@@ -186,6 +203,11 @@ public class RedeemAnnualUpgradeOfferCommand(
 
             throw;
         }
+
+        // Deferred from the release above: now that the annual-upgrade schedule exists and is
+        // configured, the organization has left the price-migration program for good. Passing a
+        // null schedule drops only the cohort assignment row.
+        await priceIncreaseScheduler.ReleaseSchedule(null, organization.Id);
 
         _logger.LogInformation(
             "{Command}: Created annual-upgrade schedule ({ScheduleId}) for Organization ({OrganizationId}): {SourcePlanType} -> {TargetPlanType}",
