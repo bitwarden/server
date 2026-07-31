@@ -21,9 +21,11 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Bit.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Services;
@@ -2493,5 +2495,81 @@ public class CipherServiceTests
                 .DidNotReceive()
                 .DeleteAttachmentsForCipherAsync(cipher.Id);
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_ExistingLeasingGatedCipher_ThrowsAndDoesNotPersist(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher)
+    {
+        // Personal cipher so the edit-permission check passes and we reach the lease gate.
+        var savingUserId = cipher.UserId!.Value;
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateAsync(savingUserId, cipher)
+            .ThrowsAsync(new NotFoundException());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, cipher.RevisionDate));
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceive().ReplaceAsync(Arg.Any<CipherDetails>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_NewCipher_DoesNotInvokeLeaseGate(
+        SutProvider<CipherService> sutProvider, Cipher cipher)
+    {
+        // A new cipher has no collection paths yet, so it is never leasing-gated.
+        cipher.Id = default;
+        var savingUserId = cipher.UserId!.Value;
+
+        await sutProvider.Sut.SaveAsync(cipher, savingUserId, null);
+
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().EnsureCanMutateAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_OrgAdmin_DoesNotInvokeLeaseGate(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid deletingUserId)
+    {
+        // Admins act through org-wide permissions with no collection-membership path, so the gate is skipped.
+        await sutProvider.Sut.DeleteAsync(cipher, deletingUserId, orgAdmin: true);
+
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().EnsureCanMutateAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAttachmentAsync_ExistingLeasingGatedCipher_ThrowsAndDoesNotDelete(
+        SutProvider<CipherService> sutProvider, Cipher cipher, string attachmentId)
+    {
+        // Personal cipher so the edit-permission check passes and we reach the lease gate.
+        cipher.OrganizationId = null;
+        var deletingUserId = cipher.UserId!.Value;
+
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateAsync(deletingUserId, cipher)
+            .ThrowsAsync(new NotFoundException());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.DeleteAttachmentAsync(cipher, attachmentId, deletingUserId, orgAdmin: false));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().DeleteAttachmentAsync(default, default!);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceiveWithAnyArgs().DeleteAttachmentAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAttachmentAsync_OrgAdmin_DoesNotInvokeLeaseGate(
+        SutProvider<CipherService> sutProvider, Cipher cipher, string attachmentId, Guid deletingUserId)
+    {
+        // Admins act through org-wide permissions, so the gate is skipped before the attachment lookup.
+        cipher.Attachments = null;
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.DeleteAttachmentAsync(cipher, attachmentId, deletingUserId, orgAdmin: true));
+
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().EnsureCanMutateAsync(default, default!);
     }
 }

@@ -2,6 +2,7 @@
 using System.Text;
 using System.Text.Json;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Test.Vault.AutoFixture;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models;
@@ -19,6 +20,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Bit.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
@@ -33,6 +35,7 @@ namespace Bit.Api.Test.Controllers;
 
 [ControllerCustomize(typeof(CiphersController))]
 [SutProviderCustomize]
+[CipherLeaseGateBypassCustomize]
 public class CiphersControllerTests
 {
     [Theory, BitAutoData]
@@ -1181,7 +1184,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherOrgDetails.Id);
 
-        Assert.IsType<CipherMiniResponseModel>(result);
+        Assert.IsAssignableFrom<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(Arg.Is<CipherDetails>(
                     (cd) => cd.OrganizationId.Equals(cipherOrgDetails.OrganizationId)), userId, true);
     }
@@ -1250,7 +1253,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherOrgDetails.Id);
 
-        Assert.IsType<CipherMiniResponseModel>(result);
+        Assert.IsAssignableFrom<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(Arg.Is<CipherDetails>(
                     (cd) => cd.OrganizationId.Equals(cipherOrgDetails.OrganizationId)), userId, true);
     }
@@ -1279,7 +1282,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherOrgDetails.Id);
 
-        Assert.IsType<CipherMiniResponseModel>(result);
+        Assert.IsAssignableFrom<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(Arg.Is<CipherDetails>(
                     (cd) => cd.OrganizationId.Equals(cipherOrgDetails.OrganizationId)), userId, true);
     }
@@ -1303,7 +1306,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherOrgDetails.Id);
 
-        Assert.IsType<CipherMiniResponseModel>(result);
+        Assert.IsAssignableFrom<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(Arg.Is<CipherDetails>(
                     (cd) => cd.OrganizationId.Equals(cipherOrgDetails.OrganizationId)), userId, true);
     }
@@ -1343,7 +1346,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherDetails.Id);
 
-        Assert.IsType<CipherMiniResponseModel>(result);
+        Assert.IsAssignableFrom<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(Arg.Is<CipherDetails>(
                     (cd) => cd.OrganizationId.Equals(cipherOrgDetails.OrganizationId)), userId, true);
     }
@@ -2394,6 +2397,30 @@ public class CiphersControllerTests
 
         Assert.NotNull(result);
         Assert.Equal(attachmentId, result.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentData_LeasingGatedCipher_ThrowsNotFoundAndDoesNotIssueUrl(
+        Guid cipherId, string attachmentId, Guid userId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs((Guid?)userId);
+
+        var cipherDetails = new CipherDetails { Id = cipherId, UserId = userId, Type = CipherType.Login, Data = "{}" };
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId)
+            .Returns(Task.FromResult(cipherDetails));
+
+        // Gated with no valid active lease: the gate withholds the full-access witness.
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadAsync(userId, cipherDetails)
+            .ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetAttachmentData(cipherId, attachmentId));
+
+        // No download URL is ever minted for a gated cipher.
+        await sutProvider.GetDependency<ICipherService>()
+            .DidNotReceiveWithAnyArgs().GetAttachmentDownloadDataAsync(default, default!);
     }
 
     [Theory, BitAutoData]

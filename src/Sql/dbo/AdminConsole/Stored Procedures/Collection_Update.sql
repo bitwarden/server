@@ -6,7 +6,8 @@
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
-    @Type TINYINT = 0
+    @Type TINYINT = 0,
+    @AccessRuleId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,7 +21,8 @@ BEGIN
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [DefaultUserCollectionEmail] = @DefaultUserCollectionEmail,
-        [Type] = @Type
+        [Type] = @Type,
+        [AccessRuleId] = @AccessRuleId
     WHERE
         [Id] = @Id
 

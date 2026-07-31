@@ -370,6 +370,19 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    public async Task<ICollection<Guid>> GetManagingUserIdsAsync(Guid collectionId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Guid>(
+                $"[{Schema}].[Collection_ReadManagingUserIds]",
+                new { CollectionId = collectionId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
         organizationUserIds = organizationUserIds.ToList();
@@ -486,6 +499,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             Type = collection.Type;
             ExternalId = collection.ExternalId;
             DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+            AccessRuleId = collection.AccessRuleId;
             Groups = groups.ToArrayTVP();
             Users = users.ToArrayTVP();
         }
@@ -510,6 +524,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             Type = collection.Type;
             ExternalId = collection.ExternalId;
             DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+            AccessRuleId = collection.AccessRuleId;
             Groups = groups.ToArrayTVP();
         }
 
@@ -532,6 +547,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             Type = collection.Type;
             ExternalId = collection.ExternalId;
             DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+            AccessRuleId = collection.AccessRuleId;
             Users = users.ToArrayTVP();
         }
 

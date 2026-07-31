@@ -276,6 +276,43 @@ public class HandlebarsMailServiceTests
     }
 
     [Fact]
+    public async Task SendPamPendingAccessRequestEmailsAsync_SendsOneRenderedEmailPerRecipient()
+    {
+        // Arrange
+        var managerEmails = new[] { "approver1@example.com", "approver2@example.com" };
+        var notBefore = new DateTime(2026, 6, 16, 9, 0, 0, DateTimeKind.Utc);
+        var notAfter = new DateTime(2026, 6, 16, 17, 0, 0, DateTimeKind.Utc);
+        // The messages are enqueued; run the fallback inline for each so the template renders and emails are delivered.
+        _mailEnqueuingService
+            .EnqueueManyAsync(Arg.Any<IEnumerable<IMailQueueMessage>>(), Arg.Any<Func<IMailQueueMessage, Task>>())
+            .Returns(call => Task.WhenAll(
+                call.Arg<IEnumerable<IMailQueueMessage>>().Select(call.Arg<Func<IMailQueueMessage, Task>>())));
+
+        // Act
+        await _sut.SendPamPendingAccessRequestEmailsAsync(managerEmails, "Acme Corp",
+            "Alice Smith", "alice@example.com", notBefore, notAfter, "Rotate prod DB password");
+
+        // Assert — one message per recipient (approvers are not disclosed to one another), each carrying the
+        // server-readable request fields with the requester's email anti-phishing sanitized.
+        await _mailDeliveryService.Received(2).SendEmailAsync(Arg.Any<MailMessage>());
+        foreach (var recipient in managerEmails)
+        {
+            await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+                m.ToEmails.Count() == 1 &&
+                m.ToEmails.Contains(recipient) &&
+                m.Subject == "New access request awaiting your approval" &&
+                m.Category == "PamPendingAccessRequest" &&
+                m.HtmlContent.Contains("Acme Corp") &&
+                m.HtmlContent.Contains("Alice Smith") &&
+                m.HtmlContent.Contains("alice[at]example[dot]com") &&
+                m.HtmlContent.Contains("Rotate prod DB password") &&
+                m.HtmlContent.Contains("2026") &&
+                m.HtmlContent.Contains("UTC") &&
+                m.HtmlContent.Contains("/pam/approver-inbox/approvals")));
+        }
+    }
+
+    [Fact]
     public async Task SendOrganizationUserWelcomeEmailAsync_SendsCorrectEmailWithOrganizationName()
     {
         // Arrange

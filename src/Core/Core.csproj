@@ -80,6 +80,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Libraries\Data\Data.csproj" />
     <ProjectReference Include="..\Libraries\SsrfProtection\SsrfProtection.csproj" />
+    <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -89,5 +90,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Infrastructure.IntegrationTest" />
+    <InternalsVisibleTo Include="Pam" />
   </ItemGroup>
 </Project>

@@ -1310,6 +1310,12 @@
       "data": {
         "type": "Project"
       },
+      "pam.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Data": "[0.0.1, )"
+        }
+      },
       "ssrfprotection": {
         "type": "Project"
       }

@@ -12,23 +12,23 @@
 public class AccessRequestDecisionResponseModel
 {
     /// <summary>Whether a human approver or an automatic access-rule decision produced this entry.</summary>
-    public DeciderKind DeciderKind { get; set; }
+    public DeciderKind DeciderKind { get; init; }
 
     /// <summary>The human approver's user id, or null for an automatic decision.</summary>
-    public Guid? Id { get; set; }
+    public Guid? Id { get; init; }
 
     /// <summary>The human approver's display name; null for an automatic decision, or when the user could not be resolved.</summary>
-    public string? Name { get; set; }
+    public string? Name { get; init; }
 
     /// <summary>The human approver's email; null for an automatic decision, or when the user could not be resolved.</summary>
-    public string? Email { get; set; }
+    public string? Email { get; init; }
 
     /// <summary>The optional note the approver left with the decision.</summary>
-    public string? Comment { get; set; }
+    public string? Comment { get; init; }
 
     /// <summary>The verdict reached (<c>0 = deny, 1 = approve</c>).</summary>
-    public AccessDecisionVerdict Verdict { get; set; }
+    public AccessDecisionVerdict Verdict { get; init; }
 
     /// <summary>When the decision was recorded (UTC).</summary>
-    public DateTime DecidedAt { get; set; }
+    public DateTime DecidedAt { get; init; }
 }

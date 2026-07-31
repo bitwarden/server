@@ -6,7 +6,7 @@ namespace Bit.Services.Pam.Api.Endpoints;
 
 /// <summary>
 /// The <c>leases</c> resource: the caller's own leases, the governance surface over manageable collections, and the
-/// per-lease actions (revoke, extend).
+/// per-lease actions (revoke, extend). Mirrors the routes the former <c>LeasesController</c> served.
 /// </summary>
 internal static class LeaseEndpoints
 {

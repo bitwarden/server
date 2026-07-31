@@ -25,6 +25,7 @@ public class CollectionResponseModel : ResponseModel
         ExternalId = collection.ExternalId;
         Type = collection.Type;
         DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+        AccessRuleId = collection.AccessRuleId;
     }
 
     public Guid Id { get; set; }
@@ -33,6 +34,7 @@ public class CollectionResponseModel : ResponseModel
     public string ExternalId { get; set; }
     public CollectionType Type { get; set; }
     public string DefaultUserCollectionEmail { get; set; }
+    public Guid? AccessRuleId { get; set; }
 }
 
 /// <summary>
