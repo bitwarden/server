@@ -218,6 +218,11 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // The goal of this test is an upgrade scenario where we want to start using a new certificate
         // encrypting keys at rest but want the upgrade to cause 0 issues with data protection
         // we also want to be able to revert the configuration changes in case there are issues.
+        //
+        // NOTE: This test assumes all config changes land atomically. In practice secrets can land
+        // before non-secrets, which makes several steps here unsafe as written. Do not use this
+        // test as a basis for what to do in production — see UpgradePath_WithPendingProtection
+        // for a deployment sequence that is safe regardless of the order changes land.
 
         // Setup "existing" azure infrastructure.
         await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
@@ -333,6 +338,149 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         Assert.Equal("NoNewConfig", revertedAppProtector.Unprotect(noNewConfigProtectedData));
         Assert.Equal("Prepared", revertedAppProtector.Unprotect(preparedProtectedData));
         Assert.Equal("UpdatedConfig", revertedAppProtector.Unprotect(updatedConfigData));
+    }
+
+    [Fact]
+    public async Task UpgradePath_WithPendingProtection()
+    {
+        // Full lifecycle of a protect-cert rotation using PendingProtection, including cleanup.
+        // Each phase uses the Enabled=false staging pattern so secrets can land before non-secrets.
+        //
+        // Step A — move old cert into UnprotectCertificates before activating PendingProtection:
+        //   Non-secret:   UnprotectCertificates:0:Enabled = false   (inert slot)
+        //   Secret lands: UnprotectCertificates:0:Password = OldPw  (safe, slot inactive)
+        //   Non-secrets:  UnprotectCertificates:0:FileName + Enabled = true
+        //
+        // Step B — activate PendingProtection:
+        //   Non-secret:   PendingProtection:Enabled = false          (inert slot)
+        //   Secret lands: PendingProtection:Password = NewPw         (safe, slot inactive)
+        //   Non-secrets:  PendingProtection:FileName + Enabled = true
+        //
+        // Step C — cleanup (BlobName/CertificatePassword ignored while pending active,
+        //           so secret/non-secret order no longer matters for them):
+        //   Secret:     CertificatePassword = NewPw
+        //   Non-secret: BlobName = "mynewcert.pfx"
+        //   Non-secret: PendingProtection:Enabled = false  → falls back to updated BlobName/CertificatePassword
+        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
+            .WithPortBinding(10000, true)
+            .Build();
+
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+        var certificates = await blobServiceClient.CreateBlobContainerAsync("certificates");
+        var dataProtection = await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection");
+
+        await certificates.Value.UploadBlobAsync("dataprotection.pfx", new BinaryData(FakeInitialCert));
+        await dataProtection.Value.UploadBlobAsync("keys.xml", new BinaryData(KeysData));
+
+        using var rsa = RSA.Create(2048);
+        var now = DateTimeOffset.UtcNow;
+        var newCertificate = new CertificateRequest("CN=New Dataprotected test certificate", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
+            .CreateSelfSigned(now, now.AddDays(365));
+
+        const string NewCertPassword = "Undergrad-Police0-Maturely-Countless";
+        await certificates.Value.UploadBlobAsync(
+            "mynewcert.pfx",
+            new BinaryData(newCertificate.Export(X509ContentType.Pfx, NewCertPassword))
+        );
+
+        // A1: Old cert password staged, Enabled=false keeps the slot inert — old cert still protects
+        using var stepA1 = CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Enabled", "false" },
+        });
+        Assert.Equal("MyTestData", GetProtector(stepA1).Unprotect(SavedProtectedData));
+
+        // A2: FileName + Enabled=true land together; old cert now explicitly in UnprotectCertificates
+        using var stepA2 = CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "dataprotection.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Alongside-Unworthy-Query3-Cozy" },
+        });
+        Assert.Equal("MyTestData", GetProtector(stepA2).Unprotect(SavedProtectedData));
+
+        // B1: New cert password staged, Enabled=false keeps the slot inert — old cert still protects
+        using var stepB1 = CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "dataprotection.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:PendingProtection:Password", NewCertPassword },
+            { "GlobalSettings:DataProtection:PendingProtection:Enabled", "false" },
+        });
+        Assert.Equal("MyTestData", GetProtector(stepB1).Unprotect(SavedProtectedData));
+
+        // B2: FileName + Enabled=true land together; new cert now protects; old cert in
+        // UnprotectCertificates keeps existing keys readable
+        using var stepB2 = CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "dataprotection.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:PendingProtection:FileName", "mynewcert.pfx" },
+            { "GlobalSettings:DataProtection:PendingProtection:Password", NewCertPassword },
+            { "GlobalSettings:DataProtection:PendingProtection:Enabled", "true" },
+        });
+        Assert.Equal("MyTestData", GetProtector(stepB2).Unprotect(SavedProtectedData));
+        var step4ProtectedData = AssertRoundTrippable(GetProtector(stepB2), "Step4");
+
+        // C1: CertificatePassword updated to new cert's value (secret lands first during cleanup).
+        // BlobName still points to old cert blob. Since PendingProtection:Enabled=true,
+        // BlobName/CertificatePassword are not loaded — no mismatch, no failure.
+        using var stepC1 = CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", NewCertPassword },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "dataprotection.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:PendingProtection:FileName", "mynewcert.pfx" },
+            { "GlobalSettings:DataProtection:PendingProtection:Password", NewCertPassword },
+            { "GlobalSettings:DataProtection:PendingProtection:Enabled", "true" },
+        });
+        Assert.Equal("MyTestData", GetProtector(stepC1).Unprotect(SavedProtectedData));
+        Assert.Equal("Step4", GetProtector(stepC1).Unprotect(step4ProtectedData));
+
+        // C2: BlobName updated to new cert blob (non-secret lands); still ignored while
+        // PendingProtection:Enabled=true, so the old-cert-blob/new-password mismatch window
+        // never exists.
+        using var stepC2 = CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:BlobName", "mynewcert.pfx" },
+            { "GlobalSettings:DataProtection:CertificatePassword", NewCertPassword },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "dataprotection.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:PendingProtection:FileName", "mynewcert.pfx" },
+            { "GlobalSettings:DataProtection:PendingProtection:Password", NewCertPassword },
+            { "GlobalSettings:DataProtection:PendingProtection:Enabled", "true" },
+        });
+        Assert.Equal("MyTestData", GetProtector(stepC2).Unprotect(SavedProtectedData));
+        Assert.Equal("Step4", GetProtector(stepC2).Unprotect(step4ProtectedData));
+
+        // C3: PendingProtection deactivated — falls back to BlobName=mynewcert.pfx +
+        // CertificatePassword=NewPw via the standard path. PendingProtection block can now
+        // be removed entirely from config.
+        using var stepC3 = CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:BlobName", "mynewcert.pfx" },
+            { "GlobalSettings:DataProtection:CertificatePassword", NewCertPassword },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "dataprotection.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Alongside-Unworthy-Query3-Cozy" },
+        });
+        Assert.Equal("MyTestData", GetProtector(stepC3).Unprotect(SavedProtectedData));
+        Assert.Equal("Step4", GetProtector(stepC3).Unprotect(step4ProtectedData));
+        AssertRoundTrippable(GetProtector(stepC3), "CleanedUp");
     }
 
     [Fact]
@@ -452,13 +600,69 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         await certificates.Value.UploadBlobAsync("dataprotection.pfx", new BinaryData(FakeInitialCert));
         await dataProtection.Value.UploadBlobAsync("keys.xml", new BinaryData(KeysData));
 
-        var exception = Assert.Throws<ArgumentNullException>(() => CreateApp(new Dictionary<string, string?>
+        var exception = Assert.Throws<InvalidOperationException>(() => CreateApp(new Dictionary<string, string?>
         {
             { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
             { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
             { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password",  NewCertPassword },
         }));
-        Assert.Contains("blobName", exception.ParamName);
+        Assert.Contains("Unprotect 0", exception.Message);
+        Assert.Contains("FileName", exception.Message);
+    }
+
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UnprotectCertificateCorrectPassword_NoFileName_EnabledFalse_Works(bool withPassword)
+    {
+        // This test shows how you can start to progressively stage information about an unprotect
+        // but as long as Enabled=false is in their that unprotect certificate will not attempt to be
+        // loaded and an otherwise invalid configuration does not cause startup issues and can be used.
+        // An unprotect certificate that has been used to actually protect keys should NEVER be disabled
+        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
+            .WithPortBinding(10000, true)
+            .Build();
+
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+
+        var certificates = await blobServiceClient.CreateBlobContainerAsync("certificates");
+        var dataProtection = await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection");
+
+        using var rsa = RSA.Create(2048);
+        var now = DateTimeOffset.UtcNow;
+        var certificate = new CertificateRequest("CN=New Dataprotected test certificate", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
+            .CreateSelfSigned(now, now.AddDays(365));
+
+        const string NewCertPassword = "Undergrad-Police0-Maturely-Countless";
+        await certificates.Value.UploadBlobAsync(
+            "mynewcert.pfx",
+            new BinaryData(certificate.Export(X509ContentType.Pfx, NewCertPassword))
+        );
+
+        await certificates.Value.UploadBlobAsync("dataprotection.pfx", new BinaryData(FakeInitialCert));
+        await dataProtection.Value.UploadBlobAsync("keys.xml", new BinaryData(KeysData));
+
+        var config = new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Enabled", "false" },
+        };
+
+        if (withPassword)
+        {
+            config.Add("GlobalSettings:Dataprotection:UnprotectCertificates:0:Password", NewCertPassword);
+        }
+
+        using var app = CreateApp(config);
+        var protector = GetProtector(app);
+        AssertRoundTrippable(protector, "NotEnabled");
+        Assert.Equal("MyTestData", protector.Unprotect(SavedProtectedData));
     }
 
     [Fact]
