@@ -2,6 +2,8 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.Helpers;
+using Bit.Core.Billing.Organizations.Schedules;
+using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
@@ -21,8 +23,7 @@ public class GetPendingAnnualUpgradeQuery(
 {
     public async Task<PendingAnnualUpgrade?> Run(Organization organization)
     {
-        // Shares the price-migration program flag with the offer query (same kill switch).
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM38333_AnnualBillingSavings))
         {
             return null;
         }
@@ -40,7 +41,8 @@ public class GetPendingAnnualUpgradeQuery(
         }
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, logger, organization, nameof(GetPendingAnnualUpgradeQuery), ["test_clock"]);
+            stripeAdapter, logger, organization, nameof(GetPendingAnnualUpgradeQuery),
+            ["test_clock", "schedule.phases.items.price"]);
         if (subscription is null || subscription.Status != SubscriptionStatus.Active)
         {
             return null;
@@ -53,21 +55,13 @@ public class GetPendingAnnualUpgradeQuery(
         {
             var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
 
-            var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-                new SubscriptionScheduleListOptions
-                {
-                    Customer = subscription.CustomerId,
-                    Expand = ["data.phases.items.price"]
-                });
+            var ownership = SubscriptionScheduleOwnershipMapper.MapOrNull(subscription);
+            if (ownership is not { Ownership: OrganizationSubscriptionScheduleOwnership.AnnualUpgrade })
+            {
+                return null;
+            }
 
-            // Redeemed marker: an active schedule for this subscription whose phases contain the
-            // annual-latest seat price.
-            var activeSchedule = schedules.Data.FirstOrDefault(schedule =>
-                schedule.SubscriptionId == subscription.Id &&
-                schedule.Status == SubscriptionScheduleStatus.Active &&
-                schedule.Phases.Any(phase =>
-                    phase.Items.Any(item => item.PriceId == annualLatestPlan.PasswordManager.StripeSeatPlanId)));
-
+            var activeSchedule = ownership.Schedule;
             if (activeSchedule is not { Phases.Count: > 0 })
             {
                 return null;

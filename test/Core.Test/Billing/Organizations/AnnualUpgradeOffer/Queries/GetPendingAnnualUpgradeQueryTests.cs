@@ -28,9 +28,7 @@ public class GetPendingAnnualUpgradeQueryTests
 
     public GetPendingAnnualUpgradeQueryTests()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+        _featureService.IsEnabled(FeatureFlagKeys.PM38333_AnnualBillingSavings).Returns(true);
         _query = new GetPendingAnnualUpgradeQuery(
             _logger, _featureService, _pricingClient, _stripeAdapter);
     }
@@ -56,15 +54,91 @@ public class GetPendingAnnualUpgradeQueryTests
         return subscription;
     }
 
-    [Fact]
-    public async Task Run_FlagDisabled_ReturnsNull_WithoutLookups()
+    // A past monthly phase plus a future annual-seat phase; the caller controls the future
+    // phase's metadata, since that is what ownership classification reads.
+    private SubscriptionSchedule ScheduleWithUpcomingAnnualPhase(Dictionary<string, string>? metadata)
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+        var annualSeatPriceId = annualPlan.PasswordManager.StripeSeatPlanId;
 
-        var result = await _query.Run(CreateOrganization(PlanType.TeamsMonthly));
+        return new SubscriptionSchedule
+        {
+            Id = "sub_sched_1",
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddMonths(-1),
+                    Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_monthly", Quantity = 5 }]
+                },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddMonths(1),
+                    Metadata = metadata,
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            PriceId = annualSeatPriceId,
+                            Price = new Price
+                            {
+                                Nickname = "Teams (Annually) Seat",
+                                UnitAmountDecimal = 4800,
+                                ProductId = "prod_teams",
+                                Recurring = new PriceRecurring { Interval = "year" }
+                            },
+                            Quantity = 5
+                        }
+                    ]
+                }
+            ]
+        };
+    }
 
-        Assert.Null(result);
-        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+    // Attaches the schedule to the subscription the adapter returns, rather than stubbing a listing.
+    private Subscription AttachSchedule(Organization organization, SubscriptionSchedule schedule)
+    {
+        schedule.Id ??= "sub_sched_1";
+        var subscription = SetupSubscription(organization);
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+        return subscription;
+    }
+
+    [Fact]
+    public async Task Run_NewFeatureFlagDisabled_ReturnsNullWithoutFetchingSubscription()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM38333_AnnualBillingSavings).Returns(false);
+
+        Assert.Null(await _query.Run(CreateOrganization(PlanType.TeamsMonthly)));
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default!, default!);
+    }
+
+    [Fact]
+    public async Task Run_ScheduleWithAnnualPriceButNoMetadata_ReturnsNull()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var schedule = ScheduleWithUpcomingAnnualPhase(metadata: null);
+        AttachSchedule(organization, schedule);
+
+        Assert.Null(await _query.Run(organization));
+    }
+
+    [Fact]
+    public async Task Run_ScheduleWithAnnualUpgradeMetadata_ReturnsPendingUpgrade()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var schedule = ScheduleWithUpcomingAnnualPhase(
+            metadata: new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" });
+        AttachSchedule(organization, schedule);
+
+        var result = await _query.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.Equal(schedule.Phases[^1].StartDate, result.EffectiveDate);
     }
 
     [Fact]
@@ -87,16 +161,14 @@ public class GetPendingAnnualUpgradeQueryTests
         var result = await _query.Run(organization);
 
         Assert.Null(result);
-        await _stripeAdapter.DidNotReceive().ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
     }
 
     [Fact]
-    public async Task Run_NoRedeemedSchedule_ReturnsNull()
+    public async Task Run_NoScheduleAttached_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         SetupSubscription(organization);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-        // Default ListSubscriptionSchedulesAsync returns empty in the constructor.
 
         var result = await _query.Run(organization);
 
@@ -107,111 +179,74 @@ public class GetPendingAnnualUpgradeQueryTests
     public async Task Run_ActiveScheduleHasNoUpcomingPhase_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        var subscription = SetupSubscription(organization);
-
         var annualPlan = new TeamsPlan(true);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
-
         var annualSeatPriceId = annualPlan.PasswordManager.StripeSeatPlanId;
 
         // Only a past-dated phase is present -- the schedule is "active" and already targets the
         // annual-latest seat price, but there is no future phase left to report as pending.
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data =
-                [
-                    new SubscriptionSchedule
-                    {
-                        SubscriptionId = subscription.Id,
-                        Status = SubscriptionScheduleStatus.Active,
-                        Phases =
-                        [
-                            new SubscriptionSchedulePhase
-                            {
-                                StartDate = DateTime.UtcNow.AddDays(-30),
-                                Items = [new SubscriptionSchedulePhaseItem { PriceId = annualSeatPriceId, Quantity = 5 }]
-                            }
-                        ]
-                    }
-                ]
-            });
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(-30),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" },
+                    Items = [new SubscriptionSchedulePhaseItem { PriceId = annualSeatPriceId, Quantity = 5 }]
+                }
+            ]
+        };
+        AttachSchedule(organization, schedule);
 
         var result = await _query.Run(organization);
 
         Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task Run_ListSubscriptionSchedulesThrows_ReturnsNull()
-    {
-        var organization = CreateOrganization(PlanType.TeamsMonthly);
-        SetupSubscription(organization);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-
-        // A Stripe outage while listing schedules must degrade to "no pending upgrade," not
-        // bubble up and 500 the page that calls this query inline.
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns<StripeList<SubscriptionSchedule>>(_ =>
-                throw new StripeException { StripeError = new StripeError { Code = "api_error" } });
-
-        var result = await _query.Run(organization);
-
-        Assert.Null(result);
-        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Warning, default, default!, default, default!);
     }
 
     [Fact]
     public async Task Run_RedeemedSchedule_ReturnsTargetPlanAndLineItems()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        var subscription = SetupSubscription(organization);
-
         var annualPlan = new TeamsPlan(true);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
-
         var annualSeatPriceId = annualPlan.PasswordManager.StripeSeatPlanId;
         var renewalDate = DateTime.UtcNow.AddMonths(1);
 
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data =
-                [
-                    new SubscriptionSchedule
-                    {
-                        SubscriptionId = subscription.Id,
-                        Status = SubscriptionScheduleStatus.Active,
-                        Phases =
-                        [
-                            new SubscriptionSchedulePhase
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddMonths(-1),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" },
+                    Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_monthly", Quantity = 5 }]
+                },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = renewalDate,
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            PriceId = annualSeatPriceId,
+                            Price = new Price
                             {
-                                StartDate = DateTime.UtcNow.AddMonths(-1),
-                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_monthly", Quantity = 5 }]
+                                Nickname = "Teams (Annually) Seat",
+                                UnitAmountDecimal = 4800,
+                                ProductId = "prod_teams",
+                                Recurring = new PriceRecurring { Interval = "year" }
                             },
-                            new SubscriptionSchedulePhase
-                            {
-                                StartDate = renewalDate,
-                                Items =
-                                [
-                                    new SubscriptionSchedulePhaseItem
-                                    {
-                                        PriceId = annualSeatPriceId,
-                                        Price = new Price
-                                        {
-                                            Nickname = "Teams (Annually) Seat",
-                                            UnitAmountDecimal = 4800,
-                                            ProductId = "prod_teams",
-                                            Recurring = new PriceRecurring { Interval = "year" }
-                                        },
-                                        Quantity = 5
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            });
+                            Quantity = 5
+                        }
+                    ]
+                }
+            ]
+        };
+        AttachSchedule(organization, schedule);
 
         var result = await _query.Run(organization);
 
@@ -226,7 +261,7 @@ public class GetPendingAnnualUpgradeQueryTests
     }
 
     [Fact]
-    public async Task Run_RequestsExpandedPhaseItemPrices()
+    public async Task Run_RequestsExpandedSchedulePhasePrices()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         SetupSubscription(organization);
@@ -235,50 +270,42 @@ public class GetPendingAnnualUpgradeQueryTests
 
         await _query.Run(organization);
 
-        await _stripeAdapter.Received().ListSubscriptionSchedulesAsync(
-            Arg.Is<SubscriptionScheduleListOptions>(o =>
-                o.Expand != null && o.Expand.Contains("data.phases.items.price")));
+        await _stripeAdapter.Received().GetSubscriptionAsync(
+            organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionGetOptions>(o =>
+                o.Expand != null && o.Expand.Contains("schedule.phases.items.price")));
     }
 
     [Fact]
     public async Task Run_UpcomingPhaseLacksAnnualSeatPrice_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        var subscription = SetupSubscription(organization);
         var annualPlan = new TeamsPlan(true);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
-
         var annualSeatPriceId = annualPlan.PasswordManager.StripeSeatPlanId;
         var renewalDate = DateTime.UtcNow.AddMonths(1);
 
-        // Schedule is "active" and DOES contain the annual seat price somewhere (so it is
-        // selected as the redeemed schedule), but the earliest FUTURE phase is a different
-        // (non-annual) price -> content check must reject it.
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data =
-                [
-                    new SubscriptionSchedule
-                    {
-                        SubscriptionId = subscription.Id,
-                        Status = SubscriptionScheduleStatus.Active,
-                        Phases =
-                        [
-                            new SubscriptionSchedulePhase
-                            {
-                                StartDate = DateTime.UtcNow.AddMonths(-1),
-                                Items = [new SubscriptionSchedulePhaseItem { PriceId = annualSeatPriceId, Quantity = 5 }]
-                            },
-                            new SubscriptionSchedulePhase
-                            {
-                                StartDate = renewalDate,
-                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_other", Quantity = 5 }]
-                            }
-                        ]
-                    }
-                ]
-            });
+        // Schedule is redeemed (AnnualUpgrade metadata present), but the earliest FUTURE phase is
+        // a different (non-annual) price -> content check must reject it.
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddMonths(-1),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" },
+                    Items = [new SubscriptionSchedulePhaseItem { PriceId = annualSeatPriceId, Quantity = 5 }]
+                },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = renewalDate,
+                    Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_other", Quantity = 5 }]
+                }
+            ]
+        };
+        AttachSchedule(organization, schedule);
 
         var result = await _query.Run(organization);
 
@@ -321,40 +348,30 @@ public class GetPendingAnnualUpgradeQueryTests
         var result = await _query.Run(organization);
 
         Assert.Null(result);
-        await _stripeAdapter.DidNotReceive().ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
     }
 
     [Fact]
-    public async Task Run_ScheduleForDifferentSubscriptionOrInactive_ReturnsNull()
+    public async Task Run_AttachedScheduleNotActive_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        var subscription = SetupSubscription(organization);
         var annualPlan = new TeamsPlan(true);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
         var annualSeatPriceId = annualPlan.PasswordManager.StripeSeatPlanId;
 
-        // Both schedules carry the annual seat price but neither qualifies: one belongs to a
-        // different subscription, the other is not active. The redeemed-schedule predicate must
-        // reject both and report nothing pending.
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data =
-                [
-                    new SubscriptionSchedule
-                    {
-                        SubscriptionId = "sub_other",
-                        Status = SubscriptionScheduleStatus.Active,
-                        Phases = [new SubscriptionSchedulePhase { Items = [new SubscriptionSchedulePhaseItem { PriceId = annualSeatPriceId, Quantity = 5 }] }]
-                    },
-                    new SubscriptionSchedule
-                    {
-                        SubscriptionId = subscription.Id,
-                        Status = SubscriptionScheduleStatus.Canceled,
-                        Phases = [new SubscriptionSchedulePhase { Items = [new SubscriptionSchedulePhaseItem { PriceId = annualSeatPriceId, Quantity = 5 }] }]
-                    }
-                ]
-            });
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Canceled,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddMonths(1),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" },
+                    Items = [new SubscriptionSchedulePhaseItem { PriceId = annualSeatPriceId, Quantity = 5 }]
+                }
+            ]
+        };
+        AttachSchedule(organization, schedule);
 
         var result = await _query.Run(organization);
 
@@ -365,63 +382,55 @@ public class GetPendingAnnualUpgradeQueryTests
     public async Task Run_UsesTestClockTime_AndFlagsAddonLineItems()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        var subscription = SetupSubscription(organization);
-        // A test-clock-backed subscription: "now" comes from the frozen clock, not wall-clock time.
-        var frozenNow = new DateTime(2026, 7, 6, 0, 0, 0, DateTimeKind.Utc);
-        subscription.TestClock = new Stripe.TestHelpers.TestClock { FrozenTime = frozenNow };
-
         var annualPlan = new TeamsPlan(true);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
         var annualSeatPriceId = annualPlan.PasswordManager.StripeSeatPlanId;
+        // A test-clock-backed subscription: "now" comes from the frozen clock, not wall-clock time.
+        var frozenNow = new DateTime(2026, 7, 6, 0, 0, 0, DateTimeKind.Utc);
         var renewalDate = frozenNow.AddMonths(1);
 
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data =
-                [
-                    new SubscriptionSchedule
-                    {
-                        SubscriptionId = subscription.Id,
-                        Status = SubscriptionScheduleStatus.Active,
-                        Phases =
-                        [
-                            new SubscriptionSchedulePhase
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = renewalDate,
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" },
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            PriceId = annualSeatPriceId,
+                            Price = new Price
                             {
-                                StartDate = renewalDate,
-                                Items =
-                                [
-                                    new SubscriptionSchedulePhaseItem
-                                    {
-                                        PriceId = annualSeatPriceId,
-                                        Price = new Price
-                                        {
-                                            Nickname = "Teams (Annually) Seat",
-                                            UnitAmountDecimal = 4800,
-                                            ProductId = "prod_teams",
-                                            Recurring = new PriceRecurring { Interval = "year" }
-                                        },
-                                        Quantity = 5
-                                    },
-                                    new SubscriptionSchedulePhaseItem
-                                    {
-                                        PriceId = "price_addon",
-                                        Price = new Price
-                                        {
-                                            Nickname = "Premium add-on",
-                                            UnitAmountDecimal = 1000,
-                                            ProductId = "prod_addon",
-                                            Recurring = new PriceRecurring { Interval = "year" },
-                                            Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" }
-                                        },
-                                        Quantity = 1
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            });
+                                Nickname = "Teams (Annually) Seat",
+                                UnitAmountDecimal = 4800,
+                                ProductId = "prod_teams",
+                                Recurring = new PriceRecurring { Interval = "year" }
+                            },
+                            Quantity = 5
+                        },
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            PriceId = "price_addon",
+                            Price = new Price
+                            {
+                                Nickname = "Premium add-on",
+                                UnitAmountDecimal = 1000,
+                                ProductId = "prod_addon",
+                                Recurring = new PriceRecurring { Interval = "year" },
+                                Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" }
+                            },
+                            Quantity = 1
+                        }
+                    ]
+                }
+            ]
+        };
+        var subscription = AttachSchedule(organization, schedule);
+        subscription.TestClock = new Stripe.TestHelpers.TestClock { FrozenTime = frozenNow };
 
         var result = await _query.Run(organization);
 
