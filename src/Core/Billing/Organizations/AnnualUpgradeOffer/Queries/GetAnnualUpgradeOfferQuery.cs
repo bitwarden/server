@@ -3,7 +3,6 @@ using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.Schedules;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
@@ -58,45 +57,14 @@ public class GetAnnualUpgradeOfferQuery(
             return null;
         }
 
-        // Stripe.NET deserializes an unexpanded discount array as a list of null entries.
-        // Quoting from one would silently price the organization as if it had no discounts.
-        if (HasUnexpandedDiscounts(subscription))
+        var eligibility = AnnualUpgradeEligibilityMapper.Map(subscription, currentPlan, annualLatestPlan);
+        if (!eligibility.IsEligible)
         {
-            logger.LogError(
-                "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded with unexpanded discounts; refusing to quote a savings figure",
-                nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id);
+            LogIneligible(organization, subscription, eligibility);
             return null;
         }
 
-        var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
-        switch (ownership)
-        {
-            case OrganizationSubscriptionScheduleOwnership.Unexpanded:
-                logger.LogError(
-                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; suppressing the annual upgrade offer",
-                    nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id, subscription.ScheduleId);
-                return null;
-
-            case OrganizationSubscriptionScheduleOwnership.AnnualUpgrade:
-                logger.LogInformation(
-                    "{Query}: Organization ({OrganizationId}) already redeemed the annual upgrade offer; suppressing",
-                    nameof(GetAnnualUpgradeOfferQuery), organization.Id);
-                return null;
-
-            case OrganizationSubscriptionScheduleOwnership.Foreign:
-                logger.LogWarning(
-                    "{Query}: Organization ({OrganizationId}) has an unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}); phase metadata keys present: {MetadataKeys}; suppressing the annual upgrade offer",
-                    nameof(GetAnnualUpgradeOfferQuery), organization.Id, subscription.ScheduleId, subscription.Id,
-                    string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(subscription.Schedule)));
-                return null;
-        }
-
-        var previewRequests = AnnualUpgradeSavingsCalculator.BuildPreviewRequestsOrNull(
-            subscription, currentPlan, annualLatestPlan);
-        if (previewRequests is null)
-        {
-            return null;
-        }
+        var previewRequests = AnnualUpgradeSavingsCalculator.BuildPreviewRequests(subscription, eligibility.Lines);
 
         AnnualUpgradeSavings? savings;
         try
@@ -105,8 +73,8 @@ public class GetAnnualUpgradeOfferQuery(
             // same explicit coupon set as the annual one. Reading the natural upcoming invoice for
             // the monthly side would save a call but surrender control of that set and let
             // proration and one-off invoice items into the figure.
-            var monthlyPreview = await stripeAdapter.CreateInvoicePreviewAsync(previewRequests.Value.Monthly);
-            var annualPreview = await stripeAdapter.CreateInvoicePreviewAsync(previewRequests.Value.Annual);
+            var monthlyPreview = await stripeAdapter.CreateInvoicePreviewAsync(previewRequests.Monthly);
+            var annualPreview = await stripeAdapter.CreateInvoicePreviewAsync(previewRequests.Annual);
             savings = AnnualUpgradeSavingsCalculator.SavingsFromPreviews(monthlyPreview, annualPreview);
         }
         catch (Exception exception)
@@ -133,8 +101,41 @@ public class GetAnnualUpgradeOfferQuery(
             savings.Value.CurrentAnnualCost, savings.Value.NewAnnualCost, difference);
     }
 
-    private static bool HasUnexpandedDiscounts(Subscription subscription) =>
-        (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d is null)) ||
-        subscription.Items.Data.Any(item =>
-            item.Discounts is { Count: > 0 } && item.Discounts.Any(d => d is null));
+    private void LogIneligible(
+        Organization organization, Subscription subscription, AnnualUpgradeEligibility eligibility)
+    {
+        switch (eligibility.Reason)
+        {
+            case AnnualUpgradeIneligibleReason.UnexpandedDiscounts:
+                logger.LogError(
+                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded with unexpanded discounts; refusing to quote a savings figure",
+                    nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id);
+                break;
+
+            case AnnualUpgradeIneligibleReason.UnexpandedSchedule:
+                logger.LogError(
+                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; suppressing the annual upgrade offer",
+                    nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id, subscription.ScheduleId);
+                break;
+
+            case AnnualUpgradeIneligibleReason.AlreadyScheduled:
+                logger.LogInformation(
+                    "{Query}: Organization ({OrganizationId}) already redeemed the annual upgrade offer; suppressing",
+                    nameof(GetAnnualUpgradeOfferQuery), organization.Id);
+                break;
+
+            case AnnualUpgradeIneligibleReason.ForeignSchedule:
+                logger.LogWarning(
+                    "{Query}: Organization ({OrganizationId}) has an unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}); phase metadata keys present: {MetadataKeys}; suppressing the annual upgrade offer",
+                    nameof(GetAnnualUpgradeOfferQuery), organization.Id, subscription.ScheduleId, subscription.Id,
+                    string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(subscription.Schedule)));
+                break;
+
+            case AnnualUpgradeIneligibleReason.UnmappableLine:
+                logger.LogWarning(
+                    "{Query}: Subscription ({SubscriptionId}) line item price ({PriceId}) has no annual-latest mapping for Organization ({OrganizationId}); suppressing the annual upgrade offer",
+                    nameof(GetAnnualUpgradeOfferQuery), subscription.Id, eligibility.UnmappablePriceId, organization.Id);
+                break;
+        }
+    }
 }

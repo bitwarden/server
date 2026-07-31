@@ -45,18 +45,28 @@ public class AnnualUpgradeSavingsCalculatorTests
             }
         };
 
-    private AnnualUpgradePreviewRequests Build(Subscription subscription) =>
-        AnnualUpgradeSavingsCalculator.BuildPreviewRequestsOrNull(
-            subscription, _currentPlan, _annualLatestPlan)
-        ?? throw new Xunit.Sdk.XunitException("expected a payload pair, got null");
+    private static IReadOnlyList<AnnualUpgradeLine> Lines(Subscription subscription, string targetPriceId) =>
+        [.. subscription.Items.Data.Select(item => new AnnualUpgradeLine(item, targetPriceId))];
+
+    private static AnnualUpgradePreviewRequests Build(
+        Subscription subscription, IReadOnlyList<AnnualUpgradeLine> lines) =>
+        AnnualUpgradeSavingsCalculator.BuildPreviewRequests(subscription, lines);
 
     [Fact]
     public void Build_BothSidesCarryTheSameQuantitiesAndDifferOnlyInPriceIds()
     {
         var monthlySeat = _currentPlan.PasswordManager.StripeSeatPlanId;
         var monthlySmSeat = _currentPlan.SecretsManager.StripeSeatPlanId;
+        var seatItem = Item(monthlySeat, 20);
+        var smSeatItem = Item(monthlySmSeat, 3);
+        var subscription = Subscription(seatItem, smSeatItem);
+        AnnualUpgradeLine[] lines =
+        [
+            new AnnualUpgradeLine(seatItem, _annualLatestPlan.PasswordManager.StripeSeatPlanId),
+            new AnnualUpgradeLine(smSeatItem, _annualLatestPlan.SecretsManager.StripeSeatPlanId)
+        ];
 
-        var requests = Build(Subscription(Item(monthlySeat, 20), Item(monthlySmSeat, 3)));
+        var requests = Build(subscription, lines);
 
         var monthlyItems = requests.Monthly.SubscriptionDetails.Items;
         var annualItems = requests.Annual.SubscriptionDetails.Items;
@@ -78,7 +88,9 @@ public class AnnualUpgradeSavingsCalculatorTests
     [Fact]
     public void Build_TargetsTheCustomerAndDisablesAutomaticTaxOnBothSides()
     {
-        var requests = Build(Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5)));
+        var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+
+        var requests = Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId));
 
         foreach (var options in new[] { requests.Monthly, requests.Annual })
         {
@@ -91,41 +103,12 @@ public class AnnualUpgradeSavingsCalculatorTests
     }
 
     [Fact]
-    public void Build_UnmappableLineItem_ReturnsNull()
-    {
-        Assert.Null(AnnualUpgradeSavingsCalculator.BuildPreviewRequestsOrNull(
-            Subscription(
-                Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5),
-                Item("price_sponsorship", 1)),
-            _currentPlan, _annualLatestPlan));
-    }
-
-    [Fact]
-    public void Build_NoLineItems_ReturnsNull()
-    {
-        Assert.Null(AnnualUpgradeSavingsCalculator.BuildPreviewRequestsOrNull(
-            Subscription(), _currentPlan, _annualLatestPlan));
-    }
-
-    [Fact]
-    public void Build_ItemWithNullPrice_IsSkippedNotTreatedAsUnmappable()
-    {
-        var subscription = Subscription(
-            new SubscriptionItem { Id = "si_null", Quantity = 1, Price = null },
-            Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
-
-        var requests = Build(subscription);
-
-        Assert.Single(requests.Monthly.SubscriptionDetails.Items);
-    }
-
-    [Fact]
     public void Build_SubscriptionCoupons_PassedAtInvoiceLevelOnBothSides()
     {
         var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
         subscription.Discounts = [Discount("sub_coupon")];
 
-        var requests = Build(subscription);
+        var requests = Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId));
 
         Assert.Equal(new[] { "sub_coupon" }, requests.Monthly.Discounts.Select(discount => discount.Coupon));
         Assert.Equal(new[] { "sub_coupon" }, requests.Annual.Discounts.Select(discount => discount.Coupon));
@@ -137,7 +120,7 @@ public class AnnualUpgradeSavingsCalculatorTests
         var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
         subscription.Discounts = [Discount("no_currency", currency: null)];
 
-        var requests = Build(subscription);
+        var requests = Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId));
 
         Assert.Equal(new[] { "no_currency" }, (requests.Monthly.Discounts ?? []).Select(d => d.Coupon));
     }
@@ -149,12 +132,18 @@ public class AnnualUpgradeSavingsCalculatorTests
         withOwn.Discounts = [Discount("sub_coupon")];
         withOwn.Customer = new Customer { Id = "cus_123", Discount = Discount("cus_coupon") };
 
-        Assert.Equal(new[] { "sub_coupon" }, Build(withOwn).Monthly.Discounts.Select(d => d.Coupon));
+        Assert.Equal(
+            new[] { "sub_coupon" },
+            Build(withOwn, Lines(withOwn, _annualLatestPlan.PasswordManager.StripeSeatPlanId))
+                .Monthly.Discounts.Select(d => d.Coupon));
 
         var withoutOwn = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
         withoutOwn.Customer = new Customer { Id = "cus_123", Discount = Discount("cus_coupon") };
 
-        Assert.Equal(new[] { "cus_coupon" }, Build(withoutOwn).Monthly.Discounts.Select(d => d.Coupon));
+        Assert.Equal(
+            new[] { "cus_coupon" },
+            Build(withoutOwn, Lines(withoutOwn, _annualLatestPlan.PasswordManager.StripeSeatPlanId))
+                .Monthly.Discounts.Select(d => d.Coupon));
     }
 
     [Theory]
@@ -165,7 +154,8 @@ public class AnnualUpgradeSavingsCalculatorTests
         var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
         subscription.Discounts = [Discount("temporary", duration: duration)];
 
-        Assert.Null(Build(subscription).Monthly.Discounts);
+        Assert.Null(Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId))
+            .Monthly.Discounts);
     }
 
     [Fact]
@@ -173,11 +163,16 @@ public class AnnualUpgradeSavingsCalculatorTests
     {
         var monthlySeat = _currentPlan.PasswordManager.StripeSeatPlanId;
         var monthlySmSeat = _currentPlan.SecretsManager.StripeSeatPlanId;
-        var subscription = Subscription(
-            Item(monthlySeat, 5, Discount("seat_only")),
-            Item(monthlySmSeat, 3));
+        var seatItem = Item(monthlySeat, 5, Discount("seat_only"));
+        var smSeatItem = Item(monthlySmSeat, 3);
+        var subscription = Subscription(seatItem, smSeatItem);
+        AnnualUpgradeLine[] lines =
+        [
+            new AnnualUpgradeLine(seatItem, _annualLatestPlan.PasswordManager.StripeSeatPlanId),
+            new AnnualUpgradeLine(smSeatItem, _annualLatestPlan.SecretsManager.StripeSeatPlanId)
+        ];
 
-        var requests = Build(subscription);
+        var requests = Build(subscription, lines);
 
         Assert.Null(requests.Monthly.Discounts);
         Assert.Equal(
@@ -199,7 +194,8 @@ public class AnnualUpgradeSavingsCalculatorTests
         var subscription = Subscription(Item(
             _currentPlan.PasswordManager.StripeSeatPlanId, 5, Discount("temp", duration: duration)));
 
-        Assert.Null(Build(subscription).Monthly.SubscriptionDetails.Items[0].Discounts);
+        Assert.Null(Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId))
+            .Monthly.SubscriptionDetails.Items[0].Discounts);
     }
 
     [Fact]

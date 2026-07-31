@@ -318,6 +318,27 @@ public class GetAnnualUpgradeOfferQueryTests
     }
 
     [Fact]
+    public async Task Run_ForeignSchedule_LogsWarning()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        AttachSchedule(subscription, "sub_sched_negotiated", new Dictionary<string, string>
+        {
+            ["negotiated_term"] = "3y"
+        });
+
+        Assert.Null(await _query.Run(organization));
+
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Fact]
     public async Task Run_AnnualUpgradeSchedule_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
@@ -329,6 +350,27 @@ public class GetAnnualUpgradeOfferQueryTests
         });
 
         Assert.Null(await _query.Run(organization));
+    }
+
+    [Fact]
+    public async Task Run_AnnualUpgradeSchedule_LogsInformation()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        var subscription = SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        AttachSchedule(subscription, "sub_sched_annual", new Dictionary<string, string>
+        {
+            [MetadataKeys.AnnualUpgrade] = nameof(PlanType.TeamsMonthly2020)
+        });
+
+        Assert.Null(await _query.Run(organization));
+
+        _logger.Received(1).Log(
+            LogLevel.Information,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -444,6 +486,24 @@ public class GetAnnualUpgradeOfferQueryTests
     }
 
     [Fact]
+    public async Task Run_UnmappableLineItem_LogsWarning()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        SetupSubscription(organization,
+            SeatItem(_currentPlan.PasswordManager.StripeSeatPlanId, 5),
+            SeatItem("price_sponsorship", 1));
+
+        Assert.Null(await _query.Run(organization));
+
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Fact]
     public async Task Run_ItemDiscountsPresentButUnexpanded_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
@@ -479,6 +539,46 @@ public class GetAnnualUpgradeOfferQueryTests
             .Returns(subscription);
 
         Assert.Null(await _query.Run(organization));
+    }
+
+    [Fact]
+    public async Task Run_ItemDiscountsPresentButUnexpanded_LogsError()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+
+        // Same JSON-deserialization workaround as the test above.
+        var unexpandedJson = $$"""
+            {
+              "id": "sub_123",
+              "object": "subscription",
+              "customer": "cus_123",
+              "currency": "usd",
+              "items": {
+                "object": "list",
+                "data": [
+                  {
+                    "id": "si_seat",
+                    "object": "subscription_item",
+                    "quantity": 5,
+                    "price": { "id": "{{_currentPlan.PasswordManager.StripeSeatPlanId}}", "object": "price", "product": "prod_pm" },
+                    "discounts": ["di_1"]
+                  }
+                ]
+              }
+            }
+            """;
+        var subscription = Newtonsoft.Json.JsonConvert.DeserializeObject<Subscription>(unexpandedJson)!;
+        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        Assert.Null(await _query.Run(organization));
+
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]

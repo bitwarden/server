@@ -1,7 +1,5 @@
-﻿using Bit.Core.Billing.Organizations.PlanMigration;
-using Stripe;
+﻿using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;
-using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 
@@ -27,44 +25,17 @@ internal readonly record struct AnnualUpgradePreviewRequests(
 /// </summary>
 internal static class AnnualUpgradeSavingsCalculator
 {
-    private readonly record struct PreviewLine(SubscriptionItem Item, string TargetPriceId);
-
     /// <summary>
-    /// Builds the two preview payloads, or null when the subscription has no line items or when any
-    /// line has no annual equivalent. A line the redemption cannot map is a line the redemption
-    /// will refuse, so quoting a figure for it would advertise an offer that cannot be taken.
+    /// Builds the two preview payloads: the same quantities and coupons priced once on the
+    /// subscription's current price ids and once on the annual equivalents in <paramref name="lines"/>.
     /// </summary>
     /// <remarks>
     /// The caller must load the subscription with <c>customer</c>, <c>discounts.coupon</c>,
     /// <c>customer.discount.coupon</c>, and <c>items.data.discounts.coupon</c> expanded.
     /// </remarks>
-    public static AnnualUpgradePreviewRequests? BuildPreviewRequestsOrNull(
-        Subscription subscription, Plan currentPlan, Plan annualLatestPlan)
+    public static AnnualUpgradePreviewRequests BuildPreviewRequests(
+        Subscription subscription, IReadOnlyList<AnnualUpgradeLine> lines)
     {
-        var lines = new List<PreviewLine>();
-
-        foreach (var item in subscription.Items.Data)
-        {
-            if (item.Price?.Id is null)
-            {
-                continue;
-            }
-
-            var targetPriceId = OrganizationPlanMigrationPriceMapper.MapOrNull(
-                item.Price.Id, currentPlan, annualLatestPlan);
-            if (targetPriceId is null)
-            {
-                return null;
-            }
-
-            lines.Add(new PreviewLine(item, targetPriceId));
-        }
-
-        if (lines.Count == 0)
-        {
-            return null;
-        }
-
         var invoiceDiscounts = InvoiceLevelCoupons(subscription)
             .Where(coupon => IsApplicable(coupon) && !string.IsNullOrEmpty(coupon.Id))
             .Select(coupon => new InvoiceDiscountOptions { Coupon = coupon.Id })
@@ -77,7 +48,7 @@ internal static class AnnualUpgradeSavingsCalculator
 
     private static InvoiceCreatePreviewOptions BuildPreviewOptions(
         Subscription subscription,
-        IReadOnlyList<PreviewLine> lines,
+        IReadOnlyList<AnnualUpgradeLine> lines,
         List<InvoiceDiscountOptions> invoiceDiscounts,
         bool annual) =>
         new()
@@ -99,7 +70,7 @@ internal static class AnnualUpgradeSavingsCalculator
         };
 
     private static List<InvoiceSubscriptionDetailsItemDiscountOptions>? ItemDiscountsOrNull(
-        PreviewLine line)
+        AnnualUpgradeLine line)
     {
         var discounts = (line.Item.Discounts ?? [])
             .Where(discount =>
