@@ -54,8 +54,7 @@ public class GetPendingAnnualUpgradeQueryTests
         return subscription;
     }
 
-    // A past monthly phase plus a future annual-seat phase; the caller controls the future
-    // phase's metadata, since that is what ownership classification reads.
+    // The caller controls the future phase's metadata, since that is what ownership classification reads.
     private SubscriptionSchedule ScheduleWithUpcomingAnnualPhase(Dictionary<string, string>? metadata)
     {
         var annualPlan = new TeamsPlan(true);
@@ -97,7 +96,6 @@ public class GetPendingAnnualUpgradeQueryTests
         };
     }
 
-    // Attaches the schedule to the subscription the adapter returns, rather than stubbing a listing.
     private Subscription AttachSchedule(Organization organization, SubscriptionSchedule schedule)
     {
         schedule.Id ??= "sub_sched_1";
@@ -154,9 +152,11 @@ public class GetPendingAnnualUpgradeQueryTests
     public async Task Run_SubscriptionNotActive_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        var subscription = SetupSubscription(organization);
+        // Otherwise-valid redeemed schedule, so Status is the only thing that can produce null.
+        var schedule = ScheduleWithUpcomingAnnualPhase(
+            metadata: new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" });
+        var subscription = AttachSchedule(organization, schedule);
         subscription.Status = SubscriptionStatus.PastDue;
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
 
         var result = await _query.Run(organization);
 
