@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.Data.Common;
+using AutoMapper;
 using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
@@ -8,6 +9,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
@@ -17,6 +19,22 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     public UserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
     { }
+
+    /// <summary>
+    /// Builds the context an <see cref="UpdateUserData"/> action writes through.
+    /// </summary>
+    private async Task<DatabaseContext> GetUpdateUserDataContextAsync(IServiceScope scope, DbConnection? connection,
+        DbTransaction? transaction)
+    {
+        var dbContext = GetDatabaseContext(scope);
+        if (connection != null)
+        {
+            dbContext.Database.SetDbConnection(connection);
+            await dbContext.Database.UseTransactionAsync(transaction);
+        }
+
+        return dbContext;
+    }
 
     public async Task<Core.Entities.User?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
     {
@@ -345,7 +363,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         {
             foreach (var action in updateUserDataActions)
             {
-                await action();
+                await action(dbContext.Database.GetDbConnection(), transaction.GetDbTransaction());
             }
         }
         await transaction.CommitAsync();
@@ -515,10 +533,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
 
             var userEntity = await dbContext.Users.FindAsync(userId);
             if (userEntity == null)
@@ -545,10 +563,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
         string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
 
             var userEntity = await dbContext.Users.FindAsync(userId);
             if (userEntity == null)
@@ -586,7 +604,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         foreach (var action in updateUserDataActions)
         {
-            await action();
+            await action(dbContext.Database.GetDbConnection(), transaction.GetDbTransaction());
         }
 
         await transaction.CommitAsync();
@@ -594,10 +612,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     public UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
 
             var userEntity = await dbContext.Users.FindAsync(userId) ?? throw new ArgumentException("User not found", nameof(userId));
             var timestamp = DateTime.UtcNow;
@@ -619,10 +637,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     /// <inheritdoc />
     public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
 
             var userEntity = await dbContext.Users.FindAsync(userId);
             if (userEntity == null)
