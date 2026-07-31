@@ -6377,7 +6377,9 @@ public class SubscriptionUpdatedHandlerTests
     {
         // A transient DB failure while persisting the plan flip must propagate so the
         // webhook returns non-200 and Stripe retries. Swallowing it would leave the org
-        // on monthly PlanType while Stripe bills annually -- permanent divergence.
+        // on monthly PlanType while Stripe bills annually -- permanent divergence. The
+        // handler wraps the underlying failure in a BillingException so it is
+        // distinguishable from guard/lookup failures, which are logged and swallowed.
         var organizationId = Guid.NewGuid();
         var teamsMonthly = new TeamsPlan(false);
         var teamsAnnual = new TeamsPlan(true);
@@ -6427,17 +6429,17 @@ public class SubscriptionUpdatedHandlerTests
         _organizationRepository.ReplaceAsync(Arg.Any<Organization>())
             .Returns<Task>(_ => throw new InvalidOperationException("transient DB failure"));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.HandleAsync(parsedEvent));
+        await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
     }
 
     [Fact]
-    public async Task HandleAsync_AnnualUpgradeOffer_PricingServiceThrowsBillingException_RethrowsForStripeRetry()
+    public async Task HandleAsync_AnnualUpgradeOffer_PricingServiceThrows_DoesNotRethrow()
     {
-        // Arrange: a BillingException from the pricing client must bubble out of
-        // the handler so the webhook returns 500 and Stripe retries the event.
-        // The monthly-to-annual price transition appears on exactly one
-        // subscription.updated event, so swallowing this would leave the
-        // organization's PlanType monthly forever while Stripe bills annually.
+        // Arrange: a BillingException from the pricing client during the lookup section
+        // (before the plan has been persisted) must NOT bubble out of the handler.
+        // Everything above the persistence step is a guard or lookup, and failing the
+        // whole webhook here would skip the expiration sync, sponsorship renewal, and
+        // billing-automation exemption work sequenced after this handler.
         var organizationId = Guid.NewGuid();
         var teamsMonthly = new TeamsPlan(false);
 
@@ -6476,13 +6478,77 @@ public class SubscriptionUpdatedHandlerTests
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        // Only the first call (the annual-upgrade handler's own lookup) fails. The unrelated
+        // RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync step, sequenced later
+        // in HandleAsync, calls GetPlanOrThrow with the same PlanType and must not be broken
+        // by this test's arrangement.
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly)
-            .Throws(new BillingException(message: "pricing service unavailable"));
+            .Returns(_ => throw new BillingException(message: "pricing service unavailable"), _ => teamsMonthly);
         _pricingClient.ListPlans().Returns(MockPlans.Plans);
 
-        // Act + Assert: BillingException must propagate out of HandleAsync
-        await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
+        // Act + Assert: the BillingException from the lookup section must be logged and
+        // swallowed, not propagated, so the rest of the webhook's per-organization work
+        // still runs.
+        var exception = await Record.ExceptionAsync(() => _sut.HandleAsync(parsedEvent));
 
+        Assert.Null(exception);
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_PricingLookupThrows_DoesNotRethrow()
+    {
+        // A pricing-service outage during an unrelated item change must not fail the whole
+        // webhook, because everything sequenced after this handler would be skipped.
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_pricing_lookup_throws",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_pricing_lookup_throws",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { Price = new Price { Id = "price_target_current" }, Plan = new Plan { Id = "price_target_current" } }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        // Only the first call (the annual-upgrade handler's own lookup) fails. The unrelated
+        // RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync step, sequenced later
+        // in HandleAsync, calls GetPlanOrThrow with the same PlanType and must not be broken
+        // by this test's arrangement.
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly)
+            .Returns(_ => throw new HttpRequestException("pricing service unreachable"), _ => teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        var exception = await Record.ExceptionAsync(() => _sut.HandleAsync(parsedEvent));
+
+        Assert.Null(exception);
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
