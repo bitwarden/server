@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Organization_ReadAddableToProviderByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadAddableToProviderByUserId]
     @UserId UNIQUEIDENTIFIER,
     @ProviderType TINYINT
 AS
@@ -27,3 +27,4 @@ BEGIN
             WHERE PO.[OrganizationId] = O.[Id]
         );
 END
+GO
