@@ -132,6 +132,17 @@ public class AnnualUpgradeSavingsCalculatorTests
     }
 
     [Fact]
+    public void Build_ForeverCouponWithNullCurrency_IsPassed()
+    {
+        var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        subscription.Discounts = [Discount("no_currency", currency: null)];
+
+        var requests = Build(subscription);
+
+        Assert.Equal(new[] { "no_currency" }, (requests.Monthly.Discounts ?? []).Select(d => d.Coupon));
+    }
+
+    [Fact]
     public void Build_CustomerCouponUsedOnlyWhenTheSubscriptionHasNoneOfItsOwn()
     {
         var withOwn = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));

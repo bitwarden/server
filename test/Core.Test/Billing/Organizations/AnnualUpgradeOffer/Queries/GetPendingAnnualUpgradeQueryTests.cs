@@ -313,10 +313,23 @@ public class GetPendingAnnualUpgradeQueryTests
     }
 
     [Fact]
+    public async Task Run_UnexpandedSchedule_ReturnsNullAndLogsError()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var subscription = SetupSubscription(organization);
+        subscription.ScheduleId = "sub_sched_unread";
+        subscription.Schedule = null;
+
+        var result = await _query.Run(organization);
+
+        Assert.Null(result);
+        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Error, default, default!, default, default!);
+    }
+
+    [Fact]
     public async Task Run_PricingLookupThrows_ReturnsNullAndLogsWarning()
     {
-        // The ownership gate now runs before the pricing lookup, so the schedule must actually
-        // classify as AnnualUpgrade for the lookup (and its failure) to be reached at all.
+        // Schedule attached so the pricing lookup is reached.
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         var schedule = ScheduleWithUpcomingAnnualPhase(
             metadata: new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" });

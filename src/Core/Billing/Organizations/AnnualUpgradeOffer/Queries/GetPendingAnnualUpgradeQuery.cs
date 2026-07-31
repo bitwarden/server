@@ -49,7 +49,7 @@ public class GetPendingAnnualUpgradeQuery(
         }
 
         // Fail-closed on any error from here on: this query runs inline on page load, so a
-        // pricing/price lookup failure must degrade to "no pending upgrade" rather
+        // pricing lookup failure must degrade to "no pending upgrade" rather
         // than 500 the page.
         try
         {
