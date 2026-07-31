@@ -1,0 +1,42 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../../components/head.mjml" />
+    <mj-include path="../components/admin-console-head.mjml" />
+  </mj-head>
+
+  <mj-body>
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
+      <mj-bw-ac-hero
+        title="Your Bitwarden account email was updated by an admin"
+        img-src="https://assets.bitwarden.com/email/v1/spot-enterprise-gear.svg"
+      />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="5px 20px 8px 20px">
+      <mj-section background-color="#fff" padding="10px 10px 16px 10px">
+        <mj-column>
+          <mj-text font-size="16px" line-height="24px" padding="15px 15px 0px 15px">
+            Use the new email to log in to your account.
+          </mj-text>
+          <mj-text font-size="16px" line-height="24px" padding="16px 15px 0px 15px">
+            <b>Your new email</b><br />
+            {{NewEmail}}
+          </mj-text>
+          <mj-text font-size="16px" line-height="24px" padding="16px 15px 0px 15px">
+            If this change doesn't seem right, contact your admin.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Learn More Section -->
+    <mj-wrapper padding="8px 20px 10px 20px">
+      <mj-bw-ac-learn-more-footer />
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-include path="../../../components/footer.mjml" />
+  </mj-body>
+</mjml>

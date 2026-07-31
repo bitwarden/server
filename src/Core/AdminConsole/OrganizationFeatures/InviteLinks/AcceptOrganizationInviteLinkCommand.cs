@@ -42,8 +42,8 @@ public class AcceptOrganizationInviteLinkCommand(
     {
         var user = request.User;
 
-        var link = await organizationInviteLinkRepository.GetByCodeAsync(request.Code);
-        if (link is null)
+        var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
+        if (link is null || !link.CodeMatches(request.Code.ToString()))
         {
             return new InviteLinkNotFound();
         }
@@ -57,6 +57,11 @@ public class AcceptOrganizationInviteLinkCommand(
         if (!organization.UseInviteLinks)
         {
             return new InviteLinkNotAvailable();
+        }
+
+        if (!user.EmailVerified)
+        {
+            return new EmailNotVerified();
         }
 
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))

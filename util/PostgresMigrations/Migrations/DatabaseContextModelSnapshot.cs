@@ -398,17 +398,15 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("Code")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("EncryptedInviteKey")
+                    b.Property<string>("Invite")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("EncryptedOrgKey")
                         .HasColumnType("text");
 
                     b.Property<Guid>("OrganizationId")
@@ -417,11 +415,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id");
+                    b.Property<bool>("SupportsConfirmation")
+                        .HasColumnType("boolean");
 
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasAnnotation("SqlServer:Clustered", false);
+                    b.HasKey("Id");
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()
@@ -1054,6 +1051,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("RenewalNotificationSentDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -1592,6 +1592,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("SecretId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SendId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ServiceAccountId")
                         .HasColumnType("uuid");
 
@@ -1606,6 +1609,10 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("OrganizationId", "SendId", "Date")
+                        .HasDatabaseName("IX_Event_OrganizationIdSendIdDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
                         .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
@@ -1806,6 +1813,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AccessPam")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("boolean");
 
@@ -1877,6 +1887,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<Guid?>("ProviderId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
@@ -1888,12 +1901,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("PlayId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
+                    b.HasIndex("ProviderId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("PlayItem", null, t =>
                         {
-                            t.HasCheckConstraint("CK_PlayItem_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
+                            t.HasCheckConstraint("CK_PlayItem_UserOrOrganizationOrProvider", "((CASE WHEN \"UserId\" IS NOT NULL THEN 1 ELSE 0 END) + (CASE WHEN \"OrganizationId\" IS NOT NULL THEN 1 ELSE 0 END) + (CASE WHEN \"ProviderId\" IS NOT NULL THEN 1 ELSE 0 END)) = 1");
                         });
                 });
 
@@ -3384,12 +3400,19 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Organization");
+
+                    b.Navigation("Provider");
 
                     b.Navigation("User");
                 });

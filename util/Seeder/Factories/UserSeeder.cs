@@ -31,7 +31,7 @@ internal static class UserSeeder
 
         var user = new User
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             Name = name ?? mangledEmail.Split('@')[0],
             Email = mangledEmail,
             EmailVerified = emailVerified,
@@ -50,5 +50,16 @@ internal static class UserSeeder
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
 
         return (user, keys);
+    }
+
+    /// <summary>
+    /// Applies billing gateway identity to a user so it resembles a real premium/billed user.
+    /// Only non-null values are set; nulls leave the field unchanged.
+    /// </summary>
+    internal static void ApplyBilling(User user, GatewayType? gateway, string? gatewayCustomerId, string? gatewaySubscriptionId)
+    {
+        user.Gateway = gateway ?? user.Gateway;
+        user.GatewayCustomerId = gatewayCustomerId ?? user.GatewayCustomerId;
+        user.GatewaySubscriptionId = gatewaySubscriptionId ?? user.GatewaySubscriptionId;
     }
 }

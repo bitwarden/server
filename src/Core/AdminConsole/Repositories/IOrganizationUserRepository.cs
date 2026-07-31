@@ -80,6 +80,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="status">The status to restore the user to (their status prior to being revoked).</param>
     Task RestoreAsync(Guid id, OrganizationUserStatusType status);
     Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId);
+    Task<int> GetOccupiedPamSeatCountByOrganizationIdAsync(Guid organizationId);
     Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds);
 
     /// <summary>

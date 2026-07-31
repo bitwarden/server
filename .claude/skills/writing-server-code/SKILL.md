@@ -27,6 +27,10 @@ When caching is needed, follow the conventions in [CACHING.md](https://github.co
 
 Always use `CoreHelpers.GenerateComb()` for entity IDs — never `Guid.NewGuid()`. Sequential COMBs prevent SQL Server index fragmentation that random GUIDs cause on clustered indexes, which is critical for Bitwarden's database performance at scale.
 
+### Library shape
+
+When creating or modifying code under `src/Libraries/`, read [src/Libraries/LIBRARY.md](../../../src/Libraries/LIBRARY.md) — it is the canonical shape and covers public surface, settings, endpoints, repositories, and cross-library dependencies.
+
 ## Critical Rules
 
 These are the most frequently violated conventions. Claude cannot fetch the linked docs at runtime, so these are inlined here:

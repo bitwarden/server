@@ -2,6 +2,8 @@
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.SendFeatures.Queries;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
+using Bit.Core.Tools.SendFeatures.Services;
+using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,5 +20,6 @@ public static class SendServiceCollectionExtension
         services.AddScoped<ISendCoreHelperService, SendCoreHelperService>();
         services.AddScoped<ISendAuthenticationQuery, SendAuthenticationQuery>();
         services.AddScoped<ISendOwnerQuery, SendOwnerQuery>();
+        services.AddScoped<ISendEventClassifier, SendEventClassifier>();
     }
 }

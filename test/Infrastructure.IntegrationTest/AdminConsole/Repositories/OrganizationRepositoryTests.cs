@@ -1,5 +1,9 @@
 ﻿using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -452,5 +456,156 @@ public class OrganizationRepositoryTests
         });
 
         return (user, organization, organizationUser);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAddableToProviderByUserIdAsync_StandaloneOrg_Included(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange — an org meeting all addable criteria with no ProviderOrganization link.
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await CreateAddableOrganizationAsync(organizationRepository);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        // Act
+        var result = await organizationRepository.GetAddableToProviderByUserIdAsync(user.Id, ProviderType.Msp);
+
+        // Assert
+        Assert.Contains(result, o => o.Id == organization.Id);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAddableToProviderByUserIdAsync_ResellerLinkedOrg_Excluded(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IProviderRepository providerRepository,
+        IProviderOrganizationRepository providerOrganizationRepository)
+    {
+        // Arrange — the regression PM-39894 addresses: a reseller-linked org keeps
+        // Status = Created, so it looks addable, but it already has a ProviderOrganization row.
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await CreateAddableOrganizationAsync(organizationRepository);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = $"Reseller {CombGuid.Generate()}",
+            Type = ProviderType.Reseller,
+            Status = ProviderStatusType.Created,
+            Enabled = true,
+            BillingEmail = "reseller@example.com"
+        });
+        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organization.Id
+        });
+
+        // Act
+        var result = await organizationRepository.GetAddableToProviderByUserIdAsync(user.Id, ProviderType.Msp);
+
+        // Assert
+        Assert.DoesNotContain(result, o => o.Id == organization.Id);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAddableToProviderByUserIdAsync_MspLinkedOrg_Excluded(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IProviderRepository providerRepository,
+        IProviderOrganizationRepository providerOrganizationRepository)
+    {
+        // Arrange — an org already linked to an MSP provider must not be addable again.
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await CreateAddableOrganizationAsync(organizationRepository);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = $"MSP {CombGuid.Generate()}",
+            Type = ProviderType.Msp,
+            Status = ProviderStatusType.Created,
+            Enabled = true,
+            BillingEmail = "msp@example.com"
+        });
+        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organization.Id
+        });
+
+        // Act
+        var result = await organizationRepository.GetAddableToProviderByUserIdAsync(user.Id, ProviderType.Msp);
+
+        // Assert
+        Assert.DoesNotContain(result, o => o.Id == organization.Id);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAddableToProviderByUserIdAsync_LinkedOrg_ExcludedForBusinessUnit(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IProviderRepository providerRepository,
+        IProviderOrganizationRepository providerOrganizationRepository)
+    {
+        // Arrange — the provider-link exclusion must apply to the BusinessUnit branch of the
+        // query too, not just MSP; this pins the predicate's placement outside the OR'd
+        // plan-type group.
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await CreateAddableOrganizationAsync(organizationRepository);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = $"Reseller {CombGuid.Generate()}",
+            Type = ProviderType.Reseller,
+            Status = ProviderStatusType.Created,
+            Enabled = true,
+            BillingEmail = "reseller@example.com"
+        });
+        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organization.Id
+        });
+
+        // Act
+        var result = await organizationRepository.GetAddableToProviderByUserIdAsync(
+            user.Id, ProviderType.BusinessUnit);
+
+        // Assert
+        Assert.DoesNotContain(result, o => o.Id == organization.Id);
+    }
+
+    /// <summary>
+    /// Builds an Organization inline that satisfies every predicate of the addable-to-provider query.
+    /// The shared <c>CreateTestOrganizationAsync</c> helper defaults to Status = Managed and
+    /// UseSecretsManager = true, both of which the query excludes, so we construct the org directly.
+    /// </summary>
+    private static Task<Organization> CreateAddableOrganizationAsync(
+        IOrganizationRepository organizationRepository)
+    {
+        var id = CombGuid.Generate();
+        return organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"addable-{id}",
+            BillingEmail = $"billing-{id}@example.com",
+            Plan = "Enterprise (Annually)",
+            PlanType = PlanType.EnterpriseAnnually,
+            Status = OrganizationStatusType.Created,
+            Enabled = true,
+            UseSecretsManager = false,
+            Seats = 5,
+            Gateway = GatewayType.Stripe,
+            GatewayCustomerId = $"cus_{id}",
+            GatewaySubscriptionId = $"sub_{id}",
+            PublicKey = "test-public-key",
+            PrivateKey = "test-private-key"
+        });
     }
 }

@@ -2,6 +2,7 @@
 using Bit.Api.Dirt.Controllers;
 using Bit.Api.Dirt.Models;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
@@ -141,5 +142,32 @@ public class ReportsControllerTests
             .DropPasswordHealthReportApplicationAsync(Arg.Is<DropPasswordHealthReportApplicationRequest>(_ =>
                 _.OrganizationId == request.OrganizationId &&
                 _.PasswordHealthReportApplicationIds == request.PasswordHealthReportApplicationIds));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPasskeyDirectory_ReturnsExpectedEntries(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        var entries = new List<PasskeyDirectoryEntry>
+        {
+            new() { DomainName = "example.com", Passwordless = true, Mfa = false, Instructions = "https://example.com/help" },
+            new() { DomainName = "test.com", Passwordless = false, Mfa = true, Instructions = "" }
+        };
+        sutProvider.GetDependency<IGetPasskeyDirectoryQuery>()
+            .GetPasskeyDirectoryAsync()
+            .Returns(entries);
+
+        // Act
+        var result = (await sutProvider.Sut.GetPasskeyDirectoryAsync()).ToList();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Equal("example.com", result[0].DomainName);
+        Assert.True(result[0].Passwordless);
+        Assert.False(result[0].Mfa);
+        Assert.Equal("https://example.com/help", result[0].Instructions);
+        Assert.Equal("test.com", result[1].DomainName);
+        Assert.False(result[1].Passwordless);
+        Assert.True(result[1].Mfa);
     }
 }

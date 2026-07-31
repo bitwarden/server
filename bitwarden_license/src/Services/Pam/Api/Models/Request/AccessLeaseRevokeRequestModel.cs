@@ -5,5 +5,8 @@
 /// </summary>
 public class AccessLeaseRevokeRequestModel
 {
+    /// <summary>
+    /// An optional note explaining the revocation. Recorded on the audit trail; not surfaced on the lease itself.
+    /// </summary>
     public string? Reason { get; set; }
 }

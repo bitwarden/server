@@ -10,13 +10,10 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 
 use bitwarden_crypto::{
     BitwardenLegacyKeyBytes, EncString, KeyDecryptable, KeyEncryptable, SymmetricCryptoKey,
+    SymmetricKeyAlgorithm,
 };
 
-/// Create an error JSON response and return it as a C string pointer.
-fn error_response(message: &str) -> *const c_char {
-    let error_json = serde_json::json!({ "error": message }).to_string();
-    CString::new(error_json).unwrap().into_raw()
-}
+use crate::crypto_util::{error_response, parse_key, wrap_key};
 
 /// Encrypt a plaintext string with a symmetric key, returning an EncString.
 ///
@@ -225,11 +222,69 @@ fn encrypt_segments(
     encrypt_segments(nested, rest, key)
 }
 
+/// Encrypt specified JSON fields under a freshly generated per-cipher key, and return the modified
+/// JSON with the cipher key wrapped by the vault key injected as the top-level `key` field.
+///
+/// This reproduces a "cipher key" cipher (the fields are encrypted with the cipher key rather than
+/// the vault key directly). The returned JSON deserializes into the same shape as `encrypt_fields`,
+/// plus a populated `key`.
+///
+/// # Arguments
+/// * `json` - JSON object string (the cipher view)
+/// * `field_paths_json` - JSON array of dot-notation field paths
+/// * `symmetric_key_b64` - Base64-encoded vault key that wraps the generated cipher key
+///
+/// # Safety
+/// All pointers must be valid null-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn encrypt_fields_with_cipher_key(
+    json: *const c_char,
+    field_paths_json: *const c_char,
+    symmetric_key_b64: *const c_char,
+) -> *const c_char {
+    let Ok(json_str) = CStr::from_ptr(json).to_str() else {
+        return error_response("Invalid UTF-8 in json");
+    };
+    let Ok(paths_str) = CStr::from_ptr(field_paths_json).to_str() else {
+        return error_response("Invalid UTF-8 in field_paths_json");
+    };
+    let Ok(vault_key_b64) = CStr::from_ptr(symmetric_key_b64).to_str() else {
+        return error_response("Invalid UTF-8 in symmetric_key_b64");
+    };
+
+    match encrypt_fields_with_cipher_key_internal(json_str, paths_str, vault_key_b64) {
+        Ok(json) => CString::new(json).unwrap().into_raw(),
+        Err(msg) => error_response(&msg),
+    }
+}
+
+fn encrypt_fields_with_cipher_key_internal(
+    json_str: &str,
+    paths_str: &str,
+    vault_key_b64: &str,
+) -> Result<String, String> {
+    let mut value: serde_json::Value =
+        serde_json::from_str(json_str).map_err(|_| "Failed to parse JSON".to_string())?;
+    let paths: Vec<String> = serde_json::from_str(paths_str)
+        .map_err(|_| "Failed to parse field paths JSON".to_string())?;
+    let vault_key = parse_key(vault_key_b64)?;
+
+    // Generate a per-cipher key and encrypt the fields with it (not the vault key directly).
+    let cipher_key = SymmetricCryptoKey::make(SymmetricKeyAlgorithm::Aes256CbcHmac);
+    for path in &paths {
+        encrypt_at_path(&mut value, path, &cipher_key)?;
+    }
+
+    // The cipher key is wrapped by the vault key and stored on the cipher as `key`.
+    value["key"] = serde_json::Value::String(wrap_key(&cipher_key, &vault_key)?);
+
+    serde_json::to_string(&value).map_err(|_| "Failed to serialize result JSON".to_string())
+}
+
 #[cfg(test)]
 mod tests {
-    use bitwarden_crypto::SymmetricKeyAlgorithm;
-
     use super::*;
+    use crate::crypto_util::unwrap_key;
     use crate::free_c_string;
 
     fn make_test_key() -> SymmetricCryptoKey {
@@ -394,5 +449,42 @@ mod tests {
         // Should not error on missing "name"
         encrypt_at_path(&mut value, "name", &key).unwrap();
         encrypt_at_path(&mut value, "login.username", &key).unwrap();
+    }
+
+    #[test]
+    fn encrypt_fields_with_cipher_key_roundtrip() {
+        let vault = make_test_key();
+        let vault_b64: String = vault.to_base64().into();
+
+        let input = serde_json::json!({
+            "name": "Cipher-Key Login",
+            "type": 1,
+            "login": {"username": "u@test.com", "password": "pw"}
+        })
+        .to_string();
+        let paths = r#"["name","login.username","login.password"]"#;
+
+        let out = encrypt_fields_with_cipher_key_internal(&input, paths, &vault_b64).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+
+        // A wrapped cipher key is injected.
+        let wrapped_ck = parsed["key"].as_str().unwrap();
+        assert!(wrapped_ck.starts_with("2."));
+        let cipher_key = unwrap_key(wrapped_ck, &vault).unwrap();
+
+        // Fields decrypt with the cipher key, and NOT with the vault key directly.
+        let name: EncString = parsed["name"].as_str().unwrap().parse().unwrap();
+        let name_dec: String = name.decrypt_with_key(&cipher_key).unwrap();
+        assert_eq!(name_dec, "Cipher-Key Login");
+
+        let name_again: EncString = parsed["name"].as_str().unwrap().parse().unwrap();
+        let via_vault: Result<String, _> = name_again.decrypt_with_key(&vault);
+        assert!(
+            via_vault.is_err(),
+            "fields must not decrypt with the vault key in cipher-key mode"
+        );
+
+        // Non-encrypted fields are left intact.
+        assert_eq!(parsed["type"].as_i64().unwrap(), 1);
     }
 }

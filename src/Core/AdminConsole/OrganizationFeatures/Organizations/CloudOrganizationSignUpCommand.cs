@@ -93,6 +93,7 @@ public class CloudOrganizationSignUpCommand(
             UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
             UseCustomPermissions = plan.HasCustomPermissions,
             UseScim = plan.HasScim,
+            UseRiskInsights = plan.HasRiskInsights,
             Plan = plan.Name,
             Gateway = null,
             ReferenceData = signup.Owner.ReferenceData,

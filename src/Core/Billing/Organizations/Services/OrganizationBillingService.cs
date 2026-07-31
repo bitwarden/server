@@ -7,12 +7,10 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -27,7 +25,6 @@ namespace Bit.Core.Billing.Organizations.Services;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     ILogger<OrganizationBillingService> logger,
@@ -51,7 +48,7 @@ public class OrganizationBillingService(
 
         var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
-            : await GetCustomerWhileEnsuringCorrectTaxExemptionAsync(organization, subscriptionSetup);
+            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
 
         var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, coupons);
 
@@ -260,15 +257,6 @@ public class OrganizationBillingService(
             {
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
-
-            if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-            {
-                if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
-                    !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
-                {
-                    customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
-                }
-            }
 
             if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
             {
@@ -502,35 +490,6 @@ public class OrganizationBillingService(
         await organizationRepository.ReplaceAsync(organization);
 
         return subscription;
-    }
-
-    private async Task<Customer> GetCustomerWhileEnsuringCorrectTaxExemptionAsync(
-        Organization organization,
-        SubscriptionSetup subscriptionSetup)
-    {
-        var customer = await subscriberService.GetCustomerOrThrow(organization,
-            new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
-
-        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax) || subscriptionSetup.PlanType.GetProductTier() is
-                not (ProductTierType.Teams or
-                ProductTierType.TeamsStarter or
-                ProductTierType.Enterprise))
-        {
-            return customer;
-        }
-
-        List<string> expansions = ["tax", "tax_ids"];
-        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
-        customer = customer switch
-        {
-            { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                when determinedTaxExemptStatus != customerTaxExemptStatus =>
-                await stripeAdapter.UpdateCustomerAsync(customer.Id,
-                    new CustomerUpdateOptions { Expand = expansions, TaxExempt = determinedTaxExemptStatus }),
-            _ => customer
-        };
-
-        return customer;
     }
 
 

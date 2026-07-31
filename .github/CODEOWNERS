@@ -7,13 +7,6 @@
 # CODEOWNERS owners
 .github/CODEOWNERS @bitwarden/tech-leads
 
-## Docker-related files
-**/Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
-**/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
-**/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-shot
-**/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-shot
-**/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-shot
-
 # Scanning tools
 .checkmarx/ @bitwarden/team-appsec
 
@@ -115,7 +108,14 @@ bitwarden_license/src/Services/Pam @bitwarden/team-pam-dev
 bitwarden_license/test/Services/Pam.Test @bitwarden/team-pam-dev
 
 # SDK
-util/RustSdk @bitwarden/team-sdk-sme
+util/RustSdk @bitwarden/team-sdk-sme @bitwarden/dept-architecture # joint ownership
+
+## Docker-related files
+**/Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
+**/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
+**/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-shot
+**/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-shot
+**/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-shot
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json

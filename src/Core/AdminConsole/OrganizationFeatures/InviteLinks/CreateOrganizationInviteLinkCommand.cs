@@ -42,13 +42,14 @@ public class CreateOrganizationInviteLinkCommand(
         var inviteLink = new OrganizationInviteLink
         {
             OrganizationId = request.OrganizationId,
-            EncryptedInviteKey = request.EncryptedInviteKey,
-            EncryptedOrgKey = request.EncryptedOrgKey,
+            Invite = request.Invite,
+            SupportsConfirmation = request.SupportsConfirmation,
             CreationDate = now,
             RevisionDate = now,
         };
         inviteLink.SetAllowedDomains(sanitizedDomains);
         inviteLink.SetNewId();
+        inviteLink.SetNewCode();
 
         await organizationInviteLinkRepository.CreateAsync(inviteLink);
 

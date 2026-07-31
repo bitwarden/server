@@ -60,5 +60,8 @@ internal static class SeederStepTestHelpers
         public T Read<T>(string seedName) => (T)_seeds[seedName];
 
         public IReadOnlyList<string> ListAvailable() => _seeds.Keys.ToArray();
+
+        public byte[] ReadBytes(string fileName) =>
+            throw new NotSupportedException("StubSeedReader does not provide binary samples.");
     }
 }

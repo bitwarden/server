@@ -19,7 +19,7 @@ internal static class PassportCipherSeeder
             Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToPassportData(), CipherType.Passport, options.OrganizationId, options.UserId);
     }
 }

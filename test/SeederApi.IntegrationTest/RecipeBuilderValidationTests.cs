@@ -165,15 +165,14 @@ public class RecipeBuilderValidationTests
         builder.Validate();
 
         using var provider = services.BuildServiceProvider();
-        var steps = provider.GetKeyedServices<IStep>("test").ToList();
+        var steps = provider.GetKeyedServices<OrderedStep>("test").ToList();
 
         Assert.Equal(7, steps.Count);
 
         // Verify steps are wrapped in OrderedStep with sequential order values
-        var orderedSteps = steps.Cast<OrderedStep>().ToList();
-        for (var i = 0; i < orderedSteps.Count; i++)
+        for (var i = 0; i < steps.Count; i++)
         {
-            Assert.Equal(i, orderedSteps[i].Order);
+            Assert.Equal(i, steps[i].Order);
         }
     }
 
@@ -187,17 +186,69 @@ public class RecipeBuilderValidationTests
         services.AddSingleton<ILicensingService, StubLicensingService>();
 
         using var provider = services.BuildServiceProvider();
-        var steps = provider.GetKeyedServices<IStep>("test")
-            .OrderBy(s => s is OrderedStep os ? os.Order : int.MaxValue)
+        var steps = provider.GetKeyedServices<OrderedStep>("test")
+            .OrderBy(s => s.Order)
             .ToList();
 
         Assert.Equal(2, steps.Count);
         // First step must be the user creation step; second must be the license step.
         // If this order is reversed, GenerateSelfHostUserLicenseStep reads a null context.Owner.
-        var inner0 = ((OrderedStep)steps[0]).Inner;
-        var inner1 = ((OrderedStep)steps[1]).Inner;
+        var inner0 = steps[0].Inner;
+        var inner1 = steps[1].Inner;
         Assert.IsType<CreateIndividualUserStep>(inner0);
         Assert.IsType<GenerateSelfHostUserLicenseStep>(inner1);
+    }
+
+    [Fact]
+    public void AddStep_SyncPostCommitMarker_SetsIsPostCommit()
+    {
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.AddStep(_ => new PostCommitSyncStub());
+        builder.AddStep(_ => new SyncStub());
+
+        using var provider = services.BuildServiceProvider();
+        var steps = provider.GetKeyedServices<OrderedStep>("test").OrderBy(s => s.Order).ToList();
+
+        Assert.True(steps[0].IsPostCommit);
+        Assert.False(steps[1].IsPostCommit);
+    }
+
+    [Fact]
+    public void AddAsyncStep_PostCommitMarker_SetsIsPostCommit()
+    {
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.AddAsyncStep(_ => new PostCommitAsyncStub());
+        builder.AddAsyncStep(_ => new AsyncStub());
+
+        using var provider = services.BuildServiceProvider();
+        var steps = provider.GetKeyedServices<OrderedStep>("test").OrderBy(s => s.Order).ToList();
+
+        Assert.True(steps[0].IsPostCommit);
+        Assert.False(steps[1].IsPostCommit);
+    }
+
+    private sealed class SyncStub : IStep
+    {
+        public void Execute(SeederContext context) { }
+    }
+
+    private sealed class PostCommitSyncStub : IStep, IPostCommitStep
+    {
+        public void Execute(SeederContext context) { }
+    }
+
+    private sealed class AsyncStub : IAsyncStep
+    {
+        public Task ExecuteAsync(SeederContext context) => Task.CompletedTask;
+    }
+
+    private sealed class PostCommitAsyncStub : IAsyncStep, IPostCommitStep
+    {
+        public Task ExecuteAsync(SeederContext context) => Task.CompletedTask;
     }
 
     private static readonly ISeedReader _stubReader = new StubSeedReader(hasOwner: false);
@@ -235,5 +286,8 @@ public class RecipeBuilderValidationTests
             };
 
         public IReadOnlyList<string> ListAvailable() => [];
+
+        public byte[] ReadBytes(string fileName) =>
+            throw new NotSupportedException("StubSeedReader does not provide binary samples.");
     }
 }

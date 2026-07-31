@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Context;
 using Bit.Core.Services;
-using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -55,23 +54,13 @@ public class Startup
         // Services
         var usingServiceBusAppCache = CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
-        services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
-
-        if (usingServiceBusAppCache)
-        {
-            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
-        }
-        else
-        {
-            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
-        }
 
         services.AddEventWriteServices(globalSettings);
         services.AddScoped<IEventService, EventService>();
 
-        services.AddOptionality();
+        services.ApplyServerCompatibilityLayer();
 
         // Mvc
         services.AddMvc(config =>
@@ -124,6 +113,10 @@ public class Startup
 
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
+
+        // Gates endpoints carrying IFeatureMetadata; required in any app that
+        // routes requests through endpoints tagged with [RequireFeature].
+        app.UseFeatureFlagChecks();
 
         // Add MVC to the request pipeline.
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
