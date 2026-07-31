@@ -565,6 +565,7 @@ public class UpcomingInvoiceHandler(
                         ? []
                         : customerDiscount.MergeDiscountCouponIds(
                             phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
+                    Metadata = phase.Metadata,
                     ProrationBehavior = phase.ProrationBehavior,
                     AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
                     {

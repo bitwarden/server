@@ -1,7 +1,6 @@
 {
   "$schema": "../../../schemas/preset.schema.json",
   "organization": {
-    "id": "a1b2c3d4-0000-4000-8000-000000000001",
     "fixture": "verdant-health",
     "planType": "enterprise-annually",
     "seats": 30,

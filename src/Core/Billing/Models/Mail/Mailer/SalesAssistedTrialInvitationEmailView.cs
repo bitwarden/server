@@ -34,16 +34,14 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
 
     public required int TrialLength { get; set; }
 
-    public required bool PaymentOptional { get; set; }
-
     public required string SenderEmail { get; set; }
 
     // Distinct from TrialLength: this is the token lifetime from GlobalSettings, not the trial period.
     public required int ExpiryDays { get; set; }
 
-    public string HeroTitle => TrialLength > 0
-        ? $"You're invited to start a <b>{TrialLength}-day<br/>free trial</b> of {ProductName}"
-        : $"You're invited to try <b>{ProductName}</b>";
+    public string HeroTitle => ProductTier == ProductTierType.Free
+    ? "You're invited to try Bitwarden"
+    : $"You're invited to start a <b>{TrialLength}-day<br/>free trial</b> of {ProductName}";
 
     public string ProductName => ProductTier switch
     {
@@ -98,27 +96,13 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     /// URL-encode in, so <see cref="Token"/> and <see cref="Email"/> are encoded here. Failing to encode
     /// silently breaks registration when a token contains <c>+</c> or <c>=</c> characters.
     /// </summary>
-    public string Url
-    {
-        get
-        {
-            var url = $"{_globalSettings.BaseServiceUri.VaultWithHash}/{Route}" +
+    public string Url => $"{_globalSettings.BaseServiceUri.VaultWithHash}/{Route}" +
                       $"?productTier={(int)ProductTier}" +
                       $"&product={string.Join(",", Products.Select(p => (int)p))}" +
                       $"&trialLength={TrialLength}" +
                       $"&salesAssistedToken={WebUtility.UrlEncode(Token)}" +
-                      $"&email={WebUtility.UrlEncode(Email)}";
-
-            if (PaymentOptional)
-            {
-                url += "&paymentOptional=true";
-            }
-
-            url += "&fromEmail=true";
-
-            return url;
-        }
-    }
+                      $"&email={WebUtility.UrlEncode(Email)}" +
+                      "&paymentOptional=true&fromEmail=true";
 
     private string Route => Products.Any(p => p == ProductType.PasswordManager)
         ? "trial-initiation"

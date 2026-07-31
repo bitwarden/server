@@ -239,6 +239,7 @@ public static class FeatureFlagKeys
     public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
     public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
     public const string FedRampGovRegion = "fedramp-gov-region";
+    public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
 
     /* Tools Team */
     /// <summary>
@@ -300,6 +301,7 @@ public static class FeatureFlagKeys
     public const string PasskeyDirectoryReport = "inno-passkey-directory-report";
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
+    public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";

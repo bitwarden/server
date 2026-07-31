@@ -87,7 +87,9 @@ public class BusinessPlanMigrationCoordinator(
 
             try
             {
-                assignment.RenewalNotificationSentDate = DateTime.UtcNow;
+                var stampedAt = DateTime.UtcNow;
+                assignment.RenewalNotificationSentDate = stampedAt;
+                assignment.RevisionDate = stampedAt;
                 await cohortAssignmentRepository.ReplaceAsync(assignment);
             }
             catch (Exception exception)

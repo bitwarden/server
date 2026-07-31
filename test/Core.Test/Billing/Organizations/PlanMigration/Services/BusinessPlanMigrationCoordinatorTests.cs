@@ -89,10 +89,13 @@ public class BusinessPlanMigrationCoordinatorTests
         sutProvider.GetDependency<IBusinessPlanRenewalNotificationService>()
             .SendRenewalEmailAsync(organization, Arg.Any<Subscription>(), cohort).Returns(true);
 
+        var originalRevisionDate = reloadedAssignment.RevisionDate;
+
         var outcome = await sutProvider.Sut.ExecuteAsync(organization, new Subscription());
 
         Assert.Equal(BusinessPlanMigrationResult.Completed, outcome);
         Assert.NotNull(reloadedAssignment.RenewalNotificationSentDate);        // stamped the reloaded copy
+        Assert.NotEqual(originalRevisionDate, reloadedAssignment.RevisionDate); // RevisionDate bumped
         await assignmentRepository.Received(1).ReplaceAsync(reloadedAssignment); // not the stale one
         await assignmentRepository.DidNotReceive().ReplaceAsync(staleAssignment);
     }

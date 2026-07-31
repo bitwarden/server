@@ -24,14 +24,14 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
     private readonly string _tempDir = Path.Join(Path.GetTempPath(), "seeder-attach-" + Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Execute_SeedsAttachmentsAcrossAllVersions()
+    public async Task Execute_SeedsAttachmentsAcrossAllVersionsAsync()
     {
         var context = BuildContext(out var baseDir);
         var userKey = RustSdkService.GenerateUserKeys("attach-test@example.com", "asdfasdfasdf").Key;
         context.Registry.UserDigests.Add(new EntityRegistry.UserDigest(Guid.NewGuid(), Guid.Empty, userKey));
 
         CreateCiphersStep.ForPersonalVault(_fixture).Execute(context);
-        CreateCipherAttachmentsStep.ForPersonalVault(_fixture).Execute(context);
+        await CreateCipherAttachmentsStep.ForPersonalVault(_fixture).ExecuteAsync(context);
 
         // v0 — one attachment with no attachment key; blob decryptable with the vault key.
         var v0Cipher = ByName(context, _v0Name);
@@ -62,7 +62,7 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
     }
 
     [Fact]
-    public void Execute_V1AttachmentOnCipherKeyCipher_Throws()
+    public async Task Execute_V1AttachmentOnCipherKeyCipher_ThrowsAsync()
     {
         // v1 wraps the attachment key with the vault key, but a client unwraps it with the cipher
         // key when the host cipher has one — so v1 on a cipher-key cipher would be undecryptable.
@@ -89,13 +89,13 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
         context.Registry.FixtureCipherNameToId["BadCombo"] = cipher.Id;
         context.Registry.UserDigests.Add(new EntityRegistry.UserDigest(Guid.NewGuid(), Guid.Empty, "unused-vault-key"));
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            CreateCipherAttachmentsStep.ForPersonalVault("bad").Execute(context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateCipherAttachmentsStep.ForPersonalVault("bad").ExecuteAsync(context));
         Assert.Contains("v1", ex.Message);
     }
 
     [Fact]
-    public void Execute_V0AttachmentOnCipherKeyCipher_Throws()
+    public async Task Execute_V0AttachmentOnCipherKeyCipher_ThrowsAsync()
     {
         // v0 encrypts the blob and filename with the vault key, but a client decrypts attachment
         // fields with the cipher key when the host cipher has one — so v0 on a cipher-key cipher
@@ -123,8 +123,8 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
         context.Registry.FixtureCipherNameToId["BadCombo"] = cipher.Id;
         context.Registry.UserDigests.Add(new EntityRegistry.UserDigest(Guid.NewGuid(), Guid.Empty, "unused-vault-key"));
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            CreateCipherAttachmentsStep.ForPersonalVault("bad").Execute(context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateCipherAttachmentsStep.ForPersonalVault("bad").ExecuteAsync(context));
         Assert.Contains("v0", ex.Message);
     }
 
@@ -140,7 +140,7 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
     }
 
     [Fact]
-    public void Execute_NoopStorageWithAttachments_Throws()
+    public async Task Execute_NoopStorageWithAttachments_ThrowsAsync()
     {
         // A fixture that declares attachments but resolves to Noop storage would commit attachment
         // metadata with no blob written — the step must fail fast instead of silently succeeding.
@@ -150,13 +150,13 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
 
         CreateCiphersStep.ForPersonalVault(_fixture).Execute(context);
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            CreateCipherAttachmentsStep.ForPersonalVault(_fixture).Execute(context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateCipherAttachmentsStep.ForPersonalVault(_fixture).ExecuteAsync(context));
         Assert.Contains("NoopAttachmentStorageService", ex.Message);
     }
 
     [Fact]
-    public void Execute_NoopStorageNoAttachments_DoesNotThrow()
+    public async Task Execute_NoopStorageNoAttachments_DoesNotThrowAsync()
     {
         // The guard only fires when the fixture actually declares attachments; a fixture with none
         // must still complete under Noop storage (the early return runs before the guard).
@@ -175,7 +175,7 @@ public sealed class CreateCipherAttachmentsStepTests : IDisposable
         var context = BuildNoopContext(new SeederStepTestHelpers.StubSeedReader().Add("ciphers.none", seedFile));
         context.Registry.UserDigests.Add(new EntityRegistry.UserDigest(Guid.NewGuid(), Guid.Empty, "unused-vault-key"));
 
-        CreateCipherAttachmentsStep.ForPersonalVault("none").Execute(context); // must not throw
+        await CreateCipherAttachmentsStep.ForPersonalVault("none").ExecuteAsync(context); // must not throw
     }
 
     private static Cipher ByName(SeederContext context, string name) =>

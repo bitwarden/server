@@ -110,6 +110,7 @@ public static class PlanFeatures
         org.UseInviteLinks = overrides.UseInviteLinks ?? org.UseInviteLinks;
         org.SyncSeats = overrides.SyncSeats ?? org.SyncSeats;
         org.UsePasswordManager = overrides.UsePasswordManager ?? org.UsePasswordManager;
+        org.UsePam = overrides.UsePam ?? org.UsePam;
     }
 
     /// <summary>
