@@ -30,7 +30,7 @@ public class CollectionUserEndpointsTests
             Assert.Equal(Policies.Application, authorizeData?.Policy);
 
             var featureMetadata = endpoint.Metadata.GetMetadata<IFeatureMetadata>();
-            Assert.Equal($"Flag = {FeatureFlagKeys.PM12473CollectionUserAccessEndpoint}", featureMetadata?.ToString());
+            Assert.Equal($"Flag = {FeatureFlagKeys.PM35160CollectionAuthorizationHandlers}", featureMetadata?.ToString());
         }
     }
 }

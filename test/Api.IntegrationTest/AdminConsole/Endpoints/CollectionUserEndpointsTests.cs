@@ -30,7 +30,7 @@ public class CollectionUserEndpointsTests : IClassFixture<ApiApplicationFactory>
         _factory.SubstituteService<IPushNotificationService>(_ => { });
         _factory.SubstituteService<Bit.Core.Services.IFeatureService>(_ => { });
         _factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(featureService =>
-            featureService.IsEnabled(FeatureFlagKeys.PM12473CollectionUserAccessEndpoint, Arg.Any<bool>())
+            featureService.IsEnabled(FeatureFlagKeys.PM35160CollectionAuthorizationHandlers, Arg.Any<bool>())
                 .Returns(true));
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);

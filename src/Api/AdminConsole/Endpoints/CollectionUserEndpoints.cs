@@ -14,7 +14,7 @@ public static class CollectionUserEndpoints
     public static void MapCollectionUserEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("organizations/{orgId:guid}/collections").WithAdminConsoleDefaults();
-        group.RequireFeature(FeatureFlagKeys.PM12473CollectionUserAccessEndpoint);
+        group.RequireFeature(FeatureFlagKeys.PM35160CollectionAuthorizationHandlers);
 
         group.MapPatch("{id:guid}/users",
             (Guid orgId, Guid id, CollectionUserAccessDeltaRequestModel model, ClaimsPrincipal user,
