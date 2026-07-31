@@ -300,6 +300,7 @@ public static class FeatureFlagKeys
     public const string PasskeyDirectoryReport = "inno-passkey-directory-report";
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
+    public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
