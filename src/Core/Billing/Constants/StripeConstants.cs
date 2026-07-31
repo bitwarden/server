@@ -94,6 +94,7 @@ public static class StripeConstants
         public const string BraintreeTransactionId = "btTransactionId";
         public const string CancellationOrigin = "cancellation_origin";
         public const string InvoiceApproved = "invoice_approved";
+        public const string IsAddOn = "isAddOn";
         public const string OrganizationId = "organizationId";
         public const string PayPalTransactionId = "btPayPalTransactionId";
         public const string ProviderId = "providerId";
