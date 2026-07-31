@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
@@ -65,8 +66,8 @@ public class CreateAccessRuleCommandTests
         var result = await sutProvider.Sut.CreateAsync(rule, collectionIds);
 
         Assert.Equal(collectionIds, result.CollectionIds);
-        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
-            .SetCollectionAssociationsAsync(rule.OrganizationId, rule.Id,
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
+            .SetAccessRuleAssociationsAsync(rule.OrganizationId, rule.Id,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(collectionIds.OrderBy(x => x))),
                 Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()));
     }
@@ -103,8 +104,8 @@ public class CreateAccessRuleCommandTests
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
         Assert.Equal("Name is required.", ex.Message);
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
-        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs()
-            .SetCollectionAssociationsAsync(default, default, default!, default!);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
+            .SetAccessRuleAssociationsAsync(default, default, default!, default!);
     }
 
     private static void SetupValidator(SutProvider<CreateAccessRuleCommand> sutProvider, Guid organizationId,

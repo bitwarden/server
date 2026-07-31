@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
@@ -10,15 +11,18 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
 {
     private readonly IAccessRuleRepository _repository;
+    private readonly ICollectionRepository _collectionRepository;
     private readonly IAccessRuleWriteValidator _validator;
     private readonly TimeProvider _timeProvider;
 
     public UpdateAccessRuleCommand(
         IAccessRuleRepository repository,
+        ICollectionRepository collectionRepository,
         IAccessRuleWriteValidator validator,
         TimeProvider timeProvider)
     {
         _repository = repository;
+        _collectionRepository = collectionRepository;
         _validator = validator;
         _timeProvider = timeProvider;
     }
@@ -57,7 +61,7 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
         await _repository.ReplaceAsync(toPersist);
 
         var toClear = existing.CollectionIds.Except(desiredCollectionIds).ToList();
-        await _repository.SetCollectionAssociationsAsync(organizationId, id, desiredCollectionIds, toClear);
+        await _collectionRepository.SetAccessRuleAssociationsAsync(organizationId, id, desiredCollectionIds, toClear);
 
         return AccessRuleDetails.From(toPersist, desiredCollectionIds);
     }
