@@ -1,4 +1,5 @@
-﻿using Bit.Pam.Entities;
+﻿using Bit.Core.Repositories;
+using Bit.Pam.Entities;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -9,15 +10,18 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 public class CreateAccessRuleCommand : ICreateAccessRuleCommand
 {
     private readonly IAccessRuleRepository _repository;
+    private readonly ICollectionRepository _collectionRepository;
     private readonly IAccessRuleWriteValidator _validator;
     private readonly TimeProvider _timeProvider;
 
     public CreateAccessRuleCommand(
         IAccessRuleRepository repository,
+        ICollectionRepository collectionRepository,
         IAccessRuleWriteValidator validator,
         TimeProvider timeProvider)
     {
         _repository = repository;
+        _collectionRepository = collectionRepository;
         _validator = validator;
         _timeProvider = timeProvider;
     }
@@ -32,7 +36,7 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
 
         var created = await _repository.CreateAsync(rule);
 
-        await _repository.SetCollectionAssociationsAsync(
+        await _collectionRepository.SetAccessRuleAssociationsAsync(
             created.OrganizationId, created.Id, desiredCollectionIds, []);
 
         return AccessRuleDetails.From(created, desiredCollectionIds);

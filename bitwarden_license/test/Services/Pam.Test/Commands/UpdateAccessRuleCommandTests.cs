@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
@@ -81,8 +82,8 @@ public class UpdateAccessRuleCommandTests
         var result = await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, desired);
 
         Assert.Equal(desired, result.CollectionIds);
-        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
-            .SetCollectionAssociationsAsync(orgId, existing.Id,
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
+            .SetAccessRuleAssociationsAsync(orgId, existing.Id,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(desired.OrderBy(x => x))),
                 Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { removedId })));
     }
@@ -103,8 +104,8 @@ public class UpdateAccessRuleCommandTests
         var result = await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, []);
 
         Assert.Empty(result.CollectionIds);
-        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
-            .SetCollectionAssociationsAsync(orgId, existing.Id,
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
+            .SetAccessRuleAssociationsAsync(orgId, existing.Id,
                 Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()),
                 Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { currentId })));
     }
@@ -154,8 +155,8 @@ public class UpdateAccessRuleCommandTests
             () => sutProvider.Sut.UpdateAsync(existing.OrganizationId, existing.Id, update, []));
         Assert.Equal("A rule with that name already exists.", ex.Message);
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
-        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs()
-            .SetCollectionAssociationsAsync(default, default, default!, default!);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
+            .SetAccessRuleAssociationsAsync(default, default, default!, default!);
     }
 
     private static void SetupValidator(SutProvider<UpdateAccessRuleCommand> sutProvider, Guid organizationId,
