@@ -121,6 +121,69 @@ public class EventServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task LogOrganizationEvent_WithAbility_LogsRequiredInfo(OrganizationAbility organizationAbility,
+        EventType eventType, DateTime date, Guid actingUserId, Guid providerId, SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        organizationAbility.Enabled = true;
+        organizationAbility.UseEvents = true;
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
+
+        // Act
+        await sutProvider.Sut.LogOrganizationEventAsync(organizationAbility, eventType, date);
+
+        // Assert
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateAsync(Arg.Is<IEvent>(e =>
+            e.OrganizationId == organizationAbility.Id &&
+            e.Type == eventType &&
+            e.ActingUserId == actingUserId &&
+            e.ProviderId == providerId &&
+            e.Date == date));
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(InstallationIdTestCases))]
+    public async Task LogOrganizationEvent_WithAbility_ProvidesInstallationId(Guid? installationId, EventType eventType,
+        OrganizationAbility organizationAbility, SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        organizationAbility.Enabled = true;
+        organizationAbility.UseEvents = true;
+
+        sutProvider.GetDependency<ICurrentContext>().InstallationId.Returns(installationId);
+
+        // Act
+        await sutProvider.Sut.LogOrganizationEventAsync(organizationAbility, eventType);
+
+        // Assert
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateAsync(Arg.Is<IEvent>(e =>
+            e.OrganizationId == organizationAbility.Id &&
+            e.Type == eventType &&
+            e.InstallationId == installationId));
+    }
+
+    [Theory]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, false)]
+    public async Task LogOrganizationEvent_WithAbility_WhenOrgDoesNotHaveAbility_DoesNotLog(
+        bool enabled, bool useEvents, OrganizationAbility organizationAbility, EventType eventType,
+        SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        organizationAbility.Enabled = enabled;
+        organizationAbility.UseEvents = useEvents;
+
+        // Act
+        await sutProvider.Sut.LogOrganizationEventAsync(organizationAbility, eventType);
+
+        // Assert
+        await sutProvider.GetDependency<IEventWriteService>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory, BitAutoData]
     public async Task LogOrganizationEvent_WithEventSystemUser_LogsRequiredInfo(Organization organization, EventType eventType,
         EventSystemUser eventSystemUser, DateTime date, Guid providerId, SutProvider<EventService> sutProvider)
     {

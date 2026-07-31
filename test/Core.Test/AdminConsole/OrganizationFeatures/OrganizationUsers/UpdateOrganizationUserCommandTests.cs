@@ -6,13 +6,18 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -388,6 +393,98 @@ public class UpdateOrganizationUserCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().CreateDefaultCollectionsAsync(
             Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WhenEnablingSecretsManager_RequiresAdditionalSeats_AndSelfHosted_Throws(
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        newUserData.Type = OrganizationUserType.User;
+        oldUserData.AccessSecretsManager = false;
+        newUserData.AccessSecretsManager = true;
+
+        Setup(sutProvider, organization, newUserData, oldUserData);
+
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, 1)
+            .Returns(1);
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateUserAsync(newUserData, OrganizationUserType.User, null, null, null));
+
+        Assert.Contains("Cannot autoscale on a self-hosted instance.", exception.Message);
+
+        // The self-host guard must fire before any billing call and before persisting the update.
+        await sutProvider.GetDependency<IPricingClient>()
+            .DidNotReceive().GetPlanOrThrow(Arg.Any<PlanType>());
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .DidNotReceive().UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceive().ReplaceAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WhenEnablingSecretsManager_RequiresAdditionalSeats_AndNotSelfHosted_Autoscales(
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        newUserData.Type = OrganizationUserType.User;
+        oldUserData.AccessSecretsManager = false;
+        newUserData.AccessSecretsManager = true;
+
+        Setup(sutProvider, organization, newUserData, oldUserData);
+
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, 1)
+            .Returns(1);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
+
+        await sutProvider.Sut.UpdateUserAsync(newUserData, OrganizationUserType.User, null, null, null);
+
+        await sutProvider.GetDependency<IPricingClient>().Received(1).GetPlanOrThrow(organization.PlanType);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .Received(1).UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1).ReplaceAsync(newUserData, Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WhenEnablingSecretsManager_NoAdditionalSeatsRequired_AndSelfHosted_DoesNotThrow(
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        newUserData.Type = OrganizationUserType.User;
+        oldUserData.AccessSecretsManager = false;
+        newUserData.AccessSecretsManager = true;
+
+        Setup(sutProvider, organization, newUserData, oldUserData);
+
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, 1)
+            .Returns(0);
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
+
+        await sutProvider.Sut.UpdateUserAsync(newUserData, OrganizationUserType.User, null, null, null);
+
+        // No seat increase is needed, so the self-host guard must not block enabling Secrets Manager.
+        await sutProvider.GetDependency<IPricingClient>()
+            .DidNotReceive().GetPlanOrThrow(Arg.Any<PlanType>());
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .DidNotReceive().UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1).ReplaceAsync(newUserData, Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
     private void Setup(SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization,

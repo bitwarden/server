@@ -11,6 +11,9 @@ public record InviteLinkDomainsRequired()
 public record InviteLinkNotAvailable()
     : BadRequestError("Your organization's plan does not support invite links.");
 
+public record InviteLinkConfirmationNotSupported()
+    : BadRequestError("This invite link does not support confirmation.");
+
 public record InviteLinkNotFound()
     : NotFoundError("Invite link not found.");
 
