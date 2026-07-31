@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
-namespace Bit.Core.Utilities;
+namespace Bit.ExceptionHandling;
 
 /// <summary>
 /// Extension methods for adding Bitwarden exception handling to Minimal API endpoint groups.
