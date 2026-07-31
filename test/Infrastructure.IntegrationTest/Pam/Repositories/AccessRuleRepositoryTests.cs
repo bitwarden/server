@@ -32,7 +32,7 @@ public class AccessRuleRepositoryTests
         };
         await collectionRepository.CreateAsync(collection, [], []);
 
-        await accessRuleRepository.SetCollectionAssociationsAsync(
+        await collectionRepository.SetAccessRuleAssociationsAsync(
             organization.Id, rule.Id, [collection.Id], []);
 
         // Sanity check: the collection is governed by the rule before deletion.

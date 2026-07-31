@@ -324,6 +324,24 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    public async Task SetAccessRuleAssociationsAsync(Guid organizationId, Guid accessRuleId,
+        IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[Collection_SetAccessRuleAssociations]",
+                new
+                {
+                    AccessRuleId = accessRuleId,
+                    OrganizationId = organizationId,
+                    ToAssign = collectionIdsToAssign.ToGuidIdArrayTVP(),
+                    ToClear = collectionIdsToClear.ToGuidIdArrayTVP(),
+                },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
     public async Task CreateUserAsync(Guid collectionId, Guid organizationUserId)
     {
         using (var connection = new SqlConnection(ConnectionString))
