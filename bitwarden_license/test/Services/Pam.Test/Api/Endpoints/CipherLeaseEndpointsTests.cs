@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Models.Api;
-using Bit.HttpExtensions;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
@@ -13,12 +12,12 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the lease wire contract that the generated OpenAPI spec — and the client bindings built from it —
+/// Locks the cipher-lease wire contract that the generated OpenAPI spec — and the client bindings built from it —
 /// depend on. The endpoint bodies are scaffold stubs; the contract (routes, names, methods, return types) is the
 /// thing under test. Endpoints are materialized by mapping them onto a minimal host and reading its
 /// <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator inspects.
 /// </summary>
-public class LeaseEndpointsTests
+public class CipherLeaseEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
@@ -43,23 +42,21 @@ public class LeaseEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheFiveLeaseRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheThreeCipherLeaseRoutes_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
-            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Leases"))
+            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("CipherLease"))
             .ToList();
 
-        Assert.Equal(5, endpoints.Count);
+        Assert.Equal(3, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
 
     [Theory]
-    [InlineData("Pam_Leases_GetActive", "GET", "leases/active")]
-    [InlineData("Pam_Leases_GetHistory", "GET", "leases/history")]
-    [InlineData("Pam_Leases_GetMine", "GET", "leases/mine")]
-    [InlineData("Pam_Leases_Revoke", "POST", "leases/{id:guid}/revoke")]
-    [InlineData("Pam_Leases_Extend", "POST", "leases/{id:guid}/extend")]
+    [InlineData("Pam_CipherLease_PreCheck", "GET", "leases/ciphers/{id:guid}/pre-check")]
+    [InlineData("Pam_CipherLease_State", "GET", "leases/ciphers/{id:guid}/state")]
+    [InlineData("Pam_CipherLease_Post", "POST", "leases/ciphers/{id:guid}")]
     public void MapPamEndpoints_RegistersExpectedRoute(string name, string method, string route)
     {
         var endpoints = MaterializeEndpoints();
@@ -67,17 +64,17 @@ public class LeaseEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/leases/active")
+        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/leases/ciphers/{id:guid}/state")
         // that the generated spec path does not.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }
 
     [Fact]
-    public void LeaseGroup_DocumentsErrorResponseModel_For400And404()
+    public void CipherLeaseGroup_DocumentsErrorResponseModel_For400And404()
     {
         var endpoint = MaterializeEndpoints()
-            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Leases"));
+            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("CipherLease"));
         var produces = endpoint.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>();
 
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status400BadRequest && p.Type == typeof(ErrorResponseModel));
@@ -85,14 +82,12 @@ public class LeaseEndpointsTests
     }
 
     [Theory]
-    [InlineData(nameof(LeaseEndpointsHandler.GetActive), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
-    [InlineData(nameof(LeaseEndpointsHandler.GetHistory), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
-    [InlineData(nameof(LeaseEndpointsHandler.GetMine), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
-    [InlineData(nameof(LeaseEndpointsHandler.Revoke), typeof(Task))]
-    [InlineData(nameof(LeaseEndpointsHandler.Extend), typeof(Task<AccessRequestDetailsResponseModel>))]
+    [InlineData(nameof(CipherLeaseEndpointsHandler.PreCheck), typeof(Task<AccessPreCheckResponseModel>))]
+    [InlineData(nameof(CipherLeaseEndpointsHandler.State), typeof(Task<CipherAccessStateResponseModel>))]
+    [InlineData(nameof(CipherLeaseEndpointsHandler.Post), typeof(Task<AccessRequestResultResponseModel>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
-        var method = typeof(LeaseEndpointsHandler).GetMethod(methodName);
+        var method = typeof(CipherLeaseEndpointsHandler).GetMethod(methodName);
 
         Assert.NotNull(method);
         Assert.Equal(expectedReturnType, method!.ReturnType);
