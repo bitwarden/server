@@ -71,7 +71,7 @@ public class SendInvoicePriceMigrationJob(
             "Send-invoice price migration sweep found {CandidateCount} candidates renewing between {MinimumLeadTimeDays} and {LeadTimeDays} days from now",
             candidates.Count, MinimumLeadTimeDays, LeadTimeDays);
 
-        var semaphore = new SemaphoreSlim(MaxConcurrency, MaxConcurrency);
+        using var semaphore = new SemaphoreSlim(MaxConcurrency, MaxConcurrency);
         var processed = 0;
         var skipped = 0;
         var errors = 0;
