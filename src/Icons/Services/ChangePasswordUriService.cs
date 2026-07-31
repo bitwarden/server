@@ -58,8 +58,12 @@ public class ChangePasswordUriService : IChangePasswordUriService
     /// <returns>True when the domain responds with a non-ok response</returns>
     private async Task<bool> HasReliableHttpStatusCode(string urlDomain)
     {
+        // The controller passes a bare host, so force https here — a bare host would otherwise
+        // default to http on port 80, probing (and returning) over a plaintext channel.
         var url = new UriBuilder(urlDomain)
         {
+            Scheme = Uri.UriSchemeHttps,
+            Port = -1,
             Path = "/.well-known/resource-that-should-not-exist-whose-status-code-should-not-be-200"
         };
 
@@ -79,8 +83,14 @@ public class ChangePasswordUriService : IChangePasswordUriService
     private async Task<string?> GetWellKnownChangePasswordUrl(string urlDomain)
     {
         // Transient failures are not caught here; they propagate to GetChangePasswordUri
-        // to be distinguished from a definitive answer.
-        var url = new UriBuilder(urlDomain) { Path = "/.well-known/change-password" };
+        // to be distinguished from a definitive answer. Force https so the probe (and the URL
+        // returned to clients) stays on a secure channel; a bare host would default to http:80.
+        var url = new UriBuilder(urlDomain)
+        {
+            Scheme = Uri.UriSchemeHttps,
+            Port = -1,
+            Path = "/.well-known/change-password"
+        };
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
 

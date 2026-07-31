@@ -10,14 +10,15 @@ namespace Bit.Icons.Test.Services;
 public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriService>
 {
     [Theory]
-    [InlineData("https://example.com", "https://example.com:443/.well-known/change-password")]
-    public async Task GetChangePasswordUri_WhenBothChecksPass_ReturnsWellKnownUrl(string domain, string expectedUrl)
+    [InlineData("example.com")]         // bare host — the shape the controller actually passes
+    [InlineData("https://example.com")] // scheme-ful input normalizes to the same https URL
+    public async Task GetChangePasswordUri_WhenBothChecksPass_ReturnsWellKnownUrl(string domain)
     {
-        // Arrange
-        var mockedHandler = new MockedHttpMessageHandler();
+        // Arrange — probes are always issued over https regardless of the input shape.
+        const string nonExistentUrl = "https://example.com/.well-known/resource-that-should-not-exist-whose-status-code-should-not-be-200";
+        const string changePasswordUrl = "https://example.com/.well-known/change-password";
 
-        var nonExistentUrl = $"{domain}/.well-known/resource-that-should-not-exist-whose-status-code-should-not-be-200";
-        var changePasswordUrl = $"{domain}/.well-known/change-password";
+        var mockedHandler = new MockedHttpMessageHandler();
 
         // Mock the response for the resource-that-should-not-exist request (returns 404)
         mockedHandler
@@ -39,7 +40,7 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
         var result = await service.GetChangePasswordUri(domain);
 
         Assert.Equal(ChangePasswordUriResultType.Found, result.Type);
-        Assert.Equal(expectedUrl, result.Uri);
+        Assert.Equal(changePasswordUrl, result.Uri);
     }
 
     [Theory]
