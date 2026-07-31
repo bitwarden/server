@@ -23,9 +23,7 @@ internal readonly record struct AnnualUpgradePreviewRequests(
 /// Prices a monthly-to-annual switch by asking Stripe to preview two invoices from the
 /// subscription's own line items: one on the current monthly price IDs and one on their annual
 /// equivalents, with the same quantities and the same coupons on both. Stripe reports the discount
-/// it actually applied per line, which is the only reliable way to honour a coupon restricted to a
-/// set of products: that restriction is not readable from a subscription retrieve at any expansion
-/// depth, and the monthly and annual price for a slot do not always sit under the same product.
+/// it actually applied per line.
 /// </summary>
 internal static class AnnualUpgradeSavingsCalculator
 {
@@ -37,13 +35,6 @@ internal static class AnnualUpgradeSavingsCalculator
     /// will refuse, so quoting a figure for it would advertise an offer that cannot be taken.
     /// </summary>
     /// <remarks>
-    /// Stripe does the arithmetic and the product scoping, which is why the previews exist: a
-    /// coupon restricted to a set of products is honoured or ignored per line by Stripe, and its
-    /// restriction is not readable from a subscription retrieve at any expansion depth. What stays
-    /// here is the decision about which coupons are in play at all, which is a product decision:
-    /// only forever coupons are modelled, and the set is passed explicitly so an unspecified list
-    /// cannot let Stripe inherit the customer coupon on top of the subscription's own.
-    ///
     /// The caller must load the subscription with <c>customer</c>, <c>discounts.coupon</c>,
     /// <c>customer.discount.coupon</c>, and <c>items.data.discounts.coupon</c> expanded.
     /// </remarks>
@@ -54,8 +45,6 @@ internal static class AnnualUpgradeSavingsCalculator
 
         foreach (var item in subscription.Items.Data)
         {
-            // Stripe.NET can surface a line with no price object; the previous implementation
-            // skipped these rather than treating them as unpriceable, so keep doing that.
             if (item.Price?.Id is null)
             {
                 continue;
@@ -76,50 +65,45 @@ internal static class AnnualUpgradeSavingsCalculator
             return null;
         }
 
-        var currency = subscription.Currency;
-
         var invoiceDiscounts = InvoiceLevelCoupons(subscription)
-            .Where(coupon => IsApplicable(coupon, currency) && !string.IsNullOrEmpty(coupon.Id))
+            .Where(coupon => IsApplicable(coupon) && !string.IsNullOrEmpty(coupon.Id))
             .Select(coupon => new InvoiceDiscountOptions { Coupon = coupon.Id })
             .ToList();
 
         return new AnnualUpgradePreviewRequests(
-            BuildSide(subscription, lines, invoiceDiscounts, currency, annual: false),
-            BuildSide(subscription, lines, invoiceDiscounts, currency, annual: true));
+            BuildPreviewOptions(subscription, lines, invoiceDiscounts, annual: false),
+            BuildPreviewOptions(subscription, lines, invoiceDiscounts, annual: true));
     }
 
-    private static InvoiceCreatePreviewOptions BuildSide(
+    private static InvoiceCreatePreviewOptions BuildPreviewOptions(
         Subscription subscription,
         IReadOnlyList<PreviewLine> lines,
         List<InvoiceDiscountOptions> invoiceDiscounts,
-        string currency,
         bool annual) =>
         new()
         {
             Customer = subscription.CustomerId,
-            // Pre-tax on both sides, matching what the quote shows today. With tax off, the
-            // invoice total is already the post-discount pre-tax figure SavingsFromPreviews reads.
+            // Pre-tax on both sides. With tax off, Total is the post-discount figure.
             AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = false },
-            // No Subscription set on purpose. Passing one would price the remainder of the current
-            // period; leaving it off prices a fresh full term, which is what the quote compares.
+            // No Subscription set on purpose. Passing one would price with prorations, not the full term.
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
                 Items = [.. lines.Select(line => new InvoiceSubscriptionDetailsItemOptions
                 {
                     Price = annual ? line.TargetPriceId : line.Item.Price.Id,
                     Quantity = line.Item.Quantity,
-                    Discounts = ItemDiscountsOrNull(line, currency)
+                    Discounts = ItemDiscountsOrNull(line)
                 })]
             },
             Discounts = invoiceDiscounts.Count > 0 ? invoiceDiscounts : null
         };
 
     private static List<InvoiceSubscriptionDetailsItemDiscountOptions>? ItemDiscountsOrNull(
-        PreviewLine line, string currency)
+        PreviewLine line)
     {
         var discounts = (line.Item.Discounts ?? [])
             .Where(discount =>
-                IsApplicable(discount?.Coupon, currency) &&
+                IsApplicable(discount?.Coupon) &&
                 !string.IsNullOrEmpty(discount!.Coupon.Id))
             .Select(discount => new InvoiceSubscriptionDetailsItemDiscountOptions
             {
@@ -131,19 +115,9 @@ internal static class AnnualUpgradeSavingsCalculator
     }
 
     /// <summary>
-    /// The two figures, from the two preview totals. Returns null when either preview is missing,
-    /// which suppresses the offer: the same posture as an unmappable line, because no offer beats
-    /// a wrong dollar figure.
+    /// Calculates the savings from the two preview totals. Returns null when either preview is
+    /// missing, which suppresses the offer.
     /// </summary>
-    /// <remarks>
-    /// Reads <c>Total</c> rather than <c>TotalExcludingTax</c>. Both payloads disable automatic
-    /// tax, so <c>Total</c> already is the post-discount pre-tax figure, and it is non-nullable,
-    /// whereas <c>TotalExcludingTax</c> can come back null on an untaxed invoice and would then
-    /// suppress every offer.
-    ///
-    /// A fixed-amount coupon is deducted once per invoice regardless of billing interval, so the
-    /// comparison has to be built from one monthly invoice and then multiplied, never the reverse.
-    /// </remarks>
     public static AnnualUpgradeSavings? SavingsFromPreviews(Invoice? monthly, Invoice? annual)
     {
         if (monthly is null || annual is null)
@@ -155,11 +129,8 @@ internal static class AnnualUpgradeSavingsCalculator
     }
 
     /// <summary>
-    /// The invoice-level coupons in force. Stripe gates customer inheritance on the subscription
-    /// having no discounts of its own ("When a subscription has no discounts, the customer-level
-    /// discount, if any, applies to invoices"), so the two never stack. Both sides of the quote
-    /// use this one set: the redemption is discount-neutral, carrying the same effective coupons
-    /// into Phase 2 that the subscription bills under today.
+    /// The invoice-level coupons in force: the subscription's own when it has any, otherwise the
+    /// customer's, which Stripe never stacks.
     /// </summary>
     private static IReadOnlyList<Coupon> InvoiceLevelCoupons(Subscription subscription)
     {
@@ -183,8 +154,7 @@ internal static class AnnualUpgradeSavingsCalculator
     /// against only a few monthly ones, which would quote a first-year artifact as a recurring
     /// saving.
     /// </summary>
-    private static bool IsApplicable(Coupon? coupon, string currency) =>
+    private static bool IsApplicable(Coupon? coupon) =>
         coupon is not null &&
-        string.Equals(coupon.Duration, CouponDurations.Forever, StringComparison.OrdinalIgnoreCase) &&
-        (coupon.AmountOff is null || string.Equals(coupon.Currency, currency, StringComparison.OrdinalIgnoreCase));
+        string.Equals(coupon.Duration, CouponDurations.Forever, StringComparison.OrdinalIgnoreCase);
 }

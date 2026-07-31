@@ -161,16 +161,6 @@ public class AnnualUpgradeSavingsCalculatorTests
     }
 
     [Fact]
-    public void Build_AmountOffCouponInAnotherCurrency_IsNotPassed()
-    {
-        var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
-        subscription.Discounts =
-            [Discount("eur_off", percentOff: null, amountOff: 1000, currency: "eur")];
-
-        Assert.Null(Build(subscription).Monthly.Discounts);
-    }
-
-    [Fact]
     public void Build_PercentOffCouponWithNullCurrency_IsStillPassed()
     {
         var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
