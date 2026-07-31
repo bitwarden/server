@@ -137,7 +137,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         if (orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            throw new BadRequestException(new OrganizationAccessRevoked(org?.Name ?? string.Empty).Message);
+            throw new BadRequestException(new OrganizationAccessRevoked(org?.DisplayName() ?? string.Empty).Message);
         }
 
         if (orgUser.Status != OrganizationUserStatusType.Invited)

@@ -68,7 +68,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
         {
-            return new ConfirmEmailDomainNotAllowed(organization.Name);
+            return new ConfirmEmailDomainNotAllowed(organization.DisplayName());
         }
 
         // Provider users cannot confirm via invite links.
@@ -79,7 +79,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
-        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser, organization.Name);
+        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser, organization.DisplayName());
         if (membershipStatusError is not null)
         {
             return membershipStatusError;
@@ -208,7 +208,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         return InviteUsersPasswordManagerValidator.ValidatePasswordManager(subscriptionUpdate)
             is PasswordManagerValidation.Invalid<PasswordManagerSubscriptionUpdate>
-            ? new ConfirmOrganizationHasNoAvailableSeats(organization.Name)
+            ? new ConfirmOrganizationHasNoAvailableSeats(organization.DisplayName())
             : null;
     }
 }

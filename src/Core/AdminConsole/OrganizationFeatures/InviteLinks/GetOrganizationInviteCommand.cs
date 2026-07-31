@@ -41,7 +41,7 @@ public class GetOrganizationInviteCommand(
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
         {
             var organization = await organizationRepository.GetByIdAsync(link.OrganizationId);
-            return new EmailDomainNotAllowed(organization?.Name ?? string.Empty);
+            return new EmailDomainNotAllowed(organization?.DisplayName() ?? string.Empty);
         }
 
         return link.Invite;

@@ -66,7 +66,7 @@ public class AcceptOrganizationInviteLinkCommand(
 
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
         {
-            return new EmailDomainNotAllowed(organization.Name);
+            return new EmailDomainNotAllowed(organization.DisplayName());
         }
 
         // Provider users cannot accept invite links
@@ -77,7 +77,7 @@ public class AcceptOrganizationInviteLinkCommand(
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
-        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser, organization.Name);
+        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser, organization.DisplayName());
         if (membershipStatusError is not null)
         {
             return membershipStatusError;
@@ -175,7 +175,7 @@ public class AcceptOrganizationInviteLinkCommand(
         var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
         if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
         {
-            return new OrganizationHasNoAvailableSeats(organization.Name);
+            return new OrganizationHasNoAvailableSeats(organization.DisplayName());
         }
 
         var seatExpansionError = await TryExpandSeatsAsync(organization, occupiedSeatCount);
