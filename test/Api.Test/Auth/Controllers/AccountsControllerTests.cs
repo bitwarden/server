@@ -1111,7 +1111,9 @@ public class AccountsControllerTests : IDisposable
     {
         // Arrange — modern MP JIT client: sends MPAD + MPUD + legacy Keys (no AccountKeys, no V2 flag).
         // ToUser() should map KDF, wrapped user key, and salt from MPUD; legacy Keys?.ToUser sets the keypair.
-        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        // Salt must match the user's email-derived salt (Stage 1 PM-27044 invariant).
+        var emailSalt = user.GetMasterPasswordSalt();
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, salt: emailSalt);
         setInitialPasswordRequestModel.AccountKeys = null;
         setInitialPasswordRequestModel.Keys = new KeysRequestModel
         {
@@ -1236,7 +1238,9 @@ public class AccountsControllerTests : IDisposable
         SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
         // Arrange — modern MP JIT client: MPAD + MPUD + legacy Keys (no AccountKeys)
-        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        // Salt must match the user's email-derived salt (Stage 1 PM-27044 invariant).
+        var emailSalt = user.GetMasterPasswordSalt();
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, salt: emailSalt);
         setInitialPasswordRequestModel.AccountKeys = null;
         setInitialPasswordRequestModel.Keys = new KeysRequestModel
         {
@@ -1254,8 +1258,8 @@ public class AccountsControllerTests : IDisposable
         // Act
         await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
 
-        // Assert — user.MasterPasswordSalt matches the MPUD-provided salt
-        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordUnlock.Salt, user.MasterPasswordSalt);
+        // Assert — user.MasterPasswordSalt matches the MPUD-provided salt (email-derived)
+        Assert.Equal(emailSalt, user.MasterPasswordSalt);
         Assert.False(string.IsNullOrEmpty(user.MasterPasswordSalt));
     }
 
@@ -1297,7 +1301,9 @@ public class AccountsControllerTests : IDisposable
     {
         // Arrange — modern V1 MP JIT shape: MPAD + MPUD + legacy Keys (no AccountKeys).
         // V2 MP JIT flag ON to ensure the tightened predicate is what gates the V2 branch.
-        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        // Salt must match the user's email-derived salt (Stage 1 PM-27044 invariant).
+        var emailSalt = user.GetMasterPasswordSalt();
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, salt: emailSalt);
         setInitialPasswordRequestModel.AccountKeys = null;
         setInitialPasswordRequestModel.Keys = new KeysRequestModel
         {
@@ -1328,6 +1334,37 @@ public class AccountsControllerTests : IDisposable
             .FinishProvisionAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
     }
 
+    // Stage 1 (PM-27044) invariant: if the client sends MPAD/MPUD with a salt that doesn't match
+    // the user's email-derived salt, SetInitialPasswordV1Async must reject the request. Persisting
+    // a divergent salt would leave the account un-loginable because clients currently derive the
+    // master key from the email at login time.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1_NewClient_WithDivergentSalt_ShouldThrowBadRequestAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — modern MP JIT client with a salt that doesn't match the user's email
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, salt: "divergentSalt");
+        setInitialPasswordRequestModel.AccountKeys = null;
+        setInitialPasswordRequestModel.Keys = new KeysRequestModel
+        {
+            PublicKey = "newPublicKey",
+            EncryptedPrivateKey = "newEncryptedPrivateKey"
+        };
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+
+        // Act & Assert — the catch block wraps the BadRequestException from
+        // ValidateSaltUnchangedForUser into a ModelState BadRequestException
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+
+        // V1 command must NOT be invoked when the salt validation rejects the request
+        await _setInitialMasterPasswordCommandV1.DidNotReceiveWithAnyArgs()
+            .SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
     private void UpdateSetInitialPasswordRequestModelToV1(SetInitialPasswordRequestModel model)
     {
         model.MasterPasswordAuthentication = null;
@@ -1335,7 +1372,8 @@ public class AccountsControllerTests : IDisposable
         model.AccountKeys = null;
     }
 
-    private void UpdateSetInitialPasswordRequestModelToV2(SetInitialPasswordRequestModel model, bool includeTdeSetPassword = false)
+    private void UpdateSetInitialPasswordRequestModelToV2(SetInitialPasswordRequestModel model,
+        bool includeTdeSetPassword = false, string salt = "salt")
     {
         var kdf = new KdfRequestModel
         {
@@ -1347,14 +1385,14 @@ public class AccountsControllerTests : IDisposable
         {
             Kdf = kdf,
             MasterPasswordAuthenticationHash = "authHash",
-            Salt = "salt"
+            Salt = salt
         };
 
         model.MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
         {
             Kdf = kdf,
             MasterKeyWrappedUserKey = "wrappedKey",
-            Salt = "salt"
+            Salt = salt
         };
 
         if (includeTdeSetPassword)
