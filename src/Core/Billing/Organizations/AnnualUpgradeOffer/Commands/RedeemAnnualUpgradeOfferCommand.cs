@@ -110,7 +110,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             });
         }
 
-        // Backstop for the race between page load, where the offer query suppresses this, and here.
+        // The offer query suppresses this at page load; this is the backstop for a schedule that appeared since.
         var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
 
         switch (ownership)

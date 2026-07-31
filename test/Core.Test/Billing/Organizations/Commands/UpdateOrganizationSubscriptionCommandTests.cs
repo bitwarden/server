@@ -1333,7 +1333,7 @@ public class UpdateOrganizationSubscriptionCommandTests
         SetupGetSubscription(organization, subscription);
 
         var schedule = CreateMockSchedule(subscription.Id, [(sourceSeat, 5)], [(targetSeat, 5)]);
-        // Expired anchor phase carries the ownership marker; the two real phases stay null.
+        // Marker parked on the expired anchor so the assertion isolates per-phase preservation; production stamps every phase.
         schedule.Phases.Insert(0, new SubscriptionSchedulePhase
         {
             StartDate = DateTime.UtcNow.AddDays(-30),
@@ -1382,7 +1382,7 @@ public class UpdateOrganizationSubscriptionCommandTests
         SetupGetSubscription(organization, subscription);
 
         var schedule = CreateMockSchedule(subscription.Id, [(sourceSeat, 5)], [(targetSeat, 5)]);
-        // Expired anchor phase carries the ownership marker; the two real phases stay empty.
+        // Marker parked on the expired anchor so the assertion isolates per-phase preservation; production stamps every phase.
         schedule.Phases.Insert(0, new SubscriptionSchedulePhase
         {
             StartDate = DateTime.UtcNow.AddDays(-30),
@@ -1577,7 +1577,6 @@ public class UpdateOrganizationSubscriptionCommandTests
         // PM-40537: a stale cohort assignment row must not resurrect the migration branch for a
         // schedule our code did not create; ownership is read from the schedule, not the org.
         var organization = CreateOrganization();
-        organization.PlanType = PlanType.TeamsMonthly;
 
         var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
         var target = MockPlans.Get(PlanType.EnterpriseAnnually);

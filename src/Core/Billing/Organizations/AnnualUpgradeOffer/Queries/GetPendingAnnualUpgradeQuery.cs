@@ -49,17 +49,25 @@ public class GetPendingAnnualUpgradeQuery(
         }
 
         // Fail-closed on any error from here on: this query runs inline on page load, so a
-        // pricing/schedule/price lookup failure must degrade to "no pending upgrade" rather
+        // pricing/price lookup failure must degrade to "no pending upgrade" rather
         // than 500 the page.
         try
         {
-            var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
+            var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
+            if (ownership == OrganizationSubscriptionScheduleOwnership.Unexpanded)
+            {
+                logger.LogError(
+                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; returning no pending upgrade",
+                    nameof(GetPendingAnnualUpgradeQuery), subscription.Id, organization.Id, subscription.ScheduleId);
+                return null;
+            }
 
-            if (SubscriptionScheduleOwnershipMapper.Map(subscription) !=
-                OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
+            if (ownership != OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
             {
                 return null;
             }
+
+            var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
 
             var activeSchedule = subscription.Schedule;
             if (activeSchedule is not { Phases.Count: > 0 })

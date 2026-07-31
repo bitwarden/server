@@ -8,7 +8,7 @@ using static StripeConstants;
 
 /// <summary>
 /// Classifies the Stripe subscription schedule attached to an organization's subscription, from the
-/// metadata our code stamps onto the phases of every schedule it creates.
+/// metadata our code stamps onto the phases of every organization schedule it creates.
 /// </summary>
 public static class SubscriptionScheduleOwnershipMapper
 {

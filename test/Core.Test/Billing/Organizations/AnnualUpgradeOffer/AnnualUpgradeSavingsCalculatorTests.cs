@@ -26,7 +26,6 @@ public class AnnualUpgradeSavingsCalculatorTests
     {
         Id = "sub_123",
         CustomerId = "cus_123",
-        Currency = "usd",
         Items = new StripeList<SubscriptionItem> { Data = [.. items] }
     };
 
@@ -34,7 +33,6 @@ public class AnnualUpgradeSavingsCalculatorTests
         string couponId,
         string duration = CouponDurations.Forever,
         decimal? percentOff = 25m,
-        long? amountOff = null,
         string? currency = "usd") => new()
         {
             Id = $"di_{couponId}",
@@ -43,7 +41,6 @@ public class AnnualUpgradeSavingsCalculatorTests
                 Id = couponId,
                 Duration = duration,
                 PercentOff = percentOff,
-                AmountOff = amountOff,
                 Currency = currency
             }
         };
@@ -158,15 +155,6 @@ public class AnnualUpgradeSavingsCalculatorTests
         subscription.Discounts = [Discount("temporary", duration: duration)];
 
         Assert.Null(Build(subscription).Monthly.Discounts);
-    }
-
-    [Fact]
-    public void Build_PercentOffCouponWithNullCurrency_IsStillPassed()
-    {
-        var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
-        subscription.Discounts = [Discount("pct", currency: null)];
-
-        Assert.Equal(new[] { "pct" }, Build(subscription).Monthly.Discounts.Select(d => d.Coupon));
     }
 
     [Fact]

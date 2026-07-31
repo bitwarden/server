@@ -6433,7 +6433,7 @@ public class SubscriptionUpdatedHandlerTests
     [Fact]
     public async Task HandleAsync_AnnualUpgradeOffer_PricingServiceThrowsBillingException_RethrowsForStripeRetry()
     {
-        // Arrange — a BillingException from the pricing client must bubble out of
+        // Arrange: a BillingException from the pricing client must bubble out of
         // the handler so the webhook returns 500 and Stripe retries the event.
         // The monthly-to-annual price transition appears on exactly one
         // subscription.updated event, so swallowing this would leave the
@@ -6480,7 +6480,7 @@ public class SubscriptionUpdatedHandlerTests
             .Throws(new BillingException(message: "pricing service unavailable"));
         _pricingClient.ListPlans().Returns(MockPlans.Plans);
 
-        // Act + Assert — BillingException must propagate out of HandleAsync
+        // Act + Assert: BillingException must propagate out of HandleAsync
         await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
 
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());

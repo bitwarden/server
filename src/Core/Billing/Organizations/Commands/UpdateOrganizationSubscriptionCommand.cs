@@ -174,7 +174,7 @@ public class UpdateOrganizationSubscriptionCommand(
             }
 
             _logger.LogInformation(
-                "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is not a Bitwarden migration schedule; leaving it untouched and updating the subscription directly",
+                "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is one our code did not create; leaving it untouched and updating the subscription directly",
                 CommandName, activeSchedule.Id, subscription.Id);
         }
 

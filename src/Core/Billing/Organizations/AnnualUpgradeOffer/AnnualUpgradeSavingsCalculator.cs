@@ -116,7 +116,8 @@ internal static class AnnualUpgradeSavingsCalculator
 
     /// <summary>
     /// Calculates the savings from the two preview totals. Returns null when either preview is
-    /// missing, which suppresses the offer.
+    /// missing, which suppresses the offer. Uses <c>Total</c>, not <c>TotalExcludingTax</c>, which
+    /// Stripe can leave null on an untaxed invoice and would suppress every offer.
     /// </summary>
     public static AnnualUpgradeSavings? SavingsFromPreviews(Invoice? monthly, Invoice? annual)
     {
@@ -125,6 +126,8 @@ internal static class AnnualUpgradeSavingsCalculator
             return null;
         }
 
+        // Multiplying the monthly total, not dividing the annual one: a fixed-amount coupon is
+        // deducted once per invoice regardless of billing interval.
         return new AnnualUpgradeSavings(monthly.Total / 100m * 12, annual.Total / 100m);
     }
 

@@ -511,6 +511,37 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
+    public async Task Run_AnnualUpgradeSchedule_ReleasesResolvedSchedule()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly2020);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
+        var (subscription, _) = SetupRedeemableSubscription(organization, []);
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_annual_upgrade",
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        [MetadataKeys.AnnualUpgrade] = PlanType.TeamsMonthly2020.ToString()
+                    }
+                }
+            ]
+        };
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(schedule, organization.Id);
+    }
+
+    [Fact]
     public async Task Run_NoSchedule_StillDropsCohortAssignment()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);

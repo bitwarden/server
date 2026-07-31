@@ -315,8 +315,12 @@ public class GetPendingAnnualUpgradeQueryTests
     [Fact]
     public async Task Run_PricingLookupThrows_ReturnsNullAndLogsWarning()
     {
+        // The ownership gate now runs before the pricing lookup, so the schedule must actually
+        // classify as AnnualUpgrade for the lookup (and its failure) to be reached at all.
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        SetupSubscription(organization);
+        var schedule = ScheduleWithUpcomingAnnualPhase(
+            metadata: new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" });
+        AttachSchedule(organization, schedule);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually)
             .Throws(new NotFoundException("no plan"));
 
