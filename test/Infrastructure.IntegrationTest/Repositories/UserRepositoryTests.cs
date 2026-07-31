@@ -882,6 +882,52 @@ public class UserRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task CreateAsync_RoundTripsUserKeyId(IUserRepository userRepository)
+    {
+        // Arrange
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+
+        // Act
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            UserKeyId = userKeyId
+        });
+
+        // Assert
+        var createdUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(createdUser);
+        Assert.Equal(userKeyId, createdUser.UserKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_UpdatesUserKeyId(IUserRepository userRepository)
+    {
+        // Arrange
+        const string userKeyId = "fedcba9876543210fedcba9876543210";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        });
+        Assert.Null(user.UserKeyId);
+
+        // Act
+        user.UserKeyId = userKeyId;
+        await userRepository.ReplaceAsync(user);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(userKeyId, updatedUser.UserKeyId);
+    }
+
+    [Theory, DatabaseData]
     public async Task SetV2AccountCryptographicStateAsync_RunsDelegatesInTheCallerTransaction(
         IUserRepository userRepository)
     {

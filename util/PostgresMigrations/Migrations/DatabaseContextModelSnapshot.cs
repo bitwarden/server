@@ -2231,6 +2231,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("UserKeyId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("boolean");
 

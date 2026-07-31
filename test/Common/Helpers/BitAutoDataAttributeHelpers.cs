@@ -5,6 +5,7 @@ using System.Reflection;
 using AutoFixture;
 using AutoFixture.Kernel;
 using AutoFixture.Xunit2;
+using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Test.Common.Helpers;
@@ -20,7 +21,12 @@ public static class BitAutoDataAttributeHelpers
 
         fixedTestParameters ??= Array.Empty<object>();
 
-        fixture = ApplyCustomizations(ApplyCustomizations(fixture, classCustomizations), methodCustomizations);
+        // Applied to every fixture: some Core data objects are not constructible without it.
+        var globalCustomizations = new ICustomization[] { new KeyIdCustomization() };
+
+        fixture = ApplyCustomizations(
+            ApplyCustomizations(ApplyCustomizations(fixture, globalCustomizations), classCustomizations),
+            methodCustomizations);
 
         // The first n number of parameters should be match to the supplied parameters
         var fixedTestInputParameters = methodParameters.Take(fixedTestParameters.Length).Zip(fixedTestParameters);
