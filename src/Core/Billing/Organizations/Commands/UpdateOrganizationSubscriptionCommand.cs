@@ -120,20 +120,15 @@ public class UpdateOrganizationSubscriptionCommand(
             items.Add(validationResult.AsT0);
         }
 
-        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
-        var activeSchedule = schedules.Data.FirstOrDefault(s =>
-            s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscription.Id);
+        var activeSchedule = subscription.Schedule is { Status: SubscriptionScheduleStatus.Active } attached
+            ? attached
+            : null;
 
         if (activeSchedule is { Phases.Count: > 0 })
         {
-            // PM-40537: only rewrite schedules we created — rewriting a schedule we didn't create
-            // (e.g. a Finance-built renewal) would corrupt its negotiated phases, so those fall through
-            // to the direct update. A schedule is ours if it maps to a cohort migration path, or if its
-            // phases carry the PM-38333 annual-upgrade marker. Accepted gap: a stale cohort assignment
-            // can still mis-flag a migration schedule, tracked separately.
+            // PM-40537: only rewrite schedules our code created, identified by phase metadata.
             var schedulePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, activeSchedule)
-                                ?? await ResolveCohortMigrationPhasePlansAsync(organization);
+                                ?? await ResolveCohortMigrationPhasePlansAsync(organization, activeSchedule);
             if (schedulePlans is { } plans)
             {
                 var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
@@ -222,10 +217,11 @@ public class UpdateOrganizationSubscriptionCommand(
         return updatedSubscription;
     });
 
-    // PM-37510: the command body dereferences subscription.Customer for tax reconciliation, so a
-    // reused subscription is only safe when Customer is expanded. test_clock is optional here.
+    // Reused subscriptions must carry Customer for tax reconciliation and the attached schedule,
+    // which ownership classification reads.
     private static bool HasRequiredExpansions(Subscription? subscription) =>
-        subscription is { Customer: not null };
+        subscription is { Customer: not null } &&
+        (string.IsNullOrEmpty(subscription.ScheduleId) || subscription.Schedule is not null);
 
     private async Task<Subscription?> FetchSubscriptionAsync(Organization organization)
     {
@@ -233,7 +229,7 @@ public class UpdateOrganizationSubscriptionCommand(
         {
             return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
             {
-                Expand = ["customer", "test_clock"]
+                Expand = ["customer", "test_clock", "schedule"]
             });
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
@@ -269,8 +265,15 @@ public class UpdateOrganizationSubscriptionCommand(
         return (currentPlan, annualLatestPlan);
     }
 
-    private async Task<(Plan source, Plan target)?> ResolveCohortMigrationPhasePlansAsync(Organization organization)
+    private async Task<(Plan source, Plan target)?> ResolveCohortMigrationPhasePlansAsync(
+        Organization organization, SubscriptionSchedule activeSchedule)
     {
+        if (SubscriptionScheduleOwnershipMapper.Map(activeSchedule).Ownership !=
+            OrganizationSubscriptionScheduleOwnership.PriceMigration)
+        {
+            return null;
+        }
+
         var migrationPath = await TryResolveMigrationPathAsync(organization.Id);
         if (migrationPath is null)
         {
