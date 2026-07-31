@@ -7,9 +7,6 @@
 # CODEOWNERS owners
 .github/CODEOWNERS @bitwarden/tech-leads
 
-# Scanning tools
-.checkmarx/ @bitwarden/team-appsec
-
 ## These are shared workflows ##
 .github/workflows/_move_edd_db_scripts.yml
 
