@@ -106,9 +106,9 @@ public class GetAnnualUpgradeOfferQuery(
     {
         switch (eligibility.Reason)
         {
-            case AnnualUpgradeIneligibleReason.UnexpandedDiscounts:
+            case AnnualUpgradeIneligibleReason.UnusableDiscounts:
                 logger.LogError(
-                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded with unexpanded discounts; refusing to quote a savings figure",
+                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) has an unexpanded or couponless discount; refusing to quote a savings figure",
                     nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id);
                 break;
 
@@ -135,6 +135,12 @@ public class GetAnnualUpgradeOfferQuery(
                 logger.LogWarning(
                     "{Query}: Subscription ({SubscriptionId}) line item price ({PriceId}) has no annual-latest mapping for Organization ({OrganizationId}); suppressing the annual upgrade offer",
                     nameof(GetAnnualUpgradeOfferQuery), subscription.Id, eligibility.UnmappablePriceId, organization.Id);
+                break;
+
+            default:
+                logger.LogError(
+                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) is ineligible for an unhandled reason ({Reason}); suppressing the annual upgrade offer",
+                    nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id, eligibility.Reason);
                 break;
         }
     }

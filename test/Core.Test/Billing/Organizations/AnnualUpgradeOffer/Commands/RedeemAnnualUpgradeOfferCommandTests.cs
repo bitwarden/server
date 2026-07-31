@@ -86,24 +86,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
         return (subscription, schedule);
     }
 
-    /// <summary>
-    /// Sets up a redeemable subscription with no line items, so the flow reaches the schedule
-    /// ownership check without needing pricing plan mocks configured.
-    /// </summary>
-    private Subscription SetupSubscription(Organization organization)
-    {
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            CustomerId = "cus_123",
-            Items = new StripeList<SubscriptionItem> { Data = [] }
-        };
-        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
-
-        return subscription;
-    }
-
     [Fact]
     public async Task Run_ChurnCohortMember_ReturnsOfferNoLongerAvailable_StripeNotMutated()
     {
@@ -125,6 +107,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         Assert.Equal("Offer is no longer available.", result.AsT1.Response);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
         await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
@@ -273,7 +256,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_UnexpandedDiscounts_ReturnsConflict_WithoutMutatingStripe()
+    public async Task Run_UnusableDiscounts_ReturnsConflict_WithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
 
@@ -483,7 +466,13 @@ public class RedeemAnnualUpgradeOfferCommandTests
     public async Task Run_ForeignSchedule_ReturnsConflictWithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        var subscription = SetupSubscription(organization);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var (subscription, _) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
         var schedule = new SubscriptionSchedule
         {
             Id = "sub_sched_negotiated",
@@ -504,7 +493,13 @@ public class RedeemAnnualUpgradeOfferCommandTests
     public async Task Run_UnexpandedSchedule_ReturnsConflictWithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        var subscription = SetupSubscription(organization);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var (subscription, _) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
         subscription.ScheduleId = "sub_sched_unread";
         subscription.Schedule = null;
 

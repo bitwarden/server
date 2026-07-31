@@ -25,6 +25,8 @@ public class RedeemAnnualUpgradeOfferCommand(
 {
     private readonly ILogger<RedeemAnnualUpgradeOfferCommand> _logger = logger;
 
+    private const string OfferNoLongerAvailable = "Offer is no longer available.";
+
     protected override Conflict DefaultConflict =>
         new("We had a problem switching your billing to annual. Please contact support for assistance.");
 
@@ -36,7 +38,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             _logger.LogInformation(
                 "{Command}: Organization ({OrganizationId}) is in a churn-offer cohort; refusing the annual upgrade",
                 CommandName, organization.Id);
-            return new BadRequest("Offer is no longer available.");
+            return new BadRequest(OfferNoLongerAvailable);
         }
 
         var annualLatestPlanType = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(organization.PlanType);
@@ -47,7 +49,7 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
-            return new BadRequest("Offer is no longer available.");
+            return new BadRequest(OfferNoLongerAvailable);
         }
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
@@ -209,11 +211,16 @@ public class RedeemAnnualUpgradeOfferCommand(
     {
         switch (eligibility.Reason)
         {
-            case AnnualUpgradeIneligibleReason.UnexpandedDiscounts:
+            case AnnualUpgradeIneligibleReason.UnusableDiscounts:
+                _logger.LogError(
+                    "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) has an unexpanded or couponless discount; refusing to rebuild its schedule",
+                    CommandName, subscription.Id, organization.Id);
+                return DefaultConflict;
+
             case AnnualUpgradeIneligibleReason.UnexpandedSchedule:
                 _logger.LogError(
-                    "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded without the expansions this command requires ({Reason}); refusing to rebuild its schedule",
-                    CommandName, subscription.Id, organization.Id, eligibility.Reason);
+                    "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; refusing to rebuild its schedule",
+                    CommandName, subscription.Id, organization.Id, subscription.ScheduleId);
                 return DefaultConflict;
 
             case AnnualUpgradeIneligibleReason.ForeignSchedule:
@@ -227,16 +234,19 @@ public class RedeemAnnualUpgradeOfferCommand(
                 _logger.LogInformation(
                     "{Command}: Organization ({OrganizationId}) already redeemed the annual upgrade offer",
                     CommandName, organization.Id);
-                return new BadRequest("Offer is no longer available.");
+                return new BadRequest(OfferNoLongerAvailable);
 
             case AnnualUpgradeIneligibleReason.UnmappableLine:
                 _logger.LogWarning(
                     "{Command}: Subscription ({SubscriptionId}) line item price ({PriceId}) has no annual-latest mapping for Organization ({OrganizationId})",
                     CommandName, subscription.Id, eligibility.UnmappablePriceId, organization.Id);
-                return new BadRequest("Offer is no longer available.");
+                return new BadRequest(OfferNoLongerAvailable);
 
             default:
-                return new BadRequest("Offer is no longer available.");
+                _logger.LogError(
+                    "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) is ineligible for an unhandled reason ({Reason})",
+                    CommandName, subscription.Id, organization.Id, eligibility.Reason);
+                return new BadRequest(OfferNoLongerAvailable);
         }
     }
 }

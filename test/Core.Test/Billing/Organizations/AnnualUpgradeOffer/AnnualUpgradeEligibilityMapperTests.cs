@@ -108,44 +108,41 @@ public class AnnualUpgradeEligibilityMapperTests
     }
 
     [Fact]
-    public void Map_LineWithNoPriceObject_IsSkippedRatherThanFailing()
+    public void Map_LineWithNoPriceObject_IsUnmappableRatherThanSkipped()
     {
         var result = AnnualUpgradeEligibilityMapper.Map(
             SubscriptionWith(items: [new SubscriptionItem { Id = "si_0", Price = null }, Item("2023-teams-org-seat-monthly")]),
             MonthlyTeamsPlan(), AnnualTeamsPlan());
 
-        Assert.True(result.IsEligible);
-        Assert.Single(result.Lines);
+        Assert.Equal(AnnualUpgradeIneligibleReason.UnmappableLine, result.Reason);
+        Assert.Null(result.UnmappablePriceId);
+        Assert.Empty(result.Lines);
     }
 
     [Fact]
-    public void Map_NullDiscountEntry_IsUnexpandedDiscounts()
+    public void Map_NullDiscountEntry_IsUnusableDiscounts()
     {
         var result = AnnualUpgradeEligibilityMapper.Map(
             UnexpandedDiscountSubscription(), MonthlyTeamsPlan(), AnnualTeamsPlan());
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.UnexpandedDiscounts, result.Reason);
+        Assert.Equal(AnnualUpgradeIneligibleReason.UnusableDiscounts, result.Reason);
     }
 
     [Fact]
-    public void Map_DiscountWithNoCouponId_IsUnexpandedDiscounts()
+    public void Map_DiscountWithNoCouponId_IsUnusableDiscounts()
     {
         // Stricter than the page-load path was before: a discount with no usable coupon id is as
         // unquotable as an unexpanded one.
         var result = AnnualUpgradeEligibilityMapper.Map(
             SubscriptionWith(discounts: [new Discount { Coupon = null }]), MonthlyTeamsPlan(), AnnualTeamsPlan());
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.UnexpandedDiscounts, result.Reason);
+        Assert.Equal(AnnualUpgradeIneligibleReason.UnusableDiscounts, result.Reason);
     }
 
     [Fact]
-    public void Map_NullItemDiscountEntry_IsUnexpandedDiscounts()
+    public void Map_NullItemDiscountEntry_IsUnusableDiscounts()
     {
-        // Same JSON-deserialization approach as the subscription-level unexpanded-discounts fixture
-        // above: when an item's "discounts" is not in the request's Expand list, Stripe.NET
-        // populates the item's Discounts with a same-length list of null entries. Direct assignment
-        // of `[null]` is rewritten by the SDK's expandable-field setter, so JSON deserialization is
-        // the only way to reproduce the unexpanded state in a unit test.
+        // Same JSON-deserialization workaround as UnexpandedDiscountSubscription() above.
         const string unexpandedJson = """
             {
               "id": "sub_1",
@@ -168,7 +165,7 @@ public class AnnualUpgradeEligibilityMapperTests
 
         var result = AnnualUpgradeEligibilityMapper.Map(subscription, MonthlyTeamsPlan(), AnnualTeamsPlan());
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.UnexpandedDiscounts, result.Reason);
+        Assert.Equal(AnnualUpgradeIneligibleReason.UnusableDiscounts, result.Reason);
     }
 
     [Fact]
@@ -239,7 +236,22 @@ public class AnnualUpgradeEligibilityMapperTests
         subscription.Schedule = schedule;
 
         Assert.Equal(
-            AnnualUpgradeIneligibleReason.UnexpandedDiscounts,
+            AnnualUpgradeIneligibleReason.UnusableDiscounts,
+            AnnualUpgradeEligibilityMapper.Map(subscription, MonthlyTeamsPlan(), AnnualTeamsPlan()).Reason);
+    }
+
+    [Fact]
+    public void Map_ForeignScheduleAndUnmappableLine_ReportsTheSchedule()
+    {
+        // Schedule ownership is checked before line mapping; a negotiated schedule must win over an
+        // unmappable line, not just an unusable discount, or reordering the mapper would collapse
+        // this 409 into a 400 on exactly the subscription where that distinction is most expensive.
+        var subscription = SubscriptionWith(
+            items: [Item("some-unmapped-price")],
+            schedule: Schedule(new Dictionary<string, string> { ["negotiated_term"] = "3y" }));
+
+        Assert.Equal(
+            AnnualUpgradeIneligibleReason.ForeignSchedule,
             AnnualUpgradeEligibilityMapper.Map(subscription, MonthlyTeamsPlan(), AnnualTeamsPlan()).Reason);
     }
 }

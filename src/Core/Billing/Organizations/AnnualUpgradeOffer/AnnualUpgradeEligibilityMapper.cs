@@ -8,7 +8,7 @@ namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 
 internal enum AnnualUpgradeIneligibleReason
 {
-    UnexpandedDiscounts,
+    UnusableDiscounts,
     UnexpandedSchedule,
     AlreadyScheduled,
     ForeignSchedule,
@@ -38,26 +38,30 @@ internal static class AnnualUpgradeEligibilityMapper
     {
         if (HasUnusableDiscounts(subscription))
         {
-            return Ineligible(AnnualUpgradeIneligibleReason.UnexpandedDiscounts);
+            return Ineligible(AnnualUpgradeIneligibleReason.UnusableDiscounts);
         }
 
-        switch (SubscriptionScheduleOwnershipMapper.Map(subscription))
+        // Discard-free so CS8509 catches an unhandled ownership added later.
+        var scheduleReason = SubscriptionScheduleOwnershipMapper.Map(subscription) switch
         {
-            case OrganizationSubscriptionScheduleOwnership.Unexpanded:
-                return Ineligible(AnnualUpgradeIneligibleReason.UnexpandedSchedule);
-            case OrganizationSubscriptionScheduleOwnership.AnnualUpgrade:
-                return Ineligible(AnnualUpgradeIneligibleReason.AlreadyScheduled);
-            case OrganizationSubscriptionScheduleOwnership.Foreign:
-                return Ineligible(AnnualUpgradeIneligibleReason.ForeignSchedule);
+            OrganizationSubscriptionScheduleOwnership.Unexpanded => AnnualUpgradeIneligibleReason.UnexpandedSchedule,
+            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade => AnnualUpgradeIneligibleReason.AlreadyScheduled,
+            OrganizationSubscriptionScheduleOwnership.Foreign => AnnualUpgradeIneligibleReason.ForeignSchedule,
+            OrganizationSubscriptionScheduleOwnership.None or
+                OrganizationSubscriptionScheduleOwnership.PriceMigration => (AnnualUpgradeIneligibleReason?)null
+        };
+        if (scheduleReason is not null)
+        {
+            return Ineligible(scheduleReason.Value);
         }
 
         var lines = new List<AnnualUpgradeLine>();
         foreach (var item in subscription.Items.Data)
         {
-            // Stripe.NET can surface a line with no price object.
+            // No price object to map; fail the subscription rather than drop the line.
             if (item.Price?.Id is null)
             {
-                continue;
+                return Ineligible(AnnualUpgradeIneligibleReason.UnmappableLine);
             }
 
             var targetPriceId = OrganizationPlanMigrationPriceMapper.MapOrNull(
@@ -79,7 +83,11 @@ internal static class AnnualUpgradeEligibilityMapper
         AnnualUpgradeIneligibleReason reason, string? unmappablePriceId = null) =>
         new(reason, [], unmappablePriceId);
 
+    private static bool IsUnusable(Discount? discount) =>
+        discount is null || string.IsNullOrEmpty(discount.Coupon?.Id);
+
+    // Dropped by the Phase 2 filter, which would let the customer-level coupon resurrect instead of failing loudly.
     private static bool HasUnusableDiscounts(Subscription subscription) =>
-        (subscription.Discounts ?? []).Any(d => d is null || string.IsNullOrEmpty(d.Coupon?.Id)) ||
-        subscription.Items.Data.Any(item => (item.Discounts ?? []).Any(d => d is null));
+        (subscription.Discounts ?? []).Any(IsUnusable) ||
+        subscription.Items.Data.Any(item => (item.Discounts ?? []).Any(IsUnusable));
 }

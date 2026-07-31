@@ -281,7 +281,7 @@ public class GetAnnualUpgradeOfferQueryTests
     }
 
     [Fact]
-    public async Task Run_ItemWithNullPrice_IgnoredWhenLocatingSeat_ReturnsOffer()
+    public async Task Run_ItemWithNullPrice_IsUnmappableRatherThanSkipped_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         _getChurnOfferCohortMembershipQuery.Run(organization).Returns((ChurnOfferCohortMembership?)null);
@@ -291,16 +291,15 @@ public class GetAnnualUpgradeOfferQueryTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
-        // A line item with no expanded Price must be skipped safely when locating the seat line.
+        // A line item with no expanded Price now fails the whole subscription rather than being skipped.
         SetupSubscription(organization,
             new SubscriptionItem { Price = null, Quantity = 1 },
             new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 20 });
-        SetupPreviews(monthlyTotal: 8_000, annualTotal: 72_000);
 
         var result = await _query.Run(organization);
 
-        Assert.NotNull(result);
-        Assert.Equal(960m, result.CurrentAnnualCost);
+        Assert.Null(result);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateInvoicePreviewAsync(default!);
     }
 
     [Fact]
@@ -333,7 +332,7 @@ public class GetAnnualUpgradeOfferQueryTests
         _logger.Received(1).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Any<object>(),
+            Arg.Is<object>(state => state.ToString()!.Contains("negotiated_term")),
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception?, string>>());
     }
@@ -498,7 +497,7 @@ public class GetAnnualUpgradeOfferQueryTests
         _logger.Received(1).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Any<object>(),
+            Arg.Is<object>(state => state.ToString()!.Contains("price_sponsorship")),
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception?, string>>());
     }
