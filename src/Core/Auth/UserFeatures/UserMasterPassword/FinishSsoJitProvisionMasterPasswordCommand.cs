@@ -62,13 +62,26 @@ public class FinishSsoJitProvisionMasterPasswordCommand : IFinishSsoJitProvision
             throw new BadRequestException("User not found within organization.");
         }
 
-        var updateUserData =
+        var updateUserDataTasks = new List<UpdateUserData>
+        {
             _masterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword(
                 user,
-                masterPasswordDataModel.ToSetInitialPasswordData());
+                masterPasswordDataModel.ToSetInitialPasswordData())
+        };
+
+        // Unlike the other set-password flows, this one provisions the user key rather than
+        // re-wrapping an existing one — the user.Key guard above establishes that the account has no
+        // key material yet — so the supplied key id is authoritative and written outright.
+        // A client that predates the key id field sends none. The account then picks one up from the
+        // backfill endpoint on a later sync rather than at provisioning.
+        var userKeyId = masterPasswordDataModel.MasterPasswordUnlock.ContainedKeyId();
+        if (userKeyId != null)
+        {
+            updateUserDataTasks.Add(_userRepository.SetUserKeyId(user.Id, userKeyId));
+        }
 
         await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, masterPasswordDataModel.AccountKeys,
-            [updateUserData]);
+            updateUserDataTasks);
 
         await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
 

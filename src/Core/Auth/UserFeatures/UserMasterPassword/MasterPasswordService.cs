@@ -67,7 +67,6 @@ internal class MasterPasswordService(
 
         user.Key = setInitialData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
         ApplyKdfStateOnUser(user, setInitialData.MasterPasswordUnlock.Kdf);
-        SetNewUserKeyId(user, setInitialData.MasterPasswordUnlock);
 
         // Set salt on the user
         user.MasterPasswordSalt = setInitialData.MasterPasswordUnlock.Salt;
@@ -311,14 +310,6 @@ internal class MasterPasswordService(
         user.KdfIterations = kdf.Iterations;
         user.KdfMemory = kdf.Memory;
         user.KdfParallelism = kdf.Parallelism;
-    }
-
-    private static void SetNewUserKeyId(User user, MasterPasswordUnlockData masterPasswordUnlock)
-    {
-        if (masterPasswordUnlock.ContainedKeyId() != null)
-        {
-            user.SetUserKeyId(masterPasswordUnlock.ContainedKeyId()!);
-        }
     }
 
     // A properly initialized or database-hydrated User should have at a minimum a non-default user ID.

@@ -157,6 +157,38 @@ public class RotateUserAccountKeysCommandTests
 
 
     [Theory, BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_ReplacesUserKeyId_AndOptsOutOfTheUnchangedCheck(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        PasswordChangeAndRotateUserAccountKeysData model)
+    {
+        // A rotation replaces the user key, so its key id is meant to change. Every other master
+        // password flow rejects that, so this one must opt out explicitly.
+        const string storedUserKeyId = "0123456789abcdef0123456789abcdef";
+        const string rotatedUserKeyId = "fedcba9876543210fedcba9876543210";
+
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model.BaseData);
+
+        user.UserKeyId = storedUserKeyId;
+        model.BaseData.UserKeyId = KeyId.FromHexEncodedString(rotatedUserKeyId);
+
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        var result = await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model);
+
+        Assert.Equal(IdentityResult.Success, result);
+        Assert.Equal(rotatedUserKeyId, user.UserKeyId);
+
+        await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
+            .PrepareUpdateExistingMasterPasswordAsync(
+                user,
+                Arg.Is<UpdateExistingPasswordData>(data => !data.ValidateUserKeyIdUnchanged));
+    }
+
+    [Theory, BitAutoData]
     public async Task UpdateAccountKeysAsync_PublicKeyChange_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, BaseRotateUserAccountKeysData model)
     {
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();

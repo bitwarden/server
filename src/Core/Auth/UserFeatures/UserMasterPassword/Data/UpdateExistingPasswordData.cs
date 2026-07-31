@@ -34,6 +34,12 @@ public class UpdateExistingPasswordData
     /// intentionally preserving existing sessions. Defaults to <c>true</c>.
     /// </summary>
     public bool RefreshStamp { get; set; } = true;
+    /// <summary>
+    /// When <c>true</c>, rejects a supplied key id that disagrees with the one recorded for the user.
+    /// Set to <c>false</c> only by key rotation, which replaces the user key and therefore
+    /// legitimately changes its key id. Defaults to <c>true</c>.
+    /// </summary>
+    public bool ValidateUserKeyIdUnchanged { get; set; } = true;
 
     public string? MasterPasswordHint { get; set; } = null;
 
@@ -65,5 +71,12 @@ public class UpdateExistingPasswordData
         // Validate Salt is unchanged for user
         MasterPasswordUnlock.ValidateSaltUnchangedForUser(user);
         MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
+
+        // Changing a master password re-wraps the same user key under a new master key, so its key
+        // id must not change. Key rotation opts out: it replaces the user key outright.
+        if (ValidateUserKeyIdUnchanged)
+        {
+            MasterPasswordUnlock.ValidateUserKeyIdUnchangedForUser(user);
+        }
     }
 }

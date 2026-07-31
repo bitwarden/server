@@ -29,6 +29,30 @@ public class MasterPasswordUnlockData
         }
     }
 
+    /// <summary>
+    /// Validates that a key id supplied alongside a re-wrap agrees with the one recorded for the
+    /// account. Setting or changing a master password produces a new wrapping of the same user key,
+    /// so the key id must not change.
+    /// <para>
+    /// A null on either side is not a disagreement: clients predating the field send no key id, and
+    /// legacy accounts have none recorded yet. Backfilling those is the job of
+    /// <see cref="Bit.Core.Repositories.IUserRepository.TrySetUserKeyIdAsync"/>, not of a password flow.
+    /// </para>
+    /// </summary>
+    public void ValidateUserKeyIdUnchangedForUser(User user)
+    {
+        var storedKeyId = user.GetUserKeyId();
+        if (storedKeyId == null || UserKeyId == null)
+        {
+            return;
+        }
+
+        if (storedKeyId != UserKeyId)
+        {
+            throw new BadRequestException("Invalid user key id.");
+        }
+    }
+
     public override bool Equals(object? obj)
     {
         if (obj is not MasterPasswordUnlockData other)

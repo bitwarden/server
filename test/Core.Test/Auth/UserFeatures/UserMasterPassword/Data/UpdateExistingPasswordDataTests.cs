@@ -26,7 +26,8 @@ public class UpdateExistingPasswordDataTests
     }
 
     private static UpdateExistingPasswordData BuildData(User user, string? saltOverride = null,
-        KdfSettings? kdfOverride = null)
+        KdfSettings? kdfOverride = null, string? userKeyIdOverride = null,
+        bool validateUserKeyIdUnchanged = true)
     {
         var salt = saltOverride ?? user.GetMasterPasswordSalt();
         var kdf = kdfOverride ?? new KdfSettings
@@ -38,11 +39,13 @@ public class UpdateExistingPasswordDataTests
         };
         return new UpdateExistingPasswordData
         {
+            ValidateUserKeyIdUnchanged = validateUserKeyIdUnchanged,
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
-                Kdf = kdf
+                Kdf = kdf,
+                UserKeyId = KeyId.FromHexEncodedString(userKeyIdOverride)
             },
             MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
@@ -190,5 +193,65 @@ public class UpdateExistingPasswordDataTests
         };
 
         Assert.Throws<ArgumentException>(() => data.ValidateDataForUser(user));
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Throws_WhenUserKeyIdDisagreesWithStoredOne()
+    {
+        // Changing a master password re-wraps the same user key, so a request naming a different
+        // key is rejected rather than allowed to rename the key the account is known to use.
+        var user = BuildValidUpdateUser();
+        user.UserKeyId = "0123456789abcdef0123456789abcdef";
+        var data = BuildData(user, userKeyIdOverride: "fedcba9876543210fedcba9876543210");
+
+        var exception = Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
+        Assert.Equal("Invalid user key id.", exception.Message);
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Accepts_WhenUserKeyIdMatchesStoredOne()
+    {
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var user = BuildValidUpdateUser();
+        user.UserKeyId = userKeyId;
+        var data = BuildData(user, userKeyIdOverride: userKeyId);
+
+        // Should not throw
+        data.ValidateDataForUser(user);
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Accepts_WhenAccountHasNoStoredUserKeyId()
+    {
+        var user = BuildValidUpdateUser();
+        user.UserKeyId = null;
+        var data = BuildData(user, userKeyIdOverride: "fedcba9876543210fedcba9876543210");
+
+        // Should not throw
+        data.ValidateDataForUser(user);
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Accepts_WhenClientSuppliesNoUserKeyId()
+    {
+        var user = BuildValidUpdateUser();
+        user.UserKeyId = "0123456789abcdef0123456789abcdef";
+        var data = BuildData(user);
+
+        // Should not throw
+        data.ValidateDataForUser(user);
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Accepts_MismatchedUserKeyId_WhenValidationIsOptedOut()
+    {
+        // Key rotation replaces the user key outright, so its key id is meant to change.
+        var user = BuildValidUpdateUser();
+        user.UserKeyId = "0123456789abcdef0123456789abcdef";
+        var data = BuildData(user, userKeyIdOverride: "fedcba9876543210fedcba9876543210",
+            validateUserKeyIdUnchanged: false);
+
+        // Should not throw
+        data.ValidateDataForUser(user);
     }
 }

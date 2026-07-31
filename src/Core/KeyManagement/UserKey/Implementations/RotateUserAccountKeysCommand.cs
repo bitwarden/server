@@ -97,12 +97,17 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         // - RefreshStamp = false: BaseRotateUserAccountKeysAsync already owns SecurityStamp rotation
         //   with V2-upgrade-token-aware logic; the service must not double-handle it.
         // - MasterPasswordHint populated from the request because a password change can update the hint.
+        // - ValidateUserKeyIdUnchanged = false: a rotation replaces the user key, so its key id is
+        //   meant to change. BaseRotateUserAccountKeysAsync has already assigned the new one above,
+        //   so the unchanged-check would compare the request against itself at best, and reject a
+        //   legitimate rotation at worst.
         var updatePasswordData = new UpdateExistingPasswordData
         {
             MasterPasswordAuthentication = model.MasterPasswordAuthenticationData,
             MasterPasswordUnlock = model.MasterPasswordUnlockData,
             ValidatePassword = true,
             RefreshStamp = false,
+            ValidateUserKeyIdUnchanged = false,
             MasterPasswordHint = model.MasterPasswordHint,
         };
         var preparedResult = await _masterPasswordService.PrepareUpdateExistingMasterPasswordAsync(user, updatePasswordData);
