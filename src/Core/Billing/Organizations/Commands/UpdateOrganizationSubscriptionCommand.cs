@@ -34,8 +34,9 @@ public interface IUpdateOrganizationSubscriptionCommand
     /// <param name="changeSet">The set of changes to apply to the subscription.</param>
     /// <param name="subscription">
     /// An optional pre-fetched subscription. When supplied and it carries the required expansions
-    /// (an expanded <see cref="Subscription.Customer"/>), it is reused to avoid a redundant Stripe
-    /// call; otherwise the subscription is re-fetched.
+    /// (an expanded <see cref="Subscription.Customer"/> and, if a schedule is attached, an expanded
+    /// <see cref="Subscription.Schedule"/>), it is reused to avoid a redundant Stripe call;
+    /// otherwise the subscription is re-fetched.
     /// </param>
     /// <returns>
     /// A <see cref="BillingCommandResult{T}"/> containing the updated <see cref="Subscription"/>

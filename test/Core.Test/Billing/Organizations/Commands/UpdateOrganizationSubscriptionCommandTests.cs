@@ -1579,6 +1579,16 @@ public class UpdateOrganizationSubscriptionCommandTests
         var organization = CreateOrganization();
         organization.PlanType = PlanType.TeamsMonthly;
 
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        // The migration path genuinely resolves (assignment, cohort, and both plans all stubbed),
+        // which under the old rule was enough on its own to take the migration branch.
+        SetupMigration(organization,
+            MigrationPathId.Enterprise2020AnnualToCurrent,
+            PlanType.EnterpriseAnnually2020, source,
+            PlanType.EnterpriseAnnually, target);
+
         var subscription = CreateSubscription(items: [("2023-teams-org-seat-monthly", "si_1", 5)]);
 
         var schedule = new SubscriptionSchedule
@@ -1601,15 +1611,6 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         SetupGetSubscription(organization, subscription);
         SetupUpdateSubscription(subscription);
-
-        // The organization is still in a migration cohort, which under the old rule was enough.
-        _assignmentRepository.GetByOrganizationIdAsync(organization.Id)
-            .Returns(new OrganizationPlanMigrationCohortAssignment
-            {
-                Id = Guid.NewGuid(),
-                OrganizationId = organization.Id,
-                CohortId = Guid.NewGuid()
-            });
 
         var changeSet = new OrganizationSubscriptionChangeSet
         {
