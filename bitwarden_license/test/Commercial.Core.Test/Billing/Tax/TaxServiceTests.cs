@@ -148,4 +148,17 @@ public class TaxServiceTests
 
         Assert.Equal(expected, result);
     }
+
+    [Theory]
+    [BitAutoData("MK", "MK1234567890123")]
+    [BitAutoData("GB", "123456789")]
+    public void GetStripeTaxCode_WithUnsupportedCountryOrNonMatchingTaxId_ReturnsNull(
+        string country,
+        string taxId,
+        SutProvider<TaxService> sutProvider)
+    {
+        var result = sutProvider.Sut.GetStripeTaxCode(country, taxId);
+
+        Assert.Null(result);
+    }
 }

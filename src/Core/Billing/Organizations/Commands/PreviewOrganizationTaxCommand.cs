@@ -8,6 +8,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Microsoft.Extensions.Logging;
@@ -39,7 +40,8 @@ public class PreviewOrganizationTaxCommand(
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
-    ISubscriptionDiscountService subscriptionDiscountService)
+    ISubscriptionDiscountService subscriptionDiscountService,
+    ITaxService taxService)
     : BaseBillingCommand<PreviewOrganizationTaxCommand>(logger), IPreviewOrganizationTaxCommand
 {
     private readonly ILogger<PreviewOrganizationTaxCommand> _logger = logger;
@@ -454,12 +456,23 @@ public class PreviewOrganizationTaxCommand(
             return options;
         }
 
+        var derivedTaxIdCode = taxService.GetStripeTaxCode(country, taxId.Value);
+
+        if (derivedTaxIdCode == null)
+        {
+            _logger.LogWarning(
+                "Could not derive Stripe tax ID type for country {Country}; falling back to client-supplied type {TaxIdType}",
+                country, taxId.Code);
+        }
+
+        var taxIdCode = derivedTaxIdCode ?? taxId.Code;
+
         options.CustomerDetails.TaxIds =
         [
-            new InvoiceCustomerDetailsTaxIdOptions { Type = taxId.Code, Value = taxId.Value }
+            new InvoiceCustomerDetailsTaxIdOptions { Type = taxIdCode, Value = taxId.Value }
         ];
 
-        if (taxId.Code == TaxIdType.SpanishNIF)
+        if (taxIdCode == TaxIdType.SpanishNIF)
         {
             options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
             {
