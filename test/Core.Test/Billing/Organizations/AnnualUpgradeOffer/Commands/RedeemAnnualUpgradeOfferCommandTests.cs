@@ -543,8 +543,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        // Stripe rejects releasing a schedule that is not active, so the attachment must reach
-        // ReleaseSchedule as null while the cohort assignment still drops.
         await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id, subscription.Id);
     }
 

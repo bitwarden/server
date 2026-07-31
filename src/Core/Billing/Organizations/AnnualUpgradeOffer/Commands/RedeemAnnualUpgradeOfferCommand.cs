@@ -132,9 +132,14 @@ public class RedeemAnnualUpgradeOfferCommand(
         // Releasing a price-migration schedule is intended: annual-latest is where the migration was
         // heading anyway. Passing the organization also drops its cohort assignment row, which is
         // required even when no schedule exists, because assignment precedes scheduling.
-        var scheduleToRelease = ownership == OrganizationSubscriptionScheduleOwnership.None
-            ? null
-            : subscription.Schedule;
+        SubscriptionSchedule? scheduleToRelease = ownership switch
+        {
+            OrganizationSubscriptionScheduleOwnership.None or
+                OrganizationSubscriptionScheduleOwnership.Foreign or
+                OrganizationSubscriptionScheduleOwnership.Unexpanded => null,
+            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade or
+                OrganizationSubscriptionScheduleOwnership.PriceMigration => subscription.Schedule
+        };
 
         await priceIncreaseScheduler.ReleaseSchedule(scheduleToRelease, organization.Id, subscription.Id);
 
@@ -145,7 +150,6 @@ public class RedeemAnnualUpgradeOfferCommand(
         {
             var phase1 = schedule.Phases[0];
 
-            // Both phases carry the marker; only presence is read.
             var sourcePlanType = organization.PlanType.ToString();
 
             // Phase 1 must round-trip its discounts. Omitting them is accepted by Stripe and
@@ -176,6 +180,7 @@ public class RedeemAnnualUpgradeOfferCommand(
                         Coupon = d.CouponId
                     })
                 ] : null,
+                // Only the marker's presence is read; the value is for triage.
                 Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = sourcePlanType },
                 ProrationBehavior = ProrationBehavior.None
             };
