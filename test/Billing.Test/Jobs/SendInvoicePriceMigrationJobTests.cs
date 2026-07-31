@@ -21,6 +21,7 @@ namespace Bit.Billing.Test.Jobs;
 public class SendInvoicePriceMigrationJobTests
 {
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _cohortAssignmentRepository;
+    private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IBusinessPlanMigrationCoordinator _businessPlanMigrationCoordinator;
@@ -31,6 +32,7 @@ public class SendInvoicePriceMigrationJobTests
     public SendInvoicePriceMigrationJobTests()
     {
         _cohortAssignmentRepository = Substitute.For<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        _cohortRepository = Substitute.For<IOrganizationPlanMigrationCohortRepository>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _stripeAdapter = Substitute.For<IStripeAdapter>();
         _businessPlanMigrationCoordinator = Substitute.For<IBusinessPlanMigrationCoordinator>();
@@ -39,8 +41,13 @@ public class SendInvoicePriceMigrationJobTests
 
         _featureService.IsEnabled(FeatureFlagKeys.PM38728_SendInvoicePriceMigration).Returns(true);
 
+        // Candidates belong to a migration cohort unless a test overrides with a churn-only or
+        // missing cohort; assignments are created with random cohort ids, so match any.
+        _cohortRepository.GetByIdAsync(Arg.Any<Guid>()).Returns(Cohort());
+
         _sut = new SendInvoicePriceMigrationJob(
             _cohortAssignmentRepository,
+            _cohortRepository,
             _organizationRepository,
             _stripeAdapter,
             _businessPlanMigrationCoordinator,
@@ -414,6 +421,76 @@ public class SendInvoicePriceMigrationJobTests
     }
 
     [Fact]
+    public async Task ExecuteJobAsync_ChurnOnlyCohort_SkipsWithoutStripeCall()
+    {
+        // Arrange: a null MigrationPathId marks a churn-only cohort — nothing to schedule, and the
+        // organization must not receive a renewal price-change email.
+        var organizationId = Guid.NewGuid();
+        var assignment = Assignment(organizationId);
+
+        _cohortAssignmentRepository.GetSendInvoiceCandidatesInWindowAsync(Arg.Any<int>(), Arg.Any<int>())
+            .Returns([assignment]);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(Organization(organizationId, "sub_123"));
+        _cohortRepository.GetByIdAsync(assignment.CohortId).Returns(Cohort(migrationPathId: null));
+
+        // Act
+        await _sut.Execute(CreateContext());
+
+        // Assert
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default, default);
+        await _businessPlanMigrationCoordinator.DidNotReceiveWithAnyArgs().ExecuteAsync(default, default);
+    }
+
+    [Fact]
+    public async Task ExecuteJobAsync_CohortNoLongerExists_SkipsWithoutStripeCall()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var assignment = Assignment(organizationId);
+
+        _cohortAssignmentRepository.GetSendInvoiceCandidatesInWindowAsync(Arg.Any<int>(), Arg.Any<int>())
+            .Returns([assignment]);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(Organization(organizationId, "sub_123"));
+        _cohortRepository.GetByIdAsync(assignment.CohortId).Returns((OrganizationPlanMigrationCohort?)null);
+
+        // Act
+        await _sut.Execute(CreateContext());
+
+        // Assert
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default, default);
+        await _businessPlanMigrationCoordinator.DidNotReceiveWithAnyArgs().ExecuteAsync(default, default);
+    }
+
+    [Fact]
+    public async Task ExecuteJobAsync_SchedulerDeclines_LogsError()
+    {
+        // Arrange: NotScheduled can mean a Stripe schedule exists from a previous run but the
+        // ScheduledDate stamp failed — the customer would be migrated without notice, so it alerts.
+        var organizationId = Guid.NewGuid();
+        var organization = Organization(organizationId, "sub_123");
+        var subscription = Subscription("sub_123", StripeConstants.CollectionMethod.SendInvoice,
+            DateTime.UtcNow.AddDays(10));
+
+        _cohortAssignmentRepository.GetSendInvoiceCandidatesInWindowAsync(Arg.Any<int>(), Arg.Any<int>())
+            .Returns([Assignment(organizationId)]);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _businessPlanMigrationCoordinator.ExecuteAsync(organization, subscription)
+            .Returns(BusinessPlanMigrationResult.NotScheduled);
+
+        // Act
+        await _sut.Execute(CreateContext());
+
+        // Assert
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString()!.Contains("declined the business plan price migration")),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception, string>>());
+    }
+
+    [Fact]
     public async Task ExecuteJobAsync_OneOrganizationThrows_ContinuesProcessingOthers()
     {
         // Arrange
@@ -770,6 +847,16 @@ public class SendInvoicePriceMigrationJobTests
         context.CancellationToken.Returns(CancellationToken.None);
         return context;
     }
+
+    private static OrganizationPlanMigrationCohort Cohort(
+        MigrationPathId? migrationPathId = MigrationPathId.Teams2020AnnualToCurrent) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "test-cohort",
+            MigrationPathId = migrationPathId,
+            IsActive = true
+        };
 
     private static OrganizationPlanMigrationCohortAssignment Assignment(Guid organizationId) =>
         new()

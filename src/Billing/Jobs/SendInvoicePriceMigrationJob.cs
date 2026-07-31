@@ -30,6 +30,7 @@ namespace Bit.Billing.Jobs;
 /// </remarks>
 public class SendInvoicePriceMigrationJob(
     IOrganizationPlanMigrationCohortAssignmentRepository cohortAssignmentRepository,
+    IOrganizationPlanMigrationCohortRepository cohortRepository,
     IOrganizationRepository organizationRepository,
     IStripeAdapter stripeAdapter,
     IBusinessPlanMigrationCoordinator businessPlanMigrationCoordinator,
@@ -148,6 +149,27 @@ public class SendInvoicePriceMigrationJob(
             _logger.LogWarning(
                 "Organization ({OrganizationId}) has no gateway subscription; skipping send-invoice price migration",
                 organization.Id);
+            return false;
+        }
+
+        // Selection filters on cohort activity but not migration path, so churn-only cohorts (null
+        // MigrationPathId) reach this sweep. They have nothing to schedule and must not receive a
+        // renewal price-change email; skip them before spending a Stripe fetch.
+        var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+
+        if (cohort == null)
+        {
+            _logger.LogWarning(
+                "Cohort ({CohortId}) for cohort assignment ({AssignmentId}) no longer exists; skipping send-invoice price migration",
+                assignment.CohortId, assignment.Id);
+            return false;
+        }
+
+        if (cohort.MigrationPathId == null)
+        {
+            _logger.LogInformation(
+                "Organization ({OrganizationId}) belongs to churn-only cohort ({CohortId}); skipping send-invoice price migration",
+                organization.Id, cohort.Id);
             return false;
         }
 
@@ -271,7 +293,10 @@ public class SendInvoicePriceMigrationJob(
                     return true;
                 }
             case BusinessPlanMigrationResult.NotScheduled:
-                _logger.LogWarning(
+                // A decline here can also mean a Stripe schedule was created on a previous run but the
+                // ScheduledDate stamp failed afterwards — a half-state where the customer will be
+                // migrated without ever being notified unless someone intervenes. Error so it alerts.
+                _logger.LogError(
                     "The price increase scheduler declined the business plan price migration for Organization ({OrganizationId}) subscription ({SubscriptionId}); check that the {BusinessMigrationFlag} feature flag is enabled, the cohort is active, and no existing Stripe schedule is missing its ScheduledDate stamp",
                     organization.Id, subscription.Id, FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
                 return false;
