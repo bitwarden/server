@@ -1,4 +1,5 @@
 ﻿using Bit.HttpExtensions;
+using Bit.Services.Pam.Enums;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
