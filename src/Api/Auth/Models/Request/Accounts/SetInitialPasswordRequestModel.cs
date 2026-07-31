@@ -80,14 +80,22 @@ public class SetInitialPasswordRequestModel : IValidatableObject
                 [nameof(AccountKeys), nameof(Keys)]);
         }
 
-        // If both MPAD and legacy MasterPasswordHash are present, they must agree — reject
-        // ambiguous input rather than silently letting one win via the ?? fallback.
+        // If both modern and legacy fields are present for the same value, they must agree —
+        // reject ambiguous input rather than silently letting the modern field win via ?? fallback.
         if (MasterPasswordAuthentication != null && MasterPasswordHash != null
             && MasterPasswordAuthentication.MasterPasswordAuthenticationHash != MasterPasswordHash)
         {
             yield return new ValidationResult(
                 $"{nameof(MasterPasswordAuthentication.MasterPasswordAuthenticationHash)} and {nameof(MasterPasswordHash)} are both present but differ. Provide only one.",
                 [nameof(MasterPasswordAuthentication), nameof(MasterPasswordHash)]);
+        }
+
+        if (MasterPasswordUnlock != null && Key != null
+            && MasterPasswordUnlock.MasterKeyWrappedUserKey != Key)
+        {
+            yield return new ValidationResult(
+                $"{nameof(MasterPasswordUnlock.MasterKeyWrappedUserKey)} and {nameof(Key)} are both present but differ. Provide only one.",
+                [nameof(MasterPasswordUnlock), nameof(Key)]);
         }
 
         if (HasAuthAndUnlockData())

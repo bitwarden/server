@@ -467,6 +467,88 @@ public class SetInitialPasswordRequestModelTests
             r.ErrorMessage.Contains("both present but differ"));
     }
 
+    [Theory]
+    [BitAutoData]
+    public void Validate_WithMpudAndLegacyKey_Differing_ReturnsValidationError(string orgIdentifier)
+    {
+        // Arrange — both MPUD.MasterKeyWrappedUserKey and legacy Key present with different values
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            Key = "legacyKey",
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt"
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterKeyWrappedUserKey = "differentKey",
+                Salt = "salt"
+            }
+        };
+
+        // Act
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert
+        Assert.Contains(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("both present but differ") &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.MasterPasswordUnlock)) &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.Key)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Validate_WithMpudAndLegacyKey_Matching_ReturnsNoMismatchError(string orgIdentifier)
+    {
+        // Arrange — both present with the same value
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            Key = "sameKey",
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt"
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterKeyWrappedUserKey = "sameKey",
+                Salt = "salt"
+            }
+        };
+
+        // Act
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert — no mismatch error
+        Assert.DoesNotContain(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("both present but differ"));
+    }
+
     #endregion
 
     #region HasAuthAndUnlockData Tests
