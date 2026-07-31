@@ -78,12 +78,6 @@ public interface IUserRepository : IRepository<User, Guid>
 
     /// <summary>
     /// Sets the master password and KDF for a user.
-    /// <para>
-    /// A key id on <paramref name="masterPasswordUnlockData"/> is applied fill-only: setting a master
-    /// password re-wraps the existing user key rather than replacing it, so it records a key id the
-    /// account does not have yet but never renames one it already has. Use <see cref="SetUserKeyId"/>
-    /// for flows that establish the user key itself.
-    /// </para>
     /// </summary>
     /// <param name="userId">The user identifier.</param>
     /// <param name="masterPasswordUnlockData">Data for unlocking with the master password.</param>

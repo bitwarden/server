@@ -494,10 +494,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
-                    MasterPasswordSalt = masterPasswordUnlockData.Salt,
-                    // The procedure applies this fill-only: it records a key id the account does not
-                    // have yet but never renames one it already has.
-                    UserKeyId = masterPasswordUnlockData.UserKeyId?.ToString()
+                    MasterPasswordSalt = masterPasswordUnlockData.Salt
                     // TODO (PM-35501): Add SecurityStamp so the rotation done in
                     // MasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword
                     // is persisted.
@@ -549,7 +546,6 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     Key = registerFinishData.MasterKeyWrappedUserKey,
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
-                    UserKeyId = registerFinishData.UserKeyId?.ToString(),
                 },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);

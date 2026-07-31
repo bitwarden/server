@@ -7,8 +7,7 @@ CREATE PROCEDURE [dbo].[User_UpdateMasterPasswordUnlockData]
     @MasterPasswordSalt NVARCHAR(256) = NULL,
     @Key VARCHAR(MAX),
     @RevisionDate DATETIME2(7),
-    @AccountRevisionDate DATETIME2(7),
-    @UserKeyId VARCHAR(32) = NULL
+    @AccountRevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -23,8 +22,7 @@ BEGIN
         [KdfParallelism] = @KdfParallelism,
         [MasterPasswordSalt] = @MasterPasswordSalt,
         [RevisionDate] = @RevisionDate,
-        [AccountRevisionDate] = @AccountRevisionDate,
-        [UserKeyId] = @UserKeyId
+        [AccountRevisionDate] = @AccountRevisionDate
     WHERE
         [Id] = @Id
 END

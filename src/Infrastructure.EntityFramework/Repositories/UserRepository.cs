@@ -590,11 +590,6 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
             userEntity.MasterPasswordSalt = masterPasswordUnlockData.Salt;
-            // Fill-only, matching the COALESCE in User_UpdateMasterPassword: setting a master password
-            // re-wraps the existing user key rather than replacing it, so it may record a key id the
-            // account does not have yet but must never rename one it already has.
-            userEntity.UserKeyId ??= masterPasswordUnlockData.UserKeyId?.ToString();
-
             // TODO (PM-35501): Persist SecurityStamp so the rotation done in
             // MasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword
             // is persisted.
@@ -636,7 +631,6 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.Key = registerFinishData.MasterKeyWrappedUserKey;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
-            userEntity.UserKeyId = registerFinishData.UserKeyId?.ToString();
 
             await dbContext.SaveChangesAsync();
         };

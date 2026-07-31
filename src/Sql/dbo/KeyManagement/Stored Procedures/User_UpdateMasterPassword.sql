@@ -9,8 +9,7 @@ CREATE PROCEDURE [dbo].[User_UpdateMasterPassword]
     @KdfParallelism INT = NULL,
     @RevisionDate DATETIME2(7),
     @AccountRevisionDate DATETIME2(7),
-    @MasterPasswordSalt NVARCHAR(256) = NULL,
-    @UserKeyId VARCHAR(32) = NULL
+    @MasterPasswordSalt NVARCHAR(256) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -27,11 +26,7 @@ BEGIN
         [KdfParallelism] = @KdfParallelism,
         [RevisionDate] = @RevisionDate,
         [AccountRevisionDate] = @AccountRevisionDate,
-        [MasterPasswordSalt] = @MasterPasswordSalt,
-        -- Fill-only: setting a master password re-wraps the existing user key rather than replacing
-        -- it, so it may record a key id the account does not have yet but must never rename one it
-        -- already has.
-        [UserKeyId] = COALESCE([UserKeyId], @UserKeyId)
+        [MasterPasswordSalt] = @MasterPasswordSalt
     WHERE
         [Id] = @Id
 END
