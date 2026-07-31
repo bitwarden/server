@@ -1,9 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Helpers;
-using Bit.Core.Billing.Organizations.PlanMigration;
+using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
@@ -18,7 +17,7 @@ using static StripeConstants;
 
 public class RedeemAnnualUpgradeOfferCommand(
     ILogger<RedeemAnnualUpgradeOfferCommand> logger,
-    IGetAnnualUpgradeOfferQuery getOfferQuery,
+    IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
     IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter)
@@ -31,10 +30,12 @@ public class RedeemAnnualUpgradeOfferCommand(
 
     public Task<BillingCommandResult<None>> Run(Organization organization) => HandleAsync<None>(async () =>
     {
-        // Re-validate eligibility through the same query the GET endpoint uses.
-        var offer = await getOfferQuery.Run(organization);
-        if (offer is null)
+        // Mutually exclusive with the churn-mitigation coupon offer.
+        if (await getChurnOfferCohortMembershipQuery.Run(organization) is not null)
         {
+            _logger.LogInformation(
+                "{Command}: Organization ({OrganizationId}) is in a churn-offer cohort; refusing the annual upgrade",
+                CommandName, organization.Id);
             return new BadRequest("Offer is no longer available.");
         }
 
@@ -52,82 +53,26 @@ public class RedeemAnnualUpgradeOfferCommand(
             return DefaultConflict;
         }
 
-        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
-        // proceeding would silently drop the organization's pre-existing discounts. A discount
-        // with no coupon ID is just as unusable: the phase-2 filter below drops it, which would
-        // silently let the customer-level coupon resurrect instead of failing loudly.
-        if (subscription.Discounts is { Count: > 0 } &&
-            subscription.Discounts.Any(d => d == null || string.IsNullOrEmpty(d.Coupon?.Id)))
-        {
-            _logger.LogError(
-                "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded without expanding 'discounts', or has a discount with no coupon; refusing to rebuild its schedule",
-                CommandName, subscription.Id, organization.Id);
-            return DefaultConflict;
-        }
-
-        if (subscription.Items.Data.Any(item =>
-                item.Discounts is { Count: > 0 } && item.Discounts.Any(d => d is null)))
-        {
-            _logger.LogError(
-                "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded without expanding item discounts; refusing to rebuild its schedule",
-                CommandName, subscription.Id, organization.Id);
-            return DefaultConflict;
-        }
-
         var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
         var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
 
-        // Map every line item to its annual-latest price before any mutation: a redemption
-        // that cannot be fully mapped must fail while the organization's existing schedule
-        // and cohort assignment are still intact.
-        var phase2Items = new List<SubscriptionSchedulePhaseItemOptions>();
-        foreach (var item in subscription.Items.Data)
+        var eligibility = AnnualUpgradeEligibilityMapper.Map(subscription, currentPlan, annualLatestPlan);
+        if (!eligibility.IsEligible)
         {
-            var targetPriceId = OrganizationPlanMigrationPriceMapper.MapOrNull(item.Price.Id, currentPlan, annualLatestPlan);
-            if (targetPriceId is null)
-            {
-                _logger.LogWarning(
-                    "{Command}: Subscription ({SubscriptionId}) line item price ({PriceId}) has no annual-latest mapping for Organization ({OrganizationId})",
-                    CommandName, subscription.Id, item.Price.Id, organization.Id);
-                return DefaultConflict;
-            }
-
-            // An item-bound coupon does not travel with the customer or subscription discounts.
-            // Out-of-scope coupons are accepted and applied as zero, so copying can only help.
-            var itemDiscounts = item.Discounts?
-                .Where(discount => !string.IsNullOrEmpty(discount?.Coupon?.Id))
-                .Select(discount => new SubscriptionSchedulePhaseItemDiscountOptions
-                {
-                    Coupon = discount.Coupon.Id
-                })
-                .ToList();
-
-            phase2Items.Add(new SubscriptionSchedulePhaseItemOptions
-            {
-                Price = targetPriceId,
-                Quantity = item.Quantity,
-                Discounts = itemDiscounts is { Count: > 0 } ? itemDiscounts : null
-            });
+            return Ineligible(organization, subscription, eligibility);
         }
 
-        // The offer query suppresses this at page load; this is the backstop for a schedule that appeared since.
+        var phase2Items = eligibility.Lines
+            .Select(line => new SubscriptionSchedulePhaseItemOptions
+            {
+                Price = line.TargetPriceId,
+                Quantity = line.Item.Quantity,
+                Discounts = ItemDiscounts(line.Item)
+            })
+            .ToList();
+
+        // Eligibility above already excluded Unexpanded, Foreign, and AnnualUpgrade ownership; only None and PriceMigration remain.
         var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
-
-        switch (ownership)
-        {
-            case OrganizationSubscriptionScheduleOwnership.Unexpanded:
-                _logger.LogError(
-                    "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; refusing to rebuild its schedule",
-                    CommandName, subscription.Id, organization.Id, subscription.ScheduleId);
-                return DefaultConflict;
-
-            case OrganizationSubscriptionScheduleOwnership.Foreign:
-                _logger.LogWarning(
-                    "{Command}: Refusing to release unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}) for Organization ({OrganizationId}); phase metadata keys present: {MetadataKeys}",
-                    CommandName, subscription.ScheduleId, subscription.Id, organization.Id,
-                    string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(subscription.Schedule)));
-                return DefaultConflict;
-        }
 
         // Releasing a price-migration schedule is intended: annual-latest is where the migration was
         // heading anyway. Passing the organization also drops its cohort assignment row, which is
@@ -241,4 +186,52 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         return new None();
     });
+
+    // An item-bound coupon does not travel with the customer or subscription discounts.
+    // Out-of-scope coupons are accepted and applied as zero, so copying can only help.
+    private static List<SubscriptionSchedulePhaseItemDiscountOptions>? ItemDiscounts(SubscriptionItem item)
+    {
+        var discounts = item.Discounts?
+            .Where(discount => !string.IsNullOrEmpty(discount?.Coupon?.Id))
+            .Select(discount => new SubscriptionSchedulePhaseItemDiscountOptions { Coupon = discount!.Coupon.Id })
+            .ToList();
+
+        return discounts is { Count: > 0 } ? discounts : null;
+    }
+
+    private BillingCommandResult<None> Ineligible(
+        Organization organization, Subscription subscription, AnnualUpgradeEligibility eligibility)
+    {
+        switch (eligibility.Reason)
+        {
+            case AnnualUpgradeIneligibleReason.UnexpandedDiscounts:
+            case AnnualUpgradeIneligibleReason.UnexpandedSchedule:
+                _logger.LogError(
+                    "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was loaded without the expansions this command requires ({Reason}); refusing to rebuild its schedule",
+                    CommandName, subscription.Id, organization.Id, eligibility.Reason);
+                return DefaultConflict;
+
+            case AnnualUpgradeIneligibleReason.ForeignSchedule:
+                _logger.LogWarning(
+                    "{Command}: Refusing to release unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}) for Organization ({OrganizationId}); phase metadata keys present: {MetadataKeys}",
+                    CommandName, subscription.ScheduleId, subscription.Id, organization.Id,
+                    string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(subscription.Schedule)));
+                return DefaultConflict;
+
+            case AnnualUpgradeIneligibleReason.AlreadyScheduled:
+                _logger.LogInformation(
+                    "{Command}: Organization ({OrganizationId}) already redeemed the annual upgrade offer",
+                    CommandName, organization.Id);
+                return new BadRequest("Offer is no longer available.");
+
+            case AnnualUpgradeIneligibleReason.UnmappableLine:
+                _logger.LogWarning(
+                    "{Command}: Subscription ({SubscriptionId}) line item price ({PriceId}) has no annual-latest mapping for Organization ({OrganizationId})",
+                    CommandName, subscription.Id, eligibility.UnmappablePriceId, organization.Id);
+                return new BadRequest("Offer is no longer available.");
+
+            default:
+                return new BadRequest("Offer is no longer available.");
+        }
+    }
 }

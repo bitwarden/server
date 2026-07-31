@@ -2,8 +2,9 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
-using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
-using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Models;
+using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
@@ -23,7 +24,8 @@ public class RedeemAnnualUpgradeOfferCommandTests
     private static readonly DateTime _phase1Start = new(2026, 7, 6, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _phase1End = new(2026, 8, 6, 0, 0, 0, DateTimeKind.Utc);
 
-    private readonly IGetAnnualUpgradeOfferQuery _getOfferQuery = Substitute.For<IGetAnnualUpgradeOfferQuery>();
+    private readonly IGetChurnOfferCohortMembershipQuery _getChurnOfferCohortMembershipQuery =
+        Substitute.For<IGetChurnOfferCohortMembershipQuery>();
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
@@ -31,9 +33,10 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
     public RedeemAnnualUpgradeOfferCommandTests()
     {
+        _getChurnOfferCohortMembershipQuery.Run(Arg.Any<Organization>()).Returns((ChurnOfferCohortMembership?)null);
         _command = new RedeemAnnualUpgradeOfferCommand(
             Substitute.For<ILogger<RedeemAnnualUpgradeOfferCommand>>(),
-            _getOfferQuery,
+            _getChurnOfferCohortMembershipQuery,
             _priceIncreaseScheduler,
             _pricingClient,
             _stripeAdapter);
@@ -53,8 +56,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
         Customer? customer = null,
         List<SubscriptionSchedulePhaseDiscount>? phase1Discounts = null)
     {
-        _getOfferQuery.Run(organization).Returns(new AnnualUpgradeOfferResult(60m, 48m, 12m));
-
         var subscription = new Subscription
         {
             Id = "sub_123",
@@ -91,8 +92,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
     /// </summary>
     private Subscription SetupSubscription(Organization organization)
     {
-        _getOfferQuery.Run(organization).Returns(new AnnualUpgradeOfferResult(60m, 48m, 12m));
-
         var subscription = new Subscription
         {
             Id = "sub_123",
@@ -106,10 +105,19 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_QueryReturnsNullOnRevalidation_ReturnsFailure_StripeNotMutated()
+    public async Task Run_ChurnCohortMember_ReturnsOfferNoLongerAvailable_StripeNotMutated()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        _getOfferQuery.Run(organization).Returns((AnnualUpgradeOfferResult?)null);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+        SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
+        _getChurnOfferCohortMembershipQuery.Run(organization).Returns(
+            new ChurnOfferCohortMembership(
+                new OrganizationPlanMigrationCohortAssignment { Id = Guid.NewGuid(), OrganizationId = organization.Id, CohortId = Guid.NewGuid() },
+                new OrganizationPlanMigrationCohort { Id = Guid.NewGuid(), Name = "cohort", IsActive = true, ChurnDiscountCouponCode = "coupon" }));
 
         var result = await _command.Run(organization);
 
@@ -117,6 +125,24 @@ public class RedeemAnnualUpgradeOfferCommandTests
         Assert.Equal("Offer is no longer available.", result.AsT1.Response);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
         await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_RequestsNoInvoicePreviewAndExactlyOneSubscriptionRetrieve()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+        SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateInvoicePreviewAsync(default!);
+        await _stripeAdapter.Received(1).GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
@@ -193,7 +219,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_UnmappableLineItem_ReturnsConflict_WithoutMutatingStripe()
+    public async Task Run_UnmappableLineItem_ReturnsOfferNoLongerAvailable_WithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         var monthlyPlan = new TeamsPlan(false);
@@ -209,8 +235,10 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var result = await _command.Run(organization);
 
-        Assert.True(result.IsT2);
-        Assert.Equal("We had a problem switching your billing to annual. Please contact support for assistance.", result.AsT2.Response);
+        // The eligibility mapper classifies an unmappable line as a routine "offer expired"
+        // case, not an operator-facing conflict.
+        Assert.True(result.IsT1);
+        Assert.Equal("Offer is no longer available.", result.AsT1.Response);
         // A redemption that cannot be fully mapped must fail before the org's existing
         // schedule and cohort assignment are destroyed.
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
@@ -250,7 +278,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
     public async Task Run_UnexpandedDiscounts_ReturnsConflict_WithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        _getOfferQuery.Run(organization).Returns(new AnnualUpgradeOfferResult(60m, 48m, 12m));
 
         // Construct the subscription via the same JSON path Stripe.NET uses on API responses:
         // when "discounts" is not in the request's Expand list, the SDK populates Discounts with
@@ -280,7 +307,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
     public async Task Run_UnexpandedItemDiscounts_ReturnsConflict_WithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        _getOfferQuery.Run(organization).Returns(new AnnualUpgradeOfferResult(60m, 48m, 12m));
 
         // Same JSON-deserialization approach as the subscription-level unexpanded-discounts test
         // above: when "items.data.discounts.coupon" is not in the request's Expand list,
@@ -362,7 +388,6 @@ public class RedeemAnnualUpgradeOfferCommandTests
     public async Task Run_SubscriptionNotFound_ReturnsConflict()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
-        _getOfferQuery.Run(organization).Returns(new AnnualUpgradeOfferResult(60m, 48m, 12m));
         _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns<Subscription>(_ => throw new StripeException { StripeError = new StripeError { Code = ErrorCodes.ResourceMissing } });
 
@@ -404,11 +429,9 @@ public class RedeemAnnualUpgradeOfferCommandTests
     [Fact]
     public async Task Run_OfferValidButPlanTypeHasNoAnnualMapping_ReturnsConflict_WithoutFetchingSubscription()
     {
-        // Re-validation still surfaces an offer, but the org's plan type has no annual-latest
-        // mapping (e.g. it is already annual). The command must fail closed with the default
-        // conflict before touching Stripe.
+        // The org's plan type has no annual-latest mapping (e.g. it is already annual). The
+        // command must fail closed with the default conflict before touching Stripe.
         var organization = CreateOrganization(PlanType.TeamsAnnually);
-        _getOfferQuery.Run(organization).Returns(new AnnualUpgradeOfferResult(60m, 48m, 12m));
 
         var result = await _command.Run(organization);
 
@@ -483,9 +506,11 @@ public class RedeemAnnualUpgradeOfferCommandTests
     public async Task Run_PriceMigrationSchedule_ReleasesResolvedSchedule()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        var monthlyPlan = new Teams2020Plan(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-        var (subscription, _) = SetupRedeemableSubscription(organization, []);
+        var (subscription, _) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 1 }]);
         var schedule = new SubscriptionSchedule
         {
             Id = "sub_sched_migration",
@@ -511,8 +536,10 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_AnnualUpgradeSchedule_ReleasesResolvedSchedule()
+    public async Task Run_AnnualUpgradeSchedule_ReturnsOfferNoLongerAvailable_WithoutMutatingStripe()
     {
+        // AnnualUpgrade ownership means the org already redeemed; the eligibility mapper
+        // classifies this as AlreadyScheduled and refuses to touch the schedule again.
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
@@ -537,17 +564,21 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var result = await _command.Run(organization);
 
-        Assert.True(result.IsT0);
-        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(schedule, organization.Id);
+        Assert.True(result.IsT1);
+        Assert.Equal("Offer is no longer available.", result.AsT1.Response);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleAsync(default!);
     }
 
     [Fact]
     public async Task Run_NoSchedule_StillDropsCohortAssignment()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        var monthlyPlan = new Teams2020Plan(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-        var (subscription, _) = SetupRedeemableSubscription(organization, []);
+        var (subscription, _) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 1 }]);
 
         var result = await _command.Run(organization);
 
@@ -559,9 +590,11 @@ public class RedeemAnnualUpgradeOfferCommandTests
     public async Task Run_NonActiveSchedule_ReleasesNothingButStillDropsCohortAssignment()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        var monthlyPlan = new Teams2020Plan(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-        var (subscription, _) = SetupRedeemableSubscription(organization, []);
+        var (subscription, _) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 1 }]);
         var schedule = new SubscriptionSchedule
         {
             Id = "sub_sched_canceled",
