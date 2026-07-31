@@ -141,7 +141,7 @@ public class RedeemAnnualUpgradeOfferCommand(
                 OrganizationSubscriptionScheduleOwnership.PriceMigration => subscription.Schedule
         };
 
-        await priceIncreaseScheduler.ReleaseSchedule(scheduleToRelease, organization.Id, subscription.Id);
+        await priceIncreaseScheduler.ReleaseSchedule(scheduleToRelease, organization.Id);
 
         var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
             new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });

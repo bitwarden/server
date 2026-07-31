@@ -80,20 +80,12 @@ public interface IPriceIncreaseScheduler
     Task Release(string customerId, string subscriptionId, Guid? organizationId = null);
 
     /// <summary>
-    /// Releases an already-resolved subscription schedule, skipping the schedule lookup that
-    /// <see cref="Release(string, string, Guid?)"/> performs. Pass null when the caller has
-    /// established that no schedule is attached; the cohort assignment is still dropped when
-    /// <paramref name="organizationId"/> is supplied. Callers that have already classified the
-    /// schedule should prefer this overload so ownership is decided once.
+    /// Releases an already-resolved schedule, skipping the lookup <see cref="Release(string, string, Guid?)"/>
+    /// performs, so a caller that has classified the schedule does not resolve it twice. Pass null when no
+    /// schedule is attached; the cohort assignment is still dropped when <paramref name="organizationId"/> is
+    /// supplied.
     /// </summary>
-    /// <param name="activeSchedule">The active schedule to release, or null when none is attached.</param>
-    /// <param name="organizationId">When supplied, the organization's cohort assignment is dropped.</param>
-    /// <param name="subscriptionId">
-    /// The Stripe subscription ID, used only to identify the subscription in log messages when
-    /// <paramref name="activeSchedule"/> is null and cleanup fails. Callers that already have the
-    /// subscription ID in scope should pass it so manual-cleanup logs stay actionable.
-    /// </param>
-    Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null, string? subscriptionId = null);
+    Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null);
 }
 
 public class PriceIncreaseScheduler(
@@ -240,12 +232,11 @@ public class PriceIncreaseScheduler(
         var activeSchedule = schedules.Data.FirstOrDefault(s =>
             s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
 
-        await ReleaseSchedule(activeSchedule, organizationId, subscriptionId);
+        await ReleaseSchedule(activeSchedule, organizationId);
     }
 
-    public async Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null, string? subscriptionId = null)
+    public async Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null)
     {
-        subscriptionId ??= activeSchedule?.SubscriptionId;
         try
         {
             if (activeSchedule != null)
@@ -266,16 +257,16 @@ public class PriceIncreaseScheduler(
                 catch (Exception ex)
                 {
                     logger.LogError(ex,
-                        "Released the subscription schedule for subscription {SubscriptionId} but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
-                        subscriptionId, organizationId.Value);
+                        "Released the subscription schedule but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
+                        organizationId.Value);
                 }
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to release subscription schedule for subscription {SubscriptionId}. Manual release required.",
-                subscriptionId);
+                "Failed to release subscription schedule ({ScheduleId}). Manual release required.",
+                activeSchedule?.Id);
             throw;
         }
     }

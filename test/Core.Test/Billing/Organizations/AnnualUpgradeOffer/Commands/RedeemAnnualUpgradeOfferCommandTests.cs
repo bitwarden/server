@@ -141,7 +141,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
                 o.Expand.Contains("schedule")));
         // Passing organization.Id (not null) is what drops the org's cohort assignment inside
         // ReleaseSchedule -- switching to annual also exits the cohort.
-        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id, subscription.Id);
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id);
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(schedule.Id, Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
             o.EndBehavior == SubscriptionScheduleEndBehavior.Release &&
             o.Phases.Count == 2 &&
@@ -460,7 +460,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT2);
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default, default);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
         await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleAsync(default!);
     }
 
@@ -475,7 +475,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT2);
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default, default);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
         await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleAsync(default!);
     }
 
@@ -507,7 +507,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(schedule, organization.Id, subscription.Id);
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(schedule, organization.Id);
     }
 
     [Fact]
@@ -521,7 +521,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id, subscription.Id);
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id);
     }
 
     [Fact]
@@ -543,7 +543,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id, subscription.Id);
+        await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id);
     }
 
     [Fact]
