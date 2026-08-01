@@ -1157,6 +1157,150 @@ public class StripePaymentServiceTests
         Assert.True(item.AddonSubscriptionItem);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_AnnualUpgradeSchedule_DoesNotOverrideCurrentLineItems(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — an annual-upgrade schedule (PM-38333) has the same two-phase, future-phase-2
+        // shape as a price-migration schedule, but Phase 2 carries next year's annual amount, not a
+        // same-cadence reprice of the live monthly line. The annual-upgrade surface is
+        // PendingAnnualUpgrade, not this repricing path — a future reader must not "fix" this gate away.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_teams", Nickname = "Teams Monthly", Amount = 800, Interval = "month" },
+                        Quantity = 1
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly2020" },
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 9600, ProductId = "prod_teams", Nickname = "Teams Annual" }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — the live monthly amount survives untouched; the schedule's annual amount never
+        // reaches SubscriptionInfo.Subscription.Items via this path.
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal(8.00m, item.Amount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_ForeignSchedule_DoesNotOverrideCurrentLineItems(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — a hand-authored (Dashboard) schedule carries neither annual-upgrade nor
+        // migration-cohort metadata. This cohort's behavior is deliberately narrowed by the
+        // ownership gate: it stops being repriced on this endpoint, even though it was before.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_teams", Nickname = "Teams Monthly", Amount = 800, Interval = "month" },
+                        Quantity = 1
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { ["negotiated_term"] = "3y" },
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 9600, ProductId = "prod_teams", Nickname = "Teams Negotiated" }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — the live monthly amount survives untouched.
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal(8.00m, item.Amount);
+    }
+
     [Theory, BitAutoData]
     public async Task AdjustSubscription_WhenCustomerIsExempt_DoesNotUpdateTaxExemption(
         SutProvider<StripePaymentService> sutProvider,
