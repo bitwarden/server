@@ -788,6 +788,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddDays(-5),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -1125,6 +1126,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
