@@ -29,6 +29,15 @@ public static class SubscriptionScheduleOwnershipMapper
             return OrganizationSubscriptionScheduleOwnership.Unexpanded;
         }
 
+        return MapSchedule(schedule);
+    }
+
+    /// <summary>
+    /// Classifies a schedule that the caller already loaded. Use this when the schedule was fetched
+    /// directly rather than expanded onto its subscription.
+    /// </summary>
+    public static OrganizationSubscriptionScheduleOwnership MapSchedule(SubscriptionSchedule schedule)
+    {
         if (schedule.Status != SubscriptionScheduleStatus.Active)
         {
             return OrganizationSubscriptionScheduleOwnership.None;

@@ -458,6 +458,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -547,6 +548,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -862,6 +864,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -949,6 +952,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -1042,6 +1046,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -1261,6 +1266,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddYears(1), // future -> not yet applied
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -1343,6 +1349,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddMonths(1), // future -> not yet applied
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -1495,6 +1502,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -1588,6 +1596,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -1672,6 +1681,7 @@ public class StripePaymentServiceTests
                 new SubscriptionSchedulePhase
                 {
                     StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem

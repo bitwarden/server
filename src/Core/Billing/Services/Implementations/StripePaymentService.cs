@@ -10,6 +10,8 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Billing.Organizations.Schedules;
+using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -635,6 +637,17 @@ public class StripePaymentService : IStripePaymentService
                 });
 
             if (schedule.Status != StripeConstants.SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
+            {
+                return;
+            }
+
+            // This method was written for price-migration schedules and rewrites the live line-item
+            // amounts in place. An annual-upgrade schedule (PM-38333) also has two phases with a
+            // future phase 2, so without this gate a redeemed organization would see its annual
+            // amounts reported as its current monthly line items, with interval still reading
+            // "month". PendingAnnualUpgrade is the surface for that schedule instead.
+            if (SubscriptionScheduleOwnershipMapper.MapSchedule(schedule) !=
+                OrganizationSubscriptionScheduleOwnership.PriceMigration)
             {
                 return;
             }

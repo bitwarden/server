@@ -149,4 +149,44 @@ public class SubscriptionScheduleOwnershipMapperTests
             OrganizationSubscriptionScheduleOwnership.Foreign,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(
                 Schedule(phaseMetadata: null, priceIds: "2023-enterprise-seat-annually"))));
+
+    [Fact]
+    public void MapSchedule_AnnualUpgradeMetadata_ReturnsAnnualUpgrade()
+    {
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly2020" }
+                }
+            ]
+        };
+
+        Assert.Equal(
+            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(schedule));
+    }
+
+    [Fact]
+    public void MapSchedule_MigrationCohortMetadata_ReturnsPriceMigration()
+    {
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" }
+                }
+            ]
+        };
+
+        Assert.Equal(
+            OrganizationSubscriptionScheduleOwnership.PriceMigration,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(schedule));
+    }
 }
