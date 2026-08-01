@@ -250,5 +250,4 @@ public class RedeemChurnMitigationOfferCommand(
             Metadata = phase.Metadata,
             ProrationBehavior = phase.ProrationBehavior
         };
-
 }
