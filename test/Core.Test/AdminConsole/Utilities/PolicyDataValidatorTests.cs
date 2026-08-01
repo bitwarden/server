@@ -195,6 +195,40 @@ public class PolicyDataValidatorTests
     }
 
     [Fact]
+    public void ValidateAndSerialize_FillAssist_NullData_ThrowsBadRequestException()
+    {
+        var exception = Assert.Throws<BadRequestException>(() =>
+            PolicyDataValidator.ValidateAndSerialize(null, PolicyType.FillAssist));
+
+        Assert.Contains("Invalid data for FillAssist policy", exception.Message);
+        Assert.Contains("RulesUrl", exception.Message);
+    }
+
+    [Fact]
+    public void ValidateAndSerialize_FillAssist_EmptyData_ThrowsBadRequestException()
+    {
+        var data = new Dictionary<string, object>();
+
+        var exception = Assert.Throws<BadRequestException>(() =>
+            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist));
+
+        Assert.Contains("Invalid data for FillAssist policy", exception.Message);
+        Assert.Contains("RulesUrl", exception.Message);
+    }
+
+    [Fact]
+    public void ValidateAndSerialize_FillAssist_HttpUrl_ThrowsBadRequestException()
+    {
+        var data = new Dictionary<string, object> { { "rulesUrl", "http://example.com/rules" } };
+
+        var exception = Assert.Throws<BadRequestException>(() =>
+            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist));
+
+        Assert.Contains("Invalid data for FillAssist policy", exception.Message);
+        Assert.Contains("HTTPS", exception.Message);
+    }
+
+    [Fact]
     public void ValidateAndSerialize_FillAssist_MissingRulesUrl_ThrowsBadRequestException()
     {
         var data = new Dictionary<string, object> { { "unrelated", "value" } };

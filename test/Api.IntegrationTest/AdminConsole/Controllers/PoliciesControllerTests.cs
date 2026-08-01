@@ -583,4 +583,31 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("RulesUrl", content);
     }
+
+    [Fact]
+    public async Task Put_FillAssistPolicy_HttpUrl_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.FillAssist;
+        var request = new SavePolicyRequest
+        {
+            Policy = new PolicyRequestModel
+            {
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "rulesUrl", "http://example.com/rules" }
+                }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("HTTPS", content);
+    }
 }

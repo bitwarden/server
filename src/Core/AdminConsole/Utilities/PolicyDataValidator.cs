@@ -21,6 +21,10 @@ public static class PolicyDataValidator
     {
         if (data == null || data.Count == 0)
         {
+            if (policyType == PolicyType.FillAssist)
+            {
+                throw new BadRequestException($"Invalid data for {policyType} policy: The RulesUrl field is required.");
+            }
             return null;
         }
 
