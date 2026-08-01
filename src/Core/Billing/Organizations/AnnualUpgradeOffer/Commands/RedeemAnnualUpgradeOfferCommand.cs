@@ -109,7 +109,7 @@ public class RedeemAnnualUpgradeOfferCommand(
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "{Command}: Failed to create annual-upgrade schedule for Organization ({OrganizationId}) after releasing schedule ({ReleasedScheduleId}). The organization keeps its migration cohort assignment; the released schedule must be re-created by hand.",
+                "{Command}: Failed to create annual-upgrade schedule for Organization ({OrganizationId}) after releasing schedule ({ReleasedScheduleId}). The organization keeps its migration cohort assignment, so the recovery scheduler will re-create the released schedule on the next upcoming-invoice or subscription-updated event; verify it was re-created.",
                 CommandName, organization.Id, scheduleToRelease?.Id);
 
             throw;
