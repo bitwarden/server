@@ -51,7 +51,8 @@ public class GetAnnualUpgradeOfferQuery(
         var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, logger, organization, nameof(GetAnnualUpgradeOfferQuery), SubscriptionExpansions);
+            stripeAdapter, logger, organization, nameof(GetAnnualUpgradeOfferQuery), SubscriptionExpansions,
+            LogLevel.Warning);
         if (subscription is null)
         {
             return null;

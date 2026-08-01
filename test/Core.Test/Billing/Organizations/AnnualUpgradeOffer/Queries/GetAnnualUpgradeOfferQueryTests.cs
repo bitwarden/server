@@ -258,7 +258,9 @@ public class GetAnnualUpgradeOfferQueryTests
         var result = await _query.Run(organization);
 
         Assert.Null(result);
-        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Error, default, default!, default, default!);
+        // Read path (runs inline on the organization subscription page): a missing subscription is
+        // a data condition, not an operational failure, so it logs at Warning, not Error.
+        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Warning, default, default!, default, default!);
     }
 
     [Fact]
