@@ -7,7 +7,7 @@ public class FillAssistPolicyData : IPolicyDataModel
 {
     [Required]
     [Url]
-    [RegularExpression("^https://.*", ErrorMessage = "RulesUrl must use HTTPS.")]
+    [RegularExpression("(?i)^https://.*", ErrorMessage = "RulesUrl must use HTTPS.")]
     [JsonPropertyName("rulesUrl")]
     public string? RulesUrl { get; set; }
 }

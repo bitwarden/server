@@ -610,4 +610,32 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("HTTPS", content);
     }
+
+    [Fact]
+    public async Task Put_FillAssistPolicy_DisableWithoutData_Success()
+    {
+        // Arrange
+        var policyType = PolicyType.FillAssist;
+        var request = new SavePolicyRequest
+        {
+            Policy = new PolicyRequestModel
+            {
+                Enabled = false,
+                Data = null
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var policyRepository = _factory.GetService<IPolicyRepository>();
+        var policy = await policyRepository.GetByOrganizationIdTypeAsync(_organization.Id, policyType);
+
+        Assert.NotNull(policy);
+        Assert.False(policy.Enabled);
+    }
 }

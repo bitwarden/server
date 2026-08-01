@@ -15,13 +15,14 @@ public static class PolicyDataValidator
     /// </summary>
     /// <param name="data">The policy data to validate</param>
     /// <param name="policyType">The type of policy</param>
+    /// <param name="enabled">Whether the policy is being enabled. Required-data checks only apply when the policy is enabled.</param>
     /// <returns>Serialized JSON string if data is valid, null if data is null or empty</returns>
     /// <exception cref="BadRequestException">Thrown when data validation fails</exception>
-    public static string? ValidateAndSerialize(Dictionary<string, object>? data, PolicyType policyType)
+    public static string? ValidateAndSerialize(Dictionary<string, object>? data, PolicyType policyType, bool enabled = true)
     {
         if (data == null || data.Count == 0)
         {
-            if (policyType == PolicyType.FillAssist)
+            if (enabled && policyType == PolicyType.FillAssist)
             {
                 throw new BadRequestException($"Invalid data for {policyType} policy: The RulesUrl field is required.");
             }

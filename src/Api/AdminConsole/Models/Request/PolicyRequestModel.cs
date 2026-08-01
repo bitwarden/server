@@ -15,7 +15,7 @@ public class PolicyRequestModel
 
     public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, PolicyType type, ICurrentContext currentContext)
     {
-        var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, type);
+        var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, type, Enabled.GetValueOrDefault());
         var performedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId));
 
         return new()

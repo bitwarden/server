@@ -12,7 +12,7 @@ public class PolicyUpdateRequestModel : PolicyBaseModel
 
     public PolicyUpdate ToPolicyUpdate(Guid organizationId, PolicyType type)
     {
-        var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, type);
+        var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, type, Enabled.GetValueOrDefault());
 
         return new()
         {
@@ -26,7 +26,7 @@ public class PolicyUpdateRequestModel : PolicyBaseModel
 
     public SavePolicyModel ToSavePolicyModel(Guid organizationId, PolicyType type)
     {
-        var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, type);
+        var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, type, Enabled.GetValueOrDefault());
 
         var policyUpdate = new PolicyUpdate
         {
