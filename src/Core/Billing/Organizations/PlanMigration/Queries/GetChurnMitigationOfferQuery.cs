@@ -43,7 +43,7 @@ public class GetChurnMitigationOfferQuery(
         // ineligibility surfaces without a second round-trip.
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, logger, organization, nameof(GetChurnMitigationOfferQuery),
-            ["customer", "test_clock", "discounts.coupon"]);
+            ["customer", "test_clock", "discounts.coupon"], LogLevel.Warning);
         if (subscription is null)
         {
             return null;
@@ -120,7 +120,7 @@ public class GetChurnMitigationOfferQuery(
         // ineligibility surfaces without a second round-trip.
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, logger, organization, nameof(GetChurnMitigationOfferQuery),
-            ["customer", "test_clock", "discounts.coupon"]);
+            ["customer", "test_clock", "discounts.coupon"], LogLevel.Warning);
         if (subscription is null)
         {
             return null;
