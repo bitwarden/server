@@ -641,13 +641,15 @@ public class StripePaymentService : IStripePaymentService
                 return;
             }
 
-            // This method was written for price-migration schedules and rewrites the live line-item
-            // amounts in place. An annual-upgrade schedule (PM-38333) also has two phases with a
-            // future phase 2, so without this gate a redeemed organization would see its annual
-            // amounts reported as its current monthly line items, with interval still reading
-            // "month". PendingAnnualUpgrade is the surface for that schedule instead.
-            if (SubscriptionScheduleOwnershipMapper.MapSchedule(schedule) !=
-                OrganizationSubscriptionScheduleOwnership.PriceMigration)
+            // This method rewrites the live line-item amounts in place for any schedule that reprices
+            // the CURRENT subscription at its existing cadence (price migrations, and any other
+            // schedule not otherwise called out here). An annual-upgrade schedule (PM-38333) is the
+            // one exception: its Phase 2 moves the subscription to a different interval ("year"
+            // instead of "month") entirely, so applying its amounts here would show an annual total
+            // under a still-monthly line item. PendingAnnualUpgrade is the surface for that schedule
+            // instead, so it alone is excluded.
+            if (SubscriptionScheduleOwnershipMapper.MapSchedule(schedule) ==
+                OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
             {
                 return;
             }
