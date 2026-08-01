@@ -745,8 +745,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         // pricing-service errors) and a BillingException from the persistence step further down
         // are the same exception type, so a single shared catch chain cannot propagate one while
         // swallowing the other. Splitting by code region -- rather than by exception type --
-        // is what makes that distinction possible. See HandleScheduleTriggeredAnnualUpgradeOfferAsync's
-        // sibling RedeemAnnualUpgradeOfferCommand for the same two-sequential-try shape.
+        // is what makes that distinction possible.
         Organization organization;
         Bit.Core.Models.StaticStore.Plan sourcePlan;
         Bit.Core.Models.StaticStore.Plan targetPlan;
@@ -799,9 +798,18 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         {
             // Everything above is a guard or a lookup. Failing them must not fail the whole
             // webhook, because the organization work sequenced after this handler (expiration
-            // sync, sponsorship renewal, billing-automation exemption) would be skipped. This
-            // matches HandleScheduleTriggeredFamiliesMigrationAsync and
-            // HandleScheduleTriggeredBusinessMigrationAsync.
+            // sync, sponsorship renewal, billing-automation exemption) would be skipped.
+            //
+            // This deliberately diverges from HandleScheduleTriggeredFamiliesMigrationAsync and
+            // HandleScheduleTriggeredBusinessMigrationAsync, which both have an explicit
+            // catch (BillingException) { throw; } ahead of their catch-all, so a GetPlanOrThrow
+            // failure in their lookup region propagates and Stripe retries. Here, a GetPlanOrThrow
+            // failure is swallowed like any other guard/lookup failure instead. The annual-upgrade
+            // flip is one-shot and re-derived from organization.PlanType on every event, so a
+            // missed attempt is retried for free the next time a subscription.updated event fires;
+            // failing the whole webhook to force a Stripe retry would cost more (blocking the
+            // unrelated work sequenced after this handler) than it buys. Do not "restore
+            // consistency" with the siblings here -- the divergence is intentional.
             //
             // Deliberately not gated on PM38333_AnnualBillingSavings: schedules that were already
             // redeemed must still be honored after the flag is turned off, so gating here would
