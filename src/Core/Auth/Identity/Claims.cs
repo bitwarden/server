@@ -40,6 +40,7 @@ public static class Claims
         public const string ManageUsers = "manageusers";
         public const string ManageResetPassword = "manageresetpassword";
         public const string ManageScim = "managescim";
+        public const string ManageAccessRules = "manageaccessrules";
     }
 
     /// <summary>

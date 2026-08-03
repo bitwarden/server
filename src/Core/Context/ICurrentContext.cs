@@ -57,6 +57,7 @@ public interface ICurrentContext
     Task<bool> ManageUsers(Guid orgId);
     Task<bool> AccessMembersTab(Guid orgId);
     Task<bool> ManageScim(Guid orgId);
+    Task<bool> ManageAccessRules(Guid orgId);
     Task<bool> ManageResetPassword(Guid orgId);
     Task<bool> ViewSubscription(Guid orgId);
     Task<bool> EditSubscription(Guid orgId);

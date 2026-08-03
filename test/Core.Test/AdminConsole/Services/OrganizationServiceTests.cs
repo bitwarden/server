@@ -986,6 +986,51 @@ public class OrganizationServiceTests
         await sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organization.Id, organizationUserInvite.Type.Value, null, invitePermissions);
     }
 
+    /// <summary>
+    /// A Custom member with ManageUsers must not be able to hand out ManageAccessRules unless they hold it
+    /// themselves — otherwise managing members becomes a route to granting yourself PAM rule administration.
+    /// </summary>
+    [Theory]
+    [OrganizationInviteCustomize(
+         InviteeUserType = OrganizationUserType.Custom,
+         InvitorUserType = OrganizationUserType.Custom
+     ), BitAutoData]
+    public async Task ValidateOrganizationUserUpdatePermissions_GrantingManageAccessRulesWithoutHoldingIt_Throws(
+        CurrentContextOrganization organization,
+        OrganizationUserInvite organizationUserInvite,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var invitePermissions = new Permissions { ManageAccessRules = true };
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageAccessRules(organization.Id).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(
+                organization.Id, organizationUserInvite.Type.Value, null, invitePermissions));
+
+        Assert.Contains("only grant the same custom permissions", exception.Message);
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(
+         InviteeUserType = OrganizationUserType.Custom,
+         InvitorUserType = OrganizationUserType.Custom
+     ), BitAutoData]
+    public async Task ValidateOrganizationUserUpdatePermissions_GrantingManageAccessRulesWhileHoldingIt_Passes(
+        CurrentContextOrganization organization,
+        OrganizationUserInvite organizationUserInvite,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var invitePermissions = new Permissions { ManageAccessRules = true };
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageAccessRules(organization.Id).Returns(true);
+
+        await sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(
+            organization.Id, organizationUserInvite.Type.Value, null, invitePermissions);
+    }
+
     [Theory]
     [OrganizationInviteCustomize(
          InviteeUserType = OrganizationUserType.Owner,

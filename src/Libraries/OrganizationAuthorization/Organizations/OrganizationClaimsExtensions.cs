@@ -113,5 +113,6 @@ public static class OrganizationClaimsExtensions
         ManageUsers = hasClaim(Claims.CustomPermissions.ManageUsers),
         ManageResetPassword = hasClaim(Claims.CustomPermissions.ManageResetPassword),
         ManageScim = hasClaim(Claims.CustomPermissions.ManageScim),
+        ManageAccessRules = hasClaim(Claims.CustomPermissions.ManageAccessRules),
     };
 }

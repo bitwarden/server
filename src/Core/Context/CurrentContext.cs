@@ -343,6 +343,12 @@ public class CurrentContext(
                     && (o.Permissions?.ManageScim ?? false)) ?? false);
     }
 
+    public async Task<bool> ManageAccessRules(Guid orgId)
+    {
+        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+                    && (o.Permissions?.ManageAccessRules ?? false)) ?? false);
+    }
+
     public async Task<bool> ManageUsers(Guid orgId)
     {
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
@@ -505,6 +511,7 @@ public class CurrentContext(
             ManageUsers = hasClaim("manageusers"),
             ManageResetPassword = hasClaim("manageresetpassword"),
             ManageScim = hasClaim("managescim"),
+            ManageAccessRules = hasClaim("manageaccessrules"),
         };
     }
 
