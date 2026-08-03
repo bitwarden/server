@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
