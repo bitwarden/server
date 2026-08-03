@@ -1,4 +1,4 @@
-namespace Bit.Core.Vault.Authorization;
+﻿namespace Bit.Core.Vault.Authorization;
 
 /// <summary>
 /// A capability that authorizes returning a cipher's <em>full</em> secret data under PAM credential

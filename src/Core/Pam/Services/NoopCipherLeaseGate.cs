@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;

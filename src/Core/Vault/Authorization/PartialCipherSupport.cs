@@ -1,4 +1,4 @@
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Vault.Authorization;
