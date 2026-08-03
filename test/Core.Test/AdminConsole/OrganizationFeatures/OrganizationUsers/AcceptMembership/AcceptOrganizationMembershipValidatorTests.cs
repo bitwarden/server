@@ -57,7 +57,7 @@ public class AcceptOrganizationMembershipValidatorTests
                 Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(organizationId, [orgUser, otherOrgUser], user),
-                new UserCannotBelongToAnotherOrganization(string.Empty)));
+                new UserCannotBelongToAnotherOrganization()));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)

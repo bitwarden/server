@@ -3,10 +3,8 @@
 
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
@@ -59,7 +57,7 @@ public class CloudOrganizationSignUpCommand(
             if (signup.IsFromProvider)
             {
                 throw new BadRequestException(
-                    new SecretsManagerMspUnsupportedError().Message);
+                    "Organizations with a Managed Service Provider do not support Secrets Manager.");
             }
             ValidateSecretsManagerPlan(plan, signup);
         }
@@ -124,7 +122,7 @@ public class CloudOrganizationSignUpCommand(
                 await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
             if (adminCount > 0)
             {
-                throw new BadRequestException(new FreeOrgAdminLimitError().Message);
+                throw new BadRequestException("You can only be an admin of one free organization.");
             }
         }
         else if (plan.Type != PlanType.Free)
@@ -144,38 +142,39 @@ public class CloudOrganizationSignUpCommand(
 
         if (plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats <= 0)
         {
-            throw new BadRequestException(new NoPasswordManagerSeatsError().Message);
+            throw new BadRequestException($"You do not have any Password Manager seats!");
         }
 
         if (upgrade.AdditionalSeats < 0)
         {
-            throw new BadRequestException(new CannotSubtractPasswordManagerSeatsError().Message);
+            throw new BadRequestException($"You can't subtract Password Manager seats!");
         }
 
         if (!plan.PasswordManager.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
         {
-            throw new BadRequestException(new PlanDoesNotAllowAdditionalStorageError().Message);
+            throw new BadRequestException("Plan does not allow additional storage.");
         }
 
         if (upgrade.AdditionalStorageGb < 0)
         {
-            throw new BadRequestException(new CannotSubtractStorageError().Message);
+            throw new BadRequestException("You can't subtract storage!");
         }
 
         if (!plan.PasswordManager.HasPremiumAccessOption && upgrade.PremiumAccessAddon)
         {
-            throw new BadRequestException(new PlanDoesNotAllowPremiumAccessAddonError().Message);
+            throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
         }
 
         if (!plan.PasswordManager.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
         {
-            throw new BadRequestException(new PlanDoesNotAllowAdditionalUsersError().Message);
+            throw new BadRequestException("Plan does not allow additional users.");
         }
 
         if (plan.PasswordManager.HasAdditionalSeatsOption && plan.PasswordManager.MaxAdditionalSeats.HasValue &&
             upgrade.AdditionalSeats > plan.PasswordManager.MaxAdditionalSeats.Value)
         {
-            throw new BadRequestException(new PlanMaxAdditionalUsersExceededError(plan.PasswordManager.MaxAdditionalSeats.GetValueOrDefault(0)).Message);
+            throw new BadRequestException($"Selected plan allows a maximum of " +
+                                          $"{plan.PasswordManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
         }
     }
 
@@ -183,19 +182,19 @@ public class CloudOrganizationSignUpCommand(
     {
         if (plan.SupportsSecretsManager == false)
         {
-            throw new BadRequestException(new InvalidSecretsManagerPlanError().Message);
+            throw new BadRequestException("Invalid Secrets Manager plan selected.");
         }
 
         ValidatePlan(plan, upgrade.AdditionalSmSeats.GetValueOrDefault(), "Secrets Manager");
 
         if (plan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats <= 0)
         {
-            throw new BadRequestException(new NoSecretsManagerSeatsError().Message);
+            throw new BadRequestException($"You do not have any Secrets Manager seats!");
         }
 
         if (!plan.SecretsManager.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
-            throw new BadRequestException(new PlanDoesNotAllowAdditionalMachineAccountsError().Message);
+            throw new BadRequestException("Plan does not allow additional Machine Accounts.");
         }
 
         if ((plan.ProductTier == ProductTierType.TeamsStarter &&
@@ -203,21 +202,22 @@ public class CloudOrganizationSignUpCommand(
             (plan.ProductTier != ProductTierType.TeamsStarter &&
              upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
         {
-            throw new BadRequestException(new SecretsManagerSeatsMustNotExceedPasswordManagerSeatsError().Message);
+            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
 
         if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
         {
-            throw new BadRequestException(new CannotSubtractMachineAccountsError().Message);
+            throw new BadRequestException("You can't subtract Machine Accounts!");
         }
 
         switch (plan.SecretsManager.HasAdditionalSeatsOption)
         {
             case false when upgrade.AdditionalSmSeats > 0:
-                throw new BadRequestException(new PlanDoesNotAllowAdditionalUsersError().Message);
+                throw new BadRequestException("Plan does not allow additional users.");
             case true when plan.SecretsManager.MaxAdditionalSeats.HasValue &&
                            upgrade.AdditionalSmSeats > plan.SecretsManager.MaxAdditionalSeats.Value:
-                throw new BadRequestException(new PlanMaxAdditionalUsersExceededError(plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)).Message);
+                throw new BadRequestException($"Selected plan allows a maximum of " +
+                                              $"{plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
         }
     }
 
@@ -225,17 +225,17 @@ public class CloudOrganizationSignUpCommand(
     {
         if (plan is null)
         {
-            throw new BadRequestException(new PlanNullError(productType).Message);
+            throw new BadRequestException($"{productType} Plan was null.");
         }
 
         if (plan.Disabled)
         {
-            throw new BadRequestException(new PlanNotFoundError(productType).Message);
+            throw new BadRequestException($"{productType} Plan not found.");
         }
 
         if (additionalSeats < 0)
         {
-            throw new BadRequestException(new CannotSubtractProductSeatsError(productType).Message);
+            throw new BadRequestException($"You can't subtract {productType} seats!");
         }
     }
 
@@ -245,7 +245,8 @@ public class CloudOrganizationSignUpCommand(
 
         if (requirement.CannotCreateNewOrganization())
         {
-            throw new BadRequestException(new UserCannotCreateOrg().Message);
+            throw new BadRequestException("You may not create an organization. You belong to an organization " +
+                                          "which has a policy that prohibits you from being a member of any other organization.");
         }
 
         var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
@@ -349,7 +350,7 @@ public class CloudOrganizationSignUpCommand(
     {
         if (signup.TrialLength is < 0 or > 30)
         {
-            throw new BadRequestException(new TrialLengthOutOfRangeError().Message);
+            throw new BadRequestException("Trial length must be between 0 and 30 days.");
         }
     }
 }

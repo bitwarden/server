@@ -2,10 +2,8 @@
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
@@ -69,7 +67,8 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
     {
         if (license.LicenseType != LicenseType.Organization)
         {
-            throw new BadRequestException(new PremiumLicenseError().Message);
+            throw new BadRequestException("Premium licenses cannot be applied to an organization. " +
+                                          "Upload this license from your personal account settings page.");
         }
 
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
@@ -83,7 +82,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
         if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey)))
         {
-            throw new BadRequestException(new LicenseAlreadyInUseError().Message);
+            throw new BadRequestException("License is already in use by another organization.");
         }
 
         await ValidateSignUpPoliciesAsync(owner.Id);
@@ -109,7 +108,8 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
 
         if (requirement.CannotCreateNewOrganization())
         {
-            throw new BadRequestException(new UserCannotCreateOrg().Message);
+            throw new BadRequestException("You may not create an organization. You belong to an organization " +
+                                          "which has a policy that prohibits you from being a member of any other organization.");
         }
 
         var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);

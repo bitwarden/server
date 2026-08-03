@@ -781,7 +781,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             // Self-hosted instances can't autoscale their Stripe subscription, so reject before touching billing.
             if (_globalSettings.SelfHosted)
             {
-                throw new BadRequestException(new V2_UpdateUserCommand.CannotAutoscaleSecretsManagerSeatsOnSelfHost().Message);
+                throw new BadRequestException("Cannot autoscale on a self-hosted instance.");
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgId);

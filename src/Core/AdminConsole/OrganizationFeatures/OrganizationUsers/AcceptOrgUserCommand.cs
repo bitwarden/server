@@ -1,8 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
@@ -56,7 +54,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null)
         {
-            throw new BadRequestException(new OrganizationUserNotFoundError().Message);
+            throw new BadRequestException("User invalid.");
         }
 
         var tokenValidationError = OrgUserInviteTokenable.ValidateOrgUserInvite(
@@ -73,15 +71,15 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         {
             if (orgUser.Status == OrganizationUserStatusType.Accepted)
             {
-                throw new BadRequestException(new InvitationAlreadyAcceptedError().Message);
+                throw new BadRequestException("Invitation already accepted. You will receive an email when your organization membership is confirmed.");
             }
-            throw new BadRequestException(new AlreadyPartOfOrganizationError().Message);
+            throw new BadRequestException("You are already part of this organization.");
         }
 
         if (string.IsNullOrWhiteSpace(orgUser.Email) ||
             !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
         {
-            throw new BadRequestException(new EmailMismatchError().Message);
+            throw new BadRequestException("User email does not match invite.");
         }
 
         var organizationUser = await AcceptOrgUserAsync(orgUser, user, userService);
@@ -101,13 +99,13 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier);
         if (org == null)
         {
-            throw new BadRequestException(new OrganizationNotFoundError().Message);
+            throw new BadRequestException("Organization invalid.");
         }
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
         if (orgUser == null)
         {
-            throw new BadRequestException(new UserNotFoundInOrganizationError().Message);
+            throw new BadRequestException("User not found within organization.");
         }
 
         return await AcceptOrgUserAsync(orgUser, user, userService);
@@ -118,13 +116,13 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
         {
-            throw new BadRequestException(new OrganizationNotFoundError().Message);
+            throw new BadRequestException("Organization invalid.");
         }
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
         if (orgUser == null)
         {
-            throw new BadRequestException(new UserNotFoundInOrganizationError().Message);
+            throw new BadRequestException("User not found within organization.");
         }
 
         return await AcceptOrgUserAsync(orgUser, user, userService);
@@ -133,27 +131,26 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     public async Task<OrganizationUser> AcceptOrgUserAsync(OrganizationUser orgUser, User user,
         IUserService userService)
     {
-        var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
-
         if (orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            throw new BadRequestException(new OrganizationAccessRevoked(org?.DisplayName() ?? string.Empty).Message);
+            throw new BadRequestException("Your organization access has been revoked.");
         }
 
         if (orgUser.Status != OrganizationUserStatusType.Invited)
         {
-            throw new BadRequestException(new AlreadyAcceptedError().Message);
+            throw new BadRequestException("Already accepted.");
         }
 
         if (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
         {
+            var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
             if (org.PlanType == PlanType.Free)
             {
                 var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(
                     user.Id);
                 if (adminCount > 0)
                 {
-                    throw new BadRequestException(new FreeOrgAdminLimitError().Message);
+                    throw new BadRequestException("You can only be an admin of one free organization.");
                 }
             }
         }
@@ -177,7 +174,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         if (adminEmails.Count > 0)
         {
-            await _mailService.SendOrganizationAcceptedEmailAsync(org, user.Email, adminEmails);
+            var organization = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
+            await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
         }
 
         await _pushAutoConfirmNotificationCommand.PushAsync(user.Id, orgUser.OrganizationId);
@@ -201,8 +199,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         {
             var message = result.AsError switch
             {
-                UserIsAMemberOfAnotherOrganization => new UserCannotAcceptInviteMemberOfAnotherOrg().Message,
-                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new UserCannotAcceptInviteForbiddenByOtherOrg().Message,
+                UserIsAMemberOfAnotherOrganization => "You cannot accept this invite until you leave or remove all other organizations.",
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => "You cannot accept this invite because you are in another organization which forbids it.",
                 _ => result.AsError.Message
             };
             throw new BadRequestException(message);

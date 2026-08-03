@@ -3,9 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -68,7 +66,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             organization == null ||
             providerOrganization.ProviderId != provider.Id)
         {
-            throw new BadRequestException(new FailedToRemoveOrganizationFromProviderError().Message);
+            throw new BadRequestException("Failed to remove organization. Please contact support.");
         }
 
         if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
@@ -76,7 +74,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 [],
                 includeProvider: false))
         {
-            throw new BadRequestException(new OrgMustHaveConfirmedOwner().Message);
+            throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
         var organizationOwnerEmails =

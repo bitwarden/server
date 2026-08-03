@@ -2,7 +2,6 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -38,19 +37,19 @@ public class RestoreOrganizationUserCommand(
     {
         if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId.Value)
         {
-            throw new BadRequestException(new CannotRestoreYourself().Message);
+            throw new BadRequestException("You cannot restore yourself.");
         }
 
         if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
             !await currentContext.OrganizationOwner(organizationUser.OrganizationId))
         {
-            throw new BadRequestException(new OnlyOwnersCanRestoreOwners().Message);
+            throw new BadRequestException("Only owners can restore other owners.");
         }
 
         if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
             !await currentContext.OrganizationAdmin(organizationUser.OrganizationId))
         {
-            throw new BadRequestException(new CustomUsersCannotRestoreAdmins().Message);
+            throw new BadRequestException("Custom users can not restore admins.");
         }
 
         await RepositoryRestoreUserAsync(organizationUser, defaultCollectionName);
@@ -78,7 +77,7 @@ public class RestoreOrganizationUserCommand(
     {
         if (organizationUser.Status != OrganizationUserStatusType.Revoked)
         {
-            throw new BadRequestException(new AlreadyActive().Message);
+            throw new BadRequestException("Already active.");
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
@@ -167,7 +166,7 @@ public class RestoreOrganizationUserCommand(
                 x.Value.PlanType == PlanType.Free))
         {
             throw new BadRequestException(
-                new UserCannotBeRestoredFreeOrgAdminLimit().Message);
+                "User is an owner/admin of another free organization. Please have them upgrade to a paid plan to restore their account.");
         }
     }
 
@@ -181,7 +180,7 @@ public class RestoreOrganizationUserCommand(
 
         if (filteredUsers.Count == 0)
         {
-            throw new BadRequestException(new UsersInvalid().Message);
+            throw new BadRequestException("Users invalid.");
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
@@ -213,24 +212,24 @@ public class RestoreOrganizationUserCommand(
             {
                 if (organizationUser.Status != OrganizationUserStatusType.Revoked)
                 {
-                    throw new BadRequestException(new AlreadyActive().Message);
+                    throw new BadRequestException("Already active.");
                 }
 
                 if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId)
                 {
-                    throw new BadRequestException(new CannotRestoreYourself().Message);
+                    throw new BadRequestException("You cannot restore yourself.");
                 }
 
                 if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
                     !restoringUserIsOwner)
                 {
-                    throw new BadRequestException(new OnlyOwnersCanRestoreOwners().Message);
+                    throw new BadRequestException("Only owners can restore other owners.");
                 }
 
                 if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
                     !restoringUserIsAdminOrHigher)
                 {
-                    throw new BadRequestException(new CustomUsersCannotRestoreAdmins().Message);
+                    throw new BadRequestException("Custom users can not restore admins.");
                 }
 
                 var twoFactorIsEnabled = organizationUser.UserId.HasValue
@@ -336,15 +335,16 @@ public class RestoreOrganizationUserCommand(
 
         if (singleOrgError is not null && !twoFactorCompliant)
         {
-            throw new BadRequestException(new UserCannotBeRestoredNotCompliantWithPolicies(user.Email).Message);
+            throw new BadRequestException(user.Email +
+                                          " is not compliant with the single organization and two-step login policy");
         }
 
         if (singleOrgError is not null)
         {
             var singleOrgErrorMessage = singleOrgError switch
             {
-                UserIsAMemberOfAnotherOrganization => new UserCannotBeRestoredMemberOfAnotherOrg(user.Email).Message,
-                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new UserCannotBeRestoredForbiddenByOtherOrg(user.Email).Message,
+                UserIsAMemberOfAnotherOrganization => $"{user.Email} cannot be restored until they leave or remove all other organizations.",
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => $"{user.Email} cannot be restored because they are in another organization which forbids it.",
                 _ => singleOrgError.Message
             };
 
@@ -353,7 +353,7 @@ public class RestoreOrganizationUserCommand(
 
         if (!twoFactorCompliant)
         {
-            throw new BadRequestException(new UserNotCompliantWithTwoFactorPolicy(user.Email).Message);
+            throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
         }
 
         var policyRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
@@ -364,16 +364,9 @@ public class RestoreOrganizationUserCommand(
             policyRequirement);
 
         var badRequestException = validationResult.Match(
-            error =>
-            {
-                var message = error switch
-                {
-                    UserCannotBelongToAnotherOrganization => new UserCannotBeRestoredMemberOfAnotherOrg(user.Email).Message,
-                    OtherOrganizationDoesNotAllowOtherMembership => new UserCannotBeRestoredForbiddenByOtherOrg(user.Email).Message,
-                    _ => error.Message
-                };
-                return new BadRequestException(message);
-            },
+            error => new BadRequestException(user.Email +
+                                             " is not compliant with the automatic user confirmation policy: " +
+                                             error.Message),
             _ => null);
 
         if (badRequestException is not null)

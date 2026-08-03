@@ -2,7 +2,6 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -79,7 +78,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
         if (!result.Any())
         {
-            throw new BadRequestException(new ConfirmUserNotValidError().Message);
+            throw new BadRequestException("User not valid.");
         }
 
         var (orgUser, error) = result[0];
@@ -153,7 +152,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
                     var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
                     if (adminCount > 0)
                     {
-                        throw new BadRequestException(new UserFreeOrgAdminLimitError().Message);
+                        throw new BadRequestException("User can only be an admin of one free organization.");
                     }
                 }
 
@@ -216,8 +215,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         {
             var singleOrgErrorMessage = singleOrgError switch
             {
-                UserIsAMemberOfAnotherOrganization => new UserCannotBeConfirmedMemberOfAnotherOrg(user.Email).Message,
-                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new UserCannotBeConfirmedForbiddenByOtherOrg(user.Email).Message,
+                UserIsAMemberOfAnotherOrganization => $"{user.Email} cannot be confirmed until they leave or remove all other organizations.",
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => $"{user.Email} cannot be confirmed because they are in another organization which forbids it.",
                 _ => singleOrgError.Message
             };
 
@@ -236,7 +235,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
         if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
         {
-            throw new BadRequestException(new UserDoesNotHaveTwoFactorEnabled().Message);
+            throw new BadRequestException("User does not have two-step login enabled.");
         }
     }
 

@@ -799,7 +799,7 @@ public class OrganizationUsersControllerTests
 
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
             .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
-            .Returns(new CommandResult(new EmailDomainNotAllowed(string.Empty)));
+            .Returns(new CommandResult(new EmailDomainNotAllowed()));
 
         // Act
         var result = await sutProvider.Sut.ConfirmInviteLink(model);

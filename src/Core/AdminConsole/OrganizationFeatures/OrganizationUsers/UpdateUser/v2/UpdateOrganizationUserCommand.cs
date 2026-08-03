@@ -141,8 +141,8 @@ public class UpdateOrganizationUserCommand(
     private static CommandError MapEmailChangeError(BadRequestException ex) => ex.Message switch
     {
         ChangeEmailCommand.EmailAlreadyInUseError => new EmailAlreadyInUseError(),
-        var msg when msg == new EmailClaimedByOrganizationError().Message => new EmailClaimedByAnotherOrganizationError(),
-        var msg when msg == new EmailNotOnVerifiedDomainError().Message => new NewEmailDomainNotClaimedError(),
+        OrganizationDomainAllowEmailChangeQuery.EmailClaimedByOrganizationError => new EmailClaimedByAnotherOrganizationError(),
+        OrganizationDomainAllowEmailChangeQuery.EmailNotOnVerifiedDomainError => new NewEmailDomainNotClaimedError(),
         _ => new EmailChangeFailedError(ex.Message)
     };
 

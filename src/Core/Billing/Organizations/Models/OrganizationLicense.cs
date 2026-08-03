@@ -8,7 +8,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Models.Business;
@@ -298,7 +297,8 @@ public class OrganizationLicense : ILicense
         var licenseType = claimsPrincipal.GetValue<LicenseType>(nameof(LicenseType));
         if (licenseType != Core.Enums.LicenseType.Organization)
         {
-            errorMessages.AppendLine(new PremiumLicenseError().Message);
+            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
+                                     "Upload this license from your personal account settings page.");
         }
 
         if (errorMessages.Length > 0)
@@ -378,7 +378,8 @@ public class OrganizationLicense : ILicense
 
         if (LicenseType != null && LicenseType != Core.Enums.LicenseType.Organization)
         {
-            errorMessages.AppendLine(new PremiumLicenseError().Message);
+            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
+                                     "Upload this license from your personal account settings page.");
         }
 
         if (!licensingService.VerifyLicense(this))

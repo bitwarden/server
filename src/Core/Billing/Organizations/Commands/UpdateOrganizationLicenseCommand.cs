@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
@@ -45,7 +44,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     {
         if (currentOrganizationUsingLicenseKey != null && currentOrganizationUsingLicenseKey.Id != selfHostedOrganization.Id)
         {
-            throw new BadRequestException(new LicenseAlreadyInUseError().Message);
+            throw new BadRequestException("License is already in use by another organization.");
         }
 
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);

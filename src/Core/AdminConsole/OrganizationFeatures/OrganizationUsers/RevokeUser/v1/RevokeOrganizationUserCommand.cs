@@ -21,19 +21,19 @@ public class RevokeOrganizationUserCommand(
     {
         if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId.Value)
         {
-            throw new BadRequestException(new CannotRevokeYourself().Message);
+            throw new BadRequestException("You cannot revoke yourself.");
         }
 
         if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue &&
             !await currentContext.OrganizationOwner(organizationUser.OrganizationId))
         {
-            throw new BadRequestException(new OnlyOwnersCanRevokeOwners().Message);
+            throw new BadRequestException("Only owners can revoke other owners.");
         }
 
         if (organizationUser.Type == OrganizationUserType.Admin && revokingUserId.HasValue &&
             !await currentContext.OrganizationAdmin(organizationUser.OrganizationId))
         {
-            throw new BadRequestException(new CustomUsersCannotRevokeAdmins().Message);
+            throw new BadRequestException("Custom users can not revoke admins.");
         }
 
         await RepositoryRevokeUserAsync(organizationUser, reason);
@@ -62,13 +62,13 @@ public class RevokeOrganizationUserCommand(
     {
         if (organizationUser.Status == OrganizationUserStatusType.Revoked)
         {
-            throw new BadRequestException(new AlreadyRevoked().Message);
+            throw new BadRequestException("Already revoked.");
         }
 
         if (!await hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId,
                 new[] { organizationUser.Id }, includeProvider: true))
         {
-            throw new BadRequestException(new OrgMustHaveConfirmedOwner().Message);
+            throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
         await organizationUserRepository.RevokeAsync(organizationUser.Id, reason);

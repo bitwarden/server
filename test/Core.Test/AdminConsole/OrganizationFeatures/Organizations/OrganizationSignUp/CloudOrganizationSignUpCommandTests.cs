@@ -1,9 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
@@ -208,7 +206,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains(new SecretsManagerMspUnsupportedError().Message, exception.Message);
+        Assert.Contains("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
     }
 
     [Theory]
@@ -230,7 +228,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains(new PlanDoesNotAllowAdditionalMachineAccountsError().Message, exception.Message);
+        Assert.Contains("Plan does not allow additional Machine Accounts.", exception.Message);
     }
 
     [Theory]
@@ -251,7 +249,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains(new SecretsManagerSeatsMustNotExceedPasswordManagerSeatsError().Message, exception.Message);
+        Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats", exception.Message);
     }
 
     [Theory]
@@ -272,7 +270,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains(new CannotSubtractMachineAccountsError().Message, exception.Message);
+        Assert.Contains("You can't subtract Machine Accounts!", exception.Message);
     }
 
     [Theory]
@@ -305,7 +303,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains(new FreeOrgAdminLimitError().Message, exception.Message);
+        Assert.Contains("You can only be an admin of one free organization.", exception.Message);
     }
 
     [Theory]
@@ -340,7 +338,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains(new UserCannotCreateOrg().Message, exception.Message);
+        Assert.Contains("You may not create an organization. You belong to an organization which has a policy that prohibits you from being a member of any other organization.", exception.Message);
     }
 
     [Theory]
@@ -398,7 +396,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Equal(new TrialLengthOutOfRangeError().Message, ex.Message);
+        Assert.Equal("Trial length must be between 0 and 30 days.", ex.Message);
     }
 
     [Theory]
@@ -416,7 +414,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Equal(new TrialLengthOutOfRangeError().Message, ex.Message);
+        Assert.Equal("Trial length must be between 0 and 30 days.", ex.Message);
     }
 
     [Theory]

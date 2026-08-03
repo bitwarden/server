@@ -77,11 +77,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<ProviderUser>());
-
-        // Return a User entity for each user so email is available for error interpolation.
-        sutProvider.GetDependency<IUserRepository>()
-            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(orgUsers.Select(ou => new User { Id = ou.UserId!.Value, Email = $"{ou.UserId}@example.com" }).ToList());
     }
 
     [Theory, BitAutoData]
@@ -346,14 +341,13 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
-            .Returns(new UserCannotBelongToAnotherOrganization(string.Empty));
+            .Returns(new UserCannotBelongToAnotherOrganization());
 
         var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
-        var error = Assert.IsType<UserCannotBelongToAnotherOrganization>(results[0].AsError);
-        Assert.Contains($"{userId}@example.com", error.Message);
+        Assert.IsType<UserCannotBelongToAnotherOrganization>(results[0].AsError);
     }
 
     [Theory, BitAutoData]
@@ -377,14 +371,13 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
-            .Returns(new OtherOrganizationDoesNotAllowOtherMembership(string.Empty));
+            .Returns(new OtherOrganizationDoesNotAllowOtherMembership());
 
         var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
-        var error = Assert.IsType<OtherOrganizationDoesNotAllowOtherMembership>(results[0].AsError);
-        Assert.Contains($"{userId}@example.com", error.Message);
+        Assert.IsType<OtherOrganizationDoesNotAllowOtherMembership>(results[0].AsError);
     }
 
     [Theory, BitAutoData]

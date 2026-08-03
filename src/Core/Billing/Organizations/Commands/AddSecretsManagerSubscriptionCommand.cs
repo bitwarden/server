@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
@@ -65,30 +64,30 @@ public class AddSecretsManagerSubscriptionCommand(
     {
         if (organization.UseSecretsManager)
         {
-            throw new BadRequestException(new OrganizationAlreadyUsesSecretsManagerError().Message);
+            throw new BadRequestException("Organization already uses Secrets Manager.");
         }
 
         if (!plan.SupportsSecretsManager)
         {
-            throw new BadRequestException(new OrganizationPlanDoesNotSupportSecretsManagerError().Message);
+            throw new BadRequestException("Organization's plan does not support Secrets Manager.");
         }
 
         if (plan.ProductTier != ProductTierType.Free)
         {
             if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
-                throw new ConflictException(new SecretsManagerPaymentMethodNotFoundError().Message);
+                throw new ConflictException("No payment method found.");
             }
 
             if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
-                throw new ConflictException(new SecretsManagerSubscriptionNotFoundError().Message);
+                throw new ConflictException("No subscription found.");
             }
         }
 
         if (provider is { Type: ProviderType.Msp })
         {
-            throw new BadRequestException(new SecretsManagerMspUnsupportedError().Message);
+            throw new BadRequestException("Organizations with a Managed Service Provider do not support Secrets Manager.");
         }
     }
 
@@ -100,39 +99,40 @@ public class AddSecretsManagerSubscriptionCommand(
     {
         if (additionalSmSeats < 0)
         {
-            throw new BadRequestException(new CannotAddSecretsManagerWithNegativeSeatsError().Message);
+            throw new BadRequestException("You cannot add Secrets Manager with a negative number of seats.");
         }
 
         // All paid SM plans have BaseSeats = 0, so at least one additional seat is required.
         if (plan.ProductTier != ProductTierType.Free && additionalSmSeats <= 0)
         {
-            throw new BadRequestException(new AtLeastOneSecretsManagerSeatRequiredError().Message);
+            throw new BadRequestException("At least one Secrets Manager seat is required.");
         }
 
         if (!plan.SecretsManager.HasAdditionalServiceAccountOption && additionalServiceAccounts > 0)
         {
-            throw new BadRequestException(new PlanDoesNotAllowAdditionalMachineAccountsError().Message);
+            throw new BadRequestException("Plan does not allow additional Machine Accounts.");
         }
 
         if (additionalSmSeats > organization.Seats.GetValueOrDefault())
         {
-            throw new BadRequestException(new SecretsManagerSeatsMustNotExceedPasswordManagerSeatsError().Message);
+            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
 
         if (additionalServiceAccounts < 0)
         {
-            throw new BadRequestException(new CannotAddSecretsManagerWithNegativeMachineAccountsError().Message);
+            throw new BadRequestException("You cannot add Secrets Manager with a negative number of Machine Accounts.");
         }
 
         if (!plan.SecretsManager.HasAdditionalSeatsOption && additionalSmSeats > 0)
         {
-            throw new BadRequestException(new PlanDoesNotAllowAdditionalUsersError().Message);
+            throw new BadRequestException("Plan does not allow additional users.");
         }
 
         if (plan.SecretsManager.MaxAdditionalSeats.HasValue &&
             additionalSmSeats > plan.SecretsManager.MaxAdditionalSeats.Value)
         {
-            throw new BadRequestException(new PlanMaxAdditionalUsersExceededError(plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)).Message);
+            throw new BadRequestException(
+                $"Selected plan allows a maximum of {plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
         }
     }
 }

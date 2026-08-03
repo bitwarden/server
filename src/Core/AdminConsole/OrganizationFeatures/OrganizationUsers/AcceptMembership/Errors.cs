@@ -3,4 +3,4 @@
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 
 public record TwoFactorRequiredForMembership()
-    : BadRequestError("You cannot join this organization vault until you enable two-step login on your user account.");
+    : BadRequestError("You cannot join this organization until you enable two-step login on your user account.");

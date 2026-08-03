@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationC
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -80,7 +79,7 @@ public class ConfirmOrganizationUserCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
-        Assert.Contains(new UserFreeOrgAdminLimitError().Message, exception.Message);
+        Assert.Contains("User can only be an admin of one free organization.", exception.Message);
     }
 
     [Theory]
@@ -212,7 +211,7 @@ public class ConfirmOrganizationUserCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
-        Assert.Contains(new UserCannotBeConfirmedMemberOfAnotherOrg(user.Email).Message, exception.Message);
+        Assert.Contains($"{user.Email} cannot be confirmed until they leave or remove all other organizations.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -258,7 +257,7 @@ public class ConfirmOrganizationUserCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
-        Assert.Contains(new UserCannotBeConfirmedForbiddenByOtherOrg(user.Email).Message, exception.Message);
+        Assert.Contains($"{user.Email} cannot be confirmed because they are in another organization which forbids it.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -596,7 +595,7 @@ public class ConfirmOrganizationUserCommandTests
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.Id, [orgUser, otherOrgUser], user),
-                new UserCannotBelongToAnotherOrganization(string.Empty)));
+                new UserCannotBelongToAnotherOrganization()));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<Guid>())
@@ -605,7 +604,7 @@ public class ConfirmOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
 
-        Assert.Equal(new UserCannotBelongToAnotherOrganization(string.Empty).Message, exception.Message);
+        Assert.Equal(new UserCannotBelongToAnotherOrganization().Message, exception.Message);
         await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .DidNotReceiveWithAnyArgs()
             .DeleteAllByUserIdAsync(Arg.Any<Guid>());
@@ -640,7 +639,7 @@ public class ConfirmOrganizationUserCommandTests
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser, otherOrgUser], user),
-                new OtherOrganizationDoesNotAllowOtherMembership(string.Empty)));
+                new OtherOrganizationDoesNotAllowOtherMembership()));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<Guid>())
@@ -650,7 +649,7 @@ public class ConfirmOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
 
-        Assert.Equal(new OtherOrganizationDoesNotAllowOtherMembership(string.Empty).Message, exception.Message);
+        Assert.Equal(new OtherOrganizationDoesNotAllowOtherMembership().Message, exception.Message);
         await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .DidNotReceiveWithAnyArgs()
             .DeleteAllByUserIdAsync(Arg.Any<Guid>());
@@ -862,7 +861,7 @@ public class ConfirmOrganizationUserCommandTests
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser, otherOrgUser], user),
-                new UserCannotBelongToAnotherOrganization(user.Email)));
+                new UserCannotBelongToAnotherOrganization()));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<Guid>())
@@ -872,7 +871,7 @@ public class ConfirmOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
 
-        Assert.Equal(new UserCannotBelongToAnotherOrganization(user.Email).Message, exception.Message);
+        Assert.Equal(new UserCannotBelongToAnotherOrganization().Message, exception.Message);
         Assert.NotEqual("Cannot confirm this member to the organization until they leave or remove all other organizations.",
             exception.Message);
     }
@@ -921,7 +920,7 @@ public class ConfirmOrganizationUserCommandTests
             .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user3.Id), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser3, otherOrgUser], user3),
-                new OtherOrganizationDoesNotAllowOtherMembership(string.Empty)));
+                new OtherOrganizationDoesNotAllowOtherMembership()));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(Arg.Any<Guid>())
@@ -940,7 +939,7 @@ public class ConfirmOrganizationUserCommandTests
         Assert.Equal(3, result.Count);
         Assert.Empty(result[0].Item2);
         Assert.Empty(result[1].Item2);
-        Assert.Equal(new OtherOrganizationDoesNotAllowOtherMembership(string.Empty).Message, result[2].Item2);
+        Assert.Equal(new OtherOrganizationDoesNotAllowOtherMembership().Message, result[2].Item2);
     }
 
     [Theory, BitAutoData]

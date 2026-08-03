@@ -68,7 +68,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
         {
-            return new ConfirmEmailDomainNotAllowed(organization.DisplayName());
+            return new ConfirmEmailDomainNotAllowed();
         }
 
         // Provider users cannot confirm via invite links.
@@ -79,7 +79,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
-        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser, organization.DisplayName());
+        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser);
         if (membershipStatusError is not null)
         {
             return membershipStatusError;
@@ -131,11 +131,11 @@ public class ConfirmOrganizationInviteLinkValidator(
         return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 
-    private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser, string orgName) =>
+    private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser) =>
         existingOrganizationUser switch
         {
-            { RevocationReason: not null } => new ConfirmOrganizationAccessRevoked(orgName),
-            { Status: OrganizationUserStatusType.Confirmed } => new ConfirmAlreadyOrganizationMember(orgName),
+            { RevocationReason: not null } => new ConfirmOrganizationAccessRevoked(),
+            { Status: OrganizationUserStatusType.Confirmed } => new ConfirmAlreadyOrganizationMember(),
             _ => null
         };
 
@@ -208,7 +208,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         return InviteUsersPasswordManagerValidator.ValidatePasswordManager(subscriptionUpdate)
             is PasswordManagerValidation.Invalid<PasswordManagerSubscriptionUpdate>
-            ? new ConfirmOrganizationHasNoAvailableSeats(organization.DisplayName())
+            ? new ConfirmOrganizationHasNoAvailableSeats()
             : null;
     }
 }

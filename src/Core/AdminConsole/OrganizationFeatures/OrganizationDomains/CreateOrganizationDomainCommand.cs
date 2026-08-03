@@ -32,7 +32,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
             await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(organizationDomain.DomainName);
         if (claimedDomain.Any())
         {
-            throw new ConflictException(new DomainNotAvailableError().Message);
+            throw new ConflictException("The domain is not available to be claimed.");
         }
 
         //check for duplicate domain entry for an organization
@@ -41,7 +41,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
                 organizationDomain.DomainName);
         if (duplicateOrgDomain is not null)
         {
-            throw new ConflictException(new DuplicateDomainError().Message);
+            throw new ConflictException("A domain already exists for this organization.");
         }
 
         // Generate and set DNS TXT Record

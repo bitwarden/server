@@ -163,6 +163,8 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData(ChangeEmailCommand.EmailAlreadyInUseError, typeof(EmailAlreadyInUseError), "email_already_in_use")]
+    [BitAutoData(OrganizationDomainAllowEmailChangeQuery.EmailClaimedByOrganizationError, typeof(EmailClaimedByAnotherOrganizationError), "email_claimed_by_another_organization")]
+    [BitAutoData(OrganizationDomainAllowEmailChangeQuery.EmailNotOnVerifiedDomainError, typeof(NewEmailDomainNotClaimedError), "new_email_domain_not_claimed")]
     [BitAutoData("Something unexpected went wrong.", typeof(EmailChangeFailedError), "email_change_failed")]
     public async Task UpdateUserAsync_WhenChangeEmailThrowsBadRequest_MapsToTypedErrorAndDoesNotPersist(
         string thrownMessage,
@@ -203,54 +205,6 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<MemberEmailChangedNotificationView>(default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WhenChangeEmailThrowsEmailClaimedByOrganization_MapsToEmailClaimedByAnotherOrganizationError(
-        SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
-    {
-        organizationUser.UserId = Guid.NewGuid();
-        var userToUpdate = new User { Id = organizationUser.UserId!.Value, Email = "old@claimed.example.com" };
-        var request = Setup(sutProvider, organization, organizationUser, newEmail: "new@claimed.example.com");
-
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(organizationUser.UserId!.Value)
-            .Returns(userToUpdate);
-        sutProvider.GetDependency<IChangeEmailCommand>()
-            .ChangeEmailAsync(userToUpdate, "new@claimed.example.com")
-            .ThrowsAsync(new BadRequestException(new EmailClaimedByOrganizationError().Message));
-
-        var result = await sutProvider.Sut.UpdateUserAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<EmailClaimedByAnotherOrganizationError>(result.AsError);
-        Assert.Equal("email_claimed_by_another_organization", Assert.IsAssignableFrom<IValidationError>(result.AsError).Type);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WhenChangeEmailThrowsEmailNotOnVerifiedDomain_MapsToNewEmailDomainNotClaimedError(
-        SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
-    {
-        organizationUser.UserId = Guid.NewGuid();
-        var userToUpdate = new User { Id = organizationUser.UserId!.Value, Email = "old@claimed.example.com" };
-        var request = Setup(sutProvider, organization, organizationUser, newEmail: "new@claimed.example.com");
-
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(organizationUser.UserId!.Value)
-            .Returns(userToUpdate);
-        sutProvider.GetDependency<IChangeEmailCommand>()
-            .ChangeEmailAsync(userToUpdate, "new@claimed.example.com")
-            .ThrowsAsync(new BadRequestException(new EmailNotOnVerifiedDomainError().Message));
-
-        var result = await sutProvider.Sut.UpdateUserAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<NewEmailDomainNotClaimedError>(result.AsError);
-        Assert.Equal("new_email_domain_not_claimed", Assert.IsAssignableFrom<IValidationError>(result.AsError).Type);
     }
 
     [Theory]

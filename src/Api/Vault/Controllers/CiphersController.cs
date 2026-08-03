@@ -11,7 +11,6 @@ using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -1299,7 +1298,7 @@ public class CiphersController : Controller
             // Check if the user is claimed by any organization.
             if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
             {
-                throw new BadRequestException(new CannotPurgeClaimedAccountError().Message);
+                throw new BadRequestException("Cannot purge accounts owned by an organization. Contact your organization administrator for additional details.");
             }
             await _cipherRepository.DeleteByUserIdAsync(user.Id);
         }
