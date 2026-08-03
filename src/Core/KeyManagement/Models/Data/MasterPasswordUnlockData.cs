@@ -26,15 +26,23 @@ public class MasterPasswordUnlockData
 
     public void ValidateKeyIdUnchangedForUser(User user)
     {
-        var userKeyId = user.GetUserKeyId();
-        if (this.ContainedKeyId is null && userKeyId is null)
+        var currentUserKeyId = user.GetUserKeyId();
+        if (currentUserKeyId is null)
         {
+            // no key to validate against, so do not validate
             return;
         }
 
-        if (this.ContainedKeyId is not null && !this.ContainedKeyId.Equals(userKeyId))
+        if (this.ContainedKeyId is null)
         {
-            throw new BadRequestException("Invalid user key id in master password unlock data.");
+            // no key sent, this is an old client, and we do not current validate
+            return;
+        }
+
+        if (!currentUserKeyId.Equals(this.ContainedKeyId))
+        {
+            // If a key id is sent, and there is one on the user table, they must match.
+            throw new BadRequestException("Invalid user key sent in in master-password unlock data.");
         }
     }
 
