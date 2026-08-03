@@ -1015,6 +1015,10 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordSalt = user.GetMasterPasswordSalt();
         request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey = _mockEncryptedString;
 
+        // Key ids; the contained key id must match the key id of the user key being rotated to.
+        request.AccountUnlockData.MasterPasswordUnlockData.ContainedKeyId = _mockKeyId;
+        request.NewUserKeyId = _mockKeyId;
+
         // Unlock data arrays
         request.AccountUnlockData.PasskeyUnlockData = [];
         request.AccountUnlockData.DeviceKeyUnlockData = [];

@@ -131,7 +131,8 @@ public class AccountsKeyManagementController : Controller
                 V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
                 Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
                 Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
-                Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends)
+                Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
+                NewUserKeyId = KeyId.FromHexEncodedString(model.NewUserKeyId)
             }
         };
 
