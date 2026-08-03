@@ -43,6 +43,7 @@ public class AccountsKeyManagementControllerTests
     private static readonly string _mockEncryptedType2String =
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
+    private const string _mockKeyId = "0123456789abcdef0123456789abcdef";
 
 
     [Theory]
@@ -714,6 +715,8 @@ public class AccountsKeyManagementControllerTests
                 && d.MasterPasswordUnlockData.Kdf.Parallelism == request.UnlockMethodData.MasterPasswordUnlockData.Kdf.Parallelism
                 && d.MasterPasswordUnlockData.Salt == request.UnlockMethodData.MasterPasswordUnlockData.Salt
                 && d.MasterPasswordUnlockData.MasterKeyWrappedUserKey == request.UnlockMethodData.MasterPasswordUnlockData.MasterKeyWrappedUserKey
+                && d.MasterPasswordUnlockData.ContainedKeyId!.ToString() == _mockKeyId
+                && d.BaseData.NewUserKeyId!.ToString() == _mockKeyId
 
                 && d.BaseData.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey == request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.WrappedPrivateKey
                 && d.BaseData.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey == request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.PublicKey
@@ -743,6 +746,7 @@ public class AccountsKeyManagementControllerTests
             MasterPasswordUnlockData = null,
             KeyConnectorKeyWrappedUserKey = null
         };
+        request.NewUserKeyId = _mockKeyId;
 
         await sutProvider.Sut.RotateUserKeysAsync(request);
 
@@ -786,6 +790,7 @@ public class AccountsKeyManagementControllerTests
             MasterPasswordUnlockData = null,
             KeyConnectorKeyWrappedUserKey = _mockEncryptedType2String
         };
+        request.NewUserKeyId = _mockKeyId;
 
         await sutProvider.Sut.RotateUserKeysAsync(request);
 
@@ -852,10 +857,12 @@ public class AccountsKeyManagementControllerTests
                 {
                     Iterations = 6000,
                     KdfType = KdfType.PBKDF2_SHA256,
-                }
+                },
+                ContainedKeyId = _mockKeyId
             },
             KeyConnectorKeyWrappedUserKey = null,
         };
+        request.NewUserKeyId = _mockKeyId;
         return request;
     }
 }

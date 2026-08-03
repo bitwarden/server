@@ -39,6 +39,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
     private static readonly string _mockEncryptedType7String2 = "7.Mi1iaXR3YXJkZW4tZGF0YQo=";
     private static readonly string _mockEncryptedType7WrappedSigningKey = "7.DRv74Kg1RSlFSam1MNFlGD==";
+    private const string _mockKeyId = "0123456789abcdef0123456789abcdef";
 
     private readonly HttpClient _client;
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
@@ -794,6 +795,34 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     }
 
     [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_MasterPasswordUnlockDataKeyIdDoesNotMatchNewUserKeyId_BadRequest(
+        RotateUserKeysRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, true);
+        SetupMasterPasswordRotateUserAccount(request, user);
+        request.NewUserKeyId = "fedcba9876543210fedcba9876543210";
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_MasterPasswordUnlockDataKeyIdWithoutNewUserKeyId_BadRequest(
+        RotateUserKeysRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, true);
+        SetupMasterPasswordRotateUserAccount(request, user);
+        request.NewUserKeyId = null;
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
     [BitAutoData(false)]
     [BitAutoData(true)]
     public async Task RotateUserKeysAsync_TdeUserRotation_Success(bool setupAsV2Encryption, RotateUserKeysRequestModel request)
@@ -1043,7 +1072,9 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
                     Parallelism = user.KdfParallelism
                 },
                 MasterKeyWrappedUserKey = _mockEncryptedType7String,
-                Salt = user.Email.ToLowerInvariant().Trim()
+                Salt = user.Email.ToLowerInvariant().Trim(),
+                // Must match the key id of the user key being rotated to, see SetupCommonRotate.
+                ContainedKeyId = _mockKeyId
             }
         };
         SetupCommonRotate(request, upgradeToken);
@@ -1051,6 +1082,8 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     private static void SetupCommonRotate(RotateUserKeysRequestModel request, bool upgradeToken = false)
     {
+        request.NewUserKeyId = _mockKeyId;
+
         if (upgradeToken)
         {
             request.UnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
