@@ -27,19 +27,6 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     }
 
     /// <summary>
-    /// Gets the organization user user details for the provided request
-    /// </summary>
-    /// <param name="request">Request details for the query</param>
-    /// <returns>List of OrganizationUserUserDetails</returns>
-    public async Task<IEnumerable<OrganizationUserUserDetails>> GetOrganizationUserUserDetails(OrganizationUserUserDetailsQueryRequest request)
-    {
-        var organizationUsers = await _organizationUserRepository
-            .GetManyDetailsByOrganizationAsync(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
-
-        return organizationUsers;
-    }
-
-    /// <summary>
     /// Get the organization user user details, two factor enabled status, and
     /// claimed status for the provided request.
     /// </summary>
