@@ -146,7 +146,11 @@ jobs:
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
           keyvault: gh-org-bitwarden
-          secrets: "GAMEWARDEN-REGISTRY-USERNAME,GAMEWARDEN-REGISTRY-PASSWORD,CHAINGUARD-REGISTRY-USERNAME,CHAINGUARD-REGISTRY-PASSWORD"
+          secrets: >-
+            GAMEWARDEN-REGISTRY-USERNAME,
+            GAMEWARDEN-REGISTRY-PASSWORD,
+            CHAINGUARD-REGISTRY-USERNAME,
+            CHAINGUARD-REGISTRY-PASSWORD
 
       - name: Log in to registry
         # use ACR for testing
