@@ -70,7 +70,7 @@ public class MasterPasswordUnlockData
         return Kdf.Equals(other.Kdf) &&
                MasterKeyWrappedUserKey == other.MasterKeyWrappedUserKey &&
                Salt == other.Salt
-                && ContainedKeyId?.Equals(other.ContainedKeyId) == true;
+                && Equals(ContainedKeyId, other);
     }
 
     public override int GetHashCode()
