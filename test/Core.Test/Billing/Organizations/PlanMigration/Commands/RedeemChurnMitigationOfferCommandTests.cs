@@ -91,6 +91,30 @@ public class RedeemChurnMitigationOfferCommandTests
     }
 
     [Fact]
+    public async Task Run_SubscriptionDiscountMissingSourceCoupon_DoesNotThrow_AndAppliesChurnCoupon()
+    {
+        // A pre-existing subscription discount can reference a coupon that was deleted in Stripe, leaving
+        // a null Source.Coupon; reading the current coupon ids must skip it rather than NRE.
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupMigrationCohortAssignment(organization);
+
+        var subscription = CreateSubscription();
+        subscription.Discounts = [new Discount { Id = "di_deleted" }];
+        SetupGetSubscription(organization, subscription);
+        SetupActiveScheduleWithTwoPhases(subscription);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_123",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[1].Discounts != null &&
+                opts.Phases[1].Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+    }
+
+    [Fact]
     public async Task Run_MigrationCohort_PreservesPhase1AsIs()
     {
         var organization = CreateOrganization();

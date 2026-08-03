@@ -665,6 +665,66 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
+    public async Task SchedulePersonalPriceIncrease_SubscriptionDiscountMissingSourceCoupon_DoesNotCreateSchedule()
+    {
+        // A discount expanded without "discounts.source.coupon" comes back with a null Source.Coupon;
+        // the scheduler must decline rather than NRE on the Source.Coupon.Id read.
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            new Dictionary<string, string> { { "userId", Guid.NewGuid().ToString() } },
+            CreateSubscriptionItem("some-price-id", 1));
+        subscription.Discounts = [new Discount { Id = "di_abc" }];
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        var sut = CreateSut();
+
+        await sut.SchedulePersonalPriceIncrease(subscription);
+
+        await _pricingClient.DidNotReceiveWithAnyArgs().ListPremiumPlans();
+        await _pricingClient.DidNotReceiveWithAnyArgs().GetPlanOrThrow(Arg.Any<PlanType>());
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_SubscriptionDiscountMissingSourceCoupon_DoesNotCreateSchedule()
+    {
+        // Business-tier equivalent of the guard: a subscription-level discount whose Source.Coupon is
+        // null (missing "discounts.source.coupon" expand) must make the scheduler decline, not NRE.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+        subscription.Discounts = [new Discount { Id = "di_abc" }];
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        });
+
+        var sut = CreateSut();
+
+        await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+    }
+
+    [Fact]
     public async Task SchedulePersonalPriceIncrease_ProviderSubscription_DoesNotCreateSchedule()
     {
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
