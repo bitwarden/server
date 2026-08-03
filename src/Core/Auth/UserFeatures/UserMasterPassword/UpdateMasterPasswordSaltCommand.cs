@@ -20,9 +20,6 @@ public class UpdateMasterPasswordSaltCommand : IUpdateMasterPasswordSaltCommand
             return;
         }
 
-        // The salt is null here, so this returns the email-derived salt clients already use. The
-        // revision dates are deliberately left alone: the stored value matches what clients compute,
-        // so there is nothing for them to re-sync.
         user.MasterPasswordSalt = user.Email.ToLowerInvariant().Trim();
         await _userRepository.ReplaceAsync(user);
     }
