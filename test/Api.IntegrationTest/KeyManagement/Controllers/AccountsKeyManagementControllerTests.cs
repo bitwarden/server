@@ -30,6 +30,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.KeyManagement.Controllers;
 
+[KeyIdRequestCustomize]
 public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private static readonly string _mockEncryptedString =
@@ -747,6 +748,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
         Assert.Equal(request.UnlockMethodData.MasterPasswordUnlockData!.MasterKeyWrappedUserKey, userNewState.Key);
+        Assert.Equal(request.UserKeyId, userNewState.UserKeyId);
         Assert.Equal(request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.SignedPublicKey,
             userNewState.SignedPublicKey);
         Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityState, userNewState.SecurityState);
@@ -1043,7 +1045,8 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
                     Parallelism = user.KdfParallelism
                 },
                 MasterKeyWrappedUserKey = _mockEncryptedType7String,
-                Salt = user.Email.ToLowerInvariant().Trim()
+                Salt = user.Email.ToLowerInvariant().Trim(),
+                UserKeyId = request.UserKeyId
             }
         };
         SetupCommonRotate(request, upgradeToken);

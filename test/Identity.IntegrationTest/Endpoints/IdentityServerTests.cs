@@ -6,12 +6,14 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.TestHost;
@@ -30,6 +32,9 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         PublicKey = "public-key",
         EncryptedPrivateKey = "encrypted-private-key",
     };
+
+    private const string DefaultEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+    private const string TestUserKeyId = "0123456789abcdef0123456789abcdef";
 
     private const int SecondsInMinute = 60;
     private const int MinutesInHour = 60;
@@ -86,6 +91,76 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
         Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
         AssertUserDecryptionOptions(root, user);
+    }
+
+    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
+    public async Task RegisterFinish_WithV1Encryption_IgnoresSuppliedUserKeyId(RegisterFinishRequestModel requestModel)
+    {
+        // Clearing AccountKeys leaves UserAsymmetricKeys as the account cryptographic state, which is
+        // what makes this a V1 registration. Only V2 flows establish a key id, so V1 drops one even when
+        // the client sends it; the account picks one up from the backfill endpoint on a later sync.
+        requestModel.AccountKeys = null;
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
+        SetMasterPasswordUnlockAndAuthentication(requestModel, TestUserKeyId);
+        var localFactory = new IdentityApplicationFactory();
+
+        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
+
+        Assert.Null(user.UserKeyId);
+    }
+
+    [Theory, BitAutoData, SignatureKeyPairRequestModelCustomize, RegisterFinishRequestModelCustomize]
+    public async Task RegisterFinish_WithV2Encryption_PersistsSuppliedUserKeyId(RegisterFinishRequestModel requestModel)
+    {
+        // AccountKeys is left populated so the registration resolves to V2 encryption, which persists
+        // the key id through UpdateMasterPasswordUnlockData.
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
+        SetMasterPasswordUnlockAndAuthentication(requestModel, TestUserKeyId);
+        var localFactory = new IdentityApplicationFactory();
+
+        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
+
+        Assert.Equal(TestUserKeyId, user.UserKeyId);
+    }
+
+    [Theory, BitAutoData, SignatureKeyPairRequestModelCustomize, RegisterFinishRequestModelCustomize]
+    public async Task RegisterFinish_WithV2EncryptionAndNoUserKeyId_LeavesUserKeyIdUnset(
+        RegisterFinishRequestModel requestModel)
+    {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
+        SetMasterPasswordUnlockAndAuthentication(requestModel, userKeyId: null);
+        var localFactory = new IdentityApplicationFactory();
+
+        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
+
+        Assert.Null(user.UserKeyId);
+    }
+
+    /// <summary>
+    /// Attaches matching unlock and authentication data, which model validation requires as a pair.
+    /// The KDF and salt are re-aligned by <see cref="IdentityApplicationFactory.RegisterNewIdentityFactoryUserAsync"/>.
+    /// </summary>
+    private static void SetMasterPasswordUnlockAndAuthentication(RegisterFinishRequestModel requestModel, string? userKeyId)
+    {
+        var kdf = new KdfRequestModel
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = KdfConstants.PBKDF2_ITERATIONS.Default
+        };
+
+        requestModel.MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+        {
+            Kdf = kdf,
+            MasterKeyWrappedUserKey = DefaultEncryptedString,
+            Salt = requestModel.Email,
+            UserKeyId = userKeyId
+        };
+        requestModel.MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = IdentityApplicationFactory.DefaultUserPasswordHash,
+            Salt = requestModel.Email
+        };
     }
 
     [Theory, RegisterFinishRequestModelCustomize]

@@ -51,7 +51,7 @@ public class MasterPasswordServiceTests
     }
 
     private static SetInitialPasswordData BuildSetInitialData(User user, string? hint = null,
-        bool validatePassword = false, bool refreshStamp = false)
+        bool validatePassword = false, bool refreshStamp = false, string? userKeyId = null)
     {
         // Stage 1: salt == email while MasterPasswordSalt is null (PM-28143 separates them in Stage 3).
         var salt = user.GetMasterPasswordSalt();
@@ -68,7 +68,8 @@ public class MasterPasswordServiceTests
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
-                Kdf = kdf
+                Kdf = kdf,
+                UserKeyId = KeyId.FromHexEncodedString(userKeyId)
             },
             MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
@@ -170,6 +171,70 @@ public class MasterPasswordServiceTests
         Assert.Equal(expectedTime, user.LastPasswordChangeDate);
         Assert.Equal(expectedTime, user.RevisionDate);
         Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PrepareSetInitialMasterPassword_LeavesStoredUserKeyIdUnchanged(User user)
+    {
+        // Setting a master password wraps a user key that already exists — a TDE account holds one
+        // before it ever has a master password — so it must not rename the account's key id.
+        const string storedUserKeyId = "0123456789abcdef0123456789abcdef";
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = null;
+        user.Key = null;
+        user.MasterPasswordSalt = null;
+        user.UsesKeyConnector = false;
+        user.UserKeyId = storedUserKeyId;
+
+        var data = BuildSetInitialData(user, userKeyId: storedUserKeyId);
+        sutProvider.GetDependency<IPasswordHasher<User>>()
+            .HashPassword(Arg.Any<User>(), Arg.Any<string>())
+            .Returns("hash");
+
+        var result = await sutProvider.Sut.PrepareSetInitialMasterPasswordAsync(user, data);
+
+        Assert.True(result.IsT0);
+        Assert.Equal(storedUserKeyId, result.AsT0.UserKeyId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PrepareSetInitialMasterPassword_DoesNotBackfillUserKeyId(User user)
+    {
+        // Backfilling an account that has no key id belongs to the backfill endpoint, not to a
+        // password flow — the server cannot verify a key id it has never seen.
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = null;
+        user.Key = null;
+        user.MasterPasswordSalt = null;
+        user.UsesKeyConnector = false;
+        user.UserKeyId = null;
+
+        var data = BuildSetInitialData(user, userKeyId: "0123456789abcdef0123456789abcdef");
+        sutProvider.GetDependency<IPasswordHasher<User>>()
+            .HashPassword(Arg.Any<User>(), Arg.Any<string>())
+            .Returns("hash");
+
+        var result = await sutProvider.Sut.PrepareSetInitialMasterPasswordAsync(user, data);
+
+        Assert.True(result.IsT0);
+        Assert.Null(result.AsT0.UserKeyId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PrepareSetInitialMasterPassword_ThrowsWhenUserKeyIdDisagreesWithStoredOne(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = null;
+        user.Key = null;
+        user.MasterPasswordSalt = null;
+        user.UsesKeyConnector = false;
+        user.UserKeyId = "0123456789abcdef0123456789abcdef";
+
+        var data = BuildSetInitialData(user, userKeyId: "fedcba9876543210fedcba9876543210");
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PrepareSetInitialMasterPasswordAsync(user, data));
+        Assert.Equal("Invalid user key id.", exception.Message);
     }
 
     [Theory, BitAutoData]

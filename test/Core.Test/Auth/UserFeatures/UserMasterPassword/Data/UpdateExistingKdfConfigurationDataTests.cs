@@ -24,7 +24,8 @@ public class UpdateExistingKdfConfigurationDataTests
         };
     }
 
-    private static UpdateExistingKdfConfigurationData BuildData(User user, string? saltOverride = null)
+    private static UpdateExistingKdfConfigurationData BuildData(User user, string? saltOverride = null,
+        string? userKeyIdOverride = null)
     {
         var salt = saltOverride ?? user.GetMasterPasswordSalt();
         var newKdf = new KdfSettings
@@ -40,7 +41,8 @@ public class UpdateExistingKdfConfigurationDataTests
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
-                Kdf = newKdf
+                Kdf = newKdf,
+                UserKeyId = KeyId.FromHexEncodedString(userKeyIdOverride)
             },
             MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
@@ -117,5 +119,41 @@ public class UpdateExistingKdfConfigurationDataTests
         };
 
         Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Throws_WhenUserKeyIdDisagreesWithStoredOne()
+    {
+        // KDF rotation re-derives the master key and re-wraps the same user key under it, so the
+        // user key — and its key id — is unchanged.
+        var user = BuildValidUser();
+        user.UserKeyId = "0123456789abcdef0123456789abcdef";
+        var data = BuildData(user, userKeyIdOverride: "fedcba9876543210fedcba9876543210");
+
+        var exception = Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
+        Assert.Equal("Invalid user key id.", exception.Message);
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Accepts_WhenUserKeyIdMatchesStoredOne()
+    {
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var user = BuildValidUser();
+        user.UserKeyId = userKeyId;
+        var data = BuildData(user, userKeyIdOverride: userKeyId);
+
+        // Should not throw
+        data.ValidateDataForUser(user);
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Accepts_WhenClientSuppliesNoUserKeyId()
+    {
+        var user = BuildValidUser();
+        user.UserKeyId = "0123456789abcdef0123456789abcdef";
+        var data = BuildData(user);
+
+        // Should not throw
+        data.ValidateDataForUser(user);
     }
 }

@@ -18,13 +18,20 @@ public class MasterPasswordUnlockDataRequestModel
     [StringLength(256)]
     public required string Salt { get; init; }
 
+    /// <summary>
+    /// Optional hex-encoded key id of the wrapped user key. Absent for clients that predate the field.
+    /// </summary>
+    [UserKeyId]
+    public string? UserKeyId { get; init; }
+
     public MasterPasswordUnlockData ToData()
     {
         return new MasterPasswordUnlockData
         {
             Kdf = Kdf.ToData(),
             MasterKeyWrappedUserKey = MasterKeyWrappedUserKey,
-            Salt = Salt
+            Salt = Salt,
+            UserKeyId = KeyId.FromHexEncodedString(UserKeyId)
         };
     }
 }

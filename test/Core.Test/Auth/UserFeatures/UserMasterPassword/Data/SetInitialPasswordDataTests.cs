@@ -25,7 +25,8 @@ public class SetInitialPasswordDataTests
         return user;
     }
 
-    private static SetInitialPasswordData BuildData(User user, string? saltOverride = null)
+    private static SetInitialPasswordData BuildData(User user, string? saltOverride = null,
+        string? userKeyIdOverride = null)
     {
         // Stage 1: salt == email while MasterPasswordSalt is null (PM-28143 separates them in Stage 3).
         var salt = saltOverride ?? user.GetMasterPasswordSalt();
@@ -42,7 +43,8 @@ public class SetInitialPasswordDataTests
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
-                Kdf = kdf
+                Kdf = kdf,
+                UserKeyId = KeyId.FromHexEncodedString(userKeyIdOverride)
             },
             MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
@@ -110,6 +112,55 @@ public class SetInitialPasswordDataTests
         var data = BuildData(user, saltOverride: "wrong-salt");
 
         Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Throws_WhenUserKeyIdDisagreesWithStoredOne()
+    {
+        // A TDE or SSO JIT account holds a user key before it has a master password. Setting one
+        // wraps that same key, so a request naming a different key is rejected rather than allowed
+        // to rename the key the account is known to use.
+        var user = BuildValidSetInitialUser();
+        user.UserKeyId = "0123456789abcdef0123456789abcdef";
+        var data = BuildData(user, userKeyIdOverride: "fedcba9876543210fedcba9876543210");
+
+        var exception = Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
+        Assert.Equal("Invalid user key id.", exception.Message);
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Accepts_WhenUserKeyIdMatchesStoredOne()
+    {
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var user = BuildValidSetInitialUser();
+        user.UserKeyId = userKeyId;
+        var data = BuildData(user, userKeyIdOverride: userKeyId);
+
+        // Should not throw
+        data.ValidateDataForUser(user);
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Accepts_WhenAccountHasNoStoredUserKeyId()
+    {
+        // A freshly provisioned SSO JIT account, or a legacy one that has not been backfilled yet.
+        var user = BuildValidSetInitialUser();
+        user.UserKeyId = null;
+        var data = BuildData(user, userKeyIdOverride: "fedcba9876543210fedcba9876543210");
+
+        // Should not throw
+        data.ValidateDataForUser(user);
+    }
+
+    [Fact]
+    public void ValidateDataForUser_Accepts_WhenClientSuppliesNoUserKeyId()
+    {
+        var user = BuildValidSetInitialUser();
+        user.UserKeyId = "0123456789abcdef0123456789abcdef";
+        var data = BuildData(user);
+
+        // Should not throw
+        data.ValidateDataForUser(user);
     }
 
     [Theory]

@@ -61,5 +61,9 @@ public class UpdateExistingKdfConfigurationData
         // Validate Salt is unchanged for user
         MasterPasswordUnlock.ValidateSaltUnchangedForUser(user);
         MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
+
+        // KDF rotation re-derives the master key and re-wraps the same user key under it. The user
+        // key is untouched, so its key id must not change.
+        MasterPasswordUnlock.ValidateUserKeyIdUnchangedForUser(user);
     }
 }

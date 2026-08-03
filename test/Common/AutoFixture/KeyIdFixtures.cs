@@ -1,5 +1,7 @@
 ﻿using AutoFixture;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
 
@@ -38,9 +40,13 @@ public class KeyIdCustomization : ICustomization
     {
         fixture.Register(() => KeyId.FromHexEncodedString(HexEncodedKeyId));
 
-        // Entities store the key id as a hex string, and an arbitrary generated string is not valid
-        // hex. Anything that converts one would otherwise throw.
+        // Entities and request models store the key id as a hex string, and an arbitrary generated
+        // string is not valid hex. Anything that converts one would otherwise throw.
         fixture.Customize<User>(composer => composer
+            .With(o => o.UserKeyId, HexEncodedKeyId));
+        fixture.Customize<MasterPasswordUnlockDataRequestModel>(composer => composer
+            .With(o => o.UserKeyId, HexEncodedKeyId));
+        fixture.Customize<KeysRequestModel>(composer => composer
             .With(o => o.UserKeyId, HexEncodedKeyId));
     }
 }

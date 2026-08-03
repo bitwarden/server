@@ -75,5 +75,10 @@ public class SetInitialPasswordData
         // removed in Stage 3 when PM-28143 feature flag clears and independent salts are safe.
         MasterPasswordUnlock.ValidateSaltUnchangedForUser(user);
         MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
+
+        // Setting an initial master password wraps a user key that already exists — a TDE or SSO JIT
+        // account holds one before it ever has a master password. The wrapping is new; the user key
+        // is not, so a key id already recorded for the account must not change.
+        MasterPasswordUnlock.ValidateUserKeyIdUnchangedForUser(user);
     }
 }

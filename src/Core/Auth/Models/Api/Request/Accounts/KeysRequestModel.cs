@@ -18,6 +18,13 @@ public class KeysRequestModel
     public string EncryptedPrivateKey { get; set; }
     public AccountKeysRequestModel AccountKeys { get; set; }
 
+    /// <summary>
+    /// Optional hex-encoded key id of the user key these account keys belong to. Absent for clients
+    /// that predate the field. Only honored on the V2 path.
+    /// </summary>
+    [UserKeyId]
+    public string UserKeyId { get; set; }
+
     [Obsolete("Use SetAccountKeysForUserCommand instead")]
     public User ToUser(User existingUser)
     {

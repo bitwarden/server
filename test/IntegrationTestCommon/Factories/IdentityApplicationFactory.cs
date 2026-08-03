@@ -277,7 +277,8 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             {
                 Kdf = alignedKdf,
                 MasterKeyWrappedUserKey = unlock.MasterKeyWrappedUserKey,
-                Salt = string.IsNullOrWhiteSpace(unlock.Salt) ? requestModel.Email : unlock.Salt
+                Salt = string.IsNullOrWhiteSpace(unlock.Salt) ? requestModel.Email : unlock.Salt,
+                UserKeyId = unlock.UserKeyId
             };
         }
 

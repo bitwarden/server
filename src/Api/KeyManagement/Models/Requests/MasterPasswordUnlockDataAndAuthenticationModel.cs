@@ -23,6 +23,13 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
     [MaxLength(256)]
     public string? MasterPasswordSalt { get; set; }
 
+    /// <summary>
+    /// Optional hex-encoded key id of the user key wrapped by <see cref="MasterKeyEncryptedUserKey"/>.
+    /// Absent for clients that predate the field.
+    /// </summary>
+    [UserKeyId]
+    public string? UserKeyId { get; set; }
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (KdfType == KdfType.PBKDF2_SHA256)
@@ -74,6 +81,7 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
             },
             Salt = MasterPasswordSalt ?? Email,
             MasterKeyWrappedUserKey = MasterKeyEncryptedUserKey,
+            UserKeyId = KeyId.FromHexEncodedString(UserKeyId),
         };
     }
 }
