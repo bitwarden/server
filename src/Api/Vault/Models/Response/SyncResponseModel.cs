@@ -99,7 +99,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                     WrappedUserKey1 = tokenData.WrappedUserKey1,
                     WrappedUserKey2 = tokenData.WrappedUserKey2
                 }
-                : null
+                : null,
+            UserKeyId = user.UserKeyId
         };
     }
 
