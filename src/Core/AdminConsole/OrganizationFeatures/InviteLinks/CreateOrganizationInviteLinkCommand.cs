@@ -49,6 +49,7 @@ public class CreateOrganizationInviteLinkCommand(
         };
         inviteLink.SetAllowedDomains(sanitizedDomains);
         inviteLink.SetNewId();
+        inviteLink.SetNewCode();
 
         await organizationInviteLinkRepository.CreateAsync(inviteLink);
 

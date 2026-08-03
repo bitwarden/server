@@ -7,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Vault.Entities;
@@ -225,6 +226,58 @@ public class ImportCiphersAsyncCommandTests
 
         Assert.Equal("This organization can only have a maximum of " +
         $"{organization.MaxCollections} collections.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoOrganizationalVaultAsync_Vfo1FoundationEnabled_ThrowsBadRequestWithSharedFolderTerminology(
+        Organization organization,
+        Guid importingUserId,
+        OrganizationUser importingOrganizationUser,
+        List<Collection> collections,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        organization.MaxCollections = 1;
+        importingOrganizationUser.OrganizationId = organization.Id;
+
+        foreach (var collection in collections)
+        {
+            collection.OrganizationId = organization.Id;
+        }
+
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organization.Id;
+        }
+
+        KeyValuePair<int, int>[] collectionRelationships = {
+            new(0, 0),
+            new(1, 1),
+            new(2, 2)
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, importingUserId)
+            .Returns(importingOrganizationUser);
+
+        // Set up a collection that already exists in the organization
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Collection> { collections[0] });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.VFO1Foundation)
+            .Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId, [], []));
+
+        Assert.Equal("This organization can only have a maximum of " +
+        $"{organization.MaxCollections} shared folders.", exception.Message);
     }
 
     [Theory, BitAutoData]

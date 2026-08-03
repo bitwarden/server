@@ -102,8 +102,9 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             license.AllowAdminAccessToAllCollectionItems = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems);
         }
 
+        var useSharedFolderTerminology = _featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation);
         var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception) &&
-            selfHostedOrganization.CanUseLicense(license, out exception);
+            selfHostedOrganization.CanUseLicense(license, useSharedFolderTerminology, out exception);
 
         if (!canUse)
         {

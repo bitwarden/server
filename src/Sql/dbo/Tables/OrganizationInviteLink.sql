@@ -1,7 +1,7 @@
 CREATE TABLE [dbo].[OrganizationInviteLink]
 (
     [Id]                   UNIQUEIDENTIFIER NOT NULL,
-    [Code]                 UNIQUEIDENTIFIER NOT NULL,
+    [Code]                 NVARCHAR(300)    NOT NULL,
     [OrganizationId]       UNIQUEIDENTIFIER NOT NULL,
     [AllowedDomains]       NVARCHAR(MAX)    NOT NULL,
     [Invite]               NVARCHAR(MAX)    NOT NULL,
@@ -17,6 +17,3 @@ CREATE UNIQUE NONCLUSTERED INDEX [IX_OrganizationInviteLink_OrganizationId]
     ON [dbo].[OrganizationInviteLink]([OrganizationId] ASC);
 GO
 
-CREATE UNIQUE NONCLUSTERED INDEX [IX_OrganizationInviteLink_Code]
-    ON [dbo].[OrganizationInviteLink]([Code] ASC);
-GO

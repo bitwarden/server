@@ -36,21 +36,23 @@ Need to create test data?
 
 **Modern pattern for composable fixture-based and generated seeding.**
 
-**Flow**: Preset JSON or Options → RecipeOrchestrator → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
+**Flow**: Preset JSON or Options → RecipeOrchestrator → RecipeBuilder → IStep/IAsyncStep[] → RecipeExecutor → SeederContext → BulkCommitter → IPostCommitStep[]
 
 **Key actors**:
 
 - **RecipeBuilder**: Fluent API with dependency validation
-- **IStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.)
+- **IStep / IAsyncStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.). Use `IAsyncStep` for steps that do real I/O. A step additionally marked `IPostCommitStep` is deferred until after the bulk commit, so it observes committed rows — but sees cleared entity lists, since only the `EntityRegistry` and the context's scalar properties survive the commit.
 - **SeederContext**: Shared mutable state bag (NOT thread-safe)
-- **RecipeExecutor**: Executes steps sequentially, captures statistics, commits via BulkCommitter
+- **RecipeExecutor**: Awaits steps sequentially, captures statistics, commits via BulkCommitter, then runs any post-commit steps
 - **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
-- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`) into a single record. Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`.
+- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`, `ILicensingService`, `IAttachmentStorageService`) into a single record. Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`.
+
+**Why two step interfaces, not one async contract?** Deliberate — don't unify. Collapsing to one `Task ExecuteAsync(SeederContext)` costs: rewrite 22 step classes (18 in `Steps/`, 4 test doubles); force 20 `.Execute(context)` sites in `test/SeederApi.IntegrationTest/Steps/` to `await`, their test methods to `async`; and `TreatWarningsAsErrors` is on repo-wide (`Directory.Build.props`), so CS1998 makes `async` without `await` a build error — every sync step needs `return Task.CompletedTask`. Permanent trap. The split costs less: two-arm union in `OrderedStep`, `object`-typed `Inner`, one duplicated `RecipeBuilder` registration. Diverges from `IScene`/`IQuery` — single `Task`-returning, no sync twin.
 
 **Fixture/preset separation**: Fixtures (organizations, rosters, ciphers) are independent and never reference each other. The preset is the only layer that composes fixtures and defines cross-cutting relationships (folder assignments, favorites). See `Seeds/docs/architecture.md`.
 
-**Phase order (org presets)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
-**Phase order (individual presets)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → FolderAssignments → FavoriteAssignments
+**Phase order (org presets)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (individual presets)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → CipherAttachments → FolderAssignments → FavoriteAssignments
 
 **Individual user presets** use the Pipeline with `CreateIndividualUserStep` (no org, no groups, no collections). These presets live in `Seeds/fixtures/presets/individual/` and are identified by having a `"user"` key instead of `"organization"`. They support `folderNames`, `folderAssignments`, and `favoriteAssignments` for fixture-driven personal vault organization. See `Seeds/docs/presets.md` for the catalog.
 
@@ -58,7 +60,7 @@ See `Pipeline/` folder for implementation.
 
 ## Parallelism
 
-Steps execute sequentially (phase order preserved by RecipeExecutor). Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
+Steps execute sequentially (phase order preserved by RecipeExecutor). Async steps are awaited one at a time and MUST NOT be batched with `Task.WhenAll` — `SeederContext` is not thread-safe and each step reads state written by the ones before it. Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
 
 **Thread-safety requirements:**
 
@@ -71,7 +73,7 @@ Steps execute sequentially (phase order preserved by RecipeExecutor). Within a s
 When measuring step-level performance changes, use paired worktrees:
 
 - Create `server-PM-XXXXX/perf-baseline` and `server-PM-XXXXX/perf-optimized` worktrees
-- Both worktrees get `Stopwatch` timing in `RecipeExecutor.Execute()` (the baseline measurement)
+- Both worktrees get `Stopwatch` timing in `RecipeExecutor.ExecuteAsync()` (the baseline measurement)
 - Only the optimized worktree gets actual code changes
 - Run presets with `--mangle` flag to avoid DB collisions between runs
 - Compare per-step timings across 3+ runs each, discard the first run (JIT warmup)
@@ -102,14 +104,16 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 New files under `Data/` belong in the matching subfolder (`Distributions/`, `Enums/`, `Generators/`, `Static/`) — never loose at the top level. See `Data/README.md` for what each subfolder holds. If a new file's concern doesn't fit an existing subfolder, that's a signal to create one, not to drop it loose.
 
+**Two Enums homes, by concern:** `Data/Enums/` (namespace `Bit.Seeder.Data.Enums`) holds the generation-config surface (`CompanyType`, `PasswordStrength`, distribution shapes, etc. — "Enums are the API"). Crypto-taxonomy enums that describe how seeded vault data is encrypted (`CipherEncryptionType`, `AttachmentSchemeType`) live in the top-level `Enums/` folder (namespace `Bit.Seeder.Enums`), one enum per file.
+
 ## The Recipe Contract
 
 Recipes follow strict rules:
 
 1. A Recipe SHALL accept `SeederDependencies` as its single constructor parameter
-2. A Recipe SHALL have exactly one public method named `Seed()`
+2. A Recipe SHALL have exactly one public entry point — `Seed()` when synchronous, `SeedAsync()` when it returns `Task`/`Task<T>`. Pipeline-backed Recipes (`OrganizationRecipe`, `IndividualUserRecipe`) are async; the direct-to-database Recipes (`CollectionsRecipe`, `GroupsRecipe`, `OrganizationDomainRecipe`, `OrganizationWithUsersRecipe`) remain synchronous.
 3. A Recipe MUST produce one cohesive result
-4. A Recipe MAY have overloaded `Seed()` methods with different parameters
+4. A Recipe MAY overload that entry point with different parameters
 5. A Recipe SHALL use private helper methods for internal steps
 6. A Recipe SHALL use BulkCopy for performance when creating multiple entities
 7. A Recipe SHALL compose Factories for individual entity creation
@@ -146,6 +150,19 @@ Shared logic: `Factories/CipherEncryption.cs`, `Models/EncryptedCipherDtoExtensi
 The Rust shim (`util/RustSdk/rust/`) depends only on `bitwarden_crypto`. It does **not** depend on `bitwarden_vault` — the seeder drives field selection via `[EncryptProperty]` attributes, not SDK cipher types.
 
 Before modifying encryption integration, run `RustSdkCipherTests` to validate roundtrip encryption.
+
+## Encryption Schemes (crypto taxonomy)
+
+Seeded data spans two orthogonal encryption axes, named with Bitwarden's canonical vocabulary (defined in `Enums/CipherEncryptionType.cs` and `Enums/AttachmentSchemeType.cs`):
+
+- **Cipher encryption** (`cipherEncryption`): `userKey` (no cipher key; `Cipher.Key` null) or `cipherKey` (per-cipher key wrapped by the vault key).
+- **Attachment scheme version** (`attachmentVersion`): `v0` (no attachment key), `v1` (attachment key wrapped by the vault key), `v2` (attachment key wrapped by the cipher key).
+
+**Invariant:** a cipher and its attachments use the same strategy — `v2` requires a `cipherKey` host. `Steps/CreateCipherAttachmentsStep.cs` and `Seeds/schemas/cipher.schema.json` both enforce this; keep them in sync.
+
+**Wire mapping:** `AttachmentSchemeType.{V0,V1,V2}` casts to `u32 {0,1,2}` and is matched verbatim in `util/RustSdk/rust/src/attachment.rs`. The value *is* the version number — do not reintroduce an offset.
+
+**Do not conflate with account Encryption V1/V2.** Attachment `v0/v1/v2` is key-wrapping only. Everything the seeder emits is Encryption-V1 type-2 `EncString` (AES-256-CBC-HMAC); no COSE/type-7 path exists. A future V2/COSE capability is a **separate** axis (a new enum), never a new attachment version.
 
 ## Deterministic Data Generation
 

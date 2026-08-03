@@ -17,7 +17,6 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -137,13 +136,8 @@ public class SyncController : Controller
             userAccountKeys = await _userAccountKeysQuery.Run(user);
         }
 
-        IEnumerable<Policy> policiesNew = null;
-        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null;
-        if (_featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState))
-        {
-            policiesNew = await _policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
-            organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
-        }
+        var policiesNew = await _policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
+        var organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,

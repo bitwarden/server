@@ -11,8 +11,14 @@ public record InviteLinkDomainsRequired()
 public record InviteLinkNotAvailable()
     : BadRequestError("Your organization's plan does not support invite links.");
 
+public record InviteLinkConfirmationNotSupported()
+    : BadRequestError("This invite link does not support confirmation.");
+
 public record InviteLinkNotFound()
     : NotFoundError("Invite link not found.");
+
+public record EmailNotVerified()
+    : BadRequestError("You must verify your email address before joining an organization.");
 
 public record EmailDomainNotAllowed()
     : BadRequestError("Your email domain is not allowed to join this organization.");

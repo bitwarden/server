@@ -95,6 +95,87 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
     }
 
+    [Theory, BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WithSealedOpenOrgInviteData_ReturnsNoContent(string name, bool receiveMarketingEmails)
+    {
+        // Localized factory so we can inspect the mail service in isolation.
+        var localFactory = new IdentityApplicationFactory();
+
+        var email = $"test+register+sealed+{name}@email.com";
+        var sealedOpenOrgInviteData = "opaque-base64url-blob-representing-a-realistic-sdk-output";
+
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            SealedOpenOrgInviteData = sealedOpenOrgInviteData,
+        };
+
+        var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
+
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        // The passthrough must reach the mail service unchanged — the server never parses it.
+        await localFactory.GetService<Bit.Core.Services.IMailService>()
+            .Received(1)
+            .SendRegistrationVerificationEmailAsync(
+                Arg.Is<string>(e => e == email),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Is<string>(s => s == sealedOpenOrgInviteData));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WithOversizedSealedOpenOrgInviteData_ReturnsBadRequest(string name, bool receiveMarketingEmails)
+    {
+        var email = $"test+register+oversize+{name}@email.com";
+        // Length cap in the request model is 4096; 4097+ must be rejected by model validation.
+        var oversized = new string('A', 4097);
+
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            SealedOpenOrgInviteData = oversized,
+        };
+
+        var context = await _factory.PostRegisterSendEmailVerificationAsync(model);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WithSealedOpenOrgInviteData_ForExistingUser_SilentlyDiscardsSealedData(string name, bool receiveMarketingEmails)
+    {
+        // Existing user + sealed data → 204 with no mail sent (anti-enumeration).
+        var localFactory = new IdentityApplicationFactory();
+
+        var email = $"test+register+existing+{name}@email.com";
+        await CreateUserAsync(email, name, localFactory);
+
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            SealedOpenOrgInviteData = "opaque-base64url-blob",
+        };
+
+        var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
+
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        await localFactory.GetService<Bit.Core.Services.IMailService>()
+            .DidNotReceive()
+            .SendRegistrationVerificationEmailAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>());
+    }
+
 
     [Theory]
     [BitAutoData(true)]
@@ -533,6 +614,159 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(kdfParallelism, user.KdfParallelism);
     }
 
+
+    [Theory, BitAutoData]
+    public async Task RegisterViaSalesAssistedToken_WithDisabledRegistration_Succeeds(
+        string name,
+        [StringLength(1000)] string masterPasswordHash,
+        [StringLength(50)] string masterPasswordHint,
+        string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys,
+        int kdfMemory,
+        int kdfParallelism)
+    {
+        userAsymmetricKeys.AccountKeys = null;
+
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:disableUserRegistration", "true");
+
+        var email = $"test+sales+{name}@email.com";
+        const string salesAssistedToken = "fake-sales-assisted-token";
+
+        var tokenable = new SalesAssistedRegistrationTokenable
+        {
+            Email = email,
+            Name = name,
+            ExpirationDate = DateTime.UtcNow.AddDays(5)
+        };
+
+        localFactory.SubstituteService<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>(factory =>
+        {
+            factory.TryUnprotect(Arg.Is(salesAssistedToken), out Arg.Any<SalesAssistedRegistrationTokenable>())
+                .Returns(callInfo =>
+                {
+                    callInfo[1] = tokenable;
+                    return true;
+                });
+        });
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            SalesAssistedToken = salesAssistedToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism
+        };
+
+        var postRegisterFinishHttpContext = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, postRegisterFinishHttpContext.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+
+        Assert.NotNull(user);
+        Assert.Equal(email, user.Email);
+        Assert.Equal(name, user.Name);
+        Assert.NotEqual(masterPasswordHash, user.MasterPassword);
+        Assert.NotNull(user.MasterPassword);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterViaSalesAssistedToken_WithInvalidToken_Returns400(
+        string name,
+        [StringLength(1000)] string masterPasswordHash,
+        string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys)
+    {
+        userAsymmetricKeys.AccountKeys = null;
+
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:disableUserRegistration", "true");
+
+        var email = $"test+sales+{name}@email.com";
+        const string salesAssistedToken = "invalid-token";
+
+        localFactory.SubstituteService<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>(factory =>
+        {
+            factory.TryUnprotect(Arg.Any<string>(), out Arg.Any<SalesAssistedRegistrationTokenable>())
+                .Returns(callInfo =>
+                {
+                    callInfo[1] = null;
+                    return false;
+                });
+        });
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            SalesAssistedToken = salesAssistedToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+        };
+
+        var postRegisterFinishHttpContext = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, postRegisterFinishHttpContext.Response.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterViaSalesAssistedToken_WithEmailMismatch_Returns400(
+        string name,
+        [StringLength(1000)] string masterPasswordHash,
+        string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys)
+    {
+        userAsymmetricKeys.AccountKeys = null;
+
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:disableUserRegistration", "true");
+
+        var email = $"test+sales+{name}@email.com";
+        var tokenEmail = $"other+{name}@email.com";
+        const string salesAssistedToken = "fake-sales-assisted-token";
+
+        // Token is valid but bound to a different email address — TokenIsValid(email) must reject this.
+        var tokenable = new SalesAssistedRegistrationTokenable
+        {
+            Email = tokenEmail,
+            ExpirationDate = DateTime.UtcNow.AddDays(5)
+        };
+
+        localFactory.SubstituteService<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>(factory =>
+        {
+            factory.TryUnprotect(Arg.Is(salesAssistedToken), out Arg.Any<SalesAssistedRegistrationTokenable>())
+                .Returns(callInfo =>
+                {
+                    callInfo[1] = tokenable;
+                    return true;
+                });
+        });
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,  // does not match tokenEmail
+            MasterPasswordHash = masterPasswordHash,
+            SalesAssistedToken = salesAssistedToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+        };
+
+        var postRegisterFinishHttpContext = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, postRegisterFinishHttpContext.Response.StatusCode);
+    }
 
     [Theory, BitAutoData]
     public async Task PostRegisterVerificationEmailClicked_Success(
