@@ -114,6 +114,18 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? V2UpgradeToken { get; set; }
     [MaxLength(256)]
     public string? MasterPasswordSalt { get; set; }
+
+    public KeyId? GetUserKeyId()
+    {
+        // Todo: Database Implementation in follow-up PR
+        return null;
+    }
+
+    public void SetUserKeyId(KeyId keyId)
+    {
+        return; // Todo: Database Implementation in follow-up PR
+    }
+
     public DateTime? LastApiKeyRotationDate { get; set; }
 
     public string GetMasterPasswordSalt()

@@ -279,6 +279,7 @@ public class AccountsKeyManagementController : Controller
             Ciphers = await _cipherValidator.ValidateAsync(user, request.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, request.AccountData.Folders),
             Sends = await _sendValidator.ValidateAsync(user, request.AccountData.Sends),
+            NewUserKeyId = request.NewUserKeyId.HasValue ? new KeyId(request.NewUserKeyId.Value) : null
         };
     }
 }

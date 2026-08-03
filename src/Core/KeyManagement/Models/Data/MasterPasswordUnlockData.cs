@@ -13,12 +13,28 @@ public class MasterPasswordUnlockData
     public required KdfSettings Kdf { get; init; }
     public required string MasterKeyWrappedUserKey { get; init; }
     public required string Salt { get; init; }
+    // Key ID of the contained user-key.
+    public KeyId? ContainedKeyId { get; init; }
 
     public void ValidateSaltUnchangedForUser(User user)
     {
         if (user.GetMasterPasswordSalt() != Salt)
         {
             throw new BadRequestException("Invalid master password salt.");
+        }
+    }
+
+    public void ValidateKeyIdUnchangedForUser(User user)
+    {
+        var userKeyId = user.GetUserKeyId();
+        if (this.ContainedKeyId is null && userKeyId is null)
+        {
+            return;
+        }
+
+        if (this.ContainedKeyId is not null && !this.ContainedKeyId.Equals(userKeyId))
+        {
+            throw new BadRequestException("Invalid user key id in master password unlock data.");
         }
     }
 
@@ -31,11 +47,12 @@ public class MasterPasswordUnlockData
 
         return Kdf.Equals(other.Kdf) &&
                MasterKeyWrappedUserKey == other.MasterKeyWrappedUserKey &&
-               Salt == other.Salt;
+               Salt == other.Salt
+                && ContainedKeyId == other.ContainedKeyId;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Kdf, MasterKeyWrappedUserKey, Salt);
+        return HashCode.Combine(Kdf, MasterKeyWrappedUserKey, Salt, ContainedKeyId);
     }
 }

@@ -19,5 +19,24 @@ public class MasterPasswordRotateUserAccountKeysData
 
         MasterPasswordUnlockData.ValidateSaltUnchangedForUser(user);
         MasterPasswordUnlockData.Kdf.ValidateUnchangedForUser(user);
+        ValidateKeyIdMatches();
+    }
+
+    private bool ValidateKeyIdMatches()
+    {
+        if (MasterPasswordUnlockData.ContainedKeyId == null && BaseData.NewUserKeyId == null)
+        {
+            return true;
+        }
+
+        if (MasterPasswordUnlockData.ContainedKeyId != null && BaseData.NewUserKeyId != null)
+        {
+            if (!MasterPasswordUnlockData.ContainedKeyId.Equals(BaseData.NewUserKeyId))
+            {
+                throw new BadRequestException("Invalid user key sent in in master-password unlock data.");
+            }
+        }
+
+        throw new BadRequestException("Invalid user key sent in in master-password unlock data.");
     }
 }
