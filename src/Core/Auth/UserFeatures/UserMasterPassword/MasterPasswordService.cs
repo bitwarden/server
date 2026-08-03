@@ -195,7 +195,7 @@ internal class MasterPasswordService(
 
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
         ApplyKdfStateOnUser(user, updateExistingData.MasterPasswordUnlock.Kdf);
-        updateExistingData.MasterPasswordUnlock.ValidateUserKeyUnchangedForUser(user);
+        updateExistingData.MasterPasswordUnlock.ValidateUserKeyIdUnchangedForUser(user);
 
         // Always override the master password hint, even if it's null
         user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
