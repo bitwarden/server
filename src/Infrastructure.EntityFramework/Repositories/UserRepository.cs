@@ -221,7 +221,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             // Matches the Dapper path, which passes @UserKeyId to User_UpdateKeys. Without this a
             // rotation would leave the stale key id behind on the EF providers only.
-            entity.UserKeyId = user.UserKeyId;
+            entity.SetUserKeyId(user.GetUserKeyId());
 
             await dbContext.SaveChangesAsync();
 
@@ -285,7 +285,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         // Key rotation always establishes a new user key, so an absent key id clears any
         // now-stale value rather than preserving it.
-        userEntity.UserKeyId = user.UserKeyId;
+        userEntity.SetUserKeyId(user.GetUserKeyId());
 
         await dbContext.SaveChangesAsync();
 

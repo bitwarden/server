@@ -125,11 +125,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     /// A key rotation will set a new key id. Account registrations will carry a key id.
     /// </summary>
     [MaxLength(32)]
-    public string? UserKeyId { get; private set; }
+    public string? UserKeyId { get; set; }
 
-    public void SetUserKeyId(KeyId userKeyId)
+    public void SetUserKeyId(KeyId? userKeyId)
     {
-        UserKeyId = userKeyId.ToString();
+        UserKeyId = userKeyId?.ToString();
     }
 
     // An empty column value is treated as unset rather than as a malformed key id, so a legacy row
