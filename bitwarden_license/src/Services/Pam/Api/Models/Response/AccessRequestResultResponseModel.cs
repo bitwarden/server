@@ -20,5 +20,13 @@ public class AccessRequestResultResponseModel : ResponseModel
     /// </summary>
     public AccessApprovalMode ApprovalMode { get; set; }
 
-    public AccessRequestResponseModel Request { get; set; } = null!;
+    /// <summary>
+    /// The submitted request. Fields that only a resolved or leased request carries are null here:
+    /// <see cref="AccessRequestDetailsResponseModel.ProducedLeaseId"/> and
+    /// <see cref="AccessRequestDetailsResponseModel.ProducedLeaseStatus"/> are always null at submit (no lease is
+    /// minted on either path), and <see cref="AccessRequestDetailsResponseModel.Decisions"/> is empty unless
+    /// <see cref="ApprovalMode"/> is <see cref="AccessApprovalMode.Automatic"/>, in which case it carries the
+    /// single automatic decision.
+    /// </summary>
+    public AccessRequestDetailsResponseModel Request { get; set; } = null!;
 }
