@@ -6,7 +6,6 @@ namespace Bit.Core.Test.KeyManagement.Models.Data;
 public class KeyIdTests
 {
     private const string _keyIdA = "0123456789abcdef0123456789abcdef";
-    private const string _keyIdB = "fedcba9876543210fedcba9876543210";
 
     [Theory]
     [InlineData("00000000000000000000000000000000")]
