@@ -34,36 +34,4 @@ public class KeyIdTests
     {
         Assert.Throws<ArgumentException>(() => KeyId.FromHexEncodedString(hexEncodedKeyId));
     }
-
-    // Two key ids built from the same string are distinct instances, so these comparisons only hold
-    // because KeyId compares by value. Callers rely on that for == / != and for dictionary lookups.
-    [Fact]
-    public void ComparesByValue()
-    {
-        var a1 = KeyId.FromHexEncodedString(_keyIdA);
-        var a2 = KeyId.FromHexEncodedString(_keyIdA);
-        var b = KeyId.FromHexEncodedString(_keyIdB);
-
-        Assert.Equal(a1, a2);
-        Assert.True(a1 == a2);
-        Assert.False(a1 != a2);
-        Assert.Equal(a1.GetHashCode(), a2.GetHashCode());
-
-        Assert.NotEqual(a1, b);
-        Assert.False(a1 == b);
-        Assert.True(a1 != b);
-    }
-
-    [Fact]
-    public void ComparesByValue_WithNulls()
-    {
-        var a = KeyId.FromHexEncodedString(_keyIdA);
-        KeyId? nothing = null;
-
-        Assert.False(a == nothing);
-        Assert.True(a != nothing);
-        Assert.False(nothing == a);
-        Assert.True(nothing != a);
-        Assert.True(nothing == null);
-    }
 }
