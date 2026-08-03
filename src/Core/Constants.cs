@@ -275,6 +275,7 @@ public static class FeatureFlagKeys
     public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
     public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
     public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
+    public const string PM40435_QuickCopyIconSetting = "pm-40435-quick-copy-icon-setting";
     public const string PM28192_CipherAttachmentOps = "pm-28192-cipher-attachment-ops-to-sdk";
     public const string PM32016_RemoveAtRiskCallout = "pm-32016-remove-at-risk-callout";
     public const string PM37785_VaultBatchBar = "pm-37785-vault-batch-bar";
@@ -300,6 +301,7 @@ public static class FeatureFlagKeys
     public const string PasskeyDirectoryReport = "inno-passkey-directory-report";
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
+    public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";

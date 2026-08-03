@@ -56,6 +56,12 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .ReplaceAsync(organizationUser, Arg.Any<IEnumerable<CollectionAccessSelection>>());
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminChangedEmail);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
     }
 
     [Theory]
@@ -104,6 +110,26 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
             .PushSyncSettingsAsync(Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenNotEmailChanging_LogsUpdatedEvent(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        var request = Setup(sutProvider, organization, organizationUser, newEmail: null);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceive()
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminChangedEmail);
     }
 
     [Theory]

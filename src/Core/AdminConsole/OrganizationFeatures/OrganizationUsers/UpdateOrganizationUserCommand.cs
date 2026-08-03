@@ -13,6 +13,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
@@ -30,6 +31,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     private readonly IPricingClient _pricingClient;
     private readonly TimeProvider _timeProvider;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IGlobalSettings _globalSettings;
 
     public UpdateOrganizationUserCommand(
         IEventService eventService,
@@ -43,7 +45,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         TimeProvider timeProvider,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IGlobalSettings globalSettings)
     {
         _eventService = eventService;
         _organizationService = organizationService;
@@ -57,6 +60,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         _pricingClient = pricingClient;
         _timeProvider = timeProvider;
         _policyRequirementQuery = policyRequirementQuery;
+        _globalSettings = globalSettings;
     }
 
     /// <summary>
@@ -136,7 +140,12 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organizationUser.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                // TODO: https://bitwarden.atlassian.net/browse/PM-17012
+                // Self-hosted instances can't autoscale their Stripe subscription, so reject before touching billing.
+                if (_globalSettings.SelfHosted)
+                {
+                    throw new BadRequestException("Cannot autoscale on a self-hosted instance.");
+                }
+
                 var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
                 var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                     .AdjustSeats(additionalSmSeatsRequired);
