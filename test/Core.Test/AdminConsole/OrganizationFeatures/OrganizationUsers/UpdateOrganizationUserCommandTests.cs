@@ -220,7 +220,7 @@ public class UpdateOrganizationUserCommandTests
         // Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, null, null, null));
-        Assert.Contains("User can only be an admin of one free organization.", exception.Message);
+        Assert.Contains(new UserFreeOrgAdminLimitError().Message, exception.Message);
     }
 
     [Theory]
@@ -248,7 +248,7 @@ public class UpdateOrganizationUserCommandTests
         // Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, null, null, null));
-        Assert.Contains("User can only be an admin of one free organization.", exception.Message);
+        Assert.Contains(new UserFreeOrgAdminLimitError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
