@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 
 namespace Bit.Api.AdminConsole.Authorization.Providers;
 

@@ -1214,6 +1214,15 @@
       "data": {
         "type": "Project"
       },
+      "exceptionhandling": {
+        "type": "Project",
+        "dependencies": {
+          "HttpExtensions": "[2026.7.2, )"
+        }
+      },
+      "httpextensions": {
+        "type": "Project"
+      },
       "ssrfprotection": {
         "type": "Project"
       }
