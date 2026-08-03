@@ -248,7 +248,7 @@ public static class FeatureFlagKeys
     public const string SendEventLogging = "pm-36560-send-event-logging";
     public const string SendControlsExistingSends = "pm-31885-send-controls-existing-sends";
     public const string TemporaryItemSharing = "pm-34203-temporary-item-sharing";
-    public const string ImportRefresh = "pm-35053-import-refresh";
+    public const string ImportRefresh = "pm-35053-import-upgrade";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
