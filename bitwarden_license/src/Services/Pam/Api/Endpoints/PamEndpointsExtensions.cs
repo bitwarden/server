@@ -17,6 +17,7 @@ public static class PamEndpointsExtensions
         endpoints.MapGroup("/leases").WithPamDefaults().MapLeaseEndpoints();
         endpoints.MapGroup("/access-requests").WithPamDefaults().MapAccessRequestEndpoints();
         endpoints.MapGroup("/organizations/{orgId:guid}/access-rules").WithPamDefaults().MapAccessRuleEndpoints();
+        endpoints.MapGroup("/leases/ciphers/{id:guid}").WithPamDefaults().MapCipherLeaseEndpoints();
     }
 
     /// <summary>
