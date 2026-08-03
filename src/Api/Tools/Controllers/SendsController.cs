@@ -33,11 +33,10 @@ public class SendsController : Controller
     private readonly IUserService _userService;
     private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
-    private readonly IAnonymousSendCommand _anonymousSendCommand;
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
     private readonly ISendOwnerQuery _sendOwnerQuery;
     private readonly ILogger<SendsController> _logger;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IEventService _eventService;
@@ -47,12 +46,11 @@ public class SendsController : Controller
         ISendRepository sendRepository,
         IUserService userService,
         ISendAuthorizationService sendAuthorizationService,
-        IAnonymousSendCommand anonymousSendCommand,
         INonAnonymousSendCommand nonAnonymousSendCommand,
         ISendOwnerQuery sendOwnerQuery,
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IPushNotificationService pushNotificationService,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         IEventService eventService,
@@ -62,7 +60,6 @@ public class SendsController : Controller
         _sendRepository = sendRepository;
         _userService = userService;
         _sendAuthorizationService = sendAuthorizationService;
-        _anonymousSendCommand = anonymousSendCommand;
         _nonAnonymousSendCommand = nonAnonymousSendCommand;
         _sendOwnerQuery = sendOwnerQuery;
         _sendFileStorageService = sendFileStorageService;
@@ -75,139 +72,6 @@ public class SendsController : Controller
     }
 
     #region Anonymous endpoints
-
-    [AllowAnonymous]
-    [HttpPost("access/{id}")]
-    [ProducesResponseType<SendAccessResponseModel>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<SendAccessResponseModel> Access(string id, [FromBody] SendAccessRequestModel model)
-    {
-        // Uncomment whenever we want to require the `send-id` header
-        //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Send-Id") ||
-        //    _currentContext.HttpContext.Request.Headers["Send-Id"] != id)
-        //{
-        //    throw new BadRequestException("Invalid Send-Id header.");
-        //}
-
-        var guid = new Guid(CoreHelpers.Base64UrlDecode(id));
-        var send = await _sendRepository.GetByIdAsync(guid);
-
-        if (send == null)
-        {
-            throw new BadRequestException("Could not locate send");
-        }
-
-        if (send.AuthType == AuthType.Email && send.Emails is not null)
-        {
-            throw new NotFoundException();
-        }
-
-        var sendAuthResult =
-            await _sendAuthorizationService.AccessAsync(send, model.Password);
-        if (sendAuthResult.Equals(SendAccessResult.PasswordRequired))
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        if (sendAuthResult.Equals(SendAccessResult.PasswordInvalid))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException("Invalid password.");
-        }
-
-        if (sendAuthResult.Equals(SendAccessResult.Denied))
-        {
-            throw new NotFoundException();
-        }
-
-        var sendResponse = new SendAccessResponseModel(send);
-        if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
-        {
-            var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
-            sendResponse.CreatorIdentifier = creator.Email;
-        }
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
-            && send.UserId.HasValue
-            && send.Type == SendType.Text)
-        {
-            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
-                send.UserId.Value, accessorEmail: null);
-
-            await _eventService.LogSendEventAsync(
-                send.UserId.Value,
-                send.Id,
-                EventType.Send_Accessed_Text,
-                orgContext);
-        }
-
-        return sendResponse;
-    }
-
-    [AllowAnonymous]
-    [HttpPost("{encodedSendId}/access/file/{fileId}")]
-    [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<SendFileDownloadDataResponseModel> GetSendFileDownloadData(string encodedSendId,
-        string fileId, [FromBody] SendAccessRequestModel model)
-    {
-        // Uncomment whenever we want to require the `send-id` header
-        //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Send-Id") ||
-        //    _currentContext.HttpContext.Request.Headers["Send-Id"] != encodedSendId)
-        //{
-        //    throw new BadRequestException("Invalid Send-Id header.");
-        //}
-
-        var sendId = new Guid(CoreHelpers.Base64UrlDecode(encodedSendId));
-        var send = await _sendRepository.GetByIdAsync(sendId);
-
-        if (send == null)
-        {
-            throw new BadRequestException("Could not locate send");
-        }
-
-        if (send.AuthType == AuthType.Email && send.Emails is not null)
-        {
-            throw new NotFoundException();
-        }
-
-        var (url, result) = await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId,
-            model.Password);
-
-        if (result.Equals(SendAccessResult.PasswordRequired))
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        if (result.Equals(SendAccessResult.PasswordInvalid))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException("Invalid password.");
-        }
-
-        if (result.Equals(SendAccessResult.Denied))
-        {
-            throw new NotFoundException();
-        }
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
-        {
-            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
-                send.UserId.Value, accessorEmail: null);
-
-            await _eventService.LogSendEventAsync(
-                send.UserId.Value,
-                send.Id,
-                EventType.Send_Accessed_File,
-                orgContext);
-        }
-
-        return new SendFileDownloadDataResponseModel { Id = fileId, Url = url };
-    }
 
     [AllowAnonymous]
     [HttpPost("file/validate/azure")]
