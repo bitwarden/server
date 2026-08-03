@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using System.Reflection;
 using Bit.Core.Settings;
 using Bitwarden.Server.Sdk.Features;
 
