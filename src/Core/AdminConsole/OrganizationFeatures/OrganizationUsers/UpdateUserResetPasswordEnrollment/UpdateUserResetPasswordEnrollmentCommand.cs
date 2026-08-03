@@ -37,14 +37,14 @@ public class UpdateUserResetPasswordEnrollmentCommand : IUpdateUserResetPassword
         if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
             orgUser.OrganizationId != organizationId)
         {
-            throw new BadRequestException("User not valid.");
+            throw new BadRequestException(new ConfirmUserNotValidError().Message);
         }
 
         // Make sure the organization has the ability to use password reset
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null || !org.UseResetPassword)
         {
-            throw new BadRequestException("Organization does not allow password reset enrollment.");
+            throw new BadRequestException(new PasswordResetEnrollmentNotAllowedError().Message);
         }
 
         // Make sure the organization has the policy enabled
@@ -52,7 +52,7 @@ public class UpdateUserResetPasswordEnrollmentCommand : IUpdateUserResetPassword
         var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
         if (!resetPasswordPolicy.Enabled)
         {
-            throw new BadRequestException("Organization does not have the password reset policy enabled.");
+            throw new BadRequestException(new PasswordResetPolicyNotEnabledError().Message);
         }
 
         // Block the user from withdrawal if auto enrollment is enabled
@@ -64,7 +64,7 @@ public class UpdateUserResetPasswordEnrollmentCommand : IUpdateUserResetPassword
             if (data?.AutoEnrollEnabled ?? false)
             {
                 throw new BadRequestException(
-                    "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
+                    "Due to an Enterprise policy, you are not allowed to withdraw from account recovery.");
             }
         }
 

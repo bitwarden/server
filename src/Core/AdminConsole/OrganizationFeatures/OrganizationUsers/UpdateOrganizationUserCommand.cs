@@ -208,7 +208,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             return;
         }
 
-        throw new BadRequestException("User can only be an admin of one free organization.");
+        throw new BadRequestException(new UserFreeOrgAdminLimitError().Message);
     }
 
     private async Task<List<CollectionAccessSelection>> ValidateAccessAndFilterDefaultUserCollectionsAsync(
