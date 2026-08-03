@@ -27,7 +27,10 @@ using Stripe;
 
 namespace Bit.Billing.IntegrationTest;
 
-public class StripeTestsFixture : IAsyncDisposable
+// Implements IAsyncLifetime (not IAsyncDisposable): xUnit 2.6.6 only invokes IAsyncLifetime.DisposeAsync
+// on class fixtures — IAsyncDisposable support wasn't added until xUnit v3 — so the coupon teardown
+// below must live on IAsyncLifetime or it never runs.
+public class StripeTestsFixture : IAsyncLifetime
 {
     public ApiApplicationFactory Api { get; }
     public AdminApplicationFactory Admin { get; }
@@ -1330,7 +1333,9 @@ public class StripeTestsFixture : IAsyncDisposable
         }
     }
 
-    public virtual async ValueTask DisposeAsync()
+    public virtual Task InitializeAsync() => Task.CompletedTask;
+
+    public virtual async Task DisposeAsync()
     {
         // Delete every coupon this fixture created so runs don't pollute the shared Stripe
         // test account. Runs before factory disposal since it needs a live StripeClient.
@@ -1350,6 +1355,5 @@ public class StripeTestsFixture : IAsyncDisposable
 
         await Admin.DisposeAsync();
         await Api.DisposeAsync();
-        GC.SuppressFinalize(this);
     }
 }
