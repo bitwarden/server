@@ -13,7 +13,7 @@ public class MigrationCohortTests(StripeTestsFixture fixture) : IClassFixture<St
         await fixture.SeedChurnOnlyCohortAsync(organizationId, $"churn_offer_{Guid.NewGuid():N}");
 
         // Drives GetChurnMitigationOfferQuery -> TryGetSubscriptionAsync with
-        // Expand=["customer", "test_clock", "discounts.coupon"].
+        // Expand=["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"].
         var response = await client.GetAsync(
             $"/organizations/{organizationId}/billing/vnext/churn-mitigation-offer");
         await Assert.SuccessResponseAsync(response);
