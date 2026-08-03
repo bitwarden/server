@@ -241,10 +241,6 @@ public static class FeatureFlagKeys
     public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
 
     /* Tools Team */
-    /// <summary>
-    /// Enable this flag to share the send view used by the web and browser clients
-    /// on the desktop client.
-    /// </summary>
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
     public const string SendControls = "pm-31885-send-controls";
@@ -252,6 +248,7 @@ public static class FeatureFlagKeys
     public const string SendEventLogging = "pm-36560-send-event-logging";
     public const string SendControlsExistingSends = "pm-31885-send-controls-existing-sends";
     public const string TemporaryItemSharing = "pm-34203-temporary-item-sharing";
+    public const string ImportUpdate = "pm-35053-import-upgrade";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
