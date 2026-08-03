@@ -14,6 +14,13 @@ public class MasterPasswordUnlockData
     public required string MasterKeyWrappedUserKey { get; init; }
     public required string Salt { get; init; }
 
+    /// <summary>
+    /// Key-id of the user's user-key, that is wrapped in this master-password unlock data.
+    /// </summary>
+    public KeyId? UserKeyId { get; init; }
+
+    public KeyId? ContainedKeyId() => UserKeyId;
+
     public void ValidateSaltUnchangedForUser(User user)
     {
         if (user.GetMasterPasswordSalt() != Salt)
@@ -31,11 +38,12 @@ public class MasterPasswordUnlockData
 
         return Kdf.Equals(other.Kdf) &&
                MasterKeyWrappedUserKey == other.MasterKeyWrappedUserKey &&
-               Salt == other.Salt;
+               Salt == other.Salt &&
+               KeyId.Equals(UserKeyId, other.UserKeyId);
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Kdf, MasterKeyWrappedUserKey, Salt);
+        return HashCode.Combine(Kdf, MasterKeyWrappedUserKey, Salt, UserKeyId);
     }
 }

@@ -552,6 +552,32 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         };
     }
 
+    /// <inheritdoc />
+    public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            await connection!.ExecuteAsync(
+                "[dbo].[User_SetUserKeyId]",
+                new { Id = userId, UserKeyId = userKeyId.ToString(), RevisionDate = DateTime.UtcNow },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> TrySetUserKeyIdAsync(Guid userId, KeyId userKeyId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var rowsAffected = await connection.ExecuteScalarAsync<int>(
+            "[dbo].[User_TrySetUserKeyId]",
+            new { Id = userId, UserKeyId = userKeyId.ToString(), RevisionDate = DateTime.UtcNow },
+            commandType: CommandType.StoredProcedure);
+
+        return rowsAffected > 0;
+    }
+
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
     {
         if (user == null)

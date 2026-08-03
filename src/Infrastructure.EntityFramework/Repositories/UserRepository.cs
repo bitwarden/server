@@ -636,6 +636,48 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         };
     }
 
+    /// <inheritdoc />
+    public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            userEntity.UserKeyId = userKeyId.ToString();
+            userEntity.RevisionDate = DateTime.UtcNow;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> TrySetUserKeyIdAsync(Guid userId, KeyId userKeyId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Resolved before the update expression so it is passed as a parameter rather than
+        // something the provider has to translate.
+        var hexEncodedKeyId = userKeyId.ToString();
+
+        // The UserKeyId == null predicate keeps "only set when not already set" a single
+        // conditional statement, matching the SQL Server implementation.
+        var rowsAffected = await dbContext.Users
+            .Where(u => u.Id == userId && u.UserKeyId == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(u => u.UserKeyId, hexEncodedKeyId)
+                .SetProperty(u => u.RevisionDate, DateTime.UtcNow));
+
+        return rowsAffected > 0;
+    }
+
     private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)
     {
         var defaultCollections = (from c in dbContext.Collections

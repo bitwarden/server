@@ -927,6 +927,120 @@ public class UserRepositoryTests
         Assert.Equal(userKeyId, updatedUser.UserKeyId);
     }
 
+
+    [Theory, DatabaseData]
+    public async Task TrySetUserKeyIdAsync_WhenUnset_StoresKeyId(IUserRepository userRepository)
+    {
+        // Arrange
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        });
+
+        // Act
+        var stored = await userRepository.TrySetUserKeyIdAsync(user.Id,
+            KeyId.FromHexEncodedString(userKeyId));
+
+        // Assert
+        Assert.True(stored);
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(userKeyId, updatedUser.UserKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task TrySetUserKeyIdAsync_WhenAlreadySet_ReturnsFalseAndLeavesValueUnchanged(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        const string originalUserKeyId = "0123456789abcdef0123456789abcdef";
+        const string replacementUserKeyId = "fedcba9876543210fedcba9876543210";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            UserKeyId = originalUserKeyId
+        });
+
+        // Act
+        var stored = await userRepository.TrySetUserKeyIdAsync(user.Id,
+            KeyId.FromHexEncodedString(replacementUserKeyId));
+
+        // Assert
+        Assert.False(stored);
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(originalUserKeyId, updatedUser.UserKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task TrySetUserKeyIdAsync_WhenUserDoesNotExist_ReturnsFalse(IUserRepository userRepository)
+    {
+        // Act
+        var stored = await userRepository.TrySetUserKeyIdAsync(Guid.NewGuid(),
+            KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef"));
+
+        // Assert
+        Assert.False(stored);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetUserKeyId_StoresKeyIdInTheSameTransactionAsTheAccountKeys(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        const string userKeyId = "0123456789abcdef0123456789abcdef";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        });
+
+        // Act
+        // This is how the TDE set-keys and Key Connector set-keys flows compose the write.
+        await userRepository.SetV2AccountCryptographicStateAsync(user.Id, BuildV2AccountKeysData(),
+            [userRepository.SetUserKeyId(user.Id, KeyId.FromHexEncodedString(userKeyId)!)]);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(userKeyId, updatedUser.UserKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetUserKeyId_OverwritesAnExistingKeyId(IUserRepository userRepository, Database database)
+    {
+        // Arrange
+        // Unconditional, unlike TrySetUserKeyIdAsync — the caller establishes the user key, so its key id
+        // wins over whatever a previous backfill recorded.
+        const string replacementUserKeyId = "0123456789abcdef0123456789abcdef";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            UserKeyId = "fedcba9876543210fedcba9876543210"
+        });
+
+        // Act
+        var task = userRepository.SetUserKeyId(user.Id, KeyId.FromHexEncodedString(replacementUserKeyId)!);
+        await RunUpdateUserDataAsync(task, database);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(replacementUserKeyId, updatedUser.UserKeyId);
+    }
+
     [Theory, DatabaseData]
     public async Task SetV2AccountCryptographicStateAsync_RunsDelegatesInTheCallerTransaction(
         IUserRepository userRepository)
