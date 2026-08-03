@@ -176,6 +176,18 @@ public class RedeemChurnMitigationOfferCommand(
             .Select(d => d.Source?.Coupon?.Id)
             .Where(id => !string.IsNullOrEmpty(id))
             .ToList() ?? [];
+
+        // A discount with no resolvable coupon (deleted in Stripe, or "discounts.source.coupon" not
+        // expanded) is excluded above and stripped by the write below; log it so a future expand
+        // regression that silently drops a live discount stays detectable.
+        var unresolvableDiscountCount = subscription.Discounts?.Count(d => string.IsNullOrEmpty(d?.Source?.Coupon?.Id)) ?? 0;
+        if (unresolvableDiscountCount > 0)
+        {
+            _logger.LogWarning(
+                "{Command}: {Count} discount(s) on Subscription ({SubscriptionId}) for Organization ({OrganizationId}) had no resolvable coupon and were excluded from the discount write; ensure 'discounts.source.coupon' is expanded",
+                CommandName, unresolvableDiscountCount, subscription.Id, organization.Id);
+        }
+
         var mergedCouponIds = (subscription.Customer?.Discount).MergeDiscountCouponIds(
             currentCouponIds,
             churnDiscountCouponCode);

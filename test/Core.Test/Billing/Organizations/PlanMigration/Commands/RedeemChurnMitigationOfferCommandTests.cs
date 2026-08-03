@@ -91,27 +91,25 @@ public class RedeemChurnMitigationOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_SubscriptionDiscountMissingSourceCoupon_DoesNotThrow_AndAppliesChurnCoupon()
+    public async Task Run_ChurnOnlyCohort_SubscriptionDiscountMissingSourceCoupon_DropsItAndAppliesChurnCoupon()
     {
-        // A pre-existing subscription discount can reference a coupon that was deleted in Stripe, leaving
-        // a null Source.Coupon; reading the current coupon ids must skip it rather than NRE.
+        // A pre-existing subscription discount can reference a coupon deleted in Stripe (null Source.Coupon).
+        // The churn-only path reads subscription.Discounts, so it must skip the unresolvable coupon rather
+        // than NRE, and still write the churn coupon to the subscription.
         var organization = CreateOrganization();
         SetupOfferEligible();
-        SetupMigrationCohortAssignment(organization);
+        SetupChurnOnlyCohortAssignment(organization);
 
         var subscription = CreateSubscription();
         subscription.Discounts = [new Discount { Id = "di_deleted" }];
         SetupGetSubscription(organization, subscription);
-        SetupActiveScheduleWithTwoPhases(subscription);
 
         var result = await _command.Run(organization);
 
         Assert.True(result.Success);
-        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
-            "sub_sched_123",
-            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
-                opts.Phases[1].Discounts != null &&
-                opts.Phases[1].Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(opts => opts.Discounts.Any(d => d.Coupon == ChurnCouponCode)));
     }
 
     [Fact]
