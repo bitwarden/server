@@ -46,6 +46,20 @@ public class MasterPasswordUnlockData
         }
     }
 
+    public void ValidateKeyIdMatchesNewUserKeyId(KeyId? newUserKeyId)
+    {
+        if (ContainedKeyId is null && newUserKeyId is null)
+        {
+            // No key ids sent, this is an old client, and we do not currently validate.
+            return;
+        }
+
+        if (ContainedKeyId is null || newUserKeyId is null || !ContainedKeyId.Equals(newUserKeyId))
+        {
+            throw new BadRequestException("Invalid user key sent in in master-password unlock data.");
+        }
+    }
+
     public override bool Equals(object? obj)
     {
         if (obj is not MasterPasswordUnlockData other)
@@ -56,7 +70,7 @@ public class MasterPasswordUnlockData
         return Kdf.Equals(other.Kdf) &&
                MasterKeyWrappedUserKey == other.MasterKeyWrappedUserKey &&
                Salt == other.Salt
-                && ContainedKeyId == other.ContainedKeyId;
+                && ContainedKeyId?.Equals(other.ContainedKeyId) == true;
     }
 
     public override int GetHashCode()
