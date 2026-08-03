@@ -172,7 +172,10 @@ public class RedeemChurnMitigationOfferCommand(
             return DefaultConflict;
         }
 
-        var currentCouponIds = subscription.Discounts?.Select(d => d.Source.Coupon.Id).ToList() ?? [];
+        var currentCouponIds = subscription.Discounts?
+            .Select(d => d.Source?.Coupon?.Id)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToList() ?? [];
         var mergedCouponIds = (subscription.Customer?.Discount).MergeDiscountCouponIds(
             currentCouponIds,
             churnDiscountCouponCode);
