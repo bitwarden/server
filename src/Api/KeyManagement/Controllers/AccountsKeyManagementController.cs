@@ -13,6 +13,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
@@ -279,7 +280,7 @@ public class AccountsKeyManagementController : Controller
             Ciphers = await _cipherValidator.ValidateAsync(user, request.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, request.AccountData.Folders),
             Sends = await _sendValidator.ValidateAsync(user, request.AccountData.Sends),
-            NewUserKeyId = request.NewUserKeyId.HasValue ? new KeyId(request.NewUserKeyId.Value) : null
+            NewUserKeyId = request.NewUserKeyId != null ? KeyId.FromHexEncodedString(request.NewUserKeyId) : null
         };
     }
 }
