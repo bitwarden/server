@@ -47,6 +47,11 @@ public class ChangeKdfCommand : IChangeKdfCommand
         authenticationData.ValidateSaltUnchangedForUser(user);
         unlockData.ValidateSaltUnchangedForUser(user);
 
+        // A KDF change re-wraps the existing user key, it does not replace it, so its key id must not
+        // change. Also checked in the MasterPasswordService via
+        // UpdateExistingKdfConfigurationData.ValidateDataForUser.
+        unlockData.ValidateUserKeyIdUnchangedForUser(user);
+
         // Currently KDF settings are not saved separately for authentication and unlock and must therefore be equal
         if (!authenticationData.Kdf.Equals(unlockData.Kdf))
         {

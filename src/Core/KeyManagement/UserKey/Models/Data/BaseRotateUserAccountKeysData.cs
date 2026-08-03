@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -28,4 +29,23 @@ public class BaseRotateUserAccountKeysData
     /// authoritative key id of the request: it is the value persisted as the account's key id.
     /// </summary>
     public KeyId? UserKeyId { get; set; }
+
+    /// <summary>
+    /// Validates the provided key id against the key id of this request. This should be used to verify
+    /// that the items directly encrypted by the user-key (cipher-keys, private-key, signature-key) are
+    /// encrypted by the correct key.
+    /// </summary>
+    public void ValidateContainedKeyIdMatches(KeyId? containedKeyId)
+    {
+        if (containedKeyId == null)
+        {
+            return;
+        }
+
+        if (containedKeyId != UserKeyId)
+        {
+            throw new BadRequestException(
+                "The user key id contained in the unlock data must match the user key id of the key rotation.");
+        }
+    }
 }

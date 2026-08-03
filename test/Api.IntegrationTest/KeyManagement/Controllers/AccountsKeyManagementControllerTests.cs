@@ -766,6 +766,23 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
+    public async Task RotateUserKeysAsync_MasterPasswordUnlockKeyIdMismatch_BadRequest(
+        RotateUserKeysRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, true);
+        SetupMasterPasswordRotateUserAccount(request, user);
+        request.UserKeyId = "0123456789abcdef0123456789abcdef";
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(user.UserKeyId, userNewState.UserKeyId);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task RotateUserKeysAsync_V1ToV2Rotation_Success(RotateUserKeysRequestModel request)
     {
         var user = await SetupUserForKeyRotationAsync();
