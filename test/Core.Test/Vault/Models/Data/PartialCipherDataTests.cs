@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;

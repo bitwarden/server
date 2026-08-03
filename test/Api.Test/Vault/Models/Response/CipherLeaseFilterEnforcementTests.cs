@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Vault.Authorization;
 using Xunit;
