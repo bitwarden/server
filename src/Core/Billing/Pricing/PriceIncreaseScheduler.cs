@@ -347,14 +347,15 @@ public class PriceIncreaseScheduler(
 
     private async Task<SubscriptionSchedulePhaseOptions?> ResolvePersonalPhase2Async(Subscription subscription)
     {
-        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
-        // proceeding would silently drop pre-existing discounts from Phase 2.
-        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
+        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries, and a discount
+        // expanded without "discounts.source.coupon" has a null Source.Coupon; either would silently drop
+        // pre-existing discounts from Phase 2.
+        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d?.Source?.Coupon is null))
         {
             logger.LogError(
-                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts'; " +
+                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts.source.coupon'; " +
                 "{Count} pre-existing discount(s) would be silently dropped from Phase 2. " +
-                "Caller must include \"discounts\" in the Stripe Expand list.",
+                "Caller must include \"discounts.source.coupon\" in the Stripe Expand list.",
                 subscription.Id, subscription.DiscountIds?.Count ?? 0);
             return null;
         }
@@ -511,14 +512,15 @@ public class PriceIncreaseScheduler(
         OrganizationPlanMigrationCohort cohort,
         Guid organizationId)
     {
-        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
-        // proceeding would silently drop pre-existing discounts from Phase 2.
-        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
+        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries, and a discount
+        // expanded without "discounts.source.coupon" has a null Source.Coupon; either would silently drop
+        // pre-existing discounts from Phase 2.
+        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d?.Source?.Coupon is null))
         {
             logger.LogError(
-                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts'; " +
+                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts.source.coupon'; " +
                 "{Count} pre-existing discount(s) would be silently dropped from Phase 2. " +
-                "Caller must include \"discounts\" in the Stripe Expand list.",
+                "Caller must include \"discounts.source.coupon\" in the Stripe Expand list.",
                 subscription.Id, subscription.DiscountIds?.Count ?? 0);
             return null;
         }
