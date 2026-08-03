@@ -28,6 +28,7 @@ namespace Bit.Billing.Jobs;
 /// organization's expiration stays inside the window. This job only selects candidates and re-verifies
 /// their eligibility against the live Stripe subscription before delegating.
 /// </remarks>
+[DisallowConcurrentExecution]
 public class SendInvoicePriceMigrationJob(
     IOrganizationPlanMigrationCohortAssignmentRepository cohortAssignmentRepository,
     IOrganizationPlanMigrationCohortRepository cohortRepository,
