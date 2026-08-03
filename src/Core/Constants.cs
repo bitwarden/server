@@ -1,8 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using System.Reflection;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Core;
 
@@ -131,7 +131,8 @@ public static class AuthenticationSchemes
     public const string BitwardenExternalCookieAuthenticationScheme = "bw.external";
 }
 
-public static class FeatureFlagKeys
+[FlagKeyCollection]
+public static partial class FeatureFlagKeys
 {
     /* Admin Console Team */
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
@@ -311,14 +312,6 @@ public static class FeatureFlagKeys
 
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
-
-    public static List<string> GetAllKeys()
-    {
-        return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-            .Where(fi => fi.IsLiteral && !fi.IsInitOnly && fi.FieldType == typeof(string))
-            .Select(x => (string)x.GetRawConstantValue())
-            .ToList();
-    }
 
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {
