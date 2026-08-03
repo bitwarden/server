@@ -1305,13 +1305,14 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
-    /// Idempotent coupon delete: swallows <c>resource_missing</c> so it is safe to call
-    /// whether or not the coupon exists (delete-before-create and teardown both use it).
+    /// Best-effort coupon delete for setup/teardown. Swallows any <see cref="StripeException"/> — a missing
+    /// coupon, or a rate-limit 429 under full-suite load — so one failed delete never throws or aborts the
+    /// batch and leaves sibling coupons undeleted.
     /// </summary>
     private static async Task TryDeleteCouponAsync(StripeClient stripeClient, string couponId)
     {
         try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
-        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* already gone */ }
+        catch (StripeException) { /* already gone, rate-limited, or otherwise — cleanup is best-effort */ }
     }
 
     /// <summary>
@@ -1335,11 +1336,16 @@ public class StripeTestsFixture : IAsyncDisposable
         // test account. Runs before factory disposal since it needs a live StripeClient.
         // Reserved ids are never tracked, but filter them out defensively so teardown can
         // never delete a shared/live coupon even if a future create path forgets to guard.
+        // Delete serially (not in parallel): parallel deletes add to the rate-limit pressure that 429s the
+        // deletes and leaks coupons under full-suite load.
         var couponIdsToDelete = _createdCouponIds.Distinct().Where(id => !ReservedCouponIds.Contains(id)).ToList();
         if (couponIdsToDelete.Count > 0)
         {
             var stripeClient = CreateStripeClient();
-            await Task.WhenAll(couponIdsToDelete.Select(couponId => TryDeleteCouponAsync(stripeClient, couponId)));
+            foreach (var couponId in couponIdsToDelete)
+            {
+                await TryDeleteCouponAsync(stripeClient, couponId);
+            }
         }
 
         await Admin.DisposeAsync();
