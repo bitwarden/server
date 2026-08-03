@@ -484,6 +484,50 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     }
 
     [Fact]
+    public async Task PendingProtection_WithNoCertificatePassword_Works()
+    {
+        // PendingProtection:Enabled=true must fire even when CertificatePassword is absent.
+        // Previously, PendingProtection was nested inside the CertificatePassword branch, so
+        // an absent/placeholder CertificatePassword silently skipped pending and caused a
+        // misleading "check your blob storage connection string" startup failure.
+        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
+            .WithPortBinding(10000, true)
+            .Build();
+
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+        var certificates = await blobServiceClient.CreateBlobContainerAsync("certificates");
+        var dataProtection = await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection");
+
+        using var rsa = RSA.Create(2048);
+        var now = DateTimeOffset.UtcNow;
+        var newCertificate = new CertificateRequest("CN=New Dataprotected test certificate", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
+            .CreateSelfSigned(now, now.AddDays(365));
+
+        const string NewCertPassword = "Undergrad-Police0-Maturely-Countless";
+        await certificates.Value.UploadBlobAsync(
+            "mynewcert.pfx",
+            new BinaryData(newCertificate.Export(X509ContentType.Pfx, NewCertPassword))
+        );
+        await dataProtection.Value.UploadBlobAsync("keys.xml", new BinaryData(KeysData));
+
+        // CertificatePassword is intentionally absent — only PendingProtection is configured.
+        using var app = CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:PendingProtection:FileName", "mynewcert.pfx" },
+            { "GlobalSettings:DataProtection:PendingProtection:Password", NewCertPassword },
+            { "GlobalSettings:DataProtection:PendingProtection:Enabled", "true" },
+        });
+
+        var protector = GetProtector(app);
+        AssertRoundTrippable(protector, "PendingNoCertPassword");
+    }
+
+    [Fact]
     public async Task UnprotectCertificateMissingFromBlobStorage_Throws()
     {
         // The previous implementation returned null on BlobNotFound and that null reached

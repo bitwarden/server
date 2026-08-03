@@ -28,33 +28,30 @@ public static class DataProtectionServiceCollectionExtensions
             var pending = globalSettings.DataProtection.PendingProtection;
 
             X509Certificate2? dataProtectionCert = null;
-            if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
+            if (pending is { Enabled: true })
+            {
+                dataProtectionCert = DownloadRequiredCertFromBlobStorage(
+                    globalSettings.Storage.ConnectionString,
+                    "certificates",
+                    pending.FileName,
+                    pending.Password,
+                    "pending protect"
+                );
+            }
+            else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
             {
                 dataProtectionCert = CoreHelpers.GetCertificate(
                     globalSettings.DataProtection.CertificateThumbprint);
             }
             else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
             {
-                if (pending is { Enabled: true })
-                {
-                    dataProtectionCert = DownloadRequiredCertFromBlobStorage(
-                        globalSettings.Storage.ConnectionString,
-                        "certificates",
-                        pending.FileName,
-                        pending.Password,
-                        "pending protect"
-                    );
-                }
-                else
-                {
-                    dataProtectionCert = DownloadRequiredCertFromBlobStorage(
-                        globalSettings.Storage.ConnectionString,
-                        "certificates",
-                        globalSettings.DataProtection.BlobName,
-                        globalSettings.DataProtection.CertificatePassword,
-                        "protect"
-                    );
-                }
+                dataProtectionCert = DownloadRequiredCertFromBlobStorage(
+                    globalSettings.Storage.ConnectionString,
+                    "certificates",
+                    globalSettings.DataProtection.BlobName,
+                    globalSettings.DataProtection.CertificatePassword,
+                    "protect"
+                );
             }
 
             if (!env.IsDevelopment())
