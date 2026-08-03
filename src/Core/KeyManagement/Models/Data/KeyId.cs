@@ -50,31 +50,11 @@ public class KeyId
             return false;
         }
 
-        return HexEncodedKeyId == other.HexEncodedKeyId;
+        return HexEncodedKeyId.Equals(other.HexEncodedKeyId);
     }
 
     public override int GetHashCode()
     {
         return HexEncodedKeyId.GetHashCode();
-    }
-
-    // Key ids compare by value, so == and != must too. Without these, callers comparing two
-    // instances with == would silently get reference equality, which is never what is wanted here.
-    public static bool operator ==(KeyId? left, KeyId? right) => Equals(left, right);
-    public static bool operator !=(KeyId? left, KeyId? right) => !Equals(left, right);
-
-    public static bool Equals(KeyId? left, KeyId? right)
-    {
-        if (left is null && right is null)
-        {
-            return true;
-        }
-
-        if (left is null || right is null)
-        {
-            return false;
-        }
-
-        return left.HexEncodedKeyId == right.HexEncodedKeyId;
     }
 }
