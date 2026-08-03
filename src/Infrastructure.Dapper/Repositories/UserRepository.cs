@@ -266,6 +266,12 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     user.AccountRevisionDate;
                 cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value =
                     user.LastKeyRotationDate;
+
+                // User_UpdateKeys assigns UserKeyId unconditionally, so the parameter has to be
+                // supplied even when it is null or a rotation would clear a key id it should keep.
+                cmd.Parameters.Add("@UserKeyId", SqlDbType.VarChar).Value =
+                    (object?)user.UserKeyId ?? DBNull.Value;
+
                 cmd.ExecuteNonQuery();
             }
 

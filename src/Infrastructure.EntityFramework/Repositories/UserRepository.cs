@@ -219,6 +219,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             entity.AccountRevisionDate = user.AccountRevisionDate;
             entity.RevisionDate = user.RevisionDate;
 
+            // Matches the Dapper path, which passes @UserKeyId to User_UpdateKeys. Without this a
+            // rotation would leave the stale key id behind on the EF providers only.
+            entity.SetUserKeyId(user.GetUserKeyId());
+
             await dbContext.SaveChangesAsync();
 
             //  Update re-encrypted data
@@ -278,6 +282,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.SecurityVersion = user.SecurityVersion;
 
         userEntity.V2UpgradeToken = user.V2UpgradeToken;
+
+        // Key rotation always establishes a new user key, so an absent key id clears any
+        // now-stale value rather than preserving it.
+        userEntity.SetUserKeyId(user.GetUserKeyId());
 
         await dbContext.SaveChangesAsync();
 

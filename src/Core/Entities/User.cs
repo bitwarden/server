@@ -115,6 +115,27 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     [MaxLength(256)]
     public string? MasterPasswordSalt { get; set; }
     public DateTime? LastApiKeyRotationDate { get; set; }
+    /// <summary>
+    /// A hex-endcoded key-id of the user's current user-key.
+    /// 
+    /// Each user-key has a unique key-id, and this value will change after a rotation.
+    /// It is not set by default for old users, but is set in a migration process during
+    /// a sync.
+    /// 
+    /// A key rotation will set a new key id. Account registrations will carry a key id.
+    /// </summary>
+    [MaxLength(32)]
+    public string? UserKeyId { get; set; }
+
+    public void SetUserKeyId(KeyId? userKeyId)
+    {
+        UserKeyId = userKeyId?.ToString();
+    }
+
+    // An empty column value is treated as unset rather than as a malformed key id, so a legacy row
+    // cannot fail every read of the user.
+    public KeyId? GetUserKeyId() =>
+        KeyId.FromHexEncodedString(string.IsNullOrEmpty(UserKeyId) ? null : UserKeyId);
 
     public string GetMasterPasswordSalt()
     {
