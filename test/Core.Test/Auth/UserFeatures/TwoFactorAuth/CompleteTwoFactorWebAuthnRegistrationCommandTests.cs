@@ -11,6 +11,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Auth.UserFeatures.TwoFactorAuth;
@@ -150,5 +151,45 @@ public class CompleteTwoFactorWebAuthnRegistrationCommandTests
             sutProvider.Sut.CompleteTwoFactorWebAuthnRegistrationAsync(user, 11, "NewKey", deviceResponse));
 
         Assert.Equal("Maximum allowed WebAuthn credential count exceeded.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task CompleteWebAuthRegistrationAsync_Fido2VerificationFails_ThrowsBadRequestException(bool hasPremium,
+        SutProvider<CompleteTwoFactorWebAuthnRegistrationCommand> sutProvider, User user,
+        AuthenticatorAttestationRawResponse deviceResponse)
+    {
+        // Arrange - Fido2 rejects the attestation (e.g. bad signature); this used to be signalled via a null
+        // MakeNewCredentialAsync result, but v4 of the library throws instead.
+        var maximumAllowedCredentialsGlobalSetting = new Core.Settings.GlobalSettings.WebAuthnSettings
+        {
+            PremiumMaximumAllowedCredentials = 10,
+            NonPremiumMaximumAllowedCredentials = 5
+        };
+
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = maximumAllowedCredentialsGlobalSetting;
+
+        user.Premium = hasPremium;
+        user.Id = Guid.NewGuid();
+        user.Email = "test@example.com";
+
+        sutProvider.GetDependency<IHasPremiumAccessQuery>().HasPremiumAccessAsync(user.Id).Returns(hasPremium);
+
+        SetupWebAuthnProviderWithPending(user,
+            credentialCount: hasPremium
+                ? maximumAllowedCredentialsGlobalSetting.PremiumMaximumAllowedCredentials - 1
+                : maximumAllowedCredentialsGlobalSetting.NonPremiumMaximumAllowedCredentials - 1);
+
+        sutProvider.GetDependency<IFido2>().MakeNewCredentialAsync(
+                Arg.Any<MakeNewCredentialParams>(),
+                Arg.Any<CancellationToken>())
+            .ThrowsAsync<Fido2VerificationException>();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CompleteTwoFactorWebAuthnRegistrationAsync(user, 5, "NewKey", deviceResponse));
+
+        Assert.Equal("WebAuthn credential creation failed.", exception.Message);
     }
 }
