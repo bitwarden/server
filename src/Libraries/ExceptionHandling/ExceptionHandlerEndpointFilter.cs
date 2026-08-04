@@ -1,17 +1,30 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-namespace Bit.Services.Pam.Api.Endpoints.Filters;
+namespace Bit.ExceptionHandling;
 
 /// <summary>
-/// Minimal API equivalent of the internal-API branch of <c>Bit.Api.Utilities.ExceptionHandlerFilterAttribute</c>.
-/// Minimal API endpoints do not run MVC exception filters and <c>src/Api</c> has no exception-handling middleware,
-/// so this filter translates thrown exceptions into Bitwarden's <see cref="ErrorResponseModel"/> with the same
-/// status codes the controllers produced (e.g. <see cref="NotFoundException"/> → 404 "Resource not found.").
+/// An <see cref="IEndpointFilter"/> that translates thrown exceptions into Bitwarden's
+/// <see cref="ErrorResponseModel"/> with the same HTTP status codes that
+/// <c>ExceptionHandlerFilterAttribute</c> produces for MVC controllers.
+/// <see cref="AggregateException"/> is not handled and falls through to the default 500 branch.
 /// </summary>
-public class PamExceptionHandlerEndpointFilter : IEndpointFilter
+internal sealed class ExceptionHandlerEndpointFilter : IEndpointFilter
 {
+    private readonly ILogger<ExceptionHandlerEndpointFilter> _logger;
+    private readonly IHostEnvironment _environment;
+
+    public ExceptionHandlerEndpointFilter(
+        ILogger<ExceptionHandlerEndpointFilter> logger,
+        IHostEnvironment environment)
+    {
+        _logger = logger;
+        _environment = environment;
+    }
+
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         try
@@ -20,11 +33,11 @@ public class PamExceptionHandlerEndpointFilter : IEndpointFilter
         }
         catch (Exception exception)
         {
-            return Handle(exception, context.HttpContext);
+            return Handle(exception);
         }
     }
 
-    private static IResult Handle(Exception exception, HttpContext httpContext)
+    private IResult Handle(Exception exception)
     {
         var message = "An error has occurred.";
         int statusCode;
@@ -54,10 +67,6 @@ public class PamExceptionHandlerEndpointFilter : IEndpointFilter
                 message = "Resource not found.";
                 statusCode = StatusCodes.Status404NotFound;
                 break;
-            case SecurityTokenValidationException:
-                message = "Invalid token.";
-                statusCode = StatusCodes.Status403Forbidden;
-                break;
             case UnauthorizedAccessException:
                 message = "Unauthorized.";
                 statusCode = StatusCodes.Status401Unauthorized;
@@ -66,21 +75,15 @@ public class PamExceptionHandlerEndpointFilter : IEndpointFilter
                 message = exception.Message;
                 statusCode = StatusCodes.Status409Conflict;
                 break;
-            case AggregateException aggregateException:
-                statusCode = StatusCodes.Status400BadRequest;
-                validationModel = new ErrorResponseModel(message, aggregateException.InnerExceptions.Select(e => e.Message));
-                break;
             default:
-                httpContext.RequestServices.GetRequiredService<ILogger<PamExceptionHandlerEndpointFilter>>()
-                    .LogError(0, exception, "Unhandled exception");
+                _logger.LogError(0, exception, "Unhandled exception");
                 message = "An unhandled server error has occurred.";
                 statusCode = StatusCodes.Status500InternalServerError;
                 break;
         }
 
         var errorModel = validationModel ?? new ErrorResponseModel(message);
-        var environment = httpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
-        if (environment.IsDevelopment())
+        if (_environment.IsDevelopment())
         {
             errorModel.ExceptionMessage = exception.Message;
             errorModel.ExceptionStackTrace = exception.StackTrace;
