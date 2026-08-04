@@ -17,12 +17,12 @@ public static class PamEndpointsExtensions
         endpoints.MapGroup("/leases").WithPamDefaults().MapLeaseEndpoints();
         endpoints.MapGroup("/access-requests").WithPamDefaults().MapAccessRequestEndpoints();
         endpoints.MapGroup("/organizations/{orgId:guid}/access-rules").WithPamDefaults().MapAccessRuleEndpoints();
+        endpoints.MapGroup("/leases/ciphers/{id:guid}").WithPamDefaults().MapCipherLeaseEndpoints();
     }
 
     /// <summary>
     /// Applies the shared PAM endpoint chain to a group. Order matters: the exception filter is outermost so it
-    /// translates throws from the feature filter (<see cref="Bit.Core.Exceptions.FeatureUnavailableException"/>),
-    /// the validation filter, and the handlers into the <c>ErrorResponseModel</c> contract.
+    /// translates throws from the validation filter and the handlers into the <c>ErrorResponseModel</c> contract.
     /// </summary>
     private static RouteGroupBuilder WithPamDefaults(this RouteGroupBuilder group)
     {
@@ -38,15 +38,6 @@ public static class PamEndpointsExtensions
         group.WithMetadata(
             new ProducesResponseTypeMetadata(StatusCodes.Status400BadRequest, typeof(ErrorResponseModel), ["application/json"]),
             new ProducesResponseTypeMetadata(StatusCodes.Status404NotFound, typeof(ErrorResponseModel), ["application/json"]));
-        return group;
-    }
-
-    /// <summary>
-    /// Minimal API equivalent of <c>[RequireFeature(key)]</c>: gates every endpoint in the group behind the flag.
-    /// </summary>
-    public static RouteGroupBuilder RequireFeature(this RouteGroupBuilder group, string featureFlagKey)
-    {
-        group.AddEndpointFilter(new RequireFeatureEndpointFilter(featureFlagKey));
         return group;
     }
 }

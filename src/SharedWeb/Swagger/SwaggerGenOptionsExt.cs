@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;
@@ -13,6 +15,13 @@ public static class SwaggerGenOptionsExt
     public static void InitializeSwaggerFilters(
     this SwaggerGenOptions config, IWebHostEnvironment environment)
     {
+        // Map System.Text.Json.Nodes types to free-form schemas. Otherwise Swashbuckle reflects over their
+        // members and emits a bogus named "JsonValue"/"JsonNode" component that breaks the SDK bindings.
+        config.MapType<JsonNode>(() => new OpenApiSchema());
+        config.MapType<JsonValue>(() => new OpenApiSchema());
+        config.MapType<JsonObject>(() => new OpenApiSchema { Type = JsonSchemaType.Object });
+        config.MapType<JsonArray>(() => new OpenApiSchema { Type = JsonSchemaType.Array });
+
         config.SchemaFilter<EnumSchemaFilter>();
         config.SchemaFilter<EncryptedStringSchemaFilter>();
         config.SchemaFilter<Base64UrlSchemaFilter>();

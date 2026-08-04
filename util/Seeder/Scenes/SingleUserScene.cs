@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
@@ -39,6 +40,9 @@ public class SingleUserScene(
         public bool EmailVerified { get; set; } = false;
         public bool Premium { get; set; } = false;
         public bool SelfHosted { get; set; } = false;
+        public GatewayType? Gateway { get; set; }
+        public string? GatewayCustomerId { get; set; }
+        public string? GatewaySubscriptionId { get; set; }
     }
 
     public async Task<SceneResult<SingleUserSceneResult>> SeedAsync(Request request)
@@ -56,6 +60,12 @@ public class SingleUserScene(
         {
             user.PremiumExpirationDate = DateTime.UtcNow.AddYears(1);
         }
+
+        UserSeeder.ApplyBilling(
+            user,
+            request.Gateway,
+            request.GatewayCustomerId,
+            request.GatewaySubscriptionId);
 
         await userRepository.CreateAsync(user);
 

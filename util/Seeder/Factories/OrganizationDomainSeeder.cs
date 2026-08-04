@@ -9,7 +9,7 @@ internal static class OrganizationDomainSeeder
     {
         var domain = new OrganizationDomain
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organizationId,
             DomainName = domainName,
             Txt = Guid.NewGuid().ToString("N"),

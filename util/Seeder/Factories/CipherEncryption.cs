@@ -52,7 +52,7 @@ internal static class CipherEncryption
 
         return new Cipher
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organizationId,
             UserId = userId,
             Type = cipherType,
