@@ -11,11 +11,6 @@ public class OrganizationDomainAllowEmailChangeQuery(
     IOrganizationDomainRepository organizationDomainRepository)
     : IOrganizationDomainAllowEmailChangeQuery
 {
-    public const string EmailNotOnVerifiedDomainError =
-        "Your account is managed by an organization, and this email address isn't on one of the organization's verified domains.";
-    public const string EmailClaimedByOrganizationError =
-        "This email address is claimed by an organization using Bitwarden.";
-
     /// <inheritdoc />
     public async Task ValidateAllowedAsync(User user, string newEmail)
     {
@@ -38,7 +33,7 @@ public class OrganizationDomainAllowEmailChangeQuery(
 
             if (!verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newDomain))
             {
-                throw new BadRequestException(EmailNotOnVerifiedDomainError);
+                throw new BadRequestException(new EmailNotOnVerifiedDomainError().Message);
             }
 
             return;
@@ -49,7 +44,7 @@ public class OrganizationDomainAllowEmailChangeQuery(
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(newDomain);
         if (isDomainBlocked)
         {
-            throw new BadRequestException(EmailClaimedByOrganizationError);
+            throw new BadRequestException(new EmailClaimedByOrganizationError().Message);
         }
     }
 }

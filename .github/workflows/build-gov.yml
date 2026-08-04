@@ -146,7 +146,11 @@ jobs:
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
           keyvault: gh-org-bitwarden
-          secrets: "GAMEWARDEN-REGISTRY-USERNAME,GAMEWARDEN-REGISTRY-PASSWORD"
+          secrets: >-
+            GAMEWARDEN-REGISTRY-USERNAME,
+            GAMEWARDEN-REGISTRY-PASSWORD,
+            CHAINGUARD-REGISTRY-USERNAME,
+            CHAINGUARD-REGISTRY-PASSWORD
 
       - name: Log in to registry
         # use ACR for testing
@@ -154,6 +158,13 @@ jobs:
 
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
+
+      - name: Log in to Chainguard registry
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: cgr.dev
+          username: ${{ steps.get-kv-secrets.outputs.CHAINGUARD-REGISTRY-USERNAME }}
+          password: ${{ steps.get-kv-secrets.outputs.CHAINGUARD-REGISTRY-PASSWORD }}
 
       - name: Build Docker image
         id: build-artifacts
@@ -173,8 +184,10 @@ jobs:
           fail-build: false
           output-format: sarif
 
-      - name: Log out from registry
-        run: docker logout ${_REGISTRY}
+      - name: Log out from the registries
+        run: |
+          docker logout ${_REGISTRY}
+          docker logout cgr.dev
 
       - name: Upload Grype results to GitHub
         uses: github/codeql-action/upload-sarif@cdefb33c0f6224e58673d9004f47f7cb3e328b89 # v4.31.10

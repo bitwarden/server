@@ -2,7 +2,6 @@
 using System.Text.Json;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
