@@ -5,7 +5,6 @@ using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -19,7 +18,6 @@ using static StripeConstants;
 
 public class GetPendingAnnualUpgradeQueryTests
 {
-    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ILogger<GetPendingAnnualUpgradeQuery> _logger =
@@ -28,9 +26,8 @@ public class GetPendingAnnualUpgradeQueryTests
 
     public GetPendingAnnualUpgradeQueryTests()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM38333_AnnualBillingSavings).Returns(true);
         _query = new GetPendingAnnualUpgradeQuery(
-            _logger, _featureService, _pricingClient, _stripeAdapter);
+            _logger, _pricingClient, _stripeAdapter);
     }
 
     private static Organization CreateOrganization(PlanType planType) => new()
@@ -104,16 +101,6 @@ public class GetPendingAnnualUpgradeQueryTests
         subscription.ScheduleId = schedule.Id;
         subscription.Schedule = schedule;
         return subscription;
-    }
-
-    [Fact]
-    public async Task Run_NewFeatureFlagDisabled_ReturnsNullWithoutFetchingSubscription()
-    {
-        _featureService.IsEnabled(FeatureFlagKeys.PM38333_AnnualBillingSavings).Returns(false);
-
-        Assert.Null(await _query.Run(CreateOrganization(PlanType.TeamsMonthly)));
-
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default!, default!);
     }
 
     [Fact]

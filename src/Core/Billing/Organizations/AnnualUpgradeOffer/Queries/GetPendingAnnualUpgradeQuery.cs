@@ -7,7 +7,6 @@ using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Models.Business;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
@@ -16,17 +15,13 @@ using static StripeConstants;
 
 public class GetPendingAnnualUpgradeQuery(
     ILogger<GetPendingAnnualUpgradeQuery> logger,
-    IFeatureService featureService,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : IGetPendingAnnualUpgradeQuery
 {
+    // Deliberately not gated on PM38333_AnnualBillingSavings: a schedule created before the flag
+    // is turned off still activates, and the organization should still see the change coming.
     public async Task<PendingAnnualUpgrade?> Run(Organization organization)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM38333_AnnualBillingSavings))
-        {
-            return null;
-        }
-
         // Only monthly Teams/Enterprise vintages map to an annual-latest plan.
         var annualLatestPlanType = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(organization.PlanType);
         if (annualLatestPlanType is null)
