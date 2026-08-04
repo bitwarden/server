@@ -28,7 +28,7 @@ public record NewEmailDomainNotClaimedError()
 public record EmailAlreadyInUseError()
     : EmailValidationError("Email already in use.", "email_already_in_use");
 public record EmailAlreadyInUseByAnotherMemberError()
-    : EmailValidationError("Email already in use by another organization member", "email_taken_by_organization_member");
+    : EmailValidationError("Email already in use by another organization member.", "email_taken_by_organization_member");
 public record EmailTakenOutsideOrganizationError()
     : EmailValidationError("Email is already in use outside organization.", "email_taken_outside_organization");
 public record EmailClaimedByAnotherOrganizationError()
