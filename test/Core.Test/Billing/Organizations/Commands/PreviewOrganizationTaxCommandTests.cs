@@ -1435,6 +1435,76 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items[0].Quantity == organization.Seats));
     }
 
+    // Regression (PM-40866): Teams 2019 is a packaged plan whose subscription carries the base bundle
+    // line ("teams-org-annually"/"teams-org-monthly"), not the per-seat overage line, when the org is
+    // at/under its 5 included seats. The command must bill the new seat price at the org's seat count
+    // instead of looking up the (absent) overage price and returning a BadRequest.
+    [Theory]
+    [InlineData(true)]   // Teams 2019 Annual  -> Enterprise
+    [InlineData(false)]  // Teams 2019 Monthly -> Enterprise
+    public async Task Run_OrganizationPlanChange_Teams2019ToEnterprise_UsesOrganizationSeats(bool isAnnual)
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = isAnnual ? PlanType.TeamsAnnually2019 : PlanType.TeamsMonthly2019,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 5
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = isAnnual ? PlanCadenceType.Annually : PlanCadenceType.Monthly
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "10012"
+        };
+
+        var currentPlan = new Teams2019Plan(isAnnual);
+        var newPlan = new EnterprisePlan(isAnnual);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        // At/under its 5 included seats, the packaged plan's subscription has only the base bundle line -
+        // the per-seat overage line ("teams-org-seat-*") is absent.
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = currentPlan.PasswordManager.StripePlanId }, Quantity = 1 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 900 }],
+            Total = 9900
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == newPlan.PasswordManager.StripeSeatPlanId &&
+            options.SubscriptionDetails.Items[0].Quantity == organization.Seats));
+    }
+
     // Regression test: if the organization's current plan is seat-based but its subscription does not
     // contain a line item matching that plan's price (a data discrepancy), the command should return a
     // BadRequest rather than throwing a KeyNotFoundException from the dictionary lookup.
