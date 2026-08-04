@@ -464,6 +464,24 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         await AssertValidationProblemAsync(response, new EmailAlreadyInUseByAnotherMemberError());
     }
 
+    [Fact]
+    public async Task Put_WhenChangingEmailToAddressTakenOutsideOrganization_ReturnsTakenOutsideOrganizationProblemDetails()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var (member, domain) = await CreateClaimedMemberWithoutMasterPasswordAsync();
+
+        // Same-domain address owned by an account that is not a member of the organization, so
+        // domain validation passes and the uniqueness check identifies it as taken outside the org.
+        var takenEmail = $"outsider-{Guid.NewGuid()}@{domain}";
+        await _factory.LoginWithNewAccount(takenEmail);
+
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{member.Id}", UpdateRequest(email: takenEmail));
+
+        await AssertValidationProblemAsync(response, new EmailTakenOutsideOrganizationError());
+    }
+
     private static HttpStatusCode ExpectedSuccess(bool flagOn) =>
         flagOn ? HttpStatusCode.NoContent : HttpStatusCode.OK;
 
