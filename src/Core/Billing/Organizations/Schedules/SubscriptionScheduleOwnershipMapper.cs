@@ -24,12 +24,9 @@ public static class SubscriptionScheduleOwnershipMapper
         }
 
         var schedule = subscription.Schedule;
-        if (schedule is null)
-        {
-            return OrganizationSubscriptionScheduleOwnership.Unexpanded;
-        }
-
-        return MapSchedule(schedule);
+        return schedule is null
+            ? OrganizationSubscriptionScheduleOwnership.Unexpanded
+            : MapSchedule(schedule);
     }
 
     /// <summary>
