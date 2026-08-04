@@ -1,14 +1,32 @@
 ﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Test.Billing.Mocks.Plans;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 using Stripe;
 using Xunit;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Test.Billing.Organizations.AnnualUpgradeOffer;
 
-public class AnnualUpgradeEligibilityMapperTests
+public class AnnualUpgradeLineMapperTests
 {
+    private readonly ILogger<AnnualUpgradeLineMapperTests> _logger =
+        Substitute.For<ILogger<AnnualUpgradeLineMapperTests>>();
+
+    private IReadOnlyList<AnnualUpgradeLine>? Map(Subscription subscription) =>
+        AnnualUpgradeLineMapper.MapOrNull(
+            _logger, Guid.NewGuid(), subscription, MonthlyTeamsPlan(), AnnualTeamsPlan());
+
+    private void AssertLogged(LogLevel level, string expectedContent) =>
+        _logger.Received(1).Log(
+            level,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains(expectedContent)),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
+
     private static Plan MonthlyTeamsPlan() => new Teams2023Plan(isAnnual: false);
     private static Plan AnnualTeamsPlan() => new Teams2023Plan(isAnnual: true);
 
@@ -71,76 +89,68 @@ public class AnnualUpgradeEligibilityMapperTests
     }
 
     [Fact]
-    public void Map_MappableLines_IsEligibleAndPairsEachLineWithItsTarget()
+    public void MapOrNull_MappableLines_PairsEachLineWithItsTarget()
     {
-        var result = AnnualUpgradeEligibilityMapper.Map(
-            SubscriptionWith(), MonthlyTeamsPlan(), AnnualTeamsPlan());
+        var result = Map(SubscriptionWith());
 
-        Assert.True(result.IsEligible);
-        Assert.Null(result.Reason);
-        Assert.Null(result.UnmappablePriceId);
-        var line = Assert.Single(result.Lines);
+        var line = Assert.Single(result!);
         Assert.Equal("2023-teams-org-seat-monthly", line.Item.Price.Id);
         Assert.Equal(AnnualTeamsPlan().PasswordManager.StripeSeatPlanId, line.TargetPriceId);
     }
 
     [Fact]
-    public void Map_UnmappableLine_ReportsTheOffendingPriceId()
+    public void MapOrNull_UnmappableLine_ReturnsNullAndLogsTheOffendingPriceId()
     {
-        var result = AnnualUpgradeEligibilityMapper.Map(
-            SubscriptionWith(items: [Item("some-unmapped-price")]), MonthlyTeamsPlan(), AnnualTeamsPlan());
+        Assert.Null(Map(SubscriptionWith(items: [Item("some-unmapped-price")])));
 
-        Assert.False(result.IsEligible);
-        Assert.Equal(AnnualUpgradeIneligibleReason.UnmappableLine, result.Reason);
-        Assert.Equal("some-unmapped-price", result.UnmappablePriceId);
-        Assert.Empty(result.Lines);
+        AssertLogged(LogLevel.Warning, "some-unmapped-price");
     }
 
     [Fact]
-    public void Map_NoPricedLines_IsUnmappableWithNoPriceId()
+    public void MapOrNull_NoPricedLines_ReturnsNullAndLogsNoMapping()
     {
-        var result = AnnualUpgradeEligibilityMapper.Map(
-            SubscriptionWith(items: [new SubscriptionItem { Id = "si_1", Price = null }]),
-            MonthlyTeamsPlan(), AnnualTeamsPlan());
+        Assert.Null(Map(SubscriptionWith(items: [new SubscriptionItem { Id = "si_1", Price = null }])));
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.UnmappableLine, result.Reason);
-        Assert.Null(result.UnmappablePriceId);
+        AssertLogged(LogLevel.Warning, "has no annual-latest mapping");
     }
 
     [Fact]
-    public void Map_LineWithNoPriceObject_IsUnmappableRatherThanSkipped()
+    public void MapOrNull_LineWithNoPriceObject_IsRefusedRatherThanSkipped()
     {
-        var result = AnnualUpgradeEligibilityMapper.Map(
-            SubscriptionWith(items: [new SubscriptionItem { Id = "si_0", Price = null }, Item("2023-teams-org-seat-monthly")]),
-            MonthlyTeamsPlan(), AnnualTeamsPlan());
+        Assert.Null(Map(SubscriptionWith(
+            items: [new SubscriptionItem { Id = "si_0", Price = null }, Item("2023-teams-org-seat-monthly")])));
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.UnmappableLine, result.Reason);
-        Assert.Null(result.UnmappablePriceId);
-        Assert.Empty(result.Lines);
+        AssertLogged(LogLevel.Warning, "has no annual-latest mapping");
     }
 
     [Fact]
-    public void Map_NullDiscountEntry_IsUnusableDiscounts()
+    public void MapOrNull_NoLineItemsAtAll_ReturnsNullAndLogsNoLineItems()
     {
-        var result = AnnualUpgradeEligibilityMapper.Map(
-            UnexpandedDiscountSubscription(), MonthlyTeamsPlan(), AnnualTeamsPlan());
+        Assert.Null(Map(SubscriptionWith(items: [])));
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.UnusableDiscounts, result.Reason);
+        AssertLogged(LogLevel.Warning, "has no line items to map");
     }
 
     [Fact]
-    public void Map_DiscountWithNoCouponId_IsUnusableDiscounts()
+    public void MapOrNull_NullDiscountEntry_ReturnsNullAndLogsUnusableDiscount()
+    {
+        Assert.Null(Map(UnexpandedDiscountSubscription()));
+
+        AssertLogged(LogLevel.Error, "unexpanded or couponless discount");
+    }
+
+    [Fact]
+    public void MapOrNull_DiscountWithNoCouponId_ReturnsNullAndLogsUnusableDiscount()
     {
         // Stricter than the page-load path was before: a discount with no usable coupon id is as
         // unquotable as an unexpanded one.
-        var result = AnnualUpgradeEligibilityMapper.Map(
-            SubscriptionWith(discounts: [new Discount { Coupon = null }]), MonthlyTeamsPlan(), AnnualTeamsPlan());
+        Assert.Null(Map(SubscriptionWith(discounts: [new Discount { Coupon = null }])));
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.UnusableDiscounts, result.Reason);
+        AssertLogged(LogLevel.Error, "unexpanded or couponless discount");
     }
 
     [Fact]
-    public void Map_NullItemDiscountEntry_IsUnusableDiscounts()
+    public void MapOrNull_NullItemDiscountEntry_ReturnsNullAndLogsUnusableDiscount()
     {
         // Same JSON-deserialization workaround as UnexpandedDiscountSubscription() above.
         const string unexpandedJson = """
@@ -163,93 +173,85 @@ public class AnnualUpgradeEligibilityMapperTests
             """;
         var subscription = Newtonsoft.Json.JsonConvert.DeserializeObject<Subscription>(unexpandedJson)!;
 
-        var result = AnnualUpgradeEligibilityMapper.Map(subscription, MonthlyTeamsPlan(), AnnualTeamsPlan());
+        Assert.Null(Map(subscription));
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.UnusableDiscounts, result.Reason);
+        AssertLogged(LogLevel.Error, "unexpanded or couponless discount");
     }
 
     [Fact]
-    public void Map_UnexpandedSchedule_IsUnexpandedSchedule()
+    public void MapOrNull_UnexpandedSchedule_ReturnsNullAndLogsError()
     {
         var subscription = SubscriptionWith();
         subscription.ScheduleId = "sub_sched_unread";
         subscription.Schedule = null;
 
-        var result = AnnualUpgradeEligibilityMapper.Map(subscription, MonthlyTeamsPlan(), AnnualTeamsPlan());
+        Assert.Null(Map(subscription));
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.UnexpandedSchedule, result.Reason);
+        AssertLogged(LogLevel.Error, "was not expanded");
     }
 
     [Fact]
-    public void Map_AnnualUpgradeMarker_IsAlreadyScheduled()
+    public void MapOrNull_AnnualUpgradeMarker_ReturnsNullAndLogsInformation()
     {
         var schedule = Schedule(new Dictionary<string, string>
         {
             [StripeConstants.MetadataKeys.AnnualUpgrade] = "TeamsMonthly"
         });
 
-        var result = AnnualUpgradeEligibilityMapper.Map(
-            SubscriptionWith(schedule: schedule), MonthlyTeamsPlan(), AnnualTeamsPlan());
+        Assert.Null(Map(SubscriptionWith(schedule: schedule)));
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.AlreadyScheduled, result.Reason);
+        AssertLogged(LogLevel.Information, "already redeemed the annual upgrade offer");
     }
 
     [Fact]
-    public void Map_UnrecognizedScheduleMetadata_IsForeignSchedule()
+    public void MapOrNull_UnrecognizedScheduleMetadata_ReturnsNullAndLogsWarning()
     {
-        var result = AnnualUpgradeEligibilityMapper.Map(
-            SubscriptionWith(schedule: Schedule(new Dictionary<string, string> { ["negotiated_term"] = "3y" })),
-            MonthlyTeamsPlan(), AnnualTeamsPlan());
+        Assert.Null(Map(SubscriptionWith(
+            schedule: Schedule(new Dictionary<string, string> { ["negotiated_term"] = "3y" }))));
 
-        Assert.Equal(AnnualUpgradeIneligibleReason.ForeignSchedule, result.Reason);
+        AssertLogged(LogLevel.Warning, "unrecognized schedule");
     }
 
     [Fact]
-    public void Map_MigrationCohortSchedule_ProceedsToMapping()
+    public void MapOrNull_MigrationCohortSchedule_ProceedsToMapping()
     {
         var schedule = Schedule(new Dictionary<string, string>
         {
             [StripeConstants.MetadataKeys.MigrationCohortId] = Guid.NewGuid().ToString()
         });
 
-        var result = AnnualUpgradeEligibilityMapper.Map(
-            SubscriptionWith(schedule: schedule), MonthlyTeamsPlan(), AnnualTeamsPlan());
-
-        Assert.True(result.IsEligible);
+        Assert.NotNull(Map(SubscriptionWith(schedule: schedule)));
     }
 
     [Fact]
-    public void Map_NoScheduleAttached_ProceedsToMapping()
+    public void MapOrNull_NoScheduleAttached_ProceedsToMapping()
     {
-        var result = AnnualUpgradeEligibilityMapper.Map(
-            SubscriptionWith(), MonthlyTeamsPlan(), AnnualTeamsPlan());
-
-        Assert.True(result.IsEligible);
+        Assert.NotNull(Map(SubscriptionWith()));
     }
 
     [Fact]
-    public void Map_ForeignScheduleAndUnusableDiscount_ReportsTheDiscount()
+    public void MapOrNull_ForeignScheduleAndUnusableDiscount_ReportsTheDiscount()
     {
         var subscription = UnexpandedDiscountSubscription();
         var schedule = Schedule(new Dictionary<string, string> { ["negotiated_term"] = "3y" });
         subscription.ScheduleId = schedule.Id;
         subscription.Schedule = schedule;
 
-        Assert.Equal(
-            AnnualUpgradeIneligibleReason.UnusableDiscounts,
-            AnnualUpgradeEligibilityMapper.Map(subscription, MonthlyTeamsPlan(), AnnualTeamsPlan()).Reason);
+        Assert.Null(Map(subscription));
+
+        AssertLogged(LogLevel.Error, "unexpanded or couponless discount");
     }
 
     [Fact]
-    public void Map_ForeignScheduleAndUnmappableLine_ReportsTheSchedule()
+    public void MapOrNull_ForeignScheduleAndUnmappableLine_ReportsTheSchedule()
     {
-        // Ownership is checked before line mapping, so a negotiated schedule keeps the 409.
+        // Ownership is checked before line mapping, so the schedule is what gets reported.
         var subscription = SubscriptionWith(
             items: [Item("some-unmapped-price")],
             schedule: Schedule(new Dictionary<string, string> { ["negotiated_term"] = "3y" }));
 
-        Assert.Equal(
-            AnnualUpgradeIneligibleReason.ForeignSchedule,
-            AnnualUpgradeEligibilityMapper.Map(subscription, MonthlyTeamsPlan(), AnnualTeamsPlan()).Reason);
+        Assert.Null(Map(subscription));
+
+        AssertLogged(LogLevel.Warning, "unrecognized schedule");
     }
 }

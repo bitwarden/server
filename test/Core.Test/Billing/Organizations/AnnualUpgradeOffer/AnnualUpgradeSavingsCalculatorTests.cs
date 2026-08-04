@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Stripe;
 using Xunit;

@@ -1,4 +1,5 @@
-﻿using Stripe;
+﻿using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
+using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;

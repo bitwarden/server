@@ -257,7 +257,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_UnusableDiscounts_ReturnsConflict_WithoutMutatingStripe()
+    public async Task Run_UnusableDiscounts_ReturnsBadRequest_WithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
 
@@ -280,13 +280,13 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var result = await _command.Run(organization);
 
-        Assert.True(result.IsT2);
+        Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
         await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
     }
 
     [Fact]
-    public async Task Run_UnexpandedItemDiscounts_ReturnsConflict_WithoutMutatingStripe()
+    public async Task Run_UnexpandedItemDiscounts_ReturnsBadRequest_WithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
 
@@ -316,13 +316,13 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var result = await _command.Run(organization);
 
-        Assert.True(result.IsT2);
+        Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
         await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
     }
 
     [Fact]
-    public async Task Run_SubscriptionDiscountHasNullCoupon_ReturnsConflict_WithoutMutatingStripe()
+    public async Task Run_SubscriptionDiscountHasNullCoupon_ReturnsBadRequest_WithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         var monthlyPlan = new TeamsPlan(false);
@@ -339,13 +339,13 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var result = await _command.Run(organization);
 
-        Assert.True(result.IsT2);
+        Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
         await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
     }
 
     [Fact]
-    public async Task Run_SubscriptionDiscountHasEmptyCouponId_ReturnsConflict_WithoutMutatingStripe()
+    public async Task Run_SubscriptionDiscountHasEmptyCouponId_ReturnsBadRequest_WithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         var monthlyPlan = new TeamsPlan(false);
@@ -361,7 +361,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var result = await _command.Run(organization);
 
-        Assert.True(result.IsT2);
+        Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
         await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
     }
@@ -464,7 +464,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_ForeignSchedule_ReturnsConflictWithoutMutatingStripe()
+    public async Task Run_ForeignSchedule_ReturnsBadRequestWithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         var monthlyPlan = new TeamsPlan(false);
@@ -485,13 +485,13 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var result = await _command.Run(organization);
 
-        Assert.True(result.IsT2);
+        Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
         await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleAsync(default!);
     }
 
     [Fact]
-    public async Task Run_UnexpandedSchedule_ReturnsConflictWithoutMutatingStripe()
+    public async Task Run_UnexpandedSchedule_ReturnsBadRequestWithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         var monthlyPlan = new TeamsPlan(false);
@@ -506,7 +506,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var result = await _command.Run(organization);
 
-        Assert.True(result.IsT2);
+        Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
         await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleAsync(default!);
     }

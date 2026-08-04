@@ -2,11 +2,9 @@
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
-using Bit.Core.Billing.Organizations.Schedules;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
-using Stripe;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 
@@ -58,14 +56,14 @@ public class GetAnnualUpgradeOfferQuery(
             return null;
         }
 
-        var eligibility = AnnualUpgradeEligibilityMapper.Map(subscription, currentPlan, annualLatestPlan);
-        if (!eligibility.IsEligible)
+        var lines = AnnualUpgradeLineMapper.MapOrNull(
+            logger, organization.Id, subscription, currentPlan, annualLatestPlan);
+        if (lines is null)
         {
-            LogIneligible(organization, subscription, eligibility);
             return null;
         }
 
-        var previewRequests = AnnualUpgradeSavingsCalculator.BuildPreviewRequests(subscription, eligibility.Lines);
+        var previewRequests = AnnualUpgradeSavingsCalculator.BuildPreviewRequests(subscription, lines);
 
         AnnualUpgradeSavings? savings;
         try
@@ -100,49 +98,5 @@ public class GetAnnualUpgradeOfferQuery(
 
         return new AnnualUpgradeOfferResult(
             savings.Value.CurrentAnnualCost, savings.Value.NewAnnualCost, difference);
-    }
-
-    private void LogIneligible(
-        Organization organization, Subscription subscription, AnnualUpgradeEligibility eligibility)
-    {
-        switch (eligibility.Reason)
-        {
-            case AnnualUpgradeIneligibleReason.UnusableDiscounts:
-                logger.LogError(
-                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) has an unexpanded or couponless discount; refusing to quote a savings figure",
-                    nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id);
-                break;
-
-            case AnnualUpgradeIneligibleReason.UnexpandedSchedule:
-                logger.LogError(
-                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; suppressing the annual upgrade offer",
-                    nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id, subscription.ScheduleId);
-                break;
-
-            case AnnualUpgradeIneligibleReason.AlreadyScheduled:
-                logger.LogInformation(
-                    "{Query}: Organization ({OrganizationId}) already redeemed the annual upgrade offer; suppressing",
-                    nameof(GetAnnualUpgradeOfferQuery), organization.Id);
-                break;
-
-            case AnnualUpgradeIneligibleReason.ForeignSchedule:
-                logger.LogWarning(
-                    "{Query}: Organization ({OrganizationId}) has an unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}); phase metadata keys present: {MetadataKeys}; suppressing the annual upgrade offer",
-                    nameof(GetAnnualUpgradeOfferQuery), organization.Id, subscription.ScheduleId, subscription.Id,
-                    string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(subscription.Schedule)));
-                break;
-
-            case AnnualUpgradeIneligibleReason.UnmappableLine:
-                logger.LogWarning(
-                    "{Query}: Subscription ({SubscriptionId}) line item price ({PriceId}) has no annual-latest mapping for Organization ({OrganizationId}); suppressing the annual upgrade offer",
-                    nameof(GetAnnualUpgradeOfferQuery), subscription.Id, eligibility.UnmappablePriceId, organization.Id);
-                break;
-
-            default:
-                logger.LogError(
-                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) is ineligible for an unhandled reason ({Reason}); suppressing the annual upgrade offer",
-                    nameof(GetAnnualUpgradeOfferQuery), subscription.Id, organization.Id, eligibility.Reason);
-                break;
-        }
     }
 }
