@@ -93,6 +93,10 @@ public class Startup
             .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
         app.UseRouting();
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
     }
 }
