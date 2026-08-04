@@ -71,7 +71,7 @@ public class ChangePasswordUriService : IChangePasswordUriService
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
 
-        using var response = await _httpClient.SendAsync(request);
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         ThrowIfTransient(response.StatusCode);
         return !response.IsSuccessStatusCode;
     }
@@ -97,7 +97,7 @@ public class ChangePasswordUriService : IChangePasswordUriService
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
 
-        using var response = await _httpClient.SendAsync(request);
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         ThrowIfTransient(response.StatusCode);
         return response.IsSuccessStatusCode ? url.ToString() : null;
     }
