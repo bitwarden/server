@@ -461,7 +461,7 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         var response = await _client.PutAsJsonAsync(
             $"organizations/{_organization.Id}/users/{member.Id}", UpdateRequest(email: takenEmail));
 
-        await AssertValidationProblemAsync(response, new EmailAlreadyInUseError());
+        await AssertValidationProblemAsync(response, new EmailAlreadyInUseByAnotherMemberError());
     }
 
     private static HttpStatusCode ExpectedSuccess(bool flagOn) =>
