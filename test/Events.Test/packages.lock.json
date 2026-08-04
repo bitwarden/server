@@ -1639,6 +1639,7 @@
           "AspNetCoreRateLimit.Redis": "[2.0.0, 2.0.0]",
           "Azure.Data.Tables": "[12.11.0, 12.11.0]",
           "Azure.Extensions.AspNetCore.DataProtection.Blobs": "[1.3.4, 1.3.4]",
+          "Azure.Identity": "[1.11.4, 1.11.4]",
           "Azure.Messaging.ServiceBus": "[7.20.1, 7.20.1]",
           "Azure.Storage.Blobs": "[12.26.0, 12.26.0]",
           "Azure.Storage.Blobs.Batch": "[12.23.0, 12.23.0]",

@@ -417,12 +417,19 @@ public class GlobalSettings : IGlobalSettings
     public class AzureQueueEventSettings : IConnectionStringSettings
     {
         private string _connectionString;
+        private string _serviceUri;
         private string _queueName;
 
         public string ConnectionString
         {
             get => _connectionString;
             set => _connectionString = value?.Trim('"');
+        }
+
+        public string ServiceUri
+        {
+            get => _serviceUri;
+            set => _serviceUri = value?.Trim('"');
         }
 
         public string QueueName
@@ -440,6 +447,14 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _connectionString;
             set => _connectionString = value?.Trim('"');
+        }
+
+        private string _serviceUri;
+
+        public string ServiceUri
+        {
+            get => _serviceUri;
+            set => _serviceUri = value?.Trim('"');
         }
     }
 
