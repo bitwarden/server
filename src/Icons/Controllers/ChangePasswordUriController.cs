@@ -59,9 +59,6 @@ public class ChangePasswordUriController : Controller
 
         var domain = validUri.Host;
 
-        // Namespace the key: the Icons container shares a single IMemoryCache singleton across
-        // this controller and IconsController, and both map to the same MapDomain(domain) value.
-        // Without a prefix the two features false-hit and overwrite each other's entries.
         var cacheKey = $"change-password:{_domainMappingService.MapDomain(domain)}";
         if (_changePasswordSettings.CacheEnabled && _memoryCache.TryGetValue(cacheKey, out string? cachedUri))
         {
