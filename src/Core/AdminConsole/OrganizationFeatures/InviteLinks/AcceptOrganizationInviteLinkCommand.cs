@@ -1,10 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
@@ -26,7 +27,7 @@ public class AcceptOrganizationInviteLinkCommand(
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IProviderUserRepository providerUserRepository,
-    IPolicyRequirementQuery policyRequirementQuery,
+    IPolicyQuery policyQuery,
     IAcceptOrganizationMembershipValidator acceptOrganizationMembershipValidator,
     IOrganizationService organizationService,
     IStripePaymentService stripePaymentService,
@@ -99,8 +100,11 @@ public class AcceptOrganizationInviteLinkCommand(
             return membershipValidationResult.AsError;
         }
 
-        var resetPasswordRequirement = await policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-        var autoEnrollEnabled = resetPasswordRequirement.AutoEnrollEnabled(organization.Id);
+        // Read the policy directly rather than via IPolicyRequirementQuery: the requirement query resolves
+        // policies by OrganizationUser, which does not exist yet when accepting an invite link.
+        var resetPasswordPolicy = await policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
+        var autoEnrollEnabled = resetPasswordPolicy.Enabled
+            && resetPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
         if (autoEnrollEnabled && !OrganizationUser.IsValidResetPasswordKey(request.ResetPasswordKey))
         {
             return new ResetPasswordKeyRequired();

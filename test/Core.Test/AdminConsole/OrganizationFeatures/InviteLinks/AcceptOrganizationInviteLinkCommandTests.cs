@@ -8,7 +8,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUs
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
@@ -482,18 +481,13 @@ public class AcceptOrganizationInviteLinkCommandTests
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
 
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
-            .Returns(new ResetPasswordPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = organization.Id,
-                    PolicyType = PolicyType.ResetPassword,
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    PolicyData = "{\"autoEnrollEnabled\": true}"
-                }
-            ]));
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.ResetPassword)
+            .Returns(new PolicyStatus(organization.Id, PolicyType.ResetPassword)
+            {
+                Enabled = true,
+                Data = "{\"autoEnrollEnabled\": true}"
+            });
 
         var request = new AcceptOrganizationInviteLinkRequest
         {
@@ -716,18 +710,13 @@ public class AcceptOrganizationInviteLinkCommandTests
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
 
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
-            .Returns(new ResetPasswordPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = organization.Id,
-                    PolicyType = PolicyType.ResetPassword,
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    PolicyData = "{\"autoEnrollEnabled\": true}"
-                }
-            ]));
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.ResetPassword)
+            .Returns(new PolicyStatus(organization.Id, PolicyType.ResetPassword)
+            {
+                Enabled = true,
+                Data = "{\"autoEnrollEnabled\": true}"
+            });
 
         var resetPasswordKey = "valid-key-123";
         var request = new AcceptOrganizationInviteLinkRequest
@@ -972,9 +961,9 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetManyByUserAsync(user.Id)
             .Returns([]);
 
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
-            .Returns(new ResetPasswordPolicyRequirement([]));
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(org.Id, PolicyType.ResetPassword)
+            .Returns(new PolicyStatus(org.Id, PolicyType.ResetPassword));
 
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
             .ValidateAsync(Arg.Is<AcceptOrganizationMembershipValidationRequest>(r =>
