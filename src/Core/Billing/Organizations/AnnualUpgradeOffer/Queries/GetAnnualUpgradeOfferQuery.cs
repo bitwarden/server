@@ -79,7 +79,7 @@ public class GetAnnualUpgradeOfferQuery(
         {
             // Same posture as an unmappable line: no offer beats a wrong dollar figure.
             logger.LogError(exception,
-                "{Query}: Failed to preview the annual upgrade invoices for Organization ({OrganizationId}) on subscription ({SubscriptionId}); suppressing the annual upgrade offer",
+                "{Caller}: Failed to preview the annual upgrade invoices for Organization ({OrganizationId}) on subscription ({SubscriptionId}); suppressing the annual upgrade offer",
                 nameof(GetAnnualUpgradeOfferQuery), organization.Id, subscription.Id);
             return null;
         }

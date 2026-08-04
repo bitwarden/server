@@ -55,7 +55,7 @@ public class GetPendingAnnualUpgradeQuery(
             if (ownership == OrganizationSubscriptionScheduleOwnership.Unexpanded)
             {
                 logger.LogError(
-                    "{Query}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; returning no pending upgrade",
+                    "{Caller}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; returning no pending upgrade",
                     nameof(GetPendingAnnualUpgradeQuery), subscription.Id, organization.Id, subscription.ScheduleId);
                 return null;
             }
@@ -103,7 +103,7 @@ public class GetPendingAnnualUpgradeQuery(
         {
             logger.LogWarning(
                 exception,
-                "{Query}: Could not resolve pending annual upgrade for Organization ({OrganizationId})",
+                "{Caller}: Could not resolve pending annual upgrade for Organization ({OrganizationId})",
                 nameof(GetPendingAnnualUpgradeQuery), organization.Id);
             return null;
         }
