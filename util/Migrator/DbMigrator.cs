@@ -29,6 +29,12 @@ public class DbMigrator
         _skipDatabasePreparation = skipDatabasePreparation;
         _noTransactionMigration = noTransactionMigration;
         _executionTimeoutSeconds = executionTimeoutSeconds;
+
+        if (executionTimeoutSeconds < 0)
+        {
+            _logger.LogWarning("Ignoring migration execution timeout of {Seconds} seconds because it is negative. " +
+                "Using the default.", executionTimeoutSeconds);
+        }
     }
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
