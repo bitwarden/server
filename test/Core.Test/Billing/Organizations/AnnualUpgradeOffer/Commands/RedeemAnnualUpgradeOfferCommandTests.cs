@@ -30,13 +30,15 @@ public class RedeemAnnualUpgradeOfferCommandTests
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly ILogger<RedeemAnnualUpgradeOfferCommand> _logger =
+        Substitute.For<ILogger<RedeemAnnualUpgradeOfferCommand>>();
     private readonly RedeemAnnualUpgradeOfferCommand _command;
 
     public RedeemAnnualUpgradeOfferCommandTests()
     {
         _getChurnOfferCohortMembershipQuery.Run(Arg.Any<Organization>()).Returns((ChurnOfferCohortMembership?)null);
         _command = new RedeemAnnualUpgradeOfferCommand(
-            Substitute.For<ILogger<RedeemAnnualUpgradeOfferCommand>>(),
+            _logger,
             _getChurnOfferCohortMembershipQuery,
             _priceIncreaseScheduler,
             _pricingClient,
@@ -367,7 +369,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_SubscriptionNotFound_ReturnsConflict()
+    public async Task Run_SubscriptionNotFound_ReturnsBadRequestAndLogsWarning()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
@@ -375,8 +377,9 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var result = await _command.Run(organization);
 
-        Assert.True(result.IsT2);
+        Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Warning, default, default!, default, default!);
     }
 
     [Fact]

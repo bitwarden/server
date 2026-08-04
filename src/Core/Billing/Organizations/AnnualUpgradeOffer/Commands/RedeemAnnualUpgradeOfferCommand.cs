@@ -57,7 +57,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             ["discounts.coupon", "items.data.discounts.coupon", "schedule"]);
         if (subscription is null)
         {
-            return DefaultConflict;
+            return new BadRequest(OfferNoLongerAvailable);
         }
 
         var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
