@@ -260,7 +260,12 @@ public class GetAnnualUpgradeOfferQueryTests
         Assert.Null(result);
         // Read path (runs inline on the organization subscription page): a missing subscription is
         // a data condition, not an operational failure, so it logs at Warning, not Error.
-        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Warning, default, default!, default, default!);
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -399,7 +404,12 @@ public class GetAnnualUpgradeOfferQueryTests
         subscription.Schedule = null;
 
         Assert.Null(await _query.Run(organization));
-        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Error, default, default!, default, default!);
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -646,7 +656,12 @@ public class GetAnnualUpgradeOfferQueryTests
             });
 
         Assert.Null(await _query.Run(organization));
-        _logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Error, default, default!, default, default!);
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]

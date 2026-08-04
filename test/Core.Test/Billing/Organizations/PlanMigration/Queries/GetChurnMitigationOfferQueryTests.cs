@@ -245,7 +245,12 @@ public class GetChurnMitigationOfferQueryTests
         var result = await query.Run(organization);
 
         Assert.Null(result);
-        logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Warning, default, default!, default, default!);
+        logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -271,7 +276,12 @@ public class GetChurnMitigationOfferQueryTests
         var result = await query.Run(organization);
 
         Assert.Null(result);
-        logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Warning, default, default!, default, default!);
+        logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
