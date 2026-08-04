@@ -641,7 +641,8 @@ public class StripePaymentService : IStripePaymentService
                 return;
             }
 
-            // If there's already an annual upgrade schedule active, don't overwrite it
+            // An annual-upgrade phase 2 prices at a different interval, so its amounts don't belong
+            // on a still-monthly line item.
             if (SubscriptionScheduleOwnershipMapper.MapSchedule(schedule) ==
                 OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
             {

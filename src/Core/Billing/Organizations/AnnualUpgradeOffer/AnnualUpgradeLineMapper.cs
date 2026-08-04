@@ -9,7 +9,7 @@ using Plan = Bit.Core.Models.StaticStore.Plan;
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 
 /// <summary>
-/// Maps a subscription and its plan pair to the annual lines a switch would build, or null when
+/// Maps a subscription and its plan pair to the annual lines a monthly-to-annual switch would build, or null when
 /// they cannot be built. Logs the reason against the calling class's logger.
 /// </summary>
 internal static class AnnualUpgradeLineMapper

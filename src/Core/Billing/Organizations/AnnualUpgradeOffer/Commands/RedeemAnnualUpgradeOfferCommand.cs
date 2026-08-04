@@ -79,7 +79,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             })
             .ToList();
 
-        // Eligibility above already excluded Unexpanded, Foreign, and AnnualUpgrade ownership; only None and PriceMigration remain.
+        // MapOrNull above already excluded Unexpanded, Foreign, and AnnualUpgrade ownership; only None and PriceMigration remain.
         var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
 
         // Releasing a price-migration schedule is intended: annual-latest is where the migration was
