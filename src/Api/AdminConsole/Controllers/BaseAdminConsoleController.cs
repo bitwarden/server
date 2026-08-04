@@ -1,10 +1,8 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2;
+﻿using Bit.Api.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
-using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Models.Api;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using CommandError = Bit.Core.AdminConsole.Utilities.v2.Error;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -14,11 +12,7 @@ public abstract class BaseAdminConsoleController : Controller
     /// Maps a void <see cref="CommandResult"/> to an HTTP response.
     /// Returns 204 No Content on success, or the appropriate error status code on failure.
     /// </summary>
-    protected static IResult Handle(CommandResult commandResult) =>
-        commandResult.Match<IResult>(
-            error => MapError(error),
-            _ => TypedResults.NoContent()
-        );
+    protected static IResult Handle(CommandResult commandResult) => commandResult.ToHttpResult();
 
     /// <summary>
     /// Maps a <see cref="CommandResult{T}"/> to an HTTP response.
@@ -27,10 +21,7 @@ public abstract class BaseAdminConsoleController : Controller
     /// On failure, returns the appropriate error status code.
     /// </summary>
     protected static IResult Handle<T>(CommandResult<T> commandResult, Func<T, IResult> success) =>
-        commandResult.Match<IResult>(
-            error => MapError(error),
-            success
-        );
+        commandResult.ToHttpResult(success);
 
     protected static class Error
     {
@@ -49,22 +40,4 @@ public abstract class BaseAdminConsoleController : Controller
                 new ErrorResponseModel(message),
                 statusCode: StatusCodes.Status500InternalServerError);
     }
-
-    private static IResult MapError(CommandError error) =>
-        error switch
-        {
-            IValidationError validationError => TypedResults.BitwardenValidationProblem(validationError),
-            BadRequestError badRequest => TypedResults.BadRequest(new ErrorResponseModel(badRequest.Message)),
-            NotFoundError notFound => TypedResults.NotFound(new ErrorResponseModel(notFound.Message)),
-            ConflictError conflict => TypedResults.Json(
-                new ErrorResponseModel(conflict.Message),
-                statusCode: StatusCodes.Status409Conflict),
-            InternalError internalError => TypedResults.Json(
-                new ErrorResponseModel(internalError.Message),
-                statusCode: StatusCodes.Status500InternalServerError),
-            _ => TypedResults.Json(
-                new ErrorResponseModel(error.Message),
-                statusCode: StatusCodes.Status500InternalServerError
-            )
-        };
 }
