@@ -105,7 +105,7 @@ BEGIN
         [V2UpgradeToken] = @V2UpgradeToken,
         [MasterPasswordSalt] = @MasterPasswordSalt,
         [LastApiKeyRotationDate] = @LastApiKeyRotationDate,
-        [UserKeyId] = COALESCE(@UserKeyId, [UserKeyId])
+        [UserKeyId] = @UserKeyId
     WHERE
         [Id] = @Id
 END
