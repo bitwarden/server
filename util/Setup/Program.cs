@@ -279,7 +279,12 @@ public class Program
     {
         var vaultConnectionString = Helpers.GetValueFromEnvFile(_context.App, "global",
             "globalSettings__sqlServer__connectionString");
-        var migrator = new DbMigrator(vaultConnectionString);
+
+        var timeoutValue = Helpers.GetValueFromEnvFile(_context.App, "global",
+            "globalSettings__sqlServer__migrationExecutionTimeoutSeconds");
+        int? executionTimeoutSeconds = int.TryParse(timeoutValue, out var parsedTimeout) ? parsedTimeout : null;
+
+        var migrator = new DbMigrator(vaultConnectionString, executionTimeoutSeconds: executionTimeoutSeconds);
 
         var enableLogging = false;
 
