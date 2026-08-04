@@ -65,8 +65,8 @@
       },
       "AngleSharp": {
         "type": "Transitive",
-        "resolved": "1.4.0",
-        "contentHash": "6ph8mpaQx0KL0COYRt0kI8MB9gSp1PtKijKMhJU//+aVFgKAJLKDesG/+26JSaVCOrHNgPf12wpfoyRcMYOeXg=="
+        "resolved": "1.5.2",
+        "contentHash": "LVZ7rrr6GHbhERhTgVDarVygl1e6KwE96pronA90LBOMacDhxR4lB+xYLjn/vlnUu+xbOB2RM9fuCPEx5bdyWA=="
       },
       "AspNetCoreRateLimit": {
         "type": "Transitive",
@@ -1814,7 +1814,7 @@
       "icons": {
         "type": "Project",
         "dependencies": {
-          "AngleSharp": "[1.4.0, 1.4.0]",
+          "AngleSharp": "[1.5.2, 1.5.2]",
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
           "Bitwarden.Server.Sdk.WebEssentials": "[0.5.0, )",
