@@ -59,8 +59,11 @@ public class ChangePasswordUriController : Controller
 
         var domain = validUri.Host;
 
-        var mappedDomain = _domainMappingService.MapDomain(domain);
-        if (_changePasswordSettings.CacheEnabled && _memoryCache.TryGetValue(mappedDomain, out string? cachedUri))
+        // Namespace the key: the Icons container shares a single IMemoryCache singleton across
+        // this controller and IconsController, and both map to the same MapDomain(domain) value.
+        // Without a prefix the two features false-hit and overwrite each other's entries.
+        var cacheKey = $"change-password:{_domainMappingService.MapDomain(domain)}";
+        if (_changePasswordSettings.CacheEnabled && _memoryCache.TryGetValue(cacheKey, out string? cachedUri))
         {
             SetCacheControl(definitive: true);
             return Ok(new ChangePasswordUriResponse(cachedUri));
@@ -84,7 +87,7 @@ public class ChangePasswordUriController : Controller
         if (_changePasswordSettings.CacheEnabled)
         {
             _logger.LogInformation("Cache uri for {Domain}.", domain);
-            _memoryCache.Set(mappedDomain, result.Uri, new MemoryCacheEntryOptions
+            _memoryCache.Set(cacheKey, result.Uri, new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = new TimeSpan(_changePasswordSettings.CacheHours, 0, 0),
                 Size = result.Uri?.Length ?? 0,

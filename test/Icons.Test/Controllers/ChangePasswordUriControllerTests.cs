@@ -111,6 +111,23 @@ public class ChangePasswordUriControllerTests
         Assert.Equal(TimeSpan.FromHours(1), cacheControl.MaxAge);
     }
 
+    [Fact]
+    public async Task Get_DoesNotReadEntriesStoredUnderTheUnnamespacedDomainKey()
+    {
+        // Simulate an entry another feature (e.g. IconsController) stored under the bare mapped-domain
+        // key on the shared IMemoryCache. The change-password endpoint must namespace its key and
+        // therefore ignore this foreign entry rather than false-hit on it.
+        _memoryCache.Set(_uri, "foreign-entry", new MemoryCacheEntryOptions { Size = 1 });
+        _changePasswordService.GetChangePasswordUri(_uri)
+            .Returns(ChangePasswordUriResult.Found("https://example.com/.well-known/change-password"));
+        var sut = CreateSut();
+
+        var result = await sut.Get(_uri);
+
+        await _changePasswordService.Received(1).GetChangePasswordUri(_uri);
+        Assert.Equal("https://example.com/.well-known/change-password", GetResponseUri(result));
+    }
+
     private static string? GetResponseUri(IActionResult result)
     {
         var ok = Assert.IsType<OkObjectResult>(result);
