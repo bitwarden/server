@@ -628,6 +628,27 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         };
     }
 
+    /// <inheritdoc />
+    public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            userEntity.UserKeyId = userKeyId.ToString();
+            userEntity.RevisionDate = DateTime.UtcNow;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
     private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)
     {
         var defaultCollections = (from c in dbContext.Collections
