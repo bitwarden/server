@@ -798,6 +798,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             return;
         }
 
+        // GetPlanOrThrow above also throws BillingException, so one shared catch cannot tell a
+        // lookup failure from a persistence failure.
         // The transition appears on exactly one event, so a swallowed write leaves PlanType monthly
         // while Stripe bills annually. Re-running the flip is a no-op once PlanType is annual.
         try
