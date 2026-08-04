@@ -740,12 +740,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         Subscription subscription,
         Guid organizationId)
     {
-        // Two sequential try blocks, not one enclosing the other: a BillingException from the
-        // pricing-lookup section below (GetPlanOrThrow surfaces BillingException for
-        // pricing-service errors) and a BillingException from the persistence step further down
-        // are the same exception type, so a single shared catch chain cannot propagate one while
-        // swallowing the other. Splitting by code region -- rather than by exception type --
-        // is what makes that distinction possible.
+        // Not flag-gated: schedules redeemed before the flag is turned off must still be honored.
         Organization organization;
         Bit.Core.Models.StaticStore.Plan sourcePlan;
         Bit.Core.Models.StaticStore.Plan targetPlan;
@@ -770,8 +765,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
             organization = fetchedOrganization;
 
-            // organization.PlanType has not been updated yet at this point -- it still reflects
-            // whatever monthly plan the org was on when the annual-upgrade schedule was created.
+            // Still the monthly plan at this point.
             var targetPlanType = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(organization.PlanType);
             if (targetPlanType is null)
             {
@@ -796,36 +790,16 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         }
         catch (Exception exception)
         {
-            // Everything above is a guard or a lookup. Failing them must not fail the whole
-            // webhook, because the organization work sequenced after this handler (expiration
-            // sync, sponsorship renewal, billing-automation exemption) would be skipped.
-            //
-            // This deliberately diverges from HandleScheduleTriggeredFamiliesMigrationAsync and
-            // HandleScheduleTriggeredBusinessMigrationAsync, which both have an explicit
-            // catch (BillingException) { throw; } ahead of their catch-all, so a GetPlanOrThrow
-            // failure in their lookup region propagates and Stripe retries. Here, a GetPlanOrThrow
-            // failure is swallowed like any other guard/lookup failure instead. The annual-upgrade
-            // flip is one-shot and re-derived from organization.PlanType on every event, so a
-            // missed attempt is retried for free the next time a subscription.updated event fires;
-            // failing the whole webhook to force a Stripe retry would cost more (blocking the
-            // unrelated work sequenced after this handler) than it buys. Do not "restore
-            // consistency" with the siblings here -- the divergence is intentional.
-            //
-            // Deliberately not gated on PM38333_AnnualBillingSavings: schedules that were already
-            // redeemed must still be honored after the flag is turned off, so gating here would
-            // strand organizations mid-upgrade.
+            // Swallow so the organization work sequenced after this handler still runs. PlanType is
+            // re-read on every event, so a missed flip retries on the next one.
             _logger.LogError(exception,
                 "Failed to handle schedule-triggered annual upgrade for organization ({OrganizationId})",
                 organizationId);
             return;
         }
 
-        // Rethrow only here. The monthly-to-annual price transition appears on exactly one
-        // subscription.updated event, so a swallowed write leaves the organization's PlanType
-        // monthly forever while Stripe bills annually. The flip is idempotent on retry: once
-        // PlanType is annual, ResolveAnnualLatestPlanType returns null and the handler returns
-        // early before re-applying the change. Nothing encloses this try, so the BillingException
-        // below propagates unconditionally and Stripe retries.
+        // The transition appears on exactly one event, so a swallowed write leaves PlanType monthly
+        // while Stripe bills annually. Re-running the flip is a no-op once PlanType is annual.
         try
         {
             organization.ChangePlan(targetPlan);
