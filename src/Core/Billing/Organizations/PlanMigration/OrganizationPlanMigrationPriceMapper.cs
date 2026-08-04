@@ -7,7 +7,24 @@ internal static class OrganizationPlanMigrationPriceMapper
     /// <summary>
     /// Returns the target plan's equivalent price ID, or null if no mapping exists.
     /// </summary>
-    public static string? MapOrNull(string sourcePriceId, Plan source, Plan target) => sourcePriceId switch
+    public static string? MapOrNull(string sourcePriceId, Plan source, Plan target) =>
+        Resolve(sourcePriceId, source, target);
+
+    /// <summary>
+    /// Maps as <see cref="MapOrNull"/>; returns the input unchanged on miss. Short-circuits when
+    /// source and target are the same instance. Pass-through is intentional for Families and
+    /// uniform-price slots — callers should not log misses.
+    /// </summary>
+    public static string MapOrPassThrough(string sourcePriceId, Plan source, Plan target)
+    {
+        if (ReferenceEquals(source, target))
+        {
+            return sourcePriceId;
+        }
+        return Resolve(sourcePriceId, source, target) ?? sourcePriceId;
+    }
+
+    private static string? Resolve(string sourcePriceId, Plan source, Plan target) => sourcePriceId switch
     {
         // Packaged -> Scalable PM base price (Teams Starter -> Teams Current): a packaged source holds its
         // flat price in StripePlanId, mapped to the target's per-seat price. The IsNullOrEmpty guard keeps a
@@ -27,18 +44,4 @@ internal static class OrganizationPlanMigrationPriceMapper
             target.SecretsManager.StripeServiceAccountPlanId,
         _ => null
     };
-
-    /// <summary>
-    /// Maps as <see cref="MapOrNull"/>; returns the input unchanged on miss. Short-circuits when
-    /// source and target are the same instance. Pass-through is intentional for Families and
-    /// uniform-price slots, so callers should not log misses.
-    /// </summary>
-    public static string MapOrPassThrough(string sourcePriceId, Plan source, Plan target)
-    {
-        if (ReferenceEquals(source, target))
-        {
-            return sourcePriceId;
-        }
-        return MapOrNull(sourcePriceId, source, target) ?? sourcePriceId;
-    }
 }
