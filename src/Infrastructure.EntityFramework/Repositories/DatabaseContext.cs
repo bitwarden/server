@@ -14,6 +14,7 @@ using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using DP = Microsoft.AspNetCore.DataProtection;
 
@@ -155,6 +156,19 @@ public class DatabaseContext : DbContext
             .WithMany()
             .HasForeignKey(c => c.AccessRuleId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Collection.AccessRuleId is excluded from tracked inserts and updates, so an ordinary collection edit cannot
+        // erase or forge a PAM association no matter which repository method saves the entity. This mirrors MSSQL,
+        // where Collection_Create and Collection_Update accept @AccessRuleId and deliberately ignore it.
+        //
+        // Consequence for anything that needs to write this column: it MUST go through ExecuteUpdate (or raw SQL),
+        // which bypasses the change tracker and therefore these behaviours. Assigning the property and calling
+        // SaveChanges silently does nothing. The two writers today are
+        // ICollectionRepository.SetAccessRuleAssociationsAsync and the clear inside AccessRuleRepository.DeleteAsync.
+        eCollection.Property(c => c.AccessRuleId).Metadata
+            .SetBeforeSaveBehavior(PropertySaveBehavior.Ignore);
+        eCollection.Property(c => c.AccessRuleId).Metadata
+            .SetAfterSaveBehavior(PropertySaveBehavior.Ignore);
 
         eOrganizationMemberBaseDetail.HasNoKey();
 
