@@ -51,6 +51,52 @@ public class AccessRuleRepositoryTests
         Assert.Null(actualCollection.AccessRuleId);
     }
 
+    /// <summary>
+    /// Organization cascades to both Collection and AccessRule, while Collection -> AccessRule is RESTRICT, so
+    /// deleting an organization that still has a governed collection depends on those two cascade paths being
+    /// applied in the right order. EF's OrganizationRepository.DeleteAsync deletes neither table explicitly — it
+    /// relies on the database cascade when the organization row is removed — so this pins that org deletion
+    /// survives an active association on every provider.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task OrganizationDeleteAsync_WithGovernedCollection_Succeeds(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var rule = await accessRuleRepository.CreateAsync(new AccessRule
+        {
+            OrganizationId = organization.Id,
+            Name = "Rule Blocking Org Delete",
+            Conditions = """{"kind":"human_approval"}""",
+        });
+
+        var collection = new Collection
+        {
+            Name = "Governed Collection",
+            OrganizationId = organization.Id,
+        };
+        await collectionRepository.CreateAsync(collection, [], []);
+
+        await collectionRepository.SetAccessRuleAssociationsAsync(
+            organization.Id, rule.Id, [collection.Id], []);
+
+        var governed = await collectionRepository.GetByIdAsync(collection.Id);
+        Assert.NotNull(governed);
+        Assert.Equal(rule.Id, governed.AccessRuleId);
+
+        // Act
+        await organizationRepository.DeleteAsync(organization);
+
+        // Assert: the organization and everything hanging off it is gone.
+        Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
+        Assert.Null(await accessRuleRepository.GetByIdAsync(rule.Id));
+        Assert.Null(await collectionRepository.GetByIdAsync(collection.Id));
+    }
+
     [DatabaseTheory, DatabaseData]
     public async Task CreateAsync_ReusingNameOfDeletedRule_Succeeds(
         IOrganizationRepository organizationRepository,
