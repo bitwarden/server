@@ -133,8 +133,7 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
 
         mockedHandler
             .When(HttpMethod.Get, "https://example.com/.well-known/resource-that-should-not-exist-whose-status-code-should-not-be-200")
-            .RespondWith(transient)
-            .WithContent(new StringContent("transient"));
+            .RespondWith(transient);
 
         mockHttpFactory.CreateClient("ChangePasswordUri").Returns(mockedHandler.ToHttpClient());
 
