@@ -741,10 +741,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         Guid organizationId)
     {
         // Not flag-gated: schedules redeemed before the flag is turned off must still be honored.
-        Organization organization;
-        Bit.Core.Models.StaticStore.Plan sourcePlan;
-        Bit.Core.Models.StaticStore.Plan targetPlan;
-
+        // The monthly to annual price swap is expected on a single event, so any failure here has
+        // to surface as a non-200 for Stripe to redeliver it. Replaying is a no-op: once PlanType
+        // is annual, ResolveAnnualLatestPlanType returns null and the handler returns early.
         try
         {
             if (subscription.ScheduleId == null)
@@ -758,12 +757,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 return;
             }
 
-            var fetchedOrganization = await _organizationRepository.GetByIdAsync(organizationId);
-            if (fetchedOrganization is null)
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization is null)
             {
                 return;
             }
-            organization = fetchedOrganization;
 
             // Still the monthly plan at this point.
             var targetPlanType = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(organization.PlanType);
@@ -772,7 +770,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 return;
             }
 
-            sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+            var sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
             var sourcePriceId = sourcePlan.PasswordManager.StripeSeatPlanId;
             if (string.IsNullOrEmpty(sourcePriceId) ||
                 !previousSubscription.Items.Data.Any(item => item.Price?.Id == sourcePriceId))
@@ -780,48 +778,30 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 return;
             }
 
-            targetPlan = await _pricingClient.GetPlanOrThrow(targetPlanType.Value);
+            var targetPlan = await _pricingClient.GetPlanOrThrow(targetPlanType.Value);
             var targetPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
             if (string.IsNullOrEmpty(targetPriceId) ||
                 !subscription.Items.Any(item => item.Price?.Id == targetPriceId))
             {
                 return;
             }
+
+            organization.ChangePlan(targetPlan);
+            await _organizationRepository.ReplaceAsync(organization);
+
+            _logger.LogInformation(
+                "Schedule-triggered annual upgrade applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}",
+                organizationId,
+                sourcePlan.Type,
+                targetPlan.Type);
         }
         catch (Exception exception)
         {
-            // Swallow so the organization work sequenced after this handler still runs. PlanType is
-            // re-read on every event, so a missed flip retries on the next one.
             _logger.LogError(exception,
                 "Failed to handle schedule-triggered annual upgrade for organization ({OrganizationId})",
                 organizationId);
-            return;
+            throw;
         }
-
-        // GetPlanOrThrow above also throws BillingException, so one shared catch cannot tell a
-        // lookup failure from a persistence failure.
-        // The transition appears on exactly one event, so a swallowed write leaves PlanType monthly
-        // while Stripe bills annually. Re-running the flip is a no-op once PlanType is annual.
-        try
-        {
-            organization.ChangePlan(targetPlan);
-            await _organizationRepository.ReplaceAsync(organization);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception,
-                "Failed to persist schedule-triggered annual upgrade for organization ({OrganizationId})",
-                organizationId);
-            throw new BillingException(
-                message: $"Failed to persist schedule-triggered annual upgrade for organization ({organizationId})",
-                innerException: exception);
-        }
-
-        _logger.LogInformation(
-            "Schedule-triggered annual upgrade applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}",
-            organizationId,
-            sourcePlan.Type,
-            targetPlan.Type);
     }
 
     private static string GetPasswordManagerPriceId(Bit.Core.Models.StaticStore.Plan plan) =>
