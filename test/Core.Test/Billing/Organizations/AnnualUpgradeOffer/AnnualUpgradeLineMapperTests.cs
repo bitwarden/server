@@ -27,6 +27,9 @@ public class AnnualUpgradeLineMapperTests
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception?, string>>());
 
+    private void AssertNothingLogged() =>
+        _logger.DidNotReceiveWithAnyArgs().Log<object>(default, default, default!, default, default!);
+
     private static Plan MonthlyTeamsPlan() => new Teams2023Plan(isAnnual: false);
     private static Plan AnnualTeamsPlan() => new Teams2023Plan(isAnnual: true);
 
@@ -96,6 +99,7 @@ public class AnnualUpgradeLineMapperTests
         var line = Assert.Single(result!);
         Assert.Equal("2023-teams-org-seat-monthly", line.Item.Price.Id);
         Assert.Equal(AnnualTeamsPlan().PasswordManager.StripeSeatPlanId, line.TargetPriceId);
+        AssertNothingLogged();
     }
 
     [Fact]
@@ -221,12 +225,14 @@ public class AnnualUpgradeLineMapperTests
         });
 
         Assert.NotNull(Map(SubscriptionWith(schedule: schedule)));
+        AssertNothingLogged();
     }
 
     [Fact]
     public void MapOrNull_NoScheduleAttached_ProceedsToMapping()
     {
         Assert.NotNull(Map(SubscriptionWith()));
+        AssertNothingLogged();
     }
 
     [Fact]
