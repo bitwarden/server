@@ -121,6 +121,31 @@ public class ChangePasswordUriServiceTests : ServiceTestBase<ChangePasswordUriSe
     }
 
     [Theory]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.RequestTimeout)]
+    public async Task GetChangePasswordUri_WhenProbeReturnsTransientStatus_ReturnsLookupFailed(HttpStatusCode transient)
+    {
+        // A transient upstream status is not a definitive answer, so it must not be folded into
+        // NotSupported and cached — it should surface as LookupFailed.
+        var mockHttpFactory = Substitute.For<IHttpClientFactory>();
+        var mockedHandler = new MockedHttpMessageHandler();
+
+        mockedHandler
+            .When(HttpMethod.Get, "https://example.com/.well-known/resource-that-should-not-exist-whose-status-code-should-not-be-200")
+            .RespondWith(transient)
+            .WithContent(new StringContent("transient"));
+
+        mockHttpFactory.CreateClient("ChangePasswordUri").Returns(mockedHandler.ToHttpClient());
+
+        var service = new ChangePasswordUriService(mockHttpFactory, Substitute.For<ILogger<ChangePasswordUriService>>());
+
+        var result = await service.GetChangePasswordUri("https://example.com");
+
+        Assert.Equal(ChangePasswordUriResultType.LookupFailed, result.Type);
+    }
+
+    [Theory]
     [InlineData("")]
     public async Task GetChangePasswordUri_WhenDomainIsNullOrEmpty_ReturnsNotSupported(string domain)
     {

@@ -1,4 +1,6 @@
-﻿namespace Bit.Icons.Services;
+﻿using System.Net;
+
+namespace Bit.Icons.Services;
 
 public class ChangePasswordUriService : IChangePasswordUriService
 {
@@ -70,6 +72,7 @@ public class ChangePasswordUriService : IChangePasswordUriService
         using var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
 
         using var response = await _httpClient.SendAsync(request);
+        ThrowIfTransient(response.StatusCode);
         return !response.IsSuccessStatusCode;
     }
 
@@ -95,6 +98,22 @@ public class ChangePasswordUriService : IChangePasswordUriService
         using var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
 
         using var response = await _httpClient.SendAsync(request);
+        ThrowIfTransient(response.StatusCode);
         return response.IsSuccessStatusCode ? url.ToString() : null;
+    }
+
+    /// <summary>
+    /// Throws when the upstream returns a transient status (5xx, 429, 408). Such a response is not
+    /// a definitive answer about well-known support, so it must surface as a failure rather than be
+    /// folded into "not supported" and cached — the same sticky-wrong-answer trap this class avoids
+    /// for thrown failures.
+    /// </summary>
+    private static void ThrowIfTransient(HttpStatusCode status)
+    {
+        if ((int)status >= 500 ||
+            status is HttpStatusCode.TooManyRequests or HttpStatusCode.RequestTimeout)
+        {
+            throw new HttpRequestException($"Transient upstream status {(int)status}.", null, status);
+        }
     }
 }
