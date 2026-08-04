@@ -9,7 +9,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
-using Stripe;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 
@@ -46,8 +45,7 @@ public class GetPendingAnnualUpgradeQuery(
         try
         {
             var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-                stripeAdapter, logger, organization, nameof(GetPendingAnnualUpgradeQuery),
-                ["test_clock", "schedule.phases.items.price"], LogLevel.Warning);
+                stripeAdapter, logger, organization, ["test_clock", "schedule.phases.items.price"]);
             if (subscription is null || subscription.Status != SubscriptionStatus.Active)
             {
                 return null;

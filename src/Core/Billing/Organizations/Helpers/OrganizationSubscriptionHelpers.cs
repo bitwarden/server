@@ -11,23 +11,15 @@ using static StripeConstants;
 public static class OrganizationSubscriptionHelpers
 {
     /// <summary>
-    /// Loads the organization's Stripe subscription, optionally expanding the given paths.
-    /// Returns null (and logs, tagged with <paramref name="caller"/>, at <paramref name="logLevel"/>)
-    /// when Stripe reports the subscription is missing.
+    /// Loads the organization's Stripe subscription, optionally expanding the given paths. Returns
+    /// null and logs a Warning, tagged with the calling class, when Stripe reports the subscription
+    /// is missing.
     /// </summary>
-    /// <param name="logLevel">
-    /// Defaults to <see cref="LogLevel.Error"/> for write-path callers, where a missing subscription
-    /// means the operation cannot proceed. Read-path callers that run inline on a page load should
-    /// pass <see cref="LogLevel.Warning"/> instead: a stale <c>GatewaySubscriptionId</c> is a data
-    /// condition, not an operational failure, and should not page anyone on every page view.
-    /// </param>
-    public static async Task<Subscription?> TryGetSubscriptionAsync(
+    public static async Task<Subscription?> TryGetSubscriptionAsync<T>(
         IStripeAdapter stripeAdapter,
-        ILogger logger,
+        ILogger<T> logger,
         Organization organization,
-        string caller,
-        List<string>? expand = null,
-        LogLevel logLevel = LogLevel.Error)
+        List<string>? expand = null)
     {
         try
         {
@@ -36,9 +28,9 @@ public static class OrganizationSubscriptionHelpers
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
         {
-            logger.Log(logLevel,
+            logger.LogWarning(
                 "{Caller}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
-                caller, organization.GatewaySubscriptionId, organization.Id);
+                typeof(T).Name, organization.GatewaySubscriptionId, organization.Id);
             return null;
         }
     }

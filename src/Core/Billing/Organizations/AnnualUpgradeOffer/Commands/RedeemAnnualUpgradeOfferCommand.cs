@@ -53,7 +53,7 @@ public class RedeemAnnualUpgradeOfferCommand(
         }
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, _logger, organization, CommandName,
+            stripeAdapter, _logger, organization,
             ["discounts.coupon", "items.data.discounts.coupon", "schedule"]);
         if (subscription is null)
         {

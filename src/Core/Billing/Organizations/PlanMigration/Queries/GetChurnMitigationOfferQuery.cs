@@ -42,8 +42,7 @@ public class GetChurnMitigationOfferQuery(
         // against test customers; `discount`/`discounts.coupon` give us the churn-only
         // ineligibility surfaces without a second round-trip.
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, logger, organization, nameof(GetChurnMitigationOfferQuery),
-            ["customer", "test_clock", "discounts.coupon"], LogLevel.Warning);
+            stripeAdapter, logger, organization, ["customer", "test_clock", "discounts.coupon"]);
         if (subscription is null)
         {
             return null;
@@ -119,8 +118,7 @@ public class GetChurnMitigationOfferQuery(
         // against test customers; `discount`/`discounts.coupon` give us the churn-only
         // ineligibility surfaces without a second round-trip.
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, logger, organization, nameof(GetChurnMitigationOfferQuery),
-            ["customer", "test_clock", "discounts.coupon"], LogLevel.Warning);
+            stripeAdapter, logger, organization, ["customer", "test_clock", "discounts.coupon"]);
         if (subscription is null)
         {
             return null;

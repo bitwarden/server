@@ -76,8 +76,7 @@ public class UpdateOrganizationSubscriptionCommand(
         subscription = HasRequiredExpansions(subscription)
             ? subscription
             : await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-                stripeAdapter, _logger, organization, CommandName,
-                ["customer", "test_clock", "schedule"]);
+                stripeAdapter, _logger, organization, ["customer", "test_clock", "schedule"]);
 
         if (subscription is null)
         {
