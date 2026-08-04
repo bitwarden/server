@@ -218,6 +218,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             entity.LastKeyRotationDate = user.LastKeyRotationDate;
             entity.AccountRevisionDate = user.AccountRevisionDate;
             entity.RevisionDate = user.RevisionDate;
+            entity.UserKeyId = user.UserKeyId;
 
             await dbContext.SaveChangesAsync();
 
@@ -278,6 +279,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.SecurityVersion = user.SecurityVersion;
 
         userEntity.V2UpgradeToken = user.V2UpgradeToken;
+
+        userEntity.UserKeyId = user.UserKeyId;
 
         await dbContext.SaveChangesAsync();
 
