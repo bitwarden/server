@@ -790,8 +790,14 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
         if (assignIds.Count > 0)
         {
+            // The foreign key only proves the rule exists, not that it belongs to this organization. Without this
+            // the caller could govern its own collections with another organization's rule, handing that
+            // organization control of the conditions gating access to data it cannot see.
             await dbContext.Collections
-                .Where(c => c.OrganizationId == organizationId && assignIds.Contains(c.Id))
+                .Where(c => c.OrganizationId == organizationId
+                    && assignIds.Contains(c.Id)
+                    && dbContext.AccessRules.Any(ar => ar.Id == accessRuleId
+                        && ar.OrganizationId == organizationId))
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(c => c.AccessRuleId, accessRuleId)
                     .SetProperty(c => c.RevisionDate, now));

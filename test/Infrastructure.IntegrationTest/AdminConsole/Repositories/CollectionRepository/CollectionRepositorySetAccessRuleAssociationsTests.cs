@@ -251,6 +251,66 @@ public class CollectionRepositorySetAccessRuleAssociationsTests
         Assert.Equal(rule.Id, actual.AccessRuleId);
     }
 
+    /// <summary>
+    /// The counterpart to the foreign-collection case: the rule has to belong to the organization too. The foreign
+    /// key only proves the rule exists, so without an explicit tenancy check a caller could govern its own
+    /// collections with another organization's rule — handing that organization control of the conditions gating
+    /// access to data it cannot see. Both implementations refuse the assignment rather than erroring, matching how a
+    /// collection from another organization is already inert.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task SetAccessRuleAssociationsAsync_WithRuleFromAnotherOrganization_DoesNotAssignIt(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync(identifier: "owner");
+        var otherOrganization = await organizationRepository.CreateTestOrganizationAsync(identifier: "other");
+        var foreignRule = await CreateRuleAsync(accessRuleRepository, otherOrganization.Id, "Foreign rule");
+
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+
+        // Act
+        await collectionRepository.SetAccessRuleAssociationsAsync(
+            organization.Id, foreignRule.Id, [collection.Id], []);
+
+        // Assert
+        var actual = await collectionRepository.GetByIdAsync(collection.Id);
+        Assert.NotNull(actual);
+        Assert.Null(actual.AccessRuleId);
+    }
+
+    /// <summary>
+    /// A foreign rule must not take the existing association down with it: the clear pass is scoped to the rule
+    /// being written, so a collection governed by its own organization's rule is left alone.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task SetAccessRuleAssociationsAsync_WithRuleFromAnotherOrganization_LeavesExistingAssociationIntact(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync(identifier: "owner");
+        var otherOrganization = await organizationRepository.CreateTestOrganizationAsync(identifier: "other");
+        var ownRule = await CreateRuleAsync(accessRuleRepository, organization.Id, "Own");
+        var foreignRule = await CreateRuleAsync(accessRuleRepository, otherOrganization.Id, "Foreign");
+
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        await collectionRepository.SetAccessRuleAssociationsAsync(
+            organization.Id, ownRule.Id, [collection.Id], []);
+
+        // Act
+        await collectionRepository.SetAccessRuleAssociationsAsync(
+            organization.Id, foreignRule.Id, [collection.Id], [collection.Id]);
+
+        // Assert
+        var actual = await collectionRepository.GetByIdAsync(collection.Id);
+        Assert.NotNull(actual);
+        Assert.Equal(ownRule.Id, actual.AccessRuleId);
+    }
+
     private static Task<AccessRule> CreateRuleAsync(
         IAccessRuleRepository accessRuleRepository, Guid organizationId, string name)
         => accessRuleRepository.CreateAsync(new AccessRule
