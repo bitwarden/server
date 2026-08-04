@@ -103,10 +103,8 @@ public class ChangePasswordUriService : IChangePasswordUriService
     }
 
     /// <summary>
-    /// Throws when the upstream returns a transient status (5xx, 429, 408). Such a response is not
-    /// a definitive answer about well-known support, so it must surface as a failure rather than be
-    /// folded into "not supported" and cached — the same sticky-wrong-answer trap this class avoids
-    /// for thrown failures.
+    /// Throws on a transient upstream status (5xx, 429, 408) so it surfaces as a failure instead of
+    /// being cached as a definitive "not supported".
     /// </summary>
     private static void ThrowIfTransient(HttpStatusCode status)
     {
