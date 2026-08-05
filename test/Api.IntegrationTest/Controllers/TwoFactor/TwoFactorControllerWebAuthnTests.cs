@@ -11,6 +11,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
+using Bit.IntegrationTestCommon.Fido2;
 using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Controllers.TwoFactor.TwoFactorIntegrationTestHelpers;
@@ -108,12 +109,18 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
         var challengeRoot = await ReadJsonRootAsync(challengeResponse);
         Assert.Equal(JsonValueKind.Object, challengeRoot.GetProperty("options").ValueKind);
 
+        // ICompleteTwoFactorWebAuthnRegistrationCommand is substituted to unconditionally succeed,
+        // so the attestation doesn't need to verify against the issued challenge — it only needs to
+        // satisfy AuthenticatorAttestationRawResponse's [Required] fields for model binding to pass.
+        using var authenticator = new FakeWebAuthnAuthenticator();
+        var attestation = authenticator.MakeAttestation(new byte[32], "localhost", "https://localhost:8080");
+
         var putResponse = await _client.PutAsJsonAsync("/two-factor/webauthn",
             new
             {
                 Id = 0,
                 Name = "TestKey",
-                DeviceResponse = new { },
+                DeviceResponse = attestation,
                 UserVerificationToken = uvToken,
             });
         Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
