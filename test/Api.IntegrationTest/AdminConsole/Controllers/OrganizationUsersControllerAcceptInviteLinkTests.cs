@@ -376,6 +376,45 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         await AssertStillInvitedAsync(joinerEmail);
     }
 
+    // Existing-invitation path: account-recovery auto-enroll still enrolls the user when accepting a
+    // pending email invitation (the auto-enroll check runs for both membership branches).
+    [Fact]
+    public async Task AcceptInviteLink_WithExistingInvitation_AndAccountRecoveryAutoEnrollEnabled_EnrollsUserInAccountRecovery()
+    {
+        var organizationRepository = _factory.GetService<IOrganizationRepository>();
+        _organization.UseResetPassword = true;
+        _organization.UsePolicies = true;
+        await organizationRepository.ReplaceAsync(_organization);
+
+        var policyRepository = _factory.GetService<IPolicyRepository>();
+        var resetPasswordPolicy = new Policy
+        {
+            OrganizationId = _organization.Id,
+            Type = PolicyType.ResetPassword,
+            Enabled = true,
+        };
+        resetPasswordPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
+        await policyRepository.CreateAsync(resetPasswordPolicy);
+
+        var created = await CreateInviteLinkAsync();
+        var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
+        await CreatePendingEmailInvitationAsync(joinerEmail);
+
+        const string resetPasswordKey = "2.reset-password-key";
+        var response = await joinerClient.PostAsJsonAsync(
+            "/organizations/users/invite-link/accept",
+            new AcceptOrganizationInviteLinkRequestModel
+            {
+                OrganizationId = created.OrganizationId,
+                Code = created.Code,
+                ResetPasswordKey = resetPasswordKey,
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var organizationUser = await AssertAcceptedMemberAsync(joinerEmail);
+        Assert.Equal(resetPasswordKey, organizationUser.ResetPasswordKey);
+    }
+
     private static Task<HttpResponseMessage> AcceptAsync(HttpClient client, OrganizationInviteLinkResponseModel created) =>
         client.PostAsJsonAsync(
             "/organizations/users/invite-link/accept",
