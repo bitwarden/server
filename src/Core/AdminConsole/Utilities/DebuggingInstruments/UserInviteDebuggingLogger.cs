@@ -17,7 +17,7 @@ public static class UserInviteDebuggingLogger
         LogUserInviteStateDiagnostics(logger, [orgUser]);
     }
 
-    public static void LogUserInviteStateDiagnostics(this ILogger logger, IEnumerable<OrganizationUser> allOrgUsers)
+    public static void LogUserInviteStateDiagnostics(this ILogger logger, ICollection<OrganizationUser> allOrgUsers)
     {
         try
         {
@@ -29,7 +29,7 @@ public static class UserInviteDebuggingLogger
                 logger.LogWarning("Warning invalid invited state. {logData}", logData);
             }
 
-            var invalidConfirmedOrAcceptedState = allOrgUsers.Any(user => (user.Status == OrganizationUserStatusType.Confirmed || user.Status == OrganizationUserStatusType.Accepted) && !user.Email.IsNullOrWhiteSpace());
+            var invalidConfirmedOrAcceptedState = allOrgUsers.Any(user => user.Status is OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Accepted && !user.Email.IsNullOrWhiteSpace());
 
             if (invalidConfirmedOrAcceptedState)
             {
@@ -39,7 +39,6 @@ public static class UserInviteDebuggingLogger
         }
         catch (Exception exception)
         {
-
             // Ensure that this debugging instrument does not interfere with the current flow.
             logger.LogWarning(exception, "Unexpected exception from UserInviteDebuggingLogger");
         }
