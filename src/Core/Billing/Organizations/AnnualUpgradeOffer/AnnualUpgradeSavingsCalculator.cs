@@ -11,8 +11,9 @@ namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 internal readonly record struct AnnualUpgradeSavings(decimal CurrentAnnualCost, decimal NewAnnualCost);
 
 /// <summary>
-/// The two invoice previews the quote compares: the same quantities and the same coupons priced
-/// once on the subscription's current monthly price IDs and once on their annual equivalents.
+/// The two invoice previews the quote compares: the same quantities priced once on the
+/// subscription's current monthly price IDs and once on their annual equivalents. The annual side
+/// also carries the customer's coupon, because the annual phase will.
 /// </summary>
 internal readonly record struct AnnualUpgradePreviewRequests(
     InvoiceCreatePreviewOptions Monthly,
