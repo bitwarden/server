@@ -11,5 +11,5 @@ public record AcceptInviteLinkMembershipValidationResult
     /// Whether the joining user must be auto-enrolled in account recovery due to the Account Recovery
     /// Administration policy having auto-enrollment enabled.
     /// </summary>
-    public bool AutoEnrollEnabled { get; init; }
+    public bool AccountRecoveryAutoEnroll { get; init; }
 }

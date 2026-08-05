@@ -38,7 +38,14 @@ public class AcceptInviteLinkMembershipValidator(
         var organization = request.Organization;
         var result = new AcceptInviteLinkMembershipValidationResult();
 
-        // ----- Common eligibility -----
+        // Check membership status first for a friendlier message if they're already in the organization
+        var membershipStatusError = ValidateExistingMembershipStatus(request.ExistingMembership, organization.DisplayName());
+        if (membershipStatusError is not null)
+        {
+            return Invalid(result, membershipStatusError);
+        }
+
+        // Security: allowed domains only provide protection if the user has proven control over their email address.
         if (!user.EmailVerified)
         {
             return Invalid(result, new EmailNotVerified());
@@ -55,17 +62,14 @@ public class AcceptInviteLinkMembershipValidator(
             return Invalid(result, new ProviderUsersCannotAcceptInviteLink());
         }
 
-        var membershipStatusError = ValidateExistingMembershipStatus(request.ExistingMembership, organization.DisplayName());
-        if (membershipStatusError is not null)
-        {
-            return Invalid(result, membershipStatusError);
-        }
-
-        // ----- Policy checks: split once on membership -----
-        // A brand-new member has no OrganizationUser in the target org, so IPolicyRequirementQuery cannot
-        // resolve the target org's policies; the target org's policies are read directly instead. An
-        // existing pending email invitation has a row, so the requirement framework resolves it correctly
-        // and enforcement is delegated to the proven shared validator.
+        // ----- Policy checks -----
+        // A brand-new member has no OrganizationUser in the target org, so the shared validator
+        // (using IPolicyRequirementQuery) cannot resolve the target org's policies.
+        // The logic diverges as follows:
+        // - existing OrganizationUser (created via direct invite): use shared enforcement flow.
+        // - new OrganizationUser: bespoke enforcement flow, which checks target organization policies directly,
+        //   while still using IPolicyRequirementQuery for other organizations' policies.
+        // TODO: DRY this up in milestone 3 (PM-34429)
         var policyValidation = request.ExistingMembership is null
             ? await ValidateNewMemberPoliciesAsync(request)
             : await ValidateExistingMemberPoliciesAsync(request);
@@ -84,7 +88,7 @@ public class AcceptInviteLinkMembershipValidator(
         return Valid(new AcceptInviteLinkMembershipValidationResult
         {
             AutoConfirmPolicyEnabled = policyValidation.Request.AutoConfirmPolicyEnabled,
-            AutoEnrollEnabled = autoEnrollEnabled,
+            AccountRecoveryAutoEnroll = autoEnrollEnabled,
         });
     }
 

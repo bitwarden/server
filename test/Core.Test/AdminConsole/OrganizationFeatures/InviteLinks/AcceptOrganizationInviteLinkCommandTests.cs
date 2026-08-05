@@ -430,7 +430,7 @@ public class AcceptOrganizationInviteLinkCommandTests
             .ValidateAsync(Arg.Is<AcceptInviteLinkMembershipValidationRequest>(r =>
                 r.Organization.Id == organization.Id && r.User == user))
             .Returns(Task.FromResult(
-                Valid(new AcceptInviteLinkMembershipValidationResult { AutoEnrollEnabled = true })));
+                Valid(new AcceptInviteLinkMembershipValidationResult { AccountRecoveryAutoEnroll = true })));
 
         var resetPasswordKey = "valid-key-123";
         var request = new AcceptOrganizationInviteLinkRequest

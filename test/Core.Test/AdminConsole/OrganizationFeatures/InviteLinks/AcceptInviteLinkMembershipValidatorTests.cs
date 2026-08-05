@@ -266,7 +266,7 @@ public class AcceptInviteLinkMembershipValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, resetPasswordKey: "2.valid-key"));
 
         Assert.True(result.IsValid);
-        Assert.True(result.Request.AutoEnrollEnabled);
+        Assert.True(result.Request.AccountRecoveryAutoEnroll);
     }
 
     [Theory, BitAutoData]
@@ -281,7 +281,7 @@ public class AcceptInviteLinkMembershipValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, resetPasswordKey: null));
 
         Assert.True(result.IsValid);
-        Assert.False(result.Request.AutoEnrollEnabled);
+        Assert.False(result.Request.AccountRecoveryAutoEnroll);
     }
 
     // ----- Existing member: delegate to shared validator -----

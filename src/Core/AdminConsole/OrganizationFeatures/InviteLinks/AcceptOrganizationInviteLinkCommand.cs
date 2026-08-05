@@ -71,7 +71,7 @@ public class AcceptOrganizationInviteLinkCommand(
             return membershipValidationResult.AsError;
         }
 
-        var autoEnrollEnabled = membershipValidationResult.Request.AutoEnrollEnabled;
+        var autoEnrollEnabled = membershipValidationResult.Request.AccountRecoveryAutoEnroll;
         var autoConfirmPolicyEnabled = membershipValidationResult.Request.AutoConfirmPolicyEnabled;
 
         var acceptResult = existingOrganizationUser is not null
