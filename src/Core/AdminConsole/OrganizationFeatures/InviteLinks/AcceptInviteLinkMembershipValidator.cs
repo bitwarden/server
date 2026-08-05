@@ -56,7 +56,9 @@ public class AcceptInviteLinkMembershipValidator(
             return Invalid(result, new EmailDomainNotAllowed(organization.DisplayName()));
         }
 
-        // Provider users cannot accept invite links, regardless of the membership branch below.
+        // Provider users cannot accept invite links
+        // TODO: verify if this is actually needed. If not, we still need to check it if the autoconfirm policy is
+        // TODO: enabled - don't remove it entirely.
         if ((await providerUserRepository.GetManyByUserAsync(user.Id)).Count != 0)
         {
             return Invalid(result, new ProviderUsersCannotAcceptInviteLink());
