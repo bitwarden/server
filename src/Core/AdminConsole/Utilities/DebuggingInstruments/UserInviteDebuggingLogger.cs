@@ -17,24 +17,26 @@ public static class UserInviteDebuggingLogger
         LogUserInviteStateDiagnostics(logger, [orgUser]);
     }
 
-    public static void LogUserInviteStateDiagnostics(this ILogger logger, ICollection<OrganizationUser> allOrgUsers)
+    public static void LogUserInviteStateDiagnostics(this ILogger logger, IEnumerable<OrganizationUser> allOrgUsers)
     {
         try
         {
-            var invalidInviteState = allOrgUsers.Any(user => user.Status == OrganizationUserStatusType.Invited && user.Email.IsNullOrWhiteSpace());
+            var orgUserList = allOrgUsers.ToList();
+
+            var invalidInviteState = orgUserList.Any(user => user.Status == OrganizationUserStatusType.Invited && user.Email.IsNullOrWhiteSpace());
 
             if (invalidInviteState)
             {
-                var logData = MapObjectDataToLog(allOrgUsers);
+                var logData = MapObjectDataToLog(orgUserList);
                 logger.LogWarning("Warning invalid invited state. {logData}", logData);
             }
 
-            var invalidConfirmedOrAcceptedState = allOrgUsers.Any(user => user.Status is OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Accepted && !user.Email.IsNullOrWhiteSpace());
+            var invalidConfirmedOrAcceptedState = orgUserList.Any(user => user.Status is OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Accepted && !user.Email.IsNullOrWhiteSpace());
 
             if (invalidConfirmedOrAcceptedState)
             {
-                var logData = MapObjectDataToLog(allOrgUsers);
-                logger.LogWarning("Warning invalid confirmed or accepted state. {logData}", logData);
+                var logData = MapObjectDataToLog(orgUserList);
+                logger.LogWarning("Warning invalid confirmed or accepted state. {LogData}", logData);
             }
         }
         catch (Exception exception)
