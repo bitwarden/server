@@ -450,7 +450,6 @@ public class UpdateOrganizationSubscriptionCommand(
         string Translate(string priceId) =>
             OrganizationPlanMigrationPriceMapper.MapOrPassThrough(priceId, sourcePlan, targetPlan);
 
-        // Omitting item discounts is accepted by Stripe and strips them from the live subscription.
         var items = phaseItems
             .Select(i => new SubscriptionSchedulePhaseItemOptions
             {
