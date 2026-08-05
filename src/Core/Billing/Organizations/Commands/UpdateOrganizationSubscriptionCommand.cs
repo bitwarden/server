@@ -132,7 +132,8 @@ public class UpdateOrganizationSubscriptionCommand(
         if (activeSchedule is { Phases.Count: > 0 })
         {
             // PM-40537: only rewrite schedules our code created, identified by phase metadata.
-            var schedulePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, subscription)
+            var annualUpgradePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, subscription);
+            var schedulePlans = annualUpgradePlans
                                 ?? await ResolveCohortMigrationPhasePlansAsync(organization, subscription);
             if (schedulePlans is { } plans)
             {
@@ -163,8 +164,10 @@ public class UpdateOrganizationSubscriptionCommand(
                     "{Command}: Active migration schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating {PhaseCount} active phase(s)",
                     CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
 
+                // Annual upgrade grants no coupon, so merging the customer's would wake a dormant discount.
                 var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes,
-                    plans.source, plans.target, subscription.Customer?.Discount);
+                    plans.source, plans.target,
+                    annualUpgradePlans is null ? subscription.Customer?.Discount : null);
 
                 await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                     new SubscriptionScheduleUpdateOptions

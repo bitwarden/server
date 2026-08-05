@@ -1898,6 +1898,62 @@ public class UpdateOrganizationSubscriptionCommandTests
                 opts.Phases[1].Items.All(i => i.Discounts == null)));
     }
 
+    // PM-38333: annual upgrade grants no coupon, so merging the customer's would wake a discount
+    // Stripe suppresses today. Price migration still merges, because it does grant one.
+    [Fact]
+    public async Task Run_AnnualUpgradeSchedule_DoesNotMergeCustomerCouponIntoAnnualPhase()
+    {
+        var organization = CreateOrganization();
+        organization.PlanType = PlanType.EnterpriseMonthly;
+
+        var currentPlan = MockPlans.Get(PlanType.EnterpriseMonthly);
+        var annualPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(annualPlan);
+
+        var monthlySeat = currentPlan.PasswordManager.StripeSeatPlanId;
+        var annualSeat = annualPlan.PasswordManager.StripeSeatPlanId;
+
+        // Pass the customer through CreateSubscription so its Address and TaxExempt defaults, which
+        // the command's tax reconciliation reads, are not lost.
+        var subscription = CreateSubscription(
+            customer: new Customer
+            {
+                Id = "cus_123",
+                Address = new Address { Country = "US" },
+                TaxExempt = TaxExempt.None,
+                Discount = new Discount { Id = "di_cus", Coupon = new Coupon { Id = "customer-coupon" } }
+            },
+            items: [(monthlySeat, "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(
+            subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)],
+            phaseMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.AnnualUpgrade] = nameof(PlanType.EnterpriseMonthly)
+            });
+        schedule.Phases[1].Discounts =
+            [new SubscriptionSchedulePhaseDiscount { CouponId = "subscription-coupon" }];
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(monthlySeat, 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[1].Discounts
+                    .Select(d => d.Coupon).SequenceEqual(new[] { "subscription-coupon" })));
+    }
+
     [Fact]
     public async Task Run_AnnualUpgradeSchedule_StorageUpdate_UpdatesAnnualStorageInPhase2()
     {
