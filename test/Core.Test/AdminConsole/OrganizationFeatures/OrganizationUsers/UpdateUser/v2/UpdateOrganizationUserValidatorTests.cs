@@ -393,6 +393,91 @@ public class UpdateOrganizationUserValidatorTests
 
     [Theory]
     [BitAutoData]
+    public async Task ValidateAsync_WhenNewEmailTakenByAnotherOrganizationMember_ReturnsEmailAlreadyInUseByAnotherMember(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = orgUser.UserId!.Value, Email = "member@claimed.example.com" };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newEmail: "new@claimed.example.com", userToUpdate: userToUpdate);
+
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { [orgUser.Id] = true });
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<OrganizationDomain> { new() { DomainName = "claimed.example.com" } });
+
+        var emailOwner = new User { Id = Guid.NewGuid(), Email = "new@claimed.example.com" };
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync("new@claimed.example.com")
+            .Returns(emailOwner);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(Arg.Any<Guid>(), emailOwner.Id)
+            .Returns(new OrganizationUser());
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<EmailAlreadyInUseByAnotherMemberError>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenNewEmailTakenOutsideOrganization_ReturnsEmailTakenOutsideOrganization(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = orgUser.UserId!.Value, Email = "member@claimed.example.com" };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newEmail: "new@claimed.example.com", userToUpdate: userToUpdate);
+
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { [orgUser.Id] = true });
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<OrganizationDomain> { new() { DomainName = "claimed.example.com" } });
+
+        var emailOwner = new User { Id = Guid.NewGuid(), Email = "new@claimed.example.com" };
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync("new@claimed.example.com")
+            .Returns(emailOwner);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<EmailTakenOutsideOrganizationError>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenNewEmailNotTaken_ReturnsValidAndSkipsMembershipLookup(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = orgUser.UserId!.Value, Email = "member@claimed.example.com" };
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
+            newEmail: "new@claimed.example.com", userToUpdate: userToUpdate);
+
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { [orgUser.Id] = true });
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<OrganizationDomain> { new() { DomainName = "claimed.example.com" } });
+        // GetByEmailAsync returns null (default) — the new email is free.
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task ValidateAsync_WhenChangingNameForClaimedMember_ReturnsValid(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
