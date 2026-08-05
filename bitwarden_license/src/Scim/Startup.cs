@@ -132,6 +132,10 @@ public class Startup
         app.UseFeatureFlagChecks();
 
         // Add MVC to the request pipeline.
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
     }
 }

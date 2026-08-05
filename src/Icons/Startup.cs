@@ -78,11 +78,16 @@ public class Startup
 
         app.Use(async (context, next) =>
         {
-            context.Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue
+            // Static icon assets are cacheable long-term. The change-password endpoint sets its own
+            // Cache-Control per result (see ChangePasswordUriController), so skip it here.
+            if (!context.Request.Path.StartsWithSegments("/change-password-uri"))
             {
-                Public = true,
-                MaxAge = TimeSpan.FromDays(7)
-            };
+                context.Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue
+                {
+                    Public = true,
+                    MaxAge = TimeSpan.FromDays(7)
+                };
+            }
 
             context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; script-src 'none'");
 
