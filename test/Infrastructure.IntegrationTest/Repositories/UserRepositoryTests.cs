@@ -2,6 +2,7 @@
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
@@ -879,6 +880,66 @@ public class UserRepositoryTests
         // Assert
         Assert.Null(result);
     }
+
+    [Theory, DatabaseData]
+    public async Task SetV2AccountCryptographicStateAsync_RunsDelegatesInTheCallerTransaction(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        // The delegate writes the same user row the enclosing transaction has already written and not yet
+        // committed. If it does not enlist in that transaction it opens a second connection and blocks on
+        // the uncommitted row until the command times out, so this test failing as a timeout is the
+        // regression it guards against.
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var masterPasswordUnlockData = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType.PBKDF2_SHA256,
+                Iterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            },
+            MasterKeyWrappedUserKey = "wrapped-user-key",
+            Salt = email.ToLowerInvariant().Trim(),
+        };
+
+        // Act
+        await userRepository.SetV2AccountCryptographicStateAsync(user.Id, BuildV2AccountKeysData(),
+            [userRepository.SetMasterPassword(user.Id, masterPasswordUnlockData, "newHash", "hint")]);
+
+        // Assert
+        // Both halves of the transaction committed: the account keys and the delegate's write.
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("public-key", updatedUser.PublicKey);
+        Assert.Equal("newHash", updatedUser.MasterPassword);
+        Assert.Equal("hint", updatedUser.MasterPasswordHint);
+        Assert.Equal("wrapped-user-key", updatedUser.Key);
+    }
+
+    private static UserAccountKeysData BuildV2AccountKeysData() => new()
+    {
+        PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+            "wrapped-private-key",
+            "public-key",
+            "signed-public-key"),
+        SignatureKeyPairData = new SignatureKeyPairData(
+            SignatureAlgorithm.Ed25519,
+            "wrapped-signing-key",
+            "verifying-key"),
+        SecurityStateData = new SecurityStateData
+        {
+            SecurityState = "security-state",
+            SecurityVersion = 2
+        }
+    };
 
     private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
     {

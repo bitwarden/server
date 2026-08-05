@@ -21,6 +21,7 @@
     <Project Path="src/Core/Core.csproj" />
     <Project Path="src/Libraries/Data/Data.csproj" />
     <Project Path="src/Libraries/ExceptionHandling/ExceptionHandling.csproj" />
+    <Project Path="src/Libraries/OrganizationAuthorization/OrganizationAuthorization.csproj" />
     <Project Path="src/Libraries/SsrfProtection/SsrfProtection.csproj" />
     <Project Path="src/Events/Events.csproj" />
     <Project Path="src/EventsProcessor/EventsProcessor.csproj" />
@@ -64,6 +65,7 @@
     <Project Path="test/Core.Test/Core.Test.csproj" />
     <Project Path="test/Libraries/Data.Test/Data.Test.csproj" />
     <Project Path="test/Libraries/ExceptionHandling.Test/ExceptionHandling.Test.csproj" />
+    <Project Path="test/Libraries/OrganizationAuthorization.Test/OrganizationAuthorization.Test.csproj" />
     <Project Path="test/Libraries/SsrfProtection.Test/SsrfProtection.Test.csproj" />
     <Project Path="test/Events.IntegrationTest/Events.IntegrationTest.csproj" />
     <Project Path="test/Events.Test/Events.Test.csproj" />

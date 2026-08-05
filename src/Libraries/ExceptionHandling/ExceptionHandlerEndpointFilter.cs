@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Utilities;
+namespace Bit.ExceptionHandling;
 
 /// <summary>
 /// An <see cref="IEndpointFilter"/> that translates thrown exceptions into Bitwarden's
