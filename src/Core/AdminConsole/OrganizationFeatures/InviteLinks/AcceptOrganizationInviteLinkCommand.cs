@@ -1,7 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
@@ -28,6 +31,7 @@ public class AcceptOrganizationInviteLinkCommand(
     IMailService mailService,
     IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
+    IPolicyQuery policyQuery,
     ILogger<AcceptOrganizationInviteLinkCommand> logger,
     IEventService eventService)
     : IAcceptOrganizationInviteLinkCommand
@@ -54,7 +58,12 @@ public class AcceptOrganizationInviteLinkCommand(
         }
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
-        var allOrganizationMemberships = await organizationUserRepository.GetManyByUserAsync(user.Id);
+
+        // These policy states are needed both to validate the accept and to drive the post-accept side effects
+        // below, so resolve them here and pass them into the validator on the request.
+        var autoConfirmPolicyEnabled = organization.UsePolicies
+            && (await policyQuery.RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)).Enabled;
+        var autoEnrollEnabled = await IsAccountRecoveryAutoEnrollEnabledAsync(organization);
 
         var membershipValidationResult = await acceptInviteLinkMembershipValidator.ValidateAsync(
             new AcceptInviteLinkMembershipValidationRequest
@@ -62,17 +71,15 @@ public class AcceptOrganizationInviteLinkCommand(
                 Organization = organization,
                 User = user,
                 AllowedDomains = link.GetAllowedDomains(),
-                AllOrganizationMemberships = allOrganizationMemberships,
                 ExistingMembership = existingOrganizationUser,
                 ResetPasswordKey = request.ResetPasswordKey,
+                AutoConfirmPolicyEnabled = autoConfirmPolicyEnabled,
+                AccountRecoveryAutoEnroll = autoEnrollEnabled,
             });
         if (membershipValidationResult.IsError)
         {
             return membershipValidationResult.AsError;
         }
-
-        var autoEnrollEnabled = membershipValidationResult.Request.AccountRecoveryAutoEnroll;
-        var autoConfirmPolicyEnabled = membershipValidationResult.Request.AutoConfirmPolicyEnabled;
 
         var acceptResult = existingOrganizationUser is not null
             ? await AcceptExistingInviteAsync(existingOrganizationUser, user, autoConfirmPolicyEnabled)
@@ -87,6 +94,18 @@ public class AcceptOrganizationInviteLinkCommand(
         await PerformPostAcceptSideEffectsAsync(organization, user, autoEnrollEnabled, request.ResetPasswordKey, autoConfirmPolicyEnabled);
 
         return acceptResult;
+    }
+
+    private async Task<bool> IsAccountRecoveryAutoEnrollEnabledAsync(Organization organization)
+    {
+        if (!organization.UsePolicies)
+        {
+            return false;
+        }
+
+        var resetPasswordPolicy = await policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
+        return resetPasswordPolicy.Enabled
+            && resetPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
     }
 
     /// <summary>

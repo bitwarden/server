@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2.Validation;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
@@ -6,18 +6,20 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// Validates that a user is eligible to accept an organization invite link.
 /// </summary>
 /// <remarks>
-/// Owns the invite-link eligibility checks (email verified, allowed domain, provider block, existing
-/// membership status, and account-recovery key requirement) and enforces the Automatic User Confirmation,
-/// Single Organization, and Two-Factor Authentication policies.
+/// Owns the invite-link eligibility checks (email verified, allowed domain, existing membership status, free
+/// organization admin limit, and account-recovery key requirement) and enforces the Automatic User
+/// Confirmation, Single Organization, and Two-Factor Authentication policies. A single path handles every
+/// accept case (brand-new member, Staged provisioning, or existing email invitation): the target org's
+/// policies are read directly (they cannot be resolved through
+/// <see cref="Bit.Core.AdminConsole.OrganizationFeatures.Policies.IPolicyRequirementQuery"/> until a
+/// resolvable membership row exists), while the user's other organizations are still evaluated through the
+/// requirement framework.
 ///
-/// For a brand-new member the target organization has no <c>OrganizationUser</c> yet, so
-/// <see cref="Bit.Core.AdminConsole.OrganizationFeatures.Policies.IPolicyRequirementQuery"/> cannot resolve
-/// its policies; those are read directly and paired with <c>Organization.UsePolicies</c>. For an existing
-/// pending email invitation the row exists, so enforcement is delegated to the shared
-/// <see cref="Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership.IAcceptOrganizationMembershipValidator"/>.
+/// Returns the validated <see cref="AcceptInviteLinkMembershipValidationRequest"/> so callers act on the same
+/// request they supplied.
 /// </remarks>
 public interface IAcceptInviteLinkMembershipValidator
 {
-    Task<ValidationResult<AcceptInviteLinkMembershipValidationResult>> ValidateAsync(
+    Task<ValidationResult<AcceptInviteLinkMembershipValidationRequest>> ValidateAsync(
         AcceptInviteLinkMembershipValidationRequest request);
 }

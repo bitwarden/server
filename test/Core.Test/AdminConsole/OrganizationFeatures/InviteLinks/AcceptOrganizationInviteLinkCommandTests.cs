@@ -1,8 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Billing.Services;
@@ -152,8 +155,8 @@ public class AcceptOrganizationInviteLinkCommandTests
 
         sutProvider.GetDependency<IAcceptInviteLinkMembershipValidator>()
             .ValidateAsync(Arg.Any<AcceptInviteLinkMembershipValidationRequest>())
-            .Returns(Task.FromResult(
-                Invalid(new AcceptInviteLinkMembershipValidationResult(),
+            .Returns(ci => Task.FromResult(
+                Invalid(ci.Arg<AcceptInviteLinkMembershipValidationRequest>(),
                     new TwoFactorRequiredForMembership())));
 
         var request = new AcceptOrganizationInviteLinkRequest
@@ -261,7 +264,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(organization, user, sutProvider);
+        SetupAutoConfirmPolicy(organization, sutProvider);
         organization.Seats = 2;
         organization.MaxAutoscaleSeats = 2;
 
@@ -365,7 +368,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(organization, user, sutProvider);
+        SetupAutoConfirmPolicy(organization, sutProvider);
 
         var adminDetails = new OrganizationUserUserDetails { Email = "admin@example.com" };
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -425,12 +428,8 @@ public class AcceptOrganizationInviteLinkCommandTests
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
 
-        // The validator determines whether auto-enroll applies; the command acts on the returned flag.
-        sutProvider.GetDependency<IAcceptInviteLinkMembershipValidator>()
-            .ValidateAsync(Arg.Is<AcceptInviteLinkMembershipValidationRequest>(r =>
-                r.Organization.Id == organization.Id && r.User == user))
-            .Returns(Task.FromResult(
-                Valid(new AcceptInviteLinkMembershipValidationResult { AccountRecoveryAutoEnroll = true })));
+        // The command reads the account-recovery policy and acts on the resulting auto-enroll flag.
+        SetupAutoEnrollPolicy(organization, sutProvider);
 
         var resetPasswordKey = "valid-key-123";
         var request = new AcceptOrganizationInviteLinkRequest
@@ -481,7 +480,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(organization, user, sutProvider);
+        SetupAutoConfirmPolicy(organization, sutProvider);
 
         var request = new AcceptOrganizationInviteLinkRequest
         {
@@ -528,7 +527,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(organization, user, sutProvider);
+        SetupAutoConfirmPolicy(organization, sutProvider);
 
         sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .DeleteAllByUserIdAsync(user.Id)
@@ -551,20 +550,26 @@ public class AcceptOrganizationInviteLinkCommandTests
             .CreateAsync(Arg.Any<OrganizationUser>());
     }
 
+    // The command reads the Auto-Confirm policy state itself and passes it into the validator; enabling it
+    // drives the emergency-access deletion and auto-confirm push side effects.
     private static void SetupAutoConfirmPolicy(
         Organization organization,
-        User user,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
-    {
-        sutProvider.GetDependency<IAcceptInviteLinkMembershipValidator>()
-            .ValidateAsync(Arg.Is<AcceptInviteLinkMembershipValidationRequest>(r =>
-                r.Organization.Id == organization.Id && r.User == user))
-            .Returns(Task.FromResult(
-                Valid(new AcceptInviteLinkMembershipValidationResult
-                {
-                    AutoConfirmPolicyEnabled = true
-                })));
-    }
+        => sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(new PolicyStatus(organization.Id, PolicyType.AutomaticUserConfirmation) { Enabled = true });
+
+    // The command reads the account-recovery auto-enroll state itself; enabling it drives reset-password enrollment.
+    private static void SetupAutoEnrollPolicy(
+        Organization organization,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+        => sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.ResetPassword)
+            .Returns(new PolicyStatus(organization.Id, PolicyType.ResetPassword)
+            {
+                Enabled = true,
+                Data = "{\"autoEnrollEnabled\": true}"
+            });
 
     private static void SetupHappyPath(
         Organization org,
@@ -574,6 +579,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     {
         org.Enabled = true;
         org.UseInviteLinks = true;
+        org.UsePolicies = true;
         org.Seats = 10;
         org.MaxAutoscaleSeats = null;
         link.OrganizationId = org.Id;
@@ -602,15 +608,19 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetByOrganizationEmailAsync(org.Id, user.Email)
             .Returns((OrganizationUser?)null);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(new List<OrganizationUser>());
+        // Auto-Confirm and account-recovery policies are disabled by default; specific tests opt in via
+        // SetupAutoConfirmPolicy / SetupAutoEnrollPolicy.
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(org.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(new PolicyStatus(org.Id, PolicyType.AutomaticUserConfirmation));
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(org.Id, PolicyType.ResetPassword)
+            .Returns(new PolicyStatus(org.Id, PolicyType.ResetPassword));
 
         sutProvider.GetDependency<IAcceptInviteLinkMembershipValidator>()
             .ValidateAsync(Arg.Is<AcceptInviteLinkMembershipValidationRequest>(r =>
                 r.Organization.Id == org.Id && r.User == user))
-            .Returns(Task.FromResult(
-                Valid(new AcceptInviteLinkMembershipValidationResult())));
+            .Returns(ci => Task.FromResult(Valid(ci.Arg<AcceptInviteLinkMembershipValidationRequest>())));
 
         sutProvider.GetDependency<IStripePaymentService>()
             .HasSecretsManagerStandalone(org)

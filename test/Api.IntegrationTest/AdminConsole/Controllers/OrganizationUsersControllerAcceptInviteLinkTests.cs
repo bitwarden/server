@@ -415,6 +415,127 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         Assert.Equal(resetPasswordKey, organizationUser.ResetPasswordKey);
     }
 
+    // A Staged membership (SCIM/Directory-Connector provisioned: Email set, no linked UserId) is resolved as
+    // an existing membership, but IPolicyRequirementQuery still cannot resolve the target org's policies for
+    // it, so target-org policies must still be enforced. Here two-step login is required and the joiner has none.
+    [Fact]
+    public async Task AcceptInviteLink_WithStagedMembership_WhenOrganizationRequiresTwoFactor_AndJoinerHasNoTwoFactor_IsRejected()
+    {
+        await EnablePolicyAsync(PolicyType.TwoFactorAuthentication);
+
+        var created = await CreateInviteLinkAsync();
+        var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
+        await CreateStagedMembershipAsync(joinerEmail);
+
+        var response = await AcceptAsync(joinerClient, created);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertStillStagedAsync(joinerEmail);
+    }
+
+    // Staged path: with no policies, accepting the invite link links and accepts the staged membership.
+    [Fact]
+    public async Task AcceptInviteLink_WithStagedMembership_WithValidRequest_ReturnsOk()
+    {
+        var created = await CreateInviteLinkAsync();
+        var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
+        await CreateStagedMembershipAsync(joinerEmail);
+
+        var response = await AcceptAsync(joinerClient, created);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await AssertAcceptedMemberAsync(joinerEmail);
+    }
+
+    // Staged path: a joiner with two-step login may accept the invite link into a 2FA org.
+    [Fact]
+    public async Task AcceptInviteLink_WithStagedMembership_WhenOrganizationRequiresTwoFactor_AndJoinerHasTwoFactor_Succeeds()
+    {
+        await EnablePolicyAsync(PolicyType.TwoFactorAuthentication);
+
+        var created = await CreateInviteLinkAsync();
+        var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
+        await SetJoinerTwoFactorEnabledAsync(joinerEmail);
+        await CreateStagedMembershipAsync(joinerEmail);
+
+        var response = await AcceptAsync(joinerClient, created);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await AssertAcceptedMemberAsync(joinerEmail);
+    }
+
+    // Staged path: Single Org must still be enforced against the target organization.
+    [Fact]
+    public async Task AcceptInviteLink_WithStagedMembership_WhenTargetOrganizationEnforcesSingleOrg_AndJoinerBelongsToAnotherOrg_IsRejected()
+    {
+        await EnablePolicyAsync(PolicyType.SingleOrg);
+
+        var created = await CreateInviteLinkAsync();
+        var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
+        await AddJoinerToAnotherOrganizationAsync(joinerEmail);
+        await CreateStagedMembershipAsync(joinerEmail);
+
+        var response = await AcceptAsync(joinerClient, created);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertStillStagedAsync(joinerEmail);
+    }
+
+    // Staged path: Auto-Confirm must still be enforced against the target organization.
+    [Fact]
+    public async Task AcceptInviteLink_WithStagedMembership_WhenTargetOrganizationEnforcesAutoConfirm_AndJoinerBelongsToAnotherOrg_IsRejected()
+    {
+        await EnablePolicyAsync(PolicyType.AutomaticUserConfirmation);
+
+        var created = await CreateInviteLinkAsync();
+        var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
+        await AddJoinerToAnotherOrganizationAsync(joinerEmail);
+        await CreateStagedMembershipAsync(joinerEmail);
+
+        var response = await AcceptAsync(joinerClient, created);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertStillStagedAsync(joinerEmail);
+    }
+
+    // Staged path: account-recovery auto-enroll still enrolls the user (the check runs for all branches).
+    [Fact]
+    public async Task AcceptInviteLink_WithStagedMembership_AndAccountRecoveryAutoEnrollEnabled_EnrollsUserInAccountRecovery()
+    {
+        var organizationRepository = _factory.GetService<IOrganizationRepository>();
+        _organization.UseResetPassword = true;
+        _organization.UsePolicies = true;
+        await organizationRepository.ReplaceAsync(_organization);
+
+        var policyRepository = _factory.GetService<IPolicyRepository>();
+        var resetPasswordPolicy = new Policy
+        {
+            OrganizationId = _organization.Id,
+            Type = PolicyType.ResetPassword,
+            Enabled = true,
+        };
+        resetPasswordPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
+        await policyRepository.CreateAsync(resetPasswordPolicy);
+
+        var created = await CreateInviteLinkAsync();
+        var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
+        await CreateStagedMembershipAsync(joinerEmail);
+
+        const string resetPasswordKey = "2.reset-password-key";
+        var response = await joinerClient.PostAsJsonAsync(
+            "/organizations/users/invite-link/accept",
+            new AcceptOrganizationInviteLinkRequestModel
+            {
+                OrganizationId = created.OrganizationId,
+                Code = created.Code,
+                ResetPasswordKey = resetPasswordKey,
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var organizationUser = await AssertAcceptedMemberAsync(joinerEmail);
+        Assert.Equal(resetPasswordKey, organizationUser.ResetPasswordKey);
+    }
+
     private static Task<HttpResponseMessage> AcceptAsync(HttpClient client, OrganizationInviteLinkResponseModel created) =>
         client.PostAsJsonAsync(
             "/organizations/users/invite-link/accept",
@@ -512,6 +633,21 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         });
     }
 
+    // Creates a Staged membership (Email set, no linked UserId), mirroring SCIM/Directory-Connector
+    // provisioning, so the accept resolves it as an existing membership.
+    private async Task CreateStagedMembershipAsync(string joinerEmail)
+    {
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = _organization.Id,
+            UserId = null,
+            Email = joinerEmail,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Staged,
+        });
+    }
+
     private async Task SetJoinerTwoFactorEnabledAsync(string joinerEmail)
     {
         var userRepository = _factory.GetService<IUserRepository>();
@@ -551,5 +687,13 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         var invited = await organizationUserRepository.GetByOrganizationEmailAsync(_organization.Id, joinerEmail);
         Assert.NotNull(invited);
         Assert.Equal(OrganizationUserStatusType.Invited, invited.Status);
+    }
+
+    private async Task AssertStillStagedAsync(string joinerEmail)
+    {
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var staged = await organizationUserRepository.GetByOrganizationEmailAsync(_organization.Id, joinerEmail);
+        Assert.NotNull(staged);
+        Assert.Equal(OrganizationUserStatusType.Staged, staged.Status);
     }
 }

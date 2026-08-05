@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -17,7 +17,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 
@@ -51,20 +50,6 @@ public class AcceptInviteLinkMembershipValidatorTests
 
         Assert.True(result.IsError);
         Assert.IsType<EmailDomainNotAllowed>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithProviderUser_ReturnsProviderUsersCannotAcceptInviteLink(
-        Organization organization, User user, Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
-        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
-    {
-        SetupValidDependencies(sutProvider, organization, user);
-        sutProvider.GetDependency<IProviderUserRepository>().GetManyByUserAsync(user.Id).Returns([providerUser]);
-
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
-
-        Assert.True(result.IsError);
-        Assert.IsType<ProviderUsersCannotAcceptInviteLink>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -106,10 +91,10 @@ public class AcceptInviteLinkMembershipValidatorTests
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
         SetupValidDependencies(sutProvider, organization, user);
-        EnableTargetPolicy(sutProvider, organization, PolicyType.AutomaticUserConfirmation);
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
 
         var result = await sutProvider.Sut.ValidateAsync(
-            BuildRequest(organization, user, memberships: [MembershipInOtherOrg()]));
+            BuildRequest(organization, user, autoConfirmPolicyEnabled: true));
 
         Assert.True(result.IsError);
         Assert.IsType<UserCannotBelongToAnotherOrganization>(result.AsError);
@@ -133,33 +118,30 @@ public class AcceptInviteLinkMembershipValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_NewMember_AutoConfirmEnabled_NoOtherOrg_IsValidAndFlagSet(
+    public async Task ValidateAsync_NewMember_AutoConfirmEnabled_NoOtherOrg_IsValid(
         Organization organization, User user,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
         SetupValidDependencies(sutProvider, organization, user);
-        EnableTargetPolicy(sutProvider, organization, PolicyType.AutomaticUserConfirmation);
 
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
+        var result = await sutProvider.Sut.ValidateAsync(
+            BuildRequest(organization, user, autoConfirmPolicyEnabled: true));
 
         Assert.True(result.IsValid);
-        Assert.True(result.Request.AutoConfirmPolicyEnabled);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_NewMember_AutoConfirmEnabled_ButUsePoliciesDisabled_IsValid(
+    public async Task ValidateAsync_NewMember_AutoConfirmNotEnabled_MemberOfAnotherOrg_IsValid(
         Organization organization, User user,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
         SetupValidDependencies(sutProvider, organization, user);
-        EnableTargetPolicy(sutProvider, organization, PolicyType.AutomaticUserConfirmation);
-        organization.UsePolicies = false;
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
 
         var result = await sutProvider.Sut.ValidateAsync(
-            BuildRequest(organization, user, memberships: [MembershipInOtherOrg()]));
+            BuildRequest(organization, user, autoConfirmPolicyEnabled: false));
 
         Assert.True(result.IsValid);
-        Assert.False(result.Request.AutoConfirmPolicyEnabled);
     }
 
     // ----- New member: Single Organization -----
@@ -171,9 +153,9 @@ public class AcceptInviteLinkMembershipValidatorTests
     {
         SetupValidDependencies(sutProvider, organization, user);
         EnableTargetPolicy(sutProvider, organization, PolicyType.SingleOrg);
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
 
-        var result = await sutProvider.Sut.ValidateAsync(
-            BuildRequest(organization, user, memberships: [MembershipInOtherOrg()]));
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
 
         Assert.True(result.IsError);
         Assert.IsType<UserIsAMemberOfAnotherOrganization>(result.AsError);
@@ -188,9 +170,9 @@ public class AcceptInviteLinkMembershipValidatorTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
             .Returns(new SingleOrganizationPolicyRequirement([PolicyDetailForOtherOrg(PolicyType.SingleOrg)]));
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
 
-        var result = await sutProvider.Sut.ValidateAsync(
-            BuildRequest(organization, user, memberships: [MembershipInOtherOrg()]));
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
 
         Assert.True(result.IsError);
         Assert.IsType<UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy>(result.AsError);
@@ -239,105 +221,139 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.True(result.IsValid);
     }
 
-    // ----- Account recovery auto-enroll -----
+    // ----- Staged membership: target policies must still be enforced -----
+    // Regression guard: a Staged row (SCIM/Directory-Connector provisioned) was previously routed to the
+    // requirement framework, which cannot resolve its target-org policies, so these silently passed.
 
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_AutoEnrollEnabled_MissingKey_ReturnsResetPasswordKeyRequired(
+    [Theory]
+    [BitAutoData(PolicyType.TwoFactorAuthentication)]
+    [BitAutoData(PolicyType.SingleOrg)]
+    public async Task ValidateAsync_StagedMembership_TargetPolicyEnabled_ReturnsError(
+        PolicyType policyType,
         Organization organization, User user,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
         SetupValidDependencies(sutProvider, organization, user);
-        EnableAutoEnrollResetPassword(sutProvider, organization);
+        EnableTargetPolicy(sutProvider, organization, policyType);
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
+        var staged = Membership(OrganizationUserStatusType.Staged);
 
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, resetPasswordKey: null));
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, existing: staged));
 
         Assert.True(result.IsError);
-        Assert.IsType<ResetPasswordKeyRequired>(result.AsError);
+        Assert.IsType(ExpectedTargetPolicyError(policyType), result.AsError);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_AutoEnrollEnabled_ValidKey_IsValidAndFlagSet(
+    public async Task ValidateAsync_StagedMembership_AutoConfirmEnabled_ReturnsError(
         Organization organization, User user,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
         SetupValidDependencies(sutProvider, organization, user);
-        EnableAutoEnrollResetPassword(sutProvider, organization);
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
+        var staged = Membership(OrganizationUserStatusType.Staged);
 
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, resetPasswordKey: "2.valid-key"));
+        var result = await sutProvider.Sut.ValidateAsync(
+            BuildRequest(organization, user, existing: staged, autoConfirmPolicyEnabled: true));
 
-        Assert.True(result.IsValid);
-        Assert.True(result.Request.AccountRecoveryAutoEnroll);
+        Assert.True(result.IsError);
+        Assert.IsType<UserCannotBelongToAnotherOrganization>(result.AsError);
     }
 
+    // ----- Existing invitation: target policies read directly (parity with the old shared-validator path) -----
+
     [Theory, BitAutoData]
-    public async Task ValidateAsync_AutoEnrollEnabled_ButUsePoliciesDisabled_IsValidAndNotEnrolled(
+    public async Task ValidateAsync_ExistingInvited_UserRole_TargetTwoFactorEnabled_ReturnsError(
         Organization organization, User user,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
         SetupValidDependencies(sutProvider, organization, user);
-        EnableAutoEnrollResetPassword(sutProvider, organization);
-        organization.UsePolicies = false;
+        EnableTargetPolicy(sutProvider, organization, PolicyType.TwoFactorAuthentication);
+        var invited = Membership(OrganizationUserStatusType.Invited);
 
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, resetPasswordKey: null));
-
-        Assert.True(result.IsValid);
-        Assert.False(result.Request.AccountRecoveryAutoEnroll);
-    }
-
-    // ----- Existing member: delegate to shared validator -----
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_ExistingMember_DelegatesToSharedValidator_AndPropagatesResult(
-        Organization organization, User user, OrganizationUser existingMembership,
-        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
-    {
-        SetupValidDependencies(sutProvider, organization, user);
-        existingMembership.Status = OrganizationUserStatusType.Invited;
-        existingMembership.Type = OrganizationUserType.User;
-
-        sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
-            .Returns(Task.FromResult(Valid(new AcceptOrganizationMembershipValidationResult
-            {
-                AutoConfirmPolicyEnabled = true
-            })));
-
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, existing: existingMembership));
-
-        Assert.True(result.IsValid);
-        Assert.True(result.Request.AutoConfirmPolicyEnabled);
-        await sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .Received(1)
-            .ValidateAsync(Arg.Is<AcceptOrganizationMembershipValidationRequest>(r =>
-                r.OrganizationId == organization.Id && r.User == user));
-        // The target org's policies are resolved by the shared validator's requirement framework, not read directly.
-        await sutProvider.GetDependency<IPolicyQuery>()
-            .DidNotReceive()
-            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_ExistingMember_SharedValidatorError_IsPropagated(
-        Organization organization, User user, OrganizationUser existingMembership,
-        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
-    {
-        SetupValidDependencies(sutProvider, organization, user);
-        existingMembership.Status = OrganizationUserStatusType.Invited;
-        existingMembership.Type = OrganizationUserType.User;
-
-        sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
-            .Returns(Task.FromResult(
-                Invalid(new AcceptOrganizationMembershipValidationResult(), new TwoFactorRequiredForMembership())));
-
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, existing: existingMembership));
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, existing: invited));
 
         Assert.True(result.IsError);
         Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
     }
 
+    // ----- Existing invitation: role exemptions for the target org -----
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task ValidateAsync_ExistingInvited_ElevatedRole_ExemptFromSingleOrgAndTwoFactor(
+        OrganizationUserType role,
+        Organization organization, User user,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+        EnableTargetPolicy(sutProvider, organization, PolicyType.SingleOrg);
+        EnableTargetPolicy(sutProvider, organization, PolicyType.TwoFactorAuthentication);
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
+        var invited = Membership(OrganizationUserStatusType.Invited, role);
+
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, existing: invited));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task ValidateAsync_ExistingInvited_ElevatedRole_NotExemptFromAutoConfirm(
+        OrganizationUserType role,
+        Organization organization, User user,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
+        // The free-org admin limit is a no-op here (GetCountByFreeOrganizationAdminUserAsync defaults to 0),
+        // so the Auto-Confirm policy check is what runs.
+        var invited = Membership(OrganizationUserStatusType.Invited, role);
+
+        var result = await sutProvider.Sut.ValidateAsync(
+            BuildRequest(organization, user, existing: invited, autoConfirmPolicyEnabled: true));
+
+        Assert.True(result.IsError);
+        Assert.IsType<UserCannotBelongToAnotherOrganization>(result.AsError);
+    }
+
     [Theory, BitAutoData]
-    public async Task ValidateAsync_ExistingMember_FreeOrgAdminLimitReached_ReturnsError(
+    public async Task ValidateAsync_ExistingInvited_CustomRole_EnforcedForSingleOrg(
+        Organization organization, User user,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+        EnableTargetPolicy(sutProvider, organization, PolicyType.SingleOrg);
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
+        var invited = Membership(OrganizationUserStatusType.Invited, OrganizationUserType.Custom);
+
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, existing: invited));
+
+        Assert.True(result.IsError);
+        Assert.IsType<UserIsAMemberOfAnotherOrganization>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ExistingInvited_CustomRole_EnforcedForTwoFactor(
+        Organization organization, User user,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+        EnableTargetPolicy(sutProvider, organization, PolicyType.TwoFactorAuthentication);
+        var invited = Membership(OrganizationUserStatusType.Invited, OrganizationUserType.Custom);
+
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, existing: invited));
+
+        Assert.True(result.IsError);
+        Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
+    }
+
+    // ----- Free organization admin limit (a plan constraint, enforced ahead of policy checks) -----
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ExistingInvitedAdmin_FreeOrgAdminLimitReached_ReturnsError(
         Organization organization, User user, OrganizationUser existingMembership,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
@@ -353,9 +369,107 @@ public class AcceptInviteLinkMembershipValidatorTests
 
         Assert.True(result.IsError);
         Assert.IsType<OnlyOneFreeOrganizationAdminAllowed>(result.AsError);
-        await sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .DidNotReceiveWithAnyArgs()
-            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>());
+    }
+
+    // ----- Provider users: exempt from Single Org / 2FA, but blocked from an Auto-Confirm org -----
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ProviderUser_NoPolicies_IsValid(
+        Organization organization, User user, Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+        sutProvider.GetDependency<IProviderUserRepository>().GetManyByUserAsync(user.Id).Returns([providerUser]);
+
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ProviderUser_SingleOrgEnabled_AndMemberOfAnotherOrg_IsValid(
+        Organization organization, User user, Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+        sutProvider.GetDependency<IProviderUserRepository>().GetManyByUserAsync(user.Id).Returns([providerUser]);
+        EnableTargetPolicy(sutProvider, organization, PolicyType.SingleOrg);
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
+
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ProviderUser_TwoFactorRequired_IsValid(
+        Organization organization, User user, Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+        sutProvider.GetDependency<IProviderUserRepository>().GetManyByUserAsync(user.Id).Returns([providerUser]);
+        EnableTargetPolicy(sutProvider, organization, PolicyType.TwoFactorAuthentication);
+
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ProviderUser_AutoConfirmEnabled_ReturnsProviderUsersCannotAcceptInviteLink(
+        Organization organization, User user, Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+        sutProvider.GetDependency<IProviderUserRepository>().GetManyByUserAsync(user.Id).Returns([providerUser]);
+
+        var result = await sutProvider.Sut.ValidateAsync(
+            BuildRequest(organization, user, autoConfirmPolicyEnabled: true));
+
+        Assert.True(result.IsError);
+        Assert.IsType<ProviderUsersCannotAcceptInviteLink>(result.AsError);
+    }
+
+    // ----- Account recovery auto-enroll -----
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_AutoEnrollEnabled_MissingKey_ReturnsResetPasswordKeyRequired(
+        Organization organization, User user,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+
+        var result = await sutProvider.Sut.ValidateAsync(
+            BuildRequest(organization, user, resetPasswordKey: null, accountRecoveryAutoEnroll: true));
+
+        Assert.True(result.IsError);
+        Assert.IsType<ResetPasswordKeyRequired>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_AutoEnrollEnabled_ValidKey_IsValid(
+        Organization organization, User user,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+
+        var result = await sutProvider.Sut.ValidateAsync(
+            BuildRequest(organization, user, resetPasswordKey: "2.valid-key", accountRecoveryAutoEnroll: true));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_AutoEnrollNotEnabled_MissingKey_IsValid(
+        Organization organization, User user,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+
+        var result = await sutProvider.Sut.ValidateAsync(
+            BuildRequest(organization, user, resetPasswordKey: null, accountRecoveryAutoEnroll: false));
+
+        Assert.True(result.IsValid);
     }
 
     // ----- Helpers -----
@@ -364,21 +478,35 @@ public class AcceptInviteLinkMembershipValidatorTests
         Organization organization,
         User user,
         IEnumerable<string>? allowedDomains = null,
-        ICollection<OrganizationUser>? memberships = null,
         OrganizationUser? existing = null,
-        string? resetPasswordKey = null)
+        string? resetPasswordKey = null,
+        bool autoConfirmPolicyEnabled = false,
+        bool accountRecoveryAutoEnroll = false)
         => new()
         {
             Organization = organization,
             User = user,
             AllowedDomains = allowedDomains ?? ["example.com"],
-            AllOrganizationMemberships = memberships ?? new List<OrganizationUser>(),
             ExistingMembership = existing,
             ResetPasswordKey = resetPasswordKey,
+            AutoConfirmPolicyEnabled = autoConfirmPolicyEnabled,
+            AccountRecoveryAutoEnroll = accountRecoveryAutoEnroll,
         };
 
     private static OrganizationUser MembershipInOtherOrg() =>
         new() { OrganizationId = Guid.NewGuid() };
+
+    // A resolved existing membership in the target org: an email invitation (Invited) or SCIM/Directory-Connector
+    // provisioned row (Staged). Both have a null UserId until acceptance.
+    private static OrganizationUser Membership(
+        OrganizationUserStatusType status, OrganizationUserType type = OrganizationUserType.User) =>
+        new()
+        {
+            Status = status,
+            Type = type,
+            UserId = null,
+            Email = "user@example.com",
+        };
 
     private static PolicyDetails PolicyDetailForOtherOrg(PolicyType policyType) =>
         new()
@@ -388,24 +516,27 @@ public class AcceptInviteLinkMembershipValidatorTests
             OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
         };
 
+    private static Type ExpectedTargetPolicyError(PolicyType policyType) => policyType switch
+    {
+        PolicyType.TwoFactorAuthentication => typeof(TwoFactorRequiredForMembership),
+        PolicyType.SingleOrg => typeof(UserIsAMemberOfAnotherOrganization),
+        _ => throw new ArgumentOutOfRangeException(nameof(policyType)),
+    };
+
     private static void EnableTargetPolicy(
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider, Organization organization, PolicyType policyType)
         => sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(organization.Id, policyType)
             .Returns(new PolicyStatus(organization.Id, policyType) { Enabled = true });
 
-    private static void EnableAutoEnrollResetPassword(
-        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider, Organization organization)
-        => sutProvider.GetDependency<IPolicyQuery>()
-            .RunAsync(organization.Id, PolicyType.ResetPassword)
-            .Returns(new PolicyStatus(organization.Id, PolicyType.ResetPassword)
-            {
-                Enabled = true,
-                Data = "{\"autoEnrollEnabled\": true}"
-            });
+    private static void SetOrganizationMemberships(
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider, User user, params OrganizationUser[] memberships)
+        => sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(memberships.ToList());
 
     // Valid baseline: verified email, allowed domain, no provider, no policies enabled, no 2FA required,
-    // empty cross-org requirements.
+    // no other organization memberships, empty cross-org requirements.
     private static void SetupValidDependencies(
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider, Organization organization, User user)
     {
@@ -414,6 +545,9 @@ public class AcceptInviteLinkMembershipValidatorTests
         user.Email = "user@example.com";
 
         sutProvider.GetDependency<IProviderUserRepository>().GetManyByUserAsync(user.Id).Returns([]);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>());
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
@@ -422,11 +556,9 @@ public class AcceptInviteLinkMembershipValidatorTests
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
             .Returns(new SingleOrganizationPolicyRequirement([]));
 
-        foreach (var policyType in new[]
-                 {
-                     PolicyType.AutomaticUserConfirmation, PolicyType.SingleOrg,
-                     PolicyType.TwoFactorAuthentication, PolicyType.ResetPassword
-                 })
+        // The validator reads only Single Org and 2FA directly; Auto-Confirm and account-recovery states are
+        // supplied on the request by the caller.
+        foreach (var policyType in new[] { PolicyType.SingleOrg, PolicyType.TwoFactorAuthentication })
         {
             sutProvider.GetDependency<IPolicyQuery>()
                 .RunAsync(organization.Id, policyType)
