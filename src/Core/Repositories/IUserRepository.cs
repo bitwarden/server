@@ -21,6 +21,27 @@ public interface IUserRepository : IRepository<User, Guid>
     Task<DateTime> GetAccountRevisionDateAsync(Guid id);
     Task UpdateStorageAsync(Guid id);
     Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate);
+    /// <summary>
+    /// Backfills <see cref="User.MasterPasswordSalt"/> for a user who predates the column, so the
+    /// salt becomes a stored value rather than one derived from the email at read time by
+    /// <see cref="User.GetMasterPasswordSalt"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>A conditional write, not a read-modify-write. The row is only updated when it still has
+    /// no salt, has a master password, and <paramref name="masterPasswordSalt"/> genuinely is that
+    /// user's normalized email. Those guards live in the database rather than the caller, so the
+    /// operation is idempotent and safe when several token refreshes for the same user race.</para>
+    /// <para>Does not bump <c>RevisionDate</c> / <c>AccountRevisionDate</c>: the stored value equals
+    /// what clients already derive, so there is nothing to re-sync.</para>
+    /// <para>Silently no-ops when any guard fails — including when no such user exists. Callers get
+    /// no signal about whether a row was written; nothing downstream needs one.</para>
+    /// </remarks>
+    /// <param name="id">The user to backfill.</param>
+    /// <param name="masterPasswordSalt">
+    /// The user's normalized (lowercased, trimmed) email. Verified against the stored email by the
+    /// query itself, so a mismatched value writes nothing rather than corrupting the row.
+    /// </param>
+    Task SetMasterPasswordSaltIfNullAsync(Guid id, string masterPasswordSalt);
     Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids);
     /// <summary>
     /// Retrieves the data for the requested user IDs and includes an additional property indicating

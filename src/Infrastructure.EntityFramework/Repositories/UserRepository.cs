@@ -175,6 +175,30 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
+    /// <inheritdoc />
+    public async Task SetMasterPasswordSaltIfNullAsync(Guid id, string masterPasswordSalt)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Mirrors the guards in User_SetMasterPasswordSaltIfNull.sql. They belong in the predicate,
+        // not the caller: this runs on token refresh, so several requests for the same user can race,
+        // and a caller that read a stale "salt is null" must not be able to clobber a salt another
+        // request just wrote. ExecuteUpdate issues a single conditional UPDATE — no read-modify-write,
+        // no change tracking, and RevisionDate / AccountRevisionDate are left alone.
+        //
+        // Email.Trim().ToLower() translates to LOWER(LTRIM(RTRIM(...))) on SQL Server and the
+        // equivalent lower(trim(...)) on PostgreSQL, MySQL, and SQLite. Lowercasing both sides keeps
+        // the comparison correct on case-sensitive collations (PostgreSQL) as well as case-insensitive
+        // ones, since the caller supplies an already-normalized salt.
+        await GetDbSet(dbContext)
+            .Where(u => u.Id == id
+                && u.MasterPasswordSalt == null
+                && u.MasterPassword != null
+                && u.Email.Trim().ToLower() == masterPasswordSalt)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.MasterPasswordSalt, masterPasswordSalt));
+    }
+
     public async Task<Core.Entities.User?> GetBySsoUserAsync(string externalId, Guid? organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

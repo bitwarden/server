@@ -240,6 +240,18 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     }
 
     /// <inheritdoc />
+    public async Task SetMasterPasswordSaltIfNullAsync(Guid id, string masterPasswordSalt)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_SetMasterPasswordSaltIfNull]",
+                new { Id = id, MasterPasswordSalt = masterPasswordSalt },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    /// <inheritdoc />
     public async Task UpdateUserKeyAndEncryptedDataAsync(
         User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)

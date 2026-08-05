@@ -455,7 +455,7 @@ public class CustomTokenRequestValidatorTests
 
         // Assert: prefill is skipped — no call made
         Assert.False(context.Result.IsError);
-        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<Guid>());
+        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<User>());
     }
 
     [Fact]
@@ -472,7 +472,7 @@ public class CustomTokenRequestValidatorTests
 
         // Assert: prefill is skipped — no call made
         Assert.False(context.Result.IsError);
-        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<Guid>());
+        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<User>());
     }
 
     [Fact]
@@ -494,13 +494,14 @@ public class CustomTokenRequestValidatorTests
 
         // Assert: prefill is skipped — no call made
         Assert.False(context.Result.IsError);
-        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<Guid>());
+        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<User>());
     }
 
     [Fact]
-    public async Task TryUpdateMasterPasswordSaltForRefreshAsync_Succeeds_UpdateCalledWithUserIdAsync()
+    public async Task TryUpdateMasterPasswordSaltForRefreshAsync_ContextUserNotLoaded_SkipsUpdate()
     {
-        // Arrange
+        // Arrange — the legacy-user check left nothing on CurrentContext (e.g. the user was not
+        // found), so there is no entity to backfill and we do not go read one.
         var userId = Guid.NewGuid();
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
         [
@@ -511,13 +512,66 @@ public class CustomTokenRequestValidatorTests
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
         _featureService.IsEnabled(FeatureFlagKeys.PM_POC_PrefillMasterPasswordSalt).Returns(true);
+        _currentContext.User.Returns((User)null);
 
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert
+        // Assert: prefill is skipped — no call made
         Assert.False(context.Result.IsError);
-        await _updateMasterPasswordSaltCommand.Received(1).UpdateAsync(userId);
+        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<User>());
+    }
+
+    [Fact]
+    public async Task TryUpdateMasterPasswordSaltForRefreshAsync_ContextUserIsDifferentUser_SkipsUpdate()
+    {
+        // Arrange — guards against backfilling the wrong row if CurrentContext.User is ever
+        // populated for someone other than the refresh token's subject.
+        var userId = Guid.NewGuid();
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, userId.ToString()),
+        ], "test"));
+
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM_POC_PrefillMasterPasswordSalt).Returns(true);
+        _currentContext.User.Returns(new User { Id = Guid.NewGuid() });
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: prefill is skipped — no call made
+        Assert.False(context.Result.IsError);
+        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<User>());
+    }
+
+    [Fact]
+    public async Task TryUpdateMasterPasswordSaltForRefreshAsync_Succeeds_UpdateCalledWithContextUserAsync()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, userId.ToString()),
+        ], "test"));
+
+        var context = CreateRefreshTokenContext(subject);
+
+        // The legacy-user check above resolves the user through UserManager.FindByIdAsync, which
+        // UserStore write-throughs onto CurrentContext.User. Stand that side effect up here.
+        var user = new User { Id = userId };
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM_POC_PrefillMasterPasswordSalt).Returns(true);
+        _currentContext.User.Returns(user);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: the already-resolved entity is handed to the command — no second read
+        Assert.False(context.Result.IsError);
+        await _updateMasterPasswordSaltCommand.Received(1).UpdateAsync(user);
     }
 
     [Fact]
@@ -534,8 +588,9 @@ public class CustomTokenRequestValidatorTests
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
         _featureService.IsEnabled(FeatureFlagKeys.PM_POC_PrefillMasterPasswordSalt).Returns(true);
+        _currentContext.User.Returns(new User { Id = userId });
         _updateMasterPasswordSaltCommand
-            .UpdateAsync(Arg.Any<Guid>())
+            .UpdateAsync(Arg.Any<User>())
             .Returns<Task>(_ => throw new Exception("Transient failure"));
 
         // Act

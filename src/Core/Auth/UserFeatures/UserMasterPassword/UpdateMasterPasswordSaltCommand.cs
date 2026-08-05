@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
@@ -12,15 +13,15 @@ public class UpdateMasterPasswordSaltCommand : IUpdateMasterPasswordSaltCommand
         _userRepository = userRepository;
     }
 
-    public async Task UpdateAsync(Guid userId)
+    public async Task UpdateAsync(User user)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user is null || user.MasterPasswordSalt is not null || user.MasterPassword is null)
+        // A cheap pre-filter, not the guard. It spares the vast majority of refreshes a database
+        // round trip once the salt is populated; correctness is enforced by the conditional UPDATE.
+        if (user.MasterPasswordSalt is not null || user.MasterPassword is null)
         {
             return;
         }
 
-        user.MasterPasswordSalt = user.Email.ToLowerInvariant().Trim();
-        await _userRepository.ReplaceAsync(user);
+        await _userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, user.Email.ToLowerInvariant().Trim());
     }
 }

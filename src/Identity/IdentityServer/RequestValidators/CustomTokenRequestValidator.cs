@@ -287,7 +287,19 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 return;
             }
 
-            await _updateMasterPasswordSaltCommand.UpdateAsync(userId);
+            // The entity is already resolved for this request: the legacy-user check at the top of
+            // ValidateAsync runs UserManager.FindByIdAsync for this same subject, and UserStore
+            // write-throughs the result onto CurrentContext.User (see UserStore.FindByIdAsync).
+            // Reuse it rather than reading the same row a second time. The identity check keeps
+            // that reliance honest — if the legacy check is ever reordered or the context is
+            // populated for some other user, skip rather than backfill the wrong row.
+            var user = CurrentContext.User;
+            if (user is null || user.Id != userId)
+            {
+                return;
+            }
+
+            await _updateMasterPasswordSaltCommand.UpdateAsync(user);
         }
         catch (Exception e)
         {

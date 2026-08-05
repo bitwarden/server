@@ -8,6 +8,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Microsoft.Data.SqlClient;
 using Xunit;
@@ -940,6 +941,123 @@ public class UserRepositoryTests
             SecurityVersion = 2
         }
     };
+
+    // ---------------------------------------------------------------------------------------------
+    // SetMasterPasswordSaltIfNullAsync
+    //
+    // Every guard lives in the query rather than the caller, so these run against all four providers
+    // to prove User_SetMasterPasswordSaltIfNull.sql and the EF ExecuteUpdate agree.
+    // ---------------------------------------------------------------------------------------------
+
+    [DatabaseTheory, DatabaseData]
+    public async Task SetMasterPasswordSaltIfNullAsync_SaltNullAndHasMasterPassword_WritesSalt(
+        IUserRepository userRepository)
+    {
+        var user = await CreateSaltBackfillUserAsync(userRepository);
+
+        await userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, user.Email.ToLowerInvariant().Trim());
+
+        var updated = await userRepository.GetByIdAsync(user.Id);
+        Assert.Equal(user.Email.ToLowerInvariant().Trim(), updated!.MasterPasswordSalt);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task SetMasterPasswordSaltIfNullAsync_MixedCaseEmail_MatchesCaseInsensitively(
+        IUserRepository userRepository)
+    {
+        // The email guard must hold on case-sensitive collations (PostgreSQL) as well as
+        // case-insensitive ones, which is why both sides are lowercased.
+        var id = CoreHelpers.GenerateComb();
+        var user = await CreateSaltBackfillUserAsync(userRepository, email: $"MiXeD.{id}@Example.COM");
+
+        await userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, $"mixed.{id}@example.com");
+
+        var updated = await userRepository.GetByIdAsync(user.Id);
+        Assert.Equal($"mixed.{id}@example.com", updated!.MasterPasswordSalt);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task SetMasterPasswordSaltIfNullAsync_SaltAlreadySet_DoesNotOverwrite(
+        IUserRepository userRepository)
+    {
+        var user = await CreateSaltBackfillUserAsync(userRepository, masterPasswordSalt: "existing-salt");
+
+        await userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, user.Email.ToLowerInvariant().Trim());
+
+        var updated = await userRepository.GetByIdAsync(user.Id);
+        Assert.Equal("existing-salt", updated!.MasterPasswordSalt);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task SetMasterPasswordSaltIfNullAsync_NoMasterPassword_DoesNotWrite(
+        IUserRepository userRepository)
+    {
+        // Key Connector / TDE users have no master password, so there is no salt to prefill.
+        var user = await CreateSaltBackfillUserAsync(userRepository, masterPassword: null);
+
+        await userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, user.Email.ToLowerInvariant().Trim());
+
+        var updated = await userRepository.GetByIdAsync(user.Id);
+        Assert.Null(updated!.MasterPasswordSalt);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task SetMasterPasswordSaltIfNullAsync_SaltIsNotTheUsersEmail_DoesNotWrite(
+        IUserRepository userRepository)
+    {
+        // The query verifies the salt really is this user's normalized email, so a caller cannot
+        // write an arbitrary value into the column.
+        var user = await CreateSaltBackfillUserAsync(userRepository);
+
+        await userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, "someone.else@example.com");
+
+        var updated = await userRepository.GetByIdAsync(user.Id);
+        Assert.Null(updated!.MasterPasswordSalt);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task SetMasterPasswordSaltIfNullAsync_IsIdempotentAndLeavesRevisionDatesAlone(
+        IUserRepository userRepository)
+    {
+        // The stored value equals what clients already derive, so there is nothing to re-sync.
+        var user = await CreateSaltBackfillUserAsync(userRepository);
+        var salt = user.Email.ToLowerInvariant().Trim();
+        var before = await userRepository.GetByIdAsync(user.Id);
+
+        await userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, salt);
+        await userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, salt);
+
+        var after = await userRepository.GetByIdAsync(user.Id);
+        Assert.Equal(salt, after!.MasterPasswordSalt);
+        Assert.Equal(before!.RevisionDate, after.RevisionDate);
+        Assert.Equal(before.AccountRevisionDate, after.AccountRevisionDate);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task SetMasterPasswordSaltIfNullAsync_UnknownUser_DoesNotThrow(
+        IUserRepository userRepository)
+    {
+        await userRepository.SetMasterPasswordSaltIfNullAsync(CoreHelpers.GenerateComb(), "nobody@example.com");
+    }
+
+    private static Task<User> CreateSaltBackfillUserAsync(
+        IUserRepository userRepository,
+        string? masterPassword = "hashed-master-password",
+        string? masterPasswordSalt = null,
+        string? email = null)
+    {
+        var id = CoreHelpers.GenerateComb();
+        return userRepository.CreateAsync(new User
+        {
+            Id = id,
+            Name = $"salt-backfill-{id}",
+            Email = email ?? $"{id}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            MasterPassword = masterPassword,
+            MasterPasswordSalt = masterPasswordSalt,
+        });
+    }
 
     private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
     {
