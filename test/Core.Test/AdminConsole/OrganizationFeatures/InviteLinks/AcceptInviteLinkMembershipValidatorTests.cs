@@ -24,8 +24,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class AcceptInviteLinkMembershipValidatorTests
 {
-    // ----- Common eligibility -----
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_WithUnverifiedEmail_ReturnsEmailNotVerified(
         Organization organization, User user,
@@ -83,8 +81,6 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.True(result.IsError);
         Assert.IsType<AlreadyOrganizationMember>(result.AsError);
     }
-
-    // ----- New member: Automatic User Confirmation -----
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_NewMember_AutoConfirmEnabled_AndMemberOfAnotherOrg_ReturnsError(
@@ -145,8 +141,6 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.True(result.IsValid);
     }
 
-    // ----- New member: Single Organization -----
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_NewMember_SingleOrgEnabled_AndMemberOfAnotherOrg_ReturnsError(
         Organization organization, User user,
@@ -192,8 +186,6 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.True(result.IsValid);
     }
 
-    // ----- New member: Two-Factor Authentication -----
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_NewMember_TwoFactorRequired_UserLacksTwoFactor_ReturnsError(
         Organization organization, User user,
@@ -222,7 +214,6 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.True(result.IsValid);
     }
 
-    // ----- Staged membership: target policies must still be enforced -----
     // Regression guard: a Staged row (SCIM/Directory-Connector provisioned) was previously routed to the
     // requirement framework, which cannot resolve its target-org policies, so these silently passed.
 
@@ -261,8 +252,6 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.IsType<UserCannotBelongToAnotherOrganization>(result.AsError);
     }
 
-    // ----- Existing invitation: target policies read directly (parity with the old shared-validator path) -----
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_ExistingInvited_UserRole_TargetTwoFactorEnabled_ReturnsError(
         Organization organization, User user,
@@ -277,8 +266,6 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.True(result.IsError);
         Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
     }
-
-    // ----- Existing invitation: role exemptions for the target org -----
 
     [Theory]
     [BitAutoData(OrganizationUserType.Owner)]
@@ -351,8 +338,6 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
     }
 
-    // ----- Free organization admin limit (a plan constraint, enforced ahead of policy checks) -----
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_ExistingInvitedAdmin_FreeOrgAdminLimitReached_ReturnsError(
         Organization organization, User user, OrganizationUser existingMembership,
@@ -371,8 +356,6 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.True(result.IsError);
         Assert.IsType<OnlyOneFreeOrganizationAdminAllowed>(result.AsError);
     }
-
-    // ----- Provider users: exempt from Single Org / 2FA, but blocked from an Auto-Confirm org -----
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_ProviderUser_NoPolicies_IsValid(
@@ -465,8 +448,6 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.IsType<ProviderUsersCannotAcceptInviteLink>(result.AsError);
     }
 
-    // ----- Account recovery auto-enroll -----
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_AutoEnrollEnabled_MissingKey_ReturnsResetPasswordKeyRequired(
         Organization organization, User user,
@@ -506,8 +487,6 @@ public class AcceptInviteLinkMembershipValidatorTests
 
         Assert.True(result.IsValid);
     }
-
-    // ----- Helpers -----
 
     private static AcceptInviteLinkMembershipValidationRequest BuildRequest(
         Organization organization,
