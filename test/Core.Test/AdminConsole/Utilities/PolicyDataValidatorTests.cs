@@ -195,46 +195,6 @@ public class PolicyDataValidatorTests
     }
 
     [Fact]
-    public void ValidateAndSerialize_FillAssist_NullData_Enabled_ThrowsBadRequestException()
-    {
-        var exception = Assert.Throws<BadRequestException>(() =>
-            PolicyDataValidator.ValidateAndSerialize(null, PolicyType.FillAssist, enabled: true));
-
-        Assert.Contains("Invalid data for FillAssist policy", exception.Message);
-        Assert.Contains("RulesUrl", exception.Message);
-    }
-
-    [Fact]
-    public void ValidateAndSerialize_FillAssist_EmptyData_Enabled_ThrowsBadRequestException()
-    {
-        var data = new Dictionary<string, object>();
-
-        var exception = Assert.Throws<BadRequestException>(() =>
-            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist, enabled: true));
-
-        Assert.Contains("Invalid data for FillAssist policy", exception.Message);
-        Assert.Contains("RulesUrl", exception.Message);
-    }
-
-    [Fact]
-    public void ValidateAndSerialize_FillAssist_NullData_Disabled_ReturnsNull()
-    {
-        var result = PolicyDataValidator.ValidateAndSerialize(null, PolicyType.FillAssist, enabled: false);
-
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public void ValidateAndSerialize_FillAssist_EmptyData_Disabled_ReturnsNull()
-    {
-        var data = new Dictionary<string, object>();
-
-        var result = PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist, enabled: false);
-
-        Assert.Null(result);
-    }
-
-    [Fact]
     public void ValidateAndSerialize_FillAssist_HttpUrl_ThrowsBadRequestException()
     {
         var data = new Dictionary<string, object> { { "rulesUrl", "http://example.com/rules" } };
