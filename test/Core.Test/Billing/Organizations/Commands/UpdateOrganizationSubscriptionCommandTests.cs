@@ -1914,8 +1914,6 @@ public class UpdateOrganizationSubscriptionCommandTests
         var monthlySeat = currentPlan.PasswordManager.StripeSeatPlanId;
         var annualSeat = annualPlan.PasswordManager.StripeSeatPlanId;
 
-        // Pass the customer through CreateSubscription so its Address and TaxExempt defaults, which
-        // the command's tax reconciliation reads, are not lost.
         var subscription = CreateSubscription(
             customer: new Customer
             {
