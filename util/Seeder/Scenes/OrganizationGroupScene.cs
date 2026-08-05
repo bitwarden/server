@@ -7,10 +7,6 @@ using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
 
-/// <summary>
-/// Creates an organization group, optionally adds organization users as members, and optionally grants the
-/// group access to existing collections with per-assignment permissions.
-/// </summary>
 public class OrganizationGroupScene(
     IOrganizationRepository organizationRepository,
     IGroupRepository groupRepository,
@@ -22,16 +18,10 @@ public class OrganizationGroupScene(
         public required Guid OrganizationId { get; set; }
         [Required]
         public required string Name { get; set; }
-        /// <summary>
-        /// <c>OrganizationUser.Id</c> values (not <c>User.Id</c>) to add to the group as members after creation.
-        /// </summary>
         public IEnumerable<Guid>? OrganizationUserIds { get; set; }
         public IEnumerable<AccessSelectionRequest>? Collections { get; set; }
     }
 
-    /// <summary>
-    /// A collection access grant for the new group. <see cref="Id"/> is the <c>Collection.Id</c> the group is granted access to.
-    /// </summary>
     public class AccessSelectionRequest
     {
         [Required]
