@@ -1,8 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using System.Reflection;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Core;
 
@@ -131,7 +131,8 @@ public static class AuthenticationSchemes
     public const string BitwardenExternalCookieAuthenticationScheme = "bw.external";
 }
 
-public static class FeatureFlagKeys
+[FlagKeyCollection]
+public static partial class FeatureFlagKeys
 {
     /* Admin Console Team */
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
@@ -246,7 +247,6 @@ public static class FeatureFlagKeys
     /// on the desktop client.
     /// </summary>
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
-    public const string SendEmailOTP = "pm-19051-send-email-verification";
     public const string SendControls = "pm-31885-send-controls";
     public const string SdkSendsApi = "pm-30110-sdk-sends-api";
     public const string SendEventLogging = "pm-36560-send-event-logging";
@@ -312,14 +312,6 @@ public static class FeatureFlagKeys
 
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
-
-    public static List<string> GetAllKeys()
-    {
-        return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-            .Where(fi => fi.IsLiteral && !fi.IsInitOnly && fi.FieldType == typeof(string))
-            .Select(x => (string)x.GetRawConstantValue())
-            .ToList();
-    }
 
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {

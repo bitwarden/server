@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Premium.Models;
+﻿using System.Data.Common;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
@@ -96,5 +97,15 @@ public interface IUserRepository : IRepository<User, Guid>
     UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData);
 }
 
-public delegate Task UpdateUserData(Microsoft.Data.SqlClient.SqlConnection? connection = null,
-    Microsoft.Data.SqlClient.SqlTransaction? transaction = null);
+/// <summary>
+/// A deferred write against a user's row, run by <see cref="IUserRepository.UpdateUserDataAsync"/> or as part of a
+/// larger repository transaction such as
+/// <see cref="IUserRepository.SetV2AccountCryptographicStateAsync"/>.
+/// </summary>
+/// <remarks>
+/// The connection and transaction are provider-agnostic so that both the Dapper and Entity Framework
+/// implementations can hand the caller's ambient transaction to the action. An action given one must enlist in it:
+/// writing the same user row over a second connection blocks on the caller's uncommitted changes until the command
+/// times out.
+/// </remarks>
+public delegate Task UpdateUserData(DbConnection? connection = null, DbTransaction? transaction = null);

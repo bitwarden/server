@@ -862,7 +862,7 @@ public class AcceptOrganizationInviteLinkCommandTests
             .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
             .Returns(Task.FromResult(
                 Invalid(new AcceptOrganizationMembershipValidationResult(),
-                    new UserCannotBelongToAnotherOrganization())));
+                    new UserCannotBelongToAnotherOrganization(string.Empty))));
 
         var request = new AcceptOrganizationInviteLinkRequest
         {

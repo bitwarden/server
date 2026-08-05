@@ -7,6 +7,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -638,7 +639,7 @@ public class AccountsController : Controller
             // Check if the user is claimed by any organization.
             if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
             {
-                throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
+                throw new BadRequestException(new CannotDeleteClaimedAccountError().Message);
             }
 
             var result = await _userService.DeleteAsync(user);
