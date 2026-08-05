@@ -4,7 +4,7 @@ using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;

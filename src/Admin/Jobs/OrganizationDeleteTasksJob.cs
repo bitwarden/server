@@ -6,7 +6,7 @@ using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Jobs;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Quartz;
 
 namespace Bit.Admin.Jobs;
