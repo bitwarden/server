@@ -24,16 +24,13 @@ public record AcceptInviteLinkMembershipValidationRequest
     public string? ResetPasswordKey { get; init; }
 
     /// <summary>
-    /// Whether the Automatic User Confirmation policy is enabled for the organization being joined. Supplied
-    /// by the caller (the accept command reads it once and uses it for both validation and post-accept side
-    /// effects), keeping it in scope for both without the validator having to hand a result back out.
+    /// Whether the Automatic User Confirmation policy is enabled for the organization being joined.
     /// </summary>
     public bool AutoConfirmPolicyEnabled { get; init; }
 
     /// <summary>
     /// Whether the joining user must be auto-enrolled in account recovery because the Account Recovery
-    /// Administration policy has auto-enrollment enabled. Supplied by the caller, for the same reason as
-    /// <see cref="AutoConfirmPolicyEnabled"/>.
+    /// Administration policy has auto-enrollment enabled.
     /// </summary>
     public bool AccountRecoveryAutoEnroll { get; init; }
 }

@@ -1,6 +1,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -386,13 +387,14 @@ public class AcceptInviteLinkMembershipValidatorTests
         Assert.True(result.IsValid);
     }
 
+    // A provider user FOR the target org is exempt from that org's Single Org / 2FA (matching PolicyDetails.IsProvider).
     [Theory, BitAutoData]
-    public async Task ValidateAsync_ProviderUser_SingleOrgEnabled_AndMemberOfAnotherOrg_IsValid(
-        Organization organization, User user, Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
+    public async Task ValidateAsync_ProviderForOrganization_SingleOrgEnabled_AndMemberOfAnotherOrg_IsValid(
+        Organization organization, User user,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
         SetupValidDependencies(sutProvider, organization, user);
-        sutProvider.GetDependency<IProviderUserRepository>().GetManyByUserAsync(user.Id).Returns([providerUser]);
+        SetProviderForOrganization(sutProvider, user, organization.Id);
         EnableTargetPolicy(sutProvider, organization, PolicyType.SingleOrg);
         SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
 
@@ -402,17 +404,50 @@ public class AcceptInviteLinkMembershipValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_ProviderUser_TwoFactorRequired_IsValid(
-        Organization organization, User user, Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
+    public async Task ValidateAsync_ProviderForOrganization_TwoFactorRequired_IsValid(
+        Organization organization, User user,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
         SetupValidDependencies(sutProvider, organization, user);
-        sutProvider.GetDependency<IProviderUserRepository>().GetManyByUserAsync(user.Id).Returns([providerUser]);
+        SetProviderForOrganization(sutProvider, user, organization.Id);
         EnableTargetPolicy(sutProvider, organization, PolicyType.TwoFactorAuthentication);
 
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
 
         Assert.True(result.IsValid);
+    }
+
+    // Regression: a provider for a DIFFERENT org is NOT exempt from this org's Single Org / 2FA. The prior
+    // coarse "member of any provider" check exempted them incorrectly.
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ProviderForAnotherOrganization_SingleOrgEnabled_AndMemberOfAnotherOrg_ReturnsError(
+        Organization organization, User user,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+        SetProviderForOrganization(sutProvider, user, Guid.NewGuid());
+        EnableTargetPolicy(sutProvider, organization, PolicyType.SingleOrg);
+        SetOrganizationMemberships(sutProvider, user, MembershipInOtherOrg());
+
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
+
+        Assert.True(result.IsError);
+        Assert.IsType<UserIsAMemberOfAnotherOrganization>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ProviderForAnotherOrganization_TwoFactorRequired_ReturnsError(
+        Organization organization, User user,
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
+    {
+        SetupValidDependencies(sutProvider, organization, user);
+        SetProviderForOrganization(sutProvider, user, Guid.NewGuid());
+        EnableTargetPolicy(sutProvider, organization, PolicyType.TwoFactorAuthentication);
+
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
+
+        Assert.True(result.IsError);
+        Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -535,6 +570,14 @@ public class AcceptInviteLinkMembershipValidatorTests
             .GetManyByUserAsync(user.Id)
             .Returns(memberships.ToList());
 
+    // Makes the user a provider user for the given organization (the org-specific signal matching
+    // PolicyDetails.IsProvider, used by the Single Org / 2FA exemption).
+    private static void SetProviderForOrganization(
+        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider, User user, Guid organizationId)
+        => sutProvider.GetDependency<IProviderOrganizationRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns([new ProviderOrganizationProviderDetails { OrganizationId = organizationId }]);
+
     // Valid baseline: verified email, allowed domain, no provider, no policies enabled, no 2FA required,
     // no other organization memberships, empty cross-org requirements.
     private static void SetupValidDependencies(
@@ -545,6 +588,7 @@ public class AcceptInviteLinkMembershipValidatorTests
         user.Email = "user@example.com";
 
         sutProvider.GetDependency<IProviderUserRepository>().GetManyByUserAsync(user.Id).Returns([]);
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyByUserAsync(user.Id).Returns([]);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByUserAsync(user.Id)
             .Returns(new List<OrganizationUser>());
