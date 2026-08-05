@@ -156,8 +156,9 @@ public class RedeemAnnualUpgradeOfferCommand(
                 ProrationBehavior = ProrationBehavior.None
             };
 
-            // A customer-level coupon is always applied to the subscription so it is never left dormant.
-            var phase2Discounts = (subscription.Customer?.Discount)
+            // Only forever coupons merge: a phase discount is redeemed fresh, so a temporary one would restart.
+            var customerDiscount = subscription.Customer?.Discount;
+            var phase2Discounts = ((customerDiscount?.Coupon).IsForever() ? customerDiscount : null)
                 .MergeDiscountCouponIds(subscription.Discounts?.Select(discount => discount.Coupon?.Id))
                 .ToPhaseDiscountOptions();
 

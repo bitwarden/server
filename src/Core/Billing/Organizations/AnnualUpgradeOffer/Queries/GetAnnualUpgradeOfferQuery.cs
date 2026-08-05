@@ -67,10 +67,9 @@ public class GetAnnualUpgradeOfferQuery(
         AnnualUpgradeSavings? savings;
         try
         {
-            // Two previews rather than one, because the monthly side has to be priced under the
-            // same explicit coupon set as the annual one. Reading the natural upcoming invoice for
-            // the monthly side would save a call but surrender control of that set and let
-            // proration and one-off invoice items into the figure.
+            // Two previews rather than one, because each side needs its own explicit coupon set.
+            // Reading the natural upcoming invoice for the monthly side would save a call but
+            // surrender control of that set and let proration and one-off invoice items into the figure.
             var monthlyPreview = await stripeAdapter.CreateInvoicePreviewAsync(previewRequests.Monthly);
             var annualPreview = await stripeAdapter.CreateInvoicePreviewAsync(previewRequests.Annual);
             savings = AnnualUpgradeSavingsCalculator.SavingsFromPreviews(monthlyPreview, annualPreview);

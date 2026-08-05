@@ -97,7 +97,7 @@ internal static class AnnualUpgradeLineMapper
     private static bool IsUnusable(Discount? discount) =>
         discount is null || string.IsNullOrEmpty(discount.Coupon?.Id);
 
-    // A coupon-less discount is dropped by the Phase 2 filter, letting the customer-level coupon resurrect instead of failing loudly.
+    // A discount with no coupon would silently drop a subscription-level coupon, so redemption refuses instead.
     private static bool HasUnusableDiscounts(Subscription subscription) =>
         (subscription.Discounts ?? []).Any(IsUnusable) ||
         subscription.Items.Data.Any(item => (item.Discounts ?? []).Any(IsUnusable));

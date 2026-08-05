@@ -1,6 +1,6 @@
-﻿using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
+﻿using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Stripe;
-using static Bit.Core.Billing.Constants.StripeConstants;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 
@@ -73,7 +73,7 @@ internal static class AnnualUpgradeSavingsCalculator
     {
         var discounts = (line.Item.Discounts ?? [])
             .Where(discount =>
-                IsApplicable(discount?.Coupon) &&
+                (discount?.Coupon).IsForever() &&
                 !string.IsNullOrEmpty(discount!.Coupon.Id))
             .Select(discount => new InvoiceSubscriptionDetailsItemDiscountOptions
             {
@@ -121,9 +121,10 @@ internal static class AnnualUpgradeSavingsCalculator
         return customerCoupon is null ? [] : [customerCoupon];
     }
 
+    // Only forever coupons: a temporary one would quote a first-year artifact as a recurring saving.
     private static List<InvoiceDiscountOptions> ApplicableDiscountOptions(IReadOnlyList<Coupon> coupons) =>
         [.. coupons
-            .Where(coupon => IsApplicable(coupon) && !string.IsNullOrEmpty(coupon.Id))
+            .Where(coupon => coupon.IsForever() && !string.IsNullOrEmpty(coupon.Id))
             .Select(coupon => new InvoiceDiscountOptions { Coupon = coupon.Id })];
 
     // Customer first, matching MergeDiscountCouponIds, because Stripe applies discounts in order.
@@ -149,14 +150,4 @@ internal static class AnnualUpgradeSavingsCalculator
 
         return coupons;
     }
-
-    /// <summary>
-    /// Only coupons that will still be running at renewal are modelled. A <c>once</c> coupon is
-    /// consumed long before, and a <c>repeating</c> coupon discounts an entire annual invoice
-    /// against only a few monthly ones, which would quote a first-year artifact as a recurring
-    /// saving.
-    /// </summary>
-    private static bool IsApplicable(Coupon? coupon) =>
-        coupon is not null &&
-        string.Equals(coupon.Duration, CouponDurations.Forever, StringComparison.OrdinalIgnoreCase);
 }

@@ -230,7 +230,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_SubscriptionWithDiscounts_PreservesPhase1_AndCarriesOwnCouponToPhase2()
+    public async Task Run_SubscriptionWithDiscounts_PreservesPhase1_AndMergesCustomerAndOwnCouponIntoPhase2()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         var monthlyPlan = new TeamsPlan(false);
@@ -241,7 +241,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var (_, schedule) = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
             subscriptionDiscounts: [new Discount { Coupon = new Coupon { Id = "promo-coupon" } }],
-            customer: new Customer { Discount = new Discount { Coupon = new Coupon { Id = "customer-coupon" } } },
+            customer: new Customer { Discount = new Discount { Coupon = new Coupon { Id = "customer-coupon", Duration = CouponDurations.Forever } } },
             phase1Discounts: [new SubscriptionSchedulePhaseDiscount { CouponId = "promo-coupon" }]);
 
         var result = await _command.Run(organization);
@@ -331,9 +331,8 @@ public class RedeemAnnualUpgradeOfferCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
-        // A discount with no coupon is just as unusable as an unexpanded one: the Phase 2 filter
-        // drops it, which would leave phase2Discounts empty and let the customer-level coupon
-        // resurrect silently instead of failing the redemption.
+        // A discount with no coupon is just as unusable as an unexpanded one: it would silently
+        // drop a subscription-level coupon, so redemption refuses instead.
         SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
             subscriptionDiscounts: [new Discount { Coupon = null }]);
@@ -703,7 +702,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var (_, schedule) = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
             subscriptionDiscounts: [new Discount { Id = "di_sub", Coupon = new Coupon { Id = "sub_coupon" } }],
-            customer: new Customer { Discount = new Discount { Id = "di_cust", Coupon = new Coupon { Id = "customer_coupon" } } });
+            customer: new Customer { Discount = new Discount { Id = "di_cust", Coupon = new Coupon { Id = "customer_coupon", Duration = CouponDurations.Forever } } });
 
         var result = await _command.Run(organization);
 
@@ -727,7 +726,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         var (_, schedule) = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
-            customer: new Customer { Discount = new Discount { Id = "di_cust", Coupon = new Coupon { Id = "customer_coupon" } } });
+            customer: new Customer { Discount = new Discount { Id = "di_cust", Coupon = new Coupon { Id = "customer_coupon", Duration = CouponDurations.Forever } } });
 
         var result = await _command.Run(organization);
 
@@ -964,7 +963,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
             customer: new Customer
             {
                 Id = "cus_123",
-                Discount = new Discount { Id = "di_cus", Coupon = new Coupon { Id = "customer-coupon" } }
+                Discount = new Discount { Id = "di_cus", Coupon = new Coupon { Id = "customer-coupon", Duration = CouponDurations.Forever } }
             });
 
         var result = await _command.Run(organization);
@@ -991,7 +990,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
             customer: new Customer
             {
                 Id = "cus_123",
-                Discount = new Discount { Id = "di_cus", Coupon = new Coupon { Id = "customer-coupon" } }
+                Discount = new Discount { Id = "di_cus", Coupon = new Coupon { Id = "customer-coupon", Duration = CouponDurations.Forever } }
             },
             phase1Discounts: [new SubscriptionSchedulePhaseDiscount { CouponId = "sub-coupon" }]);
 
@@ -1017,7 +1016,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
             customer: new Customer
             {
                 Id = "cus_123",
-                Discount = new Discount { Id = "di_cus", Coupon = new Coupon { Id = "customer-coupon" } }
+                Discount = new Discount { Id = "di_cus", Coupon = new Coupon { Id = "customer-coupon", Duration = CouponDurations.Forever } }
             });
 
         var result = await _command.Run(organization);
@@ -1065,7 +1064,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
             customer: new Customer
             {
                 Id = "cus_123",
-                Discount = new Discount { Id = "di_cus", Coupon = new Coupon { Id = "shared-coupon" } }
+                Discount = new Discount { Id = "di_cus", Coupon = new Coupon { Id = "shared-coupon", Duration = CouponDurations.Forever } }
             });
 
         var result = await _command.Run(organization);
@@ -1088,6 +1087,68 @@ public class RedeemAnnualUpgradeOfferCommandTests
         SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
             customer: new Customer { Id = "cus_123" });
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_new",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o => o.Phases[1].Discounts == null));
+    }
+
+    [Theory]
+    [InlineData(CouponDurations.Once)]
+    [InlineData(CouponDurations.Repeating)]
+    public async Task Run_NonForeverCustomerCoupon_IsNotMergedIntoPhase2(string duration)
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+        SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
+            subscriptionDiscounts: [new Discount { Id = "di_sub", Coupon = new Coupon { Id = "sub-coupon" } }],
+            customer: new Customer
+            {
+                Id = "cus_123",
+                Discount = new Discount
+                {
+                    Id = "di_cus",
+                    Coupon = new Coupon { Id = "temporary-coupon", Duration = duration }
+                }
+            });
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_new",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[1].Discounts.Select(d => d.Coupon).SequenceEqual(new[] { "sub-coupon" })));
+    }
+
+    [Theory]
+    [InlineData(CouponDurations.Once)]
+    [InlineData(CouponDurations.Repeating)]
+    public async Task Run_NonForeverCustomerCouponOnly_Phase2DiscountsAreNullSoStripeInherits(string duration)
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+        SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
+            customer: new Customer
+            {
+                Id = "cus_123",
+                Discount = new Discount
+                {
+                    Id = "di_cus",
+                    Coupon = new Coupon { Id = "temporary-coupon", Duration = duration }
+                }
+            });
 
         var result = await _command.Run(organization);
 
