@@ -29,6 +29,7 @@ public class DatabaseDataAttribute : DataAttribute
 
     public bool SelfHosted { get; set; }
     public bool UseFakeTimeProvider { get; set; }
+    public SupportedDatabaseProviders[] OnlyOn { get; set; } = [];
 
     public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
@@ -47,6 +48,16 @@ public class DatabaseDataAttribute : DataAttribute
         foreach (var database in config.GetDatabases())
         {
             unconfiguredDatabases.Remove(database.Type);
+
+            if (OnlyOn.Length > 0 && !OnlyOn.Contains(database.Type))
+            {
+                var theory = new TheoryDataRow()
+                    .WithSkip($"Provider {database.Type} not in OnlyOn")
+                    .WithTrait("Database", database.Type.ToString());
+                theory.Label = database.Type.ToString();
+                theories.Add(theory);
+                continue;
+            }
 
             if (!database.Enabled)
             {
@@ -85,6 +96,11 @@ public class DatabaseDataAttribute : DataAttribute
 
         foreach (var unconfiguredDatabase in unconfiguredDatabases)
         {
+            if (OnlyOn.Length > 0 && !OnlyOn.Contains(unconfiguredDatabase))
+            {
+                continue;
+            }
+
             var theory = new TheoryDataRow()
                 .WithSkip("Unconfigured")
                 .WithTrait("Database", unconfiguredDatabase.ToString());
