@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.Schedules;
@@ -54,7 +55,7 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, _logger, organization,
-            ["discounts.coupon", "items.data.discounts.coupon", "schedule"]);
+            ["customer", "customer.discount.coupon", "discounts.coupon", "items.data.discounts.coupon", "schedule"]);
         if (subscription is null)
         {
             return new BadRequest(OfferNoLongerAvailable);
@@ -155,16 +156,10 @@ public class RedeemAnnualUpgradeOfferCommand(
                 ProrationBehavior = ProrationBehavior.None
             };
 
-            // Customer and subscription discounts never stack, so carry the subscription's own and
-            // otherwise leave it unspecified to inherit the customer's. The quote models a subset
-            // of this on purpose: it counts only forever coupons.
-            var phase2Discounts = subscription.Discounts?
-                .Where(discount => !string.IsNullOrEmpty(discount?.Coupon?.Id))
-                .Select(discount => new SubscriptionSchedulePhaseDiscountOptions
-                {
-                    Coupon = discount.Coupon.Id
-                })
-                .ToList();
+            // A customer-level coupon is always applied to the subscription so it is never left dormant.
+            var phase2Discounts = (subscription.Customer?.Discount)
+                .MergeDiscountCouponIds(subscription.Discounts?.Select(discount => discount.Coupon?.Id))
+                .ToPhaseDiscountOptions();
 
             // Stripe requires every phase to be bounded (end_date or duration); Phase 2 runs
             // exactly one annual term, then the schedule releases per EndBehavior below.
