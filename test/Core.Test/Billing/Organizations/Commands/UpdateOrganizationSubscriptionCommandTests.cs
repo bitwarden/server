@@ -1808,6 +1808,60 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_AnnualUpgradeSchedule_CarriesPhaseDiscountsByReuse_AndDoesNotMergeCustomerCoupon()
+    {
+        var organization = CreateOrganization();
+        organization.PlanType = PlanType.EnterpriseMonthly;
+
+        var currentPlan = MockPlans.Get(PlanType.EnterpriseMonthly);
+        var annualPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(annualPlan);
+
+        var monthlySeat = currentPlan.PasswordManager.StripeSeatPlanId;
+        var annualSeat = annualPlan.PasswordManager.StripeSeatPlanId;
+
+        var subscription = CreateSubscription(items: [(monthlySeat, "si_1", 5)]);
+        subscription.Customer = new Customer
+        {
+            Id = "cus_123",
+            Discount = new Discount { Id = "di_customer", Coupon = new Coupon { Id = "customer-coupon" } }
+        };
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(
+            subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)],
+            phaseMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.AnnualUpgrade] = nameof(PlanType.EnterpriseMonthly)
+            });
+        schedule.Phases[0].Discounts = [new SubscriptionSchedulePhaseDiscount { DiscountId = "di_own", CouponId = "coupon-own" }];
+        schedule.Phases[1].Discounts = [new SubscriptionSchedulePhaseDiscount { DiscountId = "di_own", CouponId = "coupon-own" }];
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(monthlySeat, 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Discounts.Count == 1 &&
+                opts.Phases[0].Discounts[0].Discount == "di_own" &&
+                opts.Phases[0].Discounts[0].Coupon == null &&
+                opts.Phases[1].Discounts.Count == 1 &&
+                opts.Phases[1].Discounts[0].Discount == "di_own" &&
+                opts.Phases[1].Discounts[0].Coupon == null &&
+                opts.Phases.All(p => p.Discounts.All(d => d.Coupon != "customer-coupon" && d.Discount != "di_customer"))));
+    }
+
+    [Fact]
     public async Task Run_AnnualUpgradeSchedule_ChangeItemPrice_CarriesItemDiscountsOntoTheNewPrice()
     {
         var organization = CreateOrganization();

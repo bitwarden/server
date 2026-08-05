@@ -132,7 +132,8 @@ public class UpdateOrganizationSubscriptionCommand(
         if (activeSchedule is { Phases.Count: > 0 })
         {
             // PM-40537: only rewrite schedules our code created, identified by phase metadata.
-            var schedulePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, subscription)
+            var annualUpgradePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, subscription);
+            var schedulePlans = annualUpgradePlans
                                 ?? await ResolveCohortMigrationPhasePlansAsync(organization, subscription);
             if (schedulePlans is { } plans)
             {
@@ -163,8 +164,13 @@ public class UpdateOrganizationSubscriptionCommand(
                     "{Command}: Active migration schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating {PhaseCount} active phase(s)",
                     CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
 
-                var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes,
-                    plans.source, plans.target, subscription.Customer?.Discount);
+                // Annual upgrade reproduces the existing discount state by reuse and adds no coupon,
+                // so it owns its phase rebuilding. Migration keeps the shared merge path unchanged.
+                var phases = annualUpgradePlans is not null
+                    ? AnnualUpgradeSchedulePhaseRebuilder.BuildUpdatedPhases(
+                        migrationPhases, changeSet.Changes, plans.source, plans.target)
+                    : BuildUpdatedPhases(migrationPhases, changeSet.Changes,
+                        plans.source, plans.target, subscription.Customer?.Discount);
 
                 await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                     new SubscriptionScheduleUpdateOptions
