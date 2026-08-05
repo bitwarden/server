@@ -1,4 +1,4 @@
-namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 public record AcceptInviteLinkMembershipValidationResult
 {
