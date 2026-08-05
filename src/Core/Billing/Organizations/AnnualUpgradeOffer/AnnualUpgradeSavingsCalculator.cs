@@ -67,7 +67,8 @@ internal static class AnnualUpgradeSavingsCalculator
                     Discounts = ItemDiscountsOrNull(line)
                 })]
             },
-            Discounts = invoiceDiscounts.Count > 0 ? invoiceDiscounts : null
+            // Empty list serializes to `discounts=`, Stripe's documented opt-out from inheriting.
+            Discounts = invoiceDiscounts
         };
 
     private static List<InvoiceSubscriptionDetailsItemDiscountOptions>? ItemDiscountsOrNull(

@@ -150,13 +150,34 @@ public class AnnualUpgradeSavingsCalculatorTests
     [Theory]
     [InlineData(CouponDurations.Once)]
     [InlineData(CouponDurations.Repeating)]
-    public void Build_NonForeverInvoiceCoupon_IsNotPassed(string duration)
+    public void Build_NonForeverInvoiceCoupon_IsSuppressedNotInherited(string duration)
     {
         var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
         subscription.Discounts = [Discount("temporary", duration: duration)];
 
-        Assert.Null(Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId))
-            .Monthly.Discounts);
+        var requests = Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId));
+
+        // The empty list is the assertion; null would inherit instead of suppressing.
+        Assert.Empty(requests.Monthly.Discounts);
+        Assert.Empty(requests.Annual.Discounts);
+    }
+
+    [Theory]
+    [InlineData(CouponDurations.Once)]
+    [InlineData(CouponDurations.Repeating)]
+    public void Build_NonForeverCustomerCoupon_IsSuppressedNotInherited(string duration)
+    {
+        var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        subscription.Customer = new Customer
+        {
+            Id = "cus_123",
+            Discount = Discount("temporary", duration: duration)
+        };
+
+        var requests = Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId));
+
+        Assert.Empty(requests.Monthly.Discounts);
+        Assert.Empty(requests.Annual.Discounts);
     }
 
     [Fact]
@@ -175,7 +196,7 @@ public class AnnualUpgradeSavingsCalculatorTests
 
         var requests = Build(subscription, lines);
 
-        Assert.Null(requests.Monthly.Discounts);
+        Assert.Empty(requests.Monthly.Discounts);
         Assert.Equal(
             new[] { "seat_only" },
             requests.Monthly.SubscriptionDetails.Items[0].Discounts.Select(d => d.Coupon));
