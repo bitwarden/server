@@ -1,4 +1,4 @@
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -112,10 +112,10 @@ public class LoggerFactoryExtensionsTests
 
     private static async Task AssertSmallFileAsync(Action<string, Dictionary<string, string?>> configure)
     {
-        using var tempDir = new TempDirectory();
+        var tempDir = Directory.CreateTempSubdirectory();
         var config = new Dictionary<string, string?>();
 
-        configure(tempDir.Directory, config);
+        configure(tempDir.FullName, config);
 
         var provider = GetServiceProvider(config, "Production");
 
@@ -136,7 +136,7 @@ public class LoggerFactoryExtensionsTests
 
         await provider.DisposeAsync();
 
-        var logFiles = Directory.EnumerateFiles(tempDir.Directory, "*.txt", SearchOption.AllDirectories);
+        var logFiles = Directory.EnumerateFiles(tempDir.FullName, "*.txt", SearchOption.AllDirectories);
         var logFile = Assert.Single(logFiles);
 
         using var fr = File.OpenRead(logFile);
