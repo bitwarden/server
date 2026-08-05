@@ -7,9 +7,6 @@
 # CODEOWNERS owners
 .github/CODEOWNERS @bitwarden/tech-leads
 
-# Scanning tools
-.checkmarx/ @bitwarden/team-appsec
-
 ## These are shared workflows ##
 .github/workflows/_move_edd_db_scripts.yml
 
@@ -68,6 +65,8 @@ test/EventsProcessor.Test @bitwarden/team-data-insights-and-reporting-dev
 
 # Admin Console team
 **/AdminConsole @bitwarden/team-admin-console-dev
+src/Libraries/OrganizationAuthorization @bitwarden/team-admin-console-dev
+test/Libraries/OrganizationAuthorization.Test @bitwarden/team-admin-console-dev
 bitwarden_license/src/Scim @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.IntegrationTest @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev

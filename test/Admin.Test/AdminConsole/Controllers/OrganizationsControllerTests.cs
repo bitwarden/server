@@ -14,6 +14,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
@@ -44,6 +45,24 @@ public class OrganizationsControllerTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(Bit.Core.FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
             .Returns(true);
+    }
+
+    private sealed record FreePlanStub : Bit.Core.Models.StaticStore.Plan
+    {
+        public FreePlanStub()
+        {
+            Type = PlanType.Free;
+            PasswordManager = new FreePasswordManagerFeatures();
+        }
+
+        private record FreePasswordManagerFeatures : PasswordManagerPlanFeatures
+        {
+            public FreePasswordManagerFeatures()
+            {
+                MaxSeats = 2;
+                MaxCollections = 2;
+            }
+        }
     }
 
     #region Edit (POST)
@@ -302,6 +321,85 @@ public class OrganizationsControllerTests
 
         await providerBillingService.Received(1).ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
         await providerBillingService.Received(1).ScaleSeats(provider, update.PlanType!.Value, update.Seats!.Value - organization.Seats.Value + organization.Seats.Value);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_DowngradeToFree_MaxCollectionsExceedsFreePlan_SetsErrorAndRedirects(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.MaxCollections = 10;
+
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.Free,
+            Seats = null,
+            MaxCollections = 10
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.Free)
+            .Returns(new FreePlanStub());
+
+        sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        // Act
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        // Assert
+        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Edit", redirectResult.ActionName);
+        Assert.Equal(
+            "Organizations with more than 2 collections cannot be downgraded to the Free plan. Your organization currently has 10 collections.",
+            sutProvider.Sut.TempData["Error"]);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_DowngradeToFree_MaxCollectionsExceedsFreePlan_Vfo1FoundationEnabled_SetsErrorWithSharedFolderTerminology(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.MaxCollections = 10;
+
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.Free,
+            Seats = null,
+            MaxCollections = 10
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.Free)
+            .Returns(new FreePlanStub());
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.VFO1Foundation)
+            .Returns(true);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        // Act
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        // Assert
+        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Edit", redirectResult.ActionName);
+        Assert.Equal(
+            "Organizations with more than 2 shared folders cannot be downgraded to the Free plan. Your organization currently has 10 shared folders.",
+            sutProvider.Sut.TempData["Error"]);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
     [BitAutoData]

@@ -12,6 +12,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<LeaseEndpointsHandler>();
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
+        services.AddScoped<CipherLeaseEndpointsHandler>();
 
         services.AddPamOpenApiEndpointDataSource();
 
