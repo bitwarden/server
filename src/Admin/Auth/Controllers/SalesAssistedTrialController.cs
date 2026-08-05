@@ -57,7 +57,7 @@ public class SalesAssistedTrialController(
             // Client /trial-initiation prioritizes a single product via parseInt
             // and Secrets Manager trial initiation also provides Password Manager trial
             // initiation at the selected product tier. PM-41426
-            // Self-service trial command has an IEnumerable shape for Product_s_, however
+            // Self-service trial command has an IEnumerable shape for Product(s), however
             // to ensure proper parsing and enrollment, sales-assisted will enforce a
             // single product selection policy.
             await sendCommand.HandleAsync(
