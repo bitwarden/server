@@ -21,14 +21,15 @@ internal readonly record struct AnnualUpgradePreviewRequests(
 /// <summary>
 /// Prices a monthly-to-annual switch by asking Stripe to preview two invoices from the
 /// subscription's own line items: one on the current monthly price IDs and one on their annual
-/// equivalents, with the same quantities and the same coupons on both. Stripe reports the discount
-/// it actually applied per line.
+/// equivalents, with the same quantities on both. The annual side also carries the customer's
+/// coupon, because the annual phase will. Stripe reports the discount it actually applied per line.
 /// </summary>
 internal static class AnnualUpgradeSavingsCalculator
 {
     /// <summary>
-    /// Builds the two preview payloads: the same quantities and coupons priced once on the
-    /// subscription's current price ids and once on the annual equivalents in <paramref name="lines"/>.
+    /// Builds the two preview payloads: the same quantities priced once on the subscription's
+    /// current price ids and once on the annual equivalents in <paramref name="lines"/>. The monthly
+    /// side carries what applies today; the annual side carries what the annual phase will apply.
     /// </summary>
     /// <remarks>
     /// The caller must load the subscription with <c>customer</c>, <c>discounts.coupon</c>,
@@ -37,14 +38,9 @@ internal static class AnnualUpgradeSavingsCalculator
     public static AnnualUpgradePreviewRequests BuildPreviewRequests(
         Subscription subscription, IReadOnlyList<AnnualUpgradeLine> lines)
     {
-        var invoiceDiscounts = InvoiceLevelCoupons(subscription)
-            .Where(coupon => IsApplicable(coupon) && !string.IsNullOrEmpty(coupon.Id))
-            .Select(coupon => new InvoiceDiscountOptions { Coupon = coupon.Id })
-            .ToList();
-
         return new AnnualUpgradePreviewRequests(
-            BuildPreviewOptions(subscription, lines, invoiceDiscounts, annual: false),
-            BuildPreviewOptions(subscription, lines, invoiceDiscounts, annual: true));
+            BuildPreviewOptions(subscription, lines, ApplicableDiscountOptions(InvoiceLevelCoupons(subscription)), annual: false),
+            BuildPreviewOptions(subscription, lines, ApplicableDiscountOptions(AnnualPhaseCoupons(subscription)), annual: true));
     }
 
     private static InvoiceCreatePreviewOptions BuildPreviewOptions(
@@ -122,6 +118,35 @@ internal static class AnnualUpgradeSavingsCalculator
 
         var customerCoupon = subscription.Customer?.Discount?.Coupon;
         return customerCoupon is null ? [] : [customerCoupon];
+    }
+
+    private static List<InvoiceDiscountOptions> ApplicableDiscountOptions(IReadOnlyList<Coupon> coupons) =>
+        [.. coupons
+            .Where(coupon => IsApplicable(coupon) && !string.IsNullOrEmpty(coupon.Id))
+            .Select(coupon => new InvoiceDiscountOptions { Coupon = coupon.Id })];
+
+    // Customer first, matching MergeDiscountCouponIds, because Stripe applies discounts in order.
+    private static IReadOnlyList<Coupon> AnnualPhaseCoupons(Subscription subscription)
+    {
+        var coupons = new List<Coupon>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        void Add(Coupon? coupon)
+        {
+            if (coupon is not null && !string.IsNullOrEmpty(coupon.Id) && seen.Add(coupon.Id))
+            {
+                coupons.Add(coupon);
+            }
+        }
+
+        Add(subscription.Customer?.Discount?.Coupon);
+
+        foreach (var discount in subscription.Discounts ?? [])
+        {
+            Add(discount?.Coupon);
+        }
+
+        return coupons;
     }
 
     /// <summary>

@@ -252,4 +252,64 @@ public class AnnualUpgradeSavingsCalculatorTests
         Assert.Null(AnnualUpgradeSavingsCalculator.SavingsFromPreviews(null, new Invoice { Total = 1 }));
         Assert.Null(AnnualUpgradeSavingsCalculator.SavingsFromPreviews(new Invoice { Total = 1 }, null));
     }
+
+    [Fact]
+    public void Build_CustomerAndSubscriptionCoupons_AnnualCarriesBothMonthlyCarriesSubscriptionsOwn()
+    {
+        var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        subscription.Discounts = [Discount("sub_coupon")];
+        subscription.Customer = new Customer { Id = "cus_123", Discount = Discount("cus_coupon") };
+
+        var requests = Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId));
+
+        Assert.Equal(
+            new[] { "cus_coupon", "sub_coupon" },
+            requests.Annual.Discounts.Select(discount => discount.Coupon));
+        Assert.Equal(
+            new[] { "sub_coupon" },
+            requests.Monthly.Discounts.Select(discount => discount.Coupon));
+    }
+
+    [Fact]
+    public void Build_CustomerCouponOnly_BothSidesCarryIt()
+    {
+        var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        subscription.Customer = new Customer { Id = "cus_123", Discount = Discount("cus_coupon") };
+
+        var requests = Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId));
+
+        Assert.Equal(new[] { "cus_coupon" }, requests.Monthly.Discounts.Select(d => d.Coupon));
+        Assert.Equal(new[] { "cus_coupon" }, requests.Annual.Discounts.Select(d => d.Coupon));
+    }
+
+    [Theory]
+    [InlineData(CouponDurations.Once)]
+    [InlineData(CouponDurations.Repeating)]
+    public void Build_NonForeverCustomerCoupon_IsExcludedFromTheAnnualSet(string duration)
+    {
+        var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        subscription.Discounts = [Discount("sub_coupon")];
+        subscription.Customer = new Customer
+        {
+            Id = "cus_123",
+            Discount = Discount("temporary", duration: duration)
+        };
+
+        var requests = Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId));
+
+        Assert.Equal(new[] { "sub_coupon" }, requests.Annual.Discounts.Select(d => d.Coupon));
+        Assert.Equal(new[] { "sub_coupon" }, requests.Monthly.Discounts.Select(d => d.Coupon));
+    }
+
+    [Fact]
+    public void Build_SameCouponAtBothLevels_AnnualListsItOnce()
+    {
+        var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
+        subscription.Discounts = [Discount("shared")];
+        subscription.Customer = new Customer { Id = "cus_123", Discount = Discount("shared") };
+
+        var requests = Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId));
+
+        Assert.Equal(new[] { "shared" }, requests.Annual.Discounts.Select(d => d.Coupon));
+    }
 }
