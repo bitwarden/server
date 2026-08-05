@@ -195,65 +195,6 @@ public class PolicyDataValidatorTests
     }
 
     [Fact]
-    public void ValidateAndSerialize_FillAssist_HttpUrl_ThrowsBadRequestException()
-    {
-        var data = new Dictionary<string, object> { { "rulesUrl", "http://example.com/rules" } };
-
-        var exception = Assert.Throws<BadRequestException>(() =>
-            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist));
-
-        Assert.Contains("Invalid data for FillAssist policy", exception.Message);
-        Assert.Contains("HTTPS", exception.Message);
-    }
-
-    [Fact]
-    public void ValidateAndSerialize_FillAssist_UppercaseHttpsScheme_ReturnsSerializedJson()
-    {
-        var data = new Dictionary<string, object> { { "rulesUrl", "HTTPS://example.com/rules" } };
-
-        var result = PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist);
-
-        Assert.NotNull(result);
-        Assert.Contains("\"rulesUrl\":\"HTTPS://example.com/rules\"", result);
-    }
-
-    [Fact]
-    public void ValidateAndSerialize_FillAssist_MissingRulesUrl_ThrowsBadRequestException()
-    {
-        var data = new Dictionary<string, object> { { "unrelated", "value" } };
-
-        var exception = Assert.Throws<BadRequestException>(() =>
-            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist));
-
-        Assert.Contains("Invalid data for FillAssist policy", exception.Message);
-        Assert.Contains("RulesUrl", exception.Message);
-    }
-
-    [Fact]
-    public void ValidateAndSerialize_FillAssist_EmptyRulesUrl_ThrowsBadRequestException()
-    {
-        var data = new Dictionary<string, object> { { "rulesUrl", "" } };
-
-        var exception = Assert.Throws<BadRequestException>(() =>
-            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist));
-
-        Assert.Contains("Invalid data for FillAssist policy", exception.Message);
-        Assert.Contains("RulesUrl", exception.Message);
-    }
-
-    [Fact]
-    public void ValidateAndSerialize_FillAssist_MalformedUrl_ThrowsBadRequestException()
-    {
-        var data = new Dictionary<string, object> { { "rulesUrl", "not a url" } };
-
-        var exception = Assert.Throws<BadRequestException>(() =>
-            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist));
-
-        Assert.Contains("Invalid data for FillAssist policy", exception.Message);
-        Assert.Contains("RulesUrl", exception.Message);
-    }
-
-    [Fact]
     public void ValidateAndSerialize_FillAssist_WrongType_ThrowsBadRequestException()
     {
         var data = new Dictionary<string, object> { { "rulesUrl", 12345 } };

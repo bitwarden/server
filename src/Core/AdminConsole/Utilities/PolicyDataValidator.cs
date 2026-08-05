@@ -41,8 +41,9 @@ public static class PolicyDataValidator
                     CoreHelpers.LoadClassFromJsonData<ResetPasswordDataModel>(json);
                     break;
                 case PolicyType.FillAssist:
-                    var fillAssistData = CoreHelpers.LoadClassFromJsonData<FillAssistPolicyData>(json);
-                    ValidateModel(fillAssistData, policyType);
+                    // Deserialize to catch JSON type errors; URL/HTTPS/required validation lives in
+                    // FillAssistPolicyEventHandler where the enable/disable distinction is available.
+                    CoreHelpers.LoadClassFromJsonData<FillAssistPolicyData>(json);
                     break;
             }
 
