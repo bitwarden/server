@@ -9,6 +9,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Mail;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -371,6 +372,8 @@ public class SendOrganizationInvitesCommandTests
 
         // Arrange
         inviteWithoutEmail.Email = null;
+        inviteWithoutEmail.Status = OrganizationUserStatusType.Invited;
+        inviteWithoutEmail.OrganizationId = organization.Id;
 
         // Act
         await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite, inviteWithoutEmail], organization));
