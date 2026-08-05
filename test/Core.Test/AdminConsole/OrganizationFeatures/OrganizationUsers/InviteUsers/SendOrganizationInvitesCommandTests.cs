@@ -18,6 +18,7 @@ using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -264,9 +265,173 @@ public class SendOrganizationInvitesCommandTests
                 info.InviterEmail == null));
     }
 
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData("   ")]
+    public async Task SendInvitesAsync_WhenAnOrgUserHasNoEmail_DoesNotLookThatEmailUp(
+        string blankEmail,
+        Organization organization,
+        OrganizationUser invite,
+        OrganizationUser inviteWithoutEmail,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProviderWithNoExistingUsers(sutProvider);
+
+        // Arrange - an invited org user with no email, as left behind by SSO just-in-time provisioning
+        inviteWithoutEmail.Email = blankEmail;
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite, inviteWithoutEmail], organization));
+
+        // Assert - a blank email in this lookup fails the whole send against SQL Server
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive()
+            .GetManyByEmailsAsync(Arg.Is<IEnumerable<string>>(emails => emails.Any(string.IsNullOrWhiteSpace)));
+    }
+
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData("   ")]
+    public async Task SendInvitesAsync_WhenAnOrgUserHasNoEmail_StillSendsTheOtherInvites(
+        string blankEmail,
+        Organization organization,
+        OrganizationUser invite,
+        OrganizationUser inviteWithoutEmail,
+        User linkedUser,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProviderWithNoExistingUsers(sutProvider);
+
+        // Arrange - a linked UserId does not make the org user invitable, the invite token is validated
+        // against the stored email at accept time
+        inviteWithoutEmail.Email = blankEmail;
+        inviteWithoutEmail.UserId = linkedUser.Id;
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite, inviteWithoutEmail], organization));
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>().Received(1)
+            .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+                info.OrgUserTokenPairs.Count() == 1 &&
+                info.OrgUserTokenPairs.Single().OrgUser.Id == invite.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WhenAnOrgUserHasNoEmail_MailInfoIsInternallyConsistent(
+        Organization organization,
+        OrganizationUser invite,
+        OrganizationUser inviteWithoutEmail,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProviderWithNoExistingUsers(sutProvider);
+
+        // Arrange
+        inviteWithoutEmail.Email = null;
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite, inviteWithoutEmail], organization));
+
+        // Assert - every mailed org user needs a recipient and an entry in the existing user dictionary
+        await sutProvider.GetDependency<IMailService>().Received(1)
+            .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+                info.OrgUserTokenPairs.All(pair =>
+                    !string.IsNullOrWhiteSpace(pair.OrgUser.Email) &&
+                    info.OrgUserHasExistingUserDict.ContainsKey(pair.OrgUser.Id))));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WhenNoOrgUserHasAnEmail_SendsNothing(
+        Organization organization,
+        OrganizationUser inviteWithoutEmail,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProviderWithNoExistingUsers(sutProvider);
+
+        // Arrange
+        inviteWithoutEmail.Email = null;
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([inviteWithoutEmail], organization));
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>().DidNotReceive()
+            .SendUpdatedOrganizationInviteEmailsAsync(Arg.Any<OrganizationInvitesInfo>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WhenAnOrgUserHasNoEmail_WarnsWithTheSkippedOrgUserId(
+        Organization organization,
+        OrganizationUser invite,
+        OrganizationUser inviteWithoutEmail,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProviderWithNoExistingUsers(sutProvider);
+
+        // Arrange
+        inviteWithoutEmail.Email = null;
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite, inviteWithoutEmail], organization));
+
+        // Assert - the log is the only signal an operator gets, and it must not carry an email address
+        sutProvider.GetDependency<ILogger<SendOrganizationInvitesCommand>>().Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state =>
+                state.ToString().Contains(inviteWithoutEmail.Id.ToString()) &&
+                state.ToString().Contains(organization.Id.ToString()) &&
+                !state.ToString().Contains(invite.Email)),
+            null,
+            Arg.Any<Func<object, Exception, string>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WhenAccountEmailDiffersInCase_TreatsUserAsExisting(
+        Organization organization,
+        OrganizationUser invite,
+        User existingUser,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProviderWithNoExistingUsers(sutProvider);
+
+        // Arrange - email lookups are case insensitive everywhere else in the invite flow
+        invite.Email = "member@example.com";
+        existingUser.Email = "Member@Example.com";
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns([existingUser]);
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization));
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>().Received(1)
+            .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+                info.OrgUserHasExistingUserDict[invite.Id]));
+    }
+
     private void SetupSutProvider(SutProvider<SendOrganizationInvitesCommand> sutProvider)
     {
         sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
         sutProvider.Create();
+    }
+
+    private void SetupSutProviderWithNoExistingUsers(SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProvider(sutProvider);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
     }
 }
