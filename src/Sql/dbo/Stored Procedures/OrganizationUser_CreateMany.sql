@@ -20,7 +20,8 @@ BEGIN
         [ResetPasswordKey],
         [AccessSecretsManager],
         [RevocationReason],
-        [StatusNew]
+        [StatusNew],
+        [AccessPam]
         )
     SELECT
         OUI.[Id],
@@ -37,7 +38,8 @@ BEGIN
         OUI.[ResetPasswordKey],
         OUI.[AccessSecretsManager],
         OUI.[RevocationReason],
-        OUI.[StatusNew]
+        OUI.[StatusNew],
+        ISNULL(OUI.[AccessPam], 0)
     FROM
         OPENJSON(@jsonData)
         WITH (
@@ -55,6 +57,7 @@ BEGIN
             [ResetPasswordKey] VARCHAR (MAX) '$.ResetPasswordKey',
             [AccessSecretsManager] BIT '$.AccessSecretsManager',
             [RevocationReason] TINYINT '$.RevocationReason',
-            [StatusNew] SMALLINT '$.StatusNew'
+            [StatusNew] SMALLINT '$.StatusNew',
+            [AccessPam] BIT '$.AccessPam'
         ) OUI
 END

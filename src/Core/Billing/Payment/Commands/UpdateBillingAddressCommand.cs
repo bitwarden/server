@@ -3,9 +3,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -19,7 +17,6 @@ public interface IUpdateBillingAddressCommand
 }
 
 public class UpdateBillingAddressCommand(
-    IFeatureService featureService,
     ILogger<UpdateBillingAddressCommand> logger,
     ISubscriberService subscriberService,
     IStripeAdapter stripeAdapter) : BaseBillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
@@ -86,11 +83,6 @@ public class UpdateBillingAddressCommand(
             Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids"]
         };
 
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            updateOptions.TaxExempt = await GetDeterminedTaxExemptStatusAsync(subscriber.GatewayCustomerId!, billingAddress.Country);
-        }
-
         var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId, updateOptions);
 
         await EnableAutomaticTaxAsync(subscriber, customer);
@@ -123,13 +115,6 @@ public class UpdateBillingAddressCommand(
         return BillingAddress.From(customer.Address, updatedTaxId);
     }
 
-
-    private async Task<string> GetDeterminedTaxExemptStatusAsync(string customerId, string? billingCountry)
-    {
-        var existingCustomer = await stripeAdapter.GetCustomerAsync(customerId);
-        return TaxHelpers.DetermineTaxExemptStatus(billingCountry, existingCustomer.TaxExempt);
-    }
-
     private async Task EnableAutomaticTaxAsync(
         ISubscriber subscriber,
         Customer customer)
@@ -141,71 +126,69 @@ public class UpdateBillingAddressCommand(
 
             if (subscription is { AutomaticTax.Enabled: false })
             {
-                if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+                    new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+                var activeSchedule = schedules.Data.FirstOrDefault(s =>
+                    s.SubscriptionId == subscription.Id
+                    && s.Status == StripeConstants.SubscriptionScheduleStatus.Active);
+
+                if (activeSchedule != null)
                 {
-                    var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-                        new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+                    var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+                    var phases = new List<SubscriptionSchedulePhaseOptions>();
 
-                    var activeSchedule = schedules.Data.FirstOrDefault(s =>
-                        s.SubscriptionId == subscription.Id
-                        && s.Status == StripeConstants.SubscriptionScheduleStatus.Active);
-
-                    if (activeSchedule != null)
+                    for (var i = 0; i < activeSchedule.Phases.Count; i++)
                     {
-                        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
-                        var phases = new List<SubscriptionSchedulePhaseOptions>();
+                        var phase = activeSchedule.Phases[i];
 
-                        for (var i = 0; i < activeSchedule.Phases.Count; i++)
+                        if (phase.EndDate <= now)
                         {
-                            var phase = activeSchedule.Phases[i];
+                            continue;
+                        }
 
-                            if (phase.EndDate <= now)
+                        var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
+
+                        // Gate on StartDate > now, not !discountConsumed (false for the active
+                        // phase 0), so we never re-stack onto the current period. Use the fetched
+                        // customer (subscription.Customer may be a bare id here).
+                        var customerDiscount = phase.StartDate > now ? customer.Discount : null;
+
+                        phases.Add(new SubscriptionSchedulePhaseOptions
+                        {
+                            StartDate = phase.StartDate,
+                            EndDate = phase.EndDate,
+                            Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
                             {
-                                continue;
+                                Price = item.PriceId,
+                                Quantity = item.Quantity
+                            }).ToList(),
+                            Discounts = discountConsumed
+                                ? []
+                                : customerDiscount.MergeDiscountCouponIds(
+                                    phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
+                            Metadata = phase.Metadata,
+                            ProrationBehavior = phase.ProrationBehavior,
+                            AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                            {
+                                Enabled = true
                             }
+                        });
+                    }
 
-                            var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
-
-                            // Gate on StartDate > now, not !discountConsumed (false for the active
-                            // phase 0), so we never re-stack onto the current period. Use the fetched
-                            // customer (subscription.Customer may be a bare id here).
-                            var customerDiscount = phase.StartDate > now ? customer.Discount : null;
-
-                            phases.Add(new SubscriptionSchedulePhaseOptions
+                    await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                        new SubscriptionScheduleUpdateOptions
+                        {
+                            DefaultSettings = new SubscriptionScheduleDefaultSettingsOptions
                             {
-                                StartDate = phase.StartDate,
-                                EndDate = phase.EndDate,
-                                Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
-                                {
-                                    Price = item.PriceId,
-                                    Quantity = item.Quantity
-                                }).ToList(),
-                                Discounts = discountConsumed
-                                    ? []
-                                    : customerDiscount.MergeDiscountCouponIds(
-                                        phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
-                                ProrationBehavior = phase.ProrationBehavior,
-                                AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                                AutomaticTax = new SubscriptionScheduleDefaultSettingsAutomaticTaxOptions
                                 {
                                     Enabled = true
                                 }
-                            });
-                        }
-
-                        await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
-                            new SubscriptionScheduleUpdateOptions
-                            {
-                                DefaultSettings = new SubscriptionScheduleDefaultSettingsOptions
-                                {
-                                    AutomaticTax = new SubscriptionScheduleDefaultSettingsAutomaticTaxOptions
-                                    {
-                                        Enabled = true
-                                    }
-                                },
-                                Phases = phases
-                            });
-                        return;
-                    }
+                            },
+                            Phases = phases
+                        });
+                    return;
                 }
 
                 await stripeAdapter.UpdateSubscriptionAsync(subscriber.GatewaySubscriptionId,

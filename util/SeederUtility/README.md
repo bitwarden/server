@@ -72,4 +72,6 @@ dotnet run -- preset --name scale.md-balanced-sterling-cooper --mangle
 dotnet run -- preset --name individual.premium --mangle
 ```
 
+Org presets accept `--mangle` (per-run unique IDs, emails, and identifiers, so you can seed the same preset repeatedly), `--org-name` (override the org display name), and `--owner-email` (override the owner login email). Both overrides compose with `--mangle`.
+
 For the full preset catalog, see [presets.md](../Seeder/Seeds/docs/presets.md).

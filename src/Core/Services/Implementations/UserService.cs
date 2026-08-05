@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -62,7 +63,6 @@ public class UserService : UserManager<User>, IUserService
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IFeatureService _featureService;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
@@ -96,7 +96,6 @@ public class UserService : UserManager<User>, IUserService
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IFeatureService featureService,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
@@ -134,7 +133,6 @@ public class UserService : UserManager<User>, IUserService
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
-        _featureService = featureService;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
@@ -249,7 +247,7 @@ public class UserService : UserManager<User>, IUserService
             {
                 return IdentityResult.Failed(new IdentityError
                 {
-                    Description = "Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.",
+                    Description = new SoleOwnerError().Message,
                 });
             }
         }
@@ -267,17 +265,10 @@ public class UserService : UserManager<User>, IUserService
         {
             try
             {
-                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-                {
-                    await _subscriberService.CancelSubscription(
-                        user,
-                        cancelImmediately: false,
-                        offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
-                }
-                else
-                {
-                    await CancelPremiumAsync(user);
-                }
+                await _subscriberService.CancelSubscription(
+                    user,
+                    cancelImmediately: false,
+                    offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
             }
             catch (GatewayException) { }
             catch (BillingException) { }
@@ -796,18 +787,6 @@ public class UserService : UserManager<User>, IUserService
         user.LicenseKey = license.LicenseKey;
         user.PremiumExpirationDate = license.Expires;
         await SaveUserAsync(user);
-    }
-
-    //TODO: Remove with the deletion of PM32645_DeferPriceMigrationToRenewal feature flag
-    public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
-    {
-        var eop = endOfPeriod.GetValueOrDefault(true);
-        if (!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
-            user.PremiumExpirationDate.Value < DateTime.UtcNow)
-        {
-            eop = false;
-        }
-        await _paymentService.CancelSubscriptionAsync(user, eop);
     }
 
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)

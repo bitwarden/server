@@ -79,7 +79,8 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendRegistrationVerificationEmailAsync(string email, string token, string? fromMarketing)
+    public async Task SendRegistrationVerificationEmailAsync(string email, string token, string? fromMarketing,
+        string? sealedOpenOrgInviteData = null)
     {
         var message = CreateDefaultMessage("Verify Your Email", email);
         var model = new RegisterVerifyEmail
@@ -89,6 +90,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
             SiteName = _globalSettings.SiteName,
             FromMarketing = WebUtility.UrlEncode(fromMarketing),
+            SealedOpenOrgInviteData = WebUtility.UrlEncode(sealedOpenOrgInviteData),
         };
         await AddMessageContentAsync(message, "Auth.RegistrationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -144,7 +146,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendCannotDeleteClaimedAccountEmailAsync(string email)
     {
-        var message = CreateDefaultMessage("Delete Your Account", email);
+        var message = CreateDefaultMessage("Delete your account", email);
         var model = new CannotDeleteClaimedAccountViewModel
         {
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -328,7 +330,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
         IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false)
     {
-        var message = CreateDefaultMessage($"Action Required: {userIdentifier} Needs to Be Confirmed", adminEmails);
+        var message = CreateDefaultMessage($"Action required: {userIdentifier} needs to be confirmed", adminEmails);
         var model = new OrganizationUserAcceptedViewModel
         {
             OrganizationId = organization.Id,
@@ -344,7 +346,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false)
     {
-        var message = CreateDefaultMessage($"You Have Been Confirmed To {organizationName}", email);
+        var message = CreateDefaultMessage($"You have been confirmed to {organizationName}", email);
         var model = new OrganizationUserConfirmedViewModel
         {
             TitleFirst = "You're confirmed as a member of ",
@@ -382,9 +384,9 @@ public class HandlebarsMailService : IMailService
 
             var subject = model! switch
             {
-                { IsFreeOrg: true, OrgUserHasExistingUser: true } => "You have been invited to a Bitwarden Organization",
+                { IsFreeOrg: true, OrgUserHasExistingUser: true } => "You have been invited to a Bitwarden vault",
                 { IsFreeOrg: true, OrgUserHasExistingUser: false } => "You have been invited to Bitwarden Password Manager",
-                { IsFreeOrg: false, OrgUserHasExistingUser: true } => $"{model.OrganizationName} invited you to their Bitwarden organization",
+                { IsFreeOrg: false, OrgUserHasExistingUser: true } => $"{model.OrganizationName} invited you to their Bitwarden vault",
                 { IsFreeOrg: false, OrgUserHasExistingUser: false } => $"{model.OrganizationName} set up a Bitwarden account for you"
             };
 
@@ -797,7 +799,7 @@ public class HandlebarsMailService : IMailService
     {
         const string newUserSubject = "set up a Bitwarden account for you";
         const string newUserButton = "Finish account setup";
-        const string existingUserSubject = "invited you to their Bitwarden organization";
+        const string existingUserSubject = "invited you to their Bitwarden vault";
         const string existingUserButton = "Accept invitation";
 
         if (IsEnterpriseOrTeamsPlan(planType))
@@ -823,7 +825,7 @@ public class HandlebarsMailService : IMailService
         }
 
         return (userHasExistingUser
-                ? "You have been invited to a Bitwarden Organization"
+                ? "You have been invited to a Bitwarden vault"
                 : "You have been invited to Bitwarden Password Manager",
             "AdminConsole.OrganizationInvite.OrganizationInviteFreeView",
             existingUserButton);
@@ -1562,7 +1564,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
     {
-        var message = CreateDefaultMessage("Request to Delete Your Organization", email);
+        var message = CreateDefaultMessage("Request to delete your organization", email);
         var model = new OrganizationInitiateDeleteModel
         {
             Token = WebUtility.UrlEncode(token),
@@ -1622,7 +1624,7 @@ public class HandlebarsMailService : IMailService
         MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
         {
             var sanitizedOrgName = CoreHelpers.SanitizeForEmail(org.DisplayName());
-            var message = CreateDefaultMessage($"{sanitizedOrgName} has identified {notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")}", notification.Email);
+            var message = CreateDefaultMessage($"{notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")} identified", notification.Email);
             var model = new SecurityTaskNotificationViewModel
             {
                 OrgName = sanitizedOrgName,

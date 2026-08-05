@@ -6,7 +6,6 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -18,7 +17,6 @@ namespace Bit.Core.Test.Billing.Organizations.Commands;
 
 public class PreviewOrganizationTaxCommandTests
 {
-    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly ILogger<PreviewOrganizationTaxCommand> _logger = Substitute.For<ILogger<PreviewOrganizationTaxCommand>>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
@@ -29,7 +27,7 @@ public class PreviewOrganizationTaxCommandTests
     public PreviewOrganizationTaxCommandTests()
     {
         _user = new User { Id = Guid.NewGuid(), Email = "test@example.com" };
-        _command = new PreviewOrganizationTaxCommand(_featureService, _logger, _pricingClient, _stripeAdapter, _subscriptionDiscountService);
+        _command = new PreviewOrganizationTaxCommand(_logger, _pricingClient, _stripeAdapter, _subscriptionDiscountService);
     }
 
     #region Subscription Purchase
@@ -79,7 +77,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2021-family-for-enterprise-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 1 &&
@@ -137,7 +134,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "CA" &&
             options.CustomerDetails.Address.PostalCode == "K1A 0A6" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.SubscriptionDetails.Items.Count == 2 &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "2023-teams-org-seat-monthly" && item.Quantity == 5) &&
@@ -200,7 +196,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "GB" &&
             options.CustomerDetails.Address.PostalCode == "SW1A 1AA" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.CustomerDetails.TaxIds.Count == 1 &&
             options.CustomerDetails.TaxIds[0].Type == "gb_vat" &&
             options.CustomerDetails.TaxIds[0].Value == "123456789" &&
@@ -261,113 +256,9 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "90210" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2020-families-org-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 6 &&
-            options.Discounts == null));
-    }
-
-    [Fact]
-    public async Task Run_OrganizationSubscriptionPurchase_BusinessUseNonUSCountry_UsesTaxExemptReverse()
-    {
-        var purchase = new OrganizationSubscriptionPurchase
-        {
-            Tier = ProductTierType.Teams,
-            Cadence = PlanCadenceType.Monthly,
-            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
-            {
-                Seats = 3,
-                AdditionalStorage = 0,
-                Sponsored = false
-            }
-        };
-
-        var billingAddress = new BillingAddress
-        {
-            Country = "DE",
-            PostalCode = "10115"
-        };
-
-        var plan = new TeamsPlan(false);
-        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
-
-        var invoice = new Invoice
-        {
-            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
-            Total = 2700
-        };
-
-        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
-
-        var result = await _command.Run(_user, purchase, billingAddress);
-
-        Assert.True(result.IsT0);
-        var (tax, total) = result.AsT0;
-        Assert.Equal(0.00m, tax);
-        Assert.Equal(27.00m, total);
-
-        // Verify the correct Stripe API call for business use in non-US country (tax exempt reverse)
-        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
-            options.AutomaticTax.Enabled == true &&
-            options.Currency == "usd" &&
-            options.CustomerDetails.Address.Country == "DE" &&
-            options.CustomerDetails.Address.PostalCode == "10115" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
-            options.SubscriptionDetails.Items.Count == 1 &&
-            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
-            options.SubscriptionDetails.Items[0].Quantity == 3 &&
-            options.Discounts == null));
-    }
-
-    [Fact]
-    public async Task Run_OrganizationSubscriptionPurchase_BusinessUseSwitzerland_UsesTaxExemptNone()
-    {
-        var purchase = new OrganizationSubscriptionPurchase
-        {
-            Tier = ProductTierType.Teams,
-            Cadence = PlanCadenceType.Monthly,
-            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
-            {
-                Seats = 3,
-                AdditionalStorage = 0,
-                Sponsored = false
-            }
-        };
-
-        var billingAddress = new BillingAddress
-        {
-            Country = "CH",
-            PostalCode = "3001"
-        };
-
-        var plan = new TeamsPlan(false);
-        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
-
-        var invoice = new Invoice
-        {
-            TotalTaxes = [new InvoiceTotalTax { Amount = 220 }],
-            Total = 2920
-        };
-
-        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
-
-        var result = await _command.Run(_user, purchase, billingAddress);
-
-        Assert.True(result.IsT0);
-        var (tax, total) = result.AsT0;
-        Assert.Equal(2.20m, tax);
-        Assert.Equal(29.20m, total);
-
-        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
-            options.AutomaticTax.Enabled == true &&
-            options.Currency == "usd" &&
-            options.CustomerDetails.Address.Country == "CH" &&
-            options.CustomerDetails.Address.PostalCode == "3001" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
-            options.SubscriptionDetails.Items.Count == 1 &&
-            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
-            options.SubscriptionDetails.Items[0].Quantity == 3 &&
             options.Discounts == null));
     }
 
@@ -417,7 +308,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "ES" &&
             options.CustomerDetails.Address.PostalCode == "28001" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.CustomerDetails.TaxIds.Count == 2 &&
             options.CustomerDetails.TaxIds.Any(t => t.Type == TaxIdType.SpanishNIF && t.Value == "12345678Z") &&
             options.CustomerDetails.TaxIds.Any(t => t.Type == TaxIdType.EUVAT && t.Value == "ES12345678Z") &&
@@ -473,7 +363,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -532,7 +421,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "CA" &&
             options.CustomerDetails.Address.PostalCode == "K1A 0A6" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.SubscriptionDetails.Items.Count == 4 &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "2023-enterprise-org-seat-annually" && item.Quantity == 10) &&
@@ -591,7 +479,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2021-family-for-enterprise-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 1 &&
@@ -650,7 +537,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "CA" &&
             options.CustomerDetails.Address.PostalCode == "K1A 0A6" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.SubscriptionDetails.Items.Count == 2 &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "2023-teams-org-seat-monthly" && item.Quantity == 5) &&
@@ -707,7 +593,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -759,7 +644,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -813,7 +697,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -866,7 +749,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -922,7 +804,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -978,7 +859,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -1034,7 +914,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -1091,7 +970,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 2 &&
@@ -1144,7 +1022,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "CA" &&
             options.CustomerDetails.Address.PostalCode == "K1A 0A6" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2020-families-org-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 1 &&
@@ -1219,7 +1096,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "10012" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 6 &&
@@ -1294,7 +1170,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "10012" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-enterprise-org-seat-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 6 &&
@@ -1347,7 +1222,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "GB" &&
             options.CustomerDetails.Address.PostalCode == "SW1A 1AA" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.SubscriptionDetails.Items.Count == 2 &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "2023-enterprise-org-seat-annually" && item.Quantity == 2) &&
@@ -1425,7 +1299,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "DE" &&
             options.CustomerDetails.Address.PostalCode == "10115" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.SubscriptionDetails.Items.Count == 4 &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "2023-enterprise-org-seat-annually" && item.Quantity == 8) &&
@@ -1530,6 +1403,76 @@ public class PreviewOrganizationTaxCommandTests
 
         // The flat-rate plan's subscription only contains its single, non-seat-based line item -
         // there is no per-seat price for the command to look up.
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = currentPlan.PasswordManager.StripePlanId }, Quantity = 1 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 900 }],
+            Total = 9900
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == newPlan.PasswordManager.StripeSeatPlanId &&
+            options.SubscriptionDetails.Items[0].Quantity == organization.Seats));
+    }
+
+    // Regression (PM-40866): Teams 2019 is a packaged plan whose subscription carries the base bundle
+    // line ("teams-org-annually"/"teams-org-monthly"), not the per-seat overage line, when the org is
+    // at/under its 5 included seats. The command must bill the new seat price at the org's seat count
+    // instead of looking up the (absent) overage price and returning a BadRequest.
+    [Theory]
+    [InlineData(true)]   // Teams 2019 Annual  -> Enterprise
+    [InlineData(false)]  // Teams 2019 Monthly -> Enterprise
+    public async Task Run_OrganizationPlanChange_Teams2019ToEnterprise_UsesOrganizationSeats(bool isAnnual)
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = isAnnual ? PlanType.TeamsAnnually2019 : PlanType.TeamsMonthly2019,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 5
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = isAnnual ? PlanCadenceType.Annually : PlanCadenceType.Monthly
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "10012"
+        };
+
+        var currentPlan = new Teams2019Plan(isAnnual);
+        var newPlan = new EnterprisePlan(isAnnual);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        // At/under its 5 included seats, the packaged plan's subscription has only the base bundle line -
+        // the per-seat overage line ("teams-org-seat-*") is absent.
         var subscriptionItems = new List<SubscriptionItem>
         {
             new() { Price = new Price { Id = currentPlan.PasswordManager.StripePlanId }, Quantity = 1 }
@@ -1692,7 +1635,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "90210" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-enterprise-org-seat-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -2282,7 +2224,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 10 &&
@@ -2347,7 +2288,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "CA" &&
             options.CustomerDetails.Address.PostalCode == "K1A 0A6" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.SubscriptionDetails.Items.Count == 2 &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "2023-enterprise-org-seat-annually" && item.Quantity == 15) &&
@@ -2414,7 +2354,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "DE" &&
             options.CustomerDetails.Address.PostalCode == "10115" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "secrets-manager-teams-seat-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 8 &&
@@ -2482,7 +2421,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "GB" &&
             options.CustomerDetails.Address.PostalCode == "SW1A 1AA" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.CustomerDetails.TaxIds.Count == 1 &&
             options.CustomerDetails.TaxIds[0].Type == "gb_vat" &&
             options.CustomerDetails.TaxIds[0].Value == "GB123456789" &&
@@ -2563,7 +2501,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "ES" &&
             options.CustomerDetails.Address.PostalCode == "28001" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
             options.CustomerDetails.TaxIds.Count == 2 &&
             options.CustomerDetails.TaxIds.Any(t => t.Type == TaxIdType.SpanishNIF && t.Value == "12345678Z") &&
             options.CustomerDetails.TaxIds.Any(t => t.Type == TaxIdType.EUVAT && t.Value == "ES12345678Z") &&
@@ -2695,7 +2632,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "AU" &&
             options.CustomerDetails.Address.PostalCode == "2000" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 2 &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "2020-families-org-annually" && item.Quantity == 6) &&
@@ -2797,7 +2733,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "90210" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -2920,7 +2855,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2020-families-org-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 6 &&
@@ -2979,7 +2913,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
@@ -3038,7 +2971,6 @@ public class PreviewOrganizationTaxCommandTests
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
             options.CustomerDetails.Address.PostalCode == "12345" &&
-            options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-enterprise-org-seat-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 10 &&
@@ -3187,10 +3119,8 @@ public class PreviewOrganizationTaxCommandTests
     #region Feature flag
 
     [Fact]
-    public async Task Run_FlagOn_BusinessUse_DoesNotSetCustomerDetailsTaxExempt()
+    public async Task Run_BusinessUse_DoesNotSetCustomerDetailsTaxExempt()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
-
         var purchase = new OrganizationSubscriptionPurchase
         {
             Tier = ProductTierType.Teams,
@@ -3219,10 +3149,8 @@ public class PreviewOrganizationTaxCommandTests
     }
 
     [Fact]
-    public async Task Run_FlagOn_FamiliesTier_DoesNotSetCustomerDetailsTaxExempt()
+    public async Task Run_FamiliesTier_DoesNotSetCustomerDetailsTaxExempt()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
-
         var purchase = new OrganizationSubscriptionPurchase
         {
             Tier = ProductTierType.Families,
