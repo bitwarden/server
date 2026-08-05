@@ -1,4 +1,4 @@
-﻿using Bit.Core.Utilities;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -7,7 +7,7 @@ using NSubstitute;
 using Serilog.Extensions.Logging;
 using Xunit;
 
-namespace Bit.Core.Test.Utilities;
+namespace Bit.SerilogFileLogging.Test;
 
 public class LoggerFactoryExtensionsTests
 {
