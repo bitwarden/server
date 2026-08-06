@@ -16,8 +16,10 @@ public class OrganizationDeleteTaskRepositoryTests
 {
     [Theory, DatabaseData]
     public async Task ClaimNextPendingAsync_PendingRow_ReturnsRowWithLeaseSet(
-        IOrganizationDeleteTaskRepository sut)
+        IOrganizationDeleteTaskRepository sut, Database database, IServiceProvider services)
     {
+        await ClearTasksAsync(services, database);
+
         var task = new OrganizationDeleteTask
         {
             OrganizationId = Guid.NewGuid(),
@@ -53,8 +55,10 @@ public class OrganizationDeleteTaskRepositoryTests
 
     [Theory, DatabaseData]
     public async Task ClaimNextPendingAsync_ConcurrentCalls_RowClaimedOnlyOnce(
-        IOrganizationDeleteTaskRepository sut)
+        IOrganizationDeleteTaskRepository sut, Database database, IServiceProvider services)
     {
+        await ClearTasksAsync(services, database);
+
         var task = new OrganizationDeleteTask
         {
             OrganizationId = Guid.NewGuid(),
@@ -73,6 +77,8 @@ public class OrganizationDeleteTaskRepositoryTests
     public async Task ClaimNextPendingAsync_StaleRevisionDate_RowIsReclaimable(
         IOrganizationDeleteTaskRepository sut, Database database, IServiceProvider services)
     {
+        await ClearTasksAsync(services, database);
+
         var task = new OrganizationDeleteTask
         {
             OrganizationId = Guid.NewGuid(),
@@ -95,8 +101,10 @@ public class OrganizationDeleteTaskRepositoryTests
 
     [Theory, DatabaseData]
     public async Task ClaimNextPendingAsync_FailureCountAtMax_RowNotClaimed(
-        IOrganizationDeleteTaskRepository sut)
+        IOrganizationDeleteTaskRepository sut, Database database, IServiceProvider services)
     {
+        await ClearTasksAsync(services, database);
+
         var task = new OrganizationDeleteTask
         {
             OrganizationId = Guid.NewGuid(),
@@ -224,6 +232,38 @@ public class OrganizationDeleteTaskRepositoryTests
             .Where(t => t.OrganizationId == organizationId)
             .ToListAsync();
         return rows.Cast<OrganizationDeleteTask>().ToList();
+    }
+
+    /// <summary>
+    /// Removes tasks left behind by earlier runs, across providers.
+    /// <para>
+    /// <c>ClaimNextPendingAsync</c> claims the oldest claimable task in the whole table, and a lease
+    /// goes stale after <see cref="OrganizationDeleteTask.LeaseDurationMinutes"/>. Rows from a
+    /// previous run therefore become claimable again, tie with this run's task on
+    /// <c>CreationDate</c>, and a test asserting it claimed its own row can pick up a stranger's —
+    /// so the claim tests only fail once the previous run is old enough. Clearing first makes them
+    /// deterministic.
+    /// </para>
+    /// <para>
+    /// Safe to clear wholesale: this table is exercised only by this class, xUnit runs the methods
+    /// of a class sequentially, and each provider runs against its own database.
+    /// </para>
+    /// </summary>
+    private static async Task ClearTasksAsync(IServiceProvider services, Database database)
+    {
+        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+        {
+            await using var connection = new SqlConnection(database.ConnectionString);
+            await connection.OpenAsync();
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = "DELETE FROM [dbo].[OrganizationDeleteTask]";
+            await cmd.ExecuteNonQueryAsync();
+            return;
+        }
+
+        using var scope = services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        await dbContext.OrganizationDeleteTasks.ExecuteDeleteAsync();
     }
 
     /// <summary>
