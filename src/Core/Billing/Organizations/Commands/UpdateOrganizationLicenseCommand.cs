@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
@@ -44,7 +45,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     {
         if (currentOrganizationUsingLicenseKey != null && currentOrganizationUsingLicenseKey.Id != selfHostedOrganization.Id)
         {
-            throw new BadRequestException("License is already in use by another organization.");
+            throw new BadRequestException(new LicenseAlreadyInUseError().Message);
         }
 
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
@@ -90,6 +91,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             license.UsePhishingBlocker = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UsePhishingBlocker);
             license.UseMyItems = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseMyItems);
             license.UseInviteLinks = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseInviteLinks);
+            license.UsePam = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UsePam);
             license.MaxStorageGb = claimsPrincipal.GetValue<short?>(OrganizationLicenseConstants.MaxStorageGb);
             license.InstallationId = claimsPrincipal.GetValue<Guid>(OrganizationLicenseConstants.InstallationId);
             license.LicenseType = claimsPrincipal.GetValue<LicenseType>(OrganizationLicenseConstants.LicenseType);
@@ -101,8 +103,9 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             license.AllowAdminAccessToAllCollectionItems = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems);
         }
 
+        var useSharedFolderTerminology = _featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation);
         var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception) &&
-            selfHostedOrganization.CanUseLicense(license, out exception);
+            selfHostedOrganization.CanUseLicense(license, useSharedFolderTerminology, out exception);
 
         if (!canUse)
         {

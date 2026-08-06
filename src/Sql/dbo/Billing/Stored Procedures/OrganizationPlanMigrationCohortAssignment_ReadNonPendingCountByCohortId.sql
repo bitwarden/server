@@ -13,7 +13,7 @@ BEGIN
     WHERE
         A.[CohortId] = @CohortId
         AND (
-            (C.[MigrationPathId] IS NOT NULL AND A.[ScheduledDate] IS NOT NULL)
+            (C.[MigrationPathId] IS NOT NULL AND (A.[ScheduledDate] IS NOT NULL OR A.[MigratedDate] IS NOT NULL))
             OR
             (C.[MigrationPathId] IS NULL AND A.[ChurnDiscountAppliedDate] IS NOT NULL)
         )

@@ -29,7 +29,7 @@ public static class BuilderExtensions
     {
         var migrationArgs = new List<string> { "-File", builder.Required("Scripts:DbMigration") };
         if (builder.IsSelfHosted())
-            migrationArgs.Add("-self-hosted");
+            migrationArgs.Add("-selfhost");
 
         return builder
             .AddExecutable("run-db-migrations", "pwsh", builder.Required("WorkingDirectory"), migrationArgs.ToArray());
@@ -123,11 +123,19 @@ public static class BuilderExtensions
         if (!int.TryParse(builder.Required("Idp:Port"), out var port))
             throw new InvalidOperationException("Invalid value for Idp:Port.");
 
+        // This is hardcoded to localhost because the browser needs to navigate to the published SSO address,
+        // not the internal Aspire endpoint reference (aspire.dev.internal). The port is still detected dynamically.
+        var ssoBaseUrl = $"http://localhost:{builder.GetBitwardenServicePort("sso")}/saml2";
+        var orgId = builder.AddParameter("sso-org-id")
+            .WithDescription("Organization ID with SSO configured to use with the IdP service.");
+
         return builder
             .AddContainer("idp", imageName, imageTag)
             .WithHttpEndpoint(port: port, name: "http", targetPort: 8080)
-            .WithEnvironment("SIMPLESAMLPHP_SP_ENTITY_ID", builder.Required("Idp:SpEntityId"))
-            .WithEnvironment("SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE", builder.Required("Idp:SpAcsUrl"))
+            .WithEnvironment("SIMPLESAMLPHP_SP_ENTITY_ID",
+                ReferenceExpression.Create($"{ssoBaseUrl}/{orgId.Resource}"))
+            .WithEnvironment("SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE",
+                ReferenceExpression.Create($"{ssoBaseUrl}/{orgId.Resource}/Acs"))
             .WithBindMount($"{builder.Required("WorkingDirectory")}/authsources.php",
                 "/var/www/simplesamlphp/config/authsources.php")
             .WithExplicitStart();
@@ -219,6 +227,11 @@ public static class BuilderExtensions
             .WaitFor(db)
             .WaitForCompletion(secretsSetup);
 
+        if (builder.IsSelfHosted())
+        {
+            service.WithEnvironment("developSelfHosted", "true");
+        }
+
         if (name is "admin" or "identity" or "billing" or "sso")
             service.WithReference(mail.GetEndpoint("smtp"));
 
@@ -263,12 +276,14 @@ public static class BuilderExtensions
     public static void ConfigureWebFrontend(this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> api)
     {
-        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var port))
+        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var basePort))
             throw new InvalidOperationException("Invalid value for WebFrontend:Port.");
-
+        var port = builder.IsSelfHosted() ? basePort + 1 : basePort;
+        var scriptName = builder.IsSelfHosted() ? "build:bit:selfhost:watch" : "build:bit:watch";
+        var url = builder.Required("WebFrontend:Url") + $":{port}";
         builder
-            .AddBitwardenNpmApp("web-frontend", "web", api, port: port)
-            .WithUrl(builder.Required("WebFrontend:Url"))
+            .AddBitwardenNpmApp("web-frontend", "web", api, port: port, scriptName: scriptName)
+            .WithUrl(url)
             .WithExternalHttpEndpoints();
     }
 

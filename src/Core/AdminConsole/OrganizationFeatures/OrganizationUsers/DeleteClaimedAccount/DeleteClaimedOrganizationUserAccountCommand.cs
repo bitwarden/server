@@ -16,7 +16,6 @@ using OneOf.Types;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 
 public class DeleteClaimedOrganizationUserAccountCommand(
-    IUserService userService,
     IEventService eventService,
     IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
     IOrganizationUserRepository organizationUserRepository,
@@ -24,7 +23,6 @@ public class DeleteClaimedOrganizationUserAccountCommand(
     IPushNotificationService pushService,
     ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
     IDeleteClaimedOrganizationUserAccountValidator deleteClaimedOrganizationUserAccountValidator,
-    IFeatureService featureService,
     ISubscriberService subscriberService)
     : IDeleteClaimedOrganizationUserAccountCommand
 {
@@ -132,18 +130,11 @@ public class DeleteClaimedOrganizationUserAccountCommand(
         {
             try
             {
-                if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-                {
-                    // In cases where the subscription is not active, the cancellation will fail and be logged.
-                    await subscriberService.CancelSubscription(
-                        user,
-                        cancelImmediately: false,
-                        offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
-                }
-                else
-                {
-                    await userService.CancelPremiumAsync(user);
-                }
+                // In cases where the subscription is not active, the cancellation will fail and be logged.
+                await subscriberService.CancelSubscription(
+                    user,
+                    cancelImmediately: false,
+                    offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
             }
             catch (Exception exception) when (exception is GatewayException or BillingException)
             {

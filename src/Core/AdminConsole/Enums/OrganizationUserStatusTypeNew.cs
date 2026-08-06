@@ -14,4 +14,5 @@ public enum OrganizationUserStatusTypeNew : short
     Invited = 0,
     Accepted = 1,
     Confirmed = 2,
+    Staged = 3,
 }

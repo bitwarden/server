@@ -22,23 +22,39 @@ internal sealed class RecipeExecutor
     }
 
     /// <summary>
-    /// Executes the recipe by resolving keyed steps, running them in order, and committing results.
+    /// Executes the recipe by resolving keyed steps, running the pre-commit steps in order, committing,
+    /// then running any steps marked <see cref="IPostCommitStep"/>.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Clears the EntityRegistry at the start to ensure a clean slate for each run.
+    /// </para>
+    /// <para>
+    /// <strong>Steps are awaited strictly sequentially.</strong> Never batch them with
+    /// <c>Task.WhenAll</c>: <see cref="SeederContext"/> is not thread-safe and each step reads state
+    /// written by the ones before it. Synchronous steps return an already-completed task, so they
+    /// still run inline on the calling thread in registration order.
+    /// </para>
+    /// <para>
+    /// The returned <see cref="PipelineExecutionResult"/> is snapshotted <em>before</em> the commit,
+    /// because committing clears the context's entity lists. A post-commit step therefore cannot
+    /// contribute to it. A caller that needs post-commit values in the result should append
+    /// <c>return result with { ... };</c> after the post-commit loop rather than moving the snapshot —
+    /// several of its arguments read <c>.Count</c> off lists the committer has already cleared.
+    /// </para>
     /// </remarks>
-    internal PipelineExecutionResult Execute()
+    internal async Task<PipelineExecutionResult> ExecuteAsync()
     {
-        var steps = _serviceProvider.GetKeyedServices<IStep>(_recipeName)
-            .OrderBy(s => s is OrderedStep os ? os.Order : int.MaxValue)
+        var steps = _serviceProvider.GetKeyedServices<OrderedStep>(_recipeName)
+            .OrderBy(s => s.Order)
             .ToList();
 
         var context = new SeederContext(_serviceProvider);
         context.Registry.Clear();
 
-        foreach (var step in steps)
+        foreach (var step in steps.Where(s => !s.IsPostCommit))
         {
-            step.Execute(context);
+            await step.ExecuteAsync(context);
         }
 
         // Capture counts BEFORE committing (commit clears the lists)
@@ -54,7 +70,8 @@ internal sealed class RecipeExecutor
             context.Groups.Count,
             context.Collections.Count,
             context.Ciphers.Count,
-            context.Folders.Count);
+            context.Folders.Count,
+            context.SsoIdentifier);
 
         var progress = context.GetProgress();
         progress?.Report(new PhaseStarted(SeederPhases.CommittingToDatabase, null));
@@ -65,6 +82,23 @@ internal sealed class RecipeExecutor
         finally
         {
             progress?.Report(new PhaseCompleted(SeederPhases.CommittingToDatabase));
+        }
+
+        var postCommit = steps.Where(s => s.IsPostCommit).ToList();
+        if (postCommit.Count > 0)
+        {
+            progress?.Report(new PhaseStarted(SeederPhases.PostCommit, null));
+            try
+            {
+                foreach (var step in postCommit)
+                {
+                    await step.ExecuteAsync(context);
+                }
+            }
+            finally
+            {
+                progress?.Report(new PhaseCompleted(SeederPhases.PostCommit));
+            }
         }
 
         return result;

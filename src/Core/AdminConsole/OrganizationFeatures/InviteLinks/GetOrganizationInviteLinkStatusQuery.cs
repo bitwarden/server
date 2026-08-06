@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Repositories;
@@ -15,10 +16,10 @@ public class GetOrganizationInviteLinkStatusQuery(
     IPolicyRepository policyRepository)
     : IGetOrganizationInviteLinkStatusQuery
 {
-    public async Task<CommandResult<OrganizationInviteLinkStatus>> GetStatusAsync(Guid code)
+    public async Task<CommandResult<OrganizationInviteLinkStatus>> GetStatusAsync(Guid organizationId, Guid code)
     {
-        var inviteLink = await organizationInviteLinkRepository.GetByCodeAsync(code);
-        if (inviteLink is null)
+        var inviteLink = await organizationInviteLinkRepository.GetByOrganizationIdAsync(organizationId);
+        if (inviteLink is null || !inviteLink.CodeMatches(code.ToString()))
         {
             return new InviteLinkNotFound();
         }
@@ -31,19 +32,18 @@ public class GetOrganizationInviteLinkStatusQuery(
 
         if (!organization.UseInviteLinks)
         {
-            return new InviteLinkNotAvailable();
+            return new OrganizationInviteLinkStatus(
+                organization.Name, LinksEnabled: false, SeatsAvailable: false, SupportsConfirmation: false, Sso: null);
         }
 
         var occupied = (await organizationRepository
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
-        var seatsAvailable = !organization.Seats.HasValue
-            || occupied < organization.Seats.Value
-            || !organization.MaxAutoscaleSeats.HasValue
-            || organization.Seats.Value < organization.MaxAutoscaleSeats.Value;
+        var seatsAvailable = OrganizationSeatAvailability.HasAvailableSeats(organization, occupied);
 
         var sso = seatsAvailable ? await GetSsoStatusAsync(organization) : null;
 
-        return new OrganizationInviteLinkStatus(organization.Name, seatsAvailable, sso);
+        return new OrganizationInviteLinkStatus(
+            organization.Name, LinksEnabled: true, seatsAvailable, inviteLink.SupportsConfirmation, sso);
     }
 
     private async Task<OrganizationInviteLinkSsoStatus?> GetSsoStatusAsync(Organization organization)

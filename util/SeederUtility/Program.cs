@@ -5,16 +5,12 @@ namespace Bit.SeederUtility;
 
 public class Program
 {
-    private static int Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
-        // Skip the banner when stdout is piped or redirected
-        if (!Console.IsOutputRedirected)
-        {
-            PrintBanner();
-        }
+        PrintBanner();
 
-        return new AppRunner<Program>()
-            .Run(args);
+        return await new AppRunner<Program>()
+            .RunAsync(args);
     }
 
     private static void PrintBanner()

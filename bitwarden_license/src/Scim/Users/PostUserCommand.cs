@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
@@ -27,17 +28,68 @@ public class PostUserCommand(
     IScimContext scimContext,
     IFeatureService featureService,
     IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
+    ICreateStagedOrganizationUsersCommand createStagedOrganizationUsersCommand,
     TimeProvider timeProvider)
     : IPostUserCommand
 {
     public async Task<OrganizationUserUserDetails?> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
     {
+        var inviteUsersAfterProvisioning = scimContext.ScimConfiguration?.InviteUsersAfterProvisioning ?? true;
+        if (!inviteUsersAfterProvisioning && featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+        {
+            return await StageScimOrganizationUserAsync(model, organizationId, scimContext.RequestScimProvider);
+        }
+
         if (featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization) is false)
         {
             return await InviteScimOrganizationUserAsync(model, organizationId, scimContext.RequestScimProvider);
         }
 
         return await InviteScimOrganizationUserAsync_vNext(model, organizationId, scimContext.RequestScimProvider);
+    }
+
+    private async Task<OrganizationUserUserDetails?> StageScimOrganizationUserAsync(
+        ScimUserRequestModel model,
+        Guid organizationId,
+        ScimProviderType scimProvider)
+    {
+        var email = model.ToOrganizationUserInvite(scimProvider).Emails.Single();
+        var externalId = model.ExternalIdForInvite();
+
+        if (string.IsNullOrWhiteSpace(email) || !model.Active)
+        {
+            throw new BadRequestException();
+        }
+
+        var orgUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+        if (orgUsers.Any(ou => ou.Email?.ToLowerInvariant() == email || ou.ExternalId == externalId))
+        {
+            throw new ConflictException();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await createStagedOrganizationUsersCommand.RunAsync(new CreateStagedOrganizationUsersRequest
+        {
+            Organization = organization,
+            Users = [new StagedOrganizationUserRequest { Email = email, ExternalId = externalId }],
+            EventSystemUser = EventSystemUser.SCIM
+        });
+
+        if (result.IsError)
+        {
+            throw new BadRequestException(result.AsError.Message);
+        }
+
+        // The command skips emails already present in the organization, so an empty result means the user
+        // was added by a concurrent request after the conflict check above.
+        var stagedUser = result.AsSuccess.FirstOrDefault() ?? throw new ConflictException();
+
+        return await organizationUserRepository.GetDetailsByIdAsync(stagedUser.Id);
     }
 
     private async Task<OrganizationUserUserDetails?> InviteScimOrganizationUserAsync_vNext(

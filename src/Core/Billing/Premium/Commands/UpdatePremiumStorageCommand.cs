@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
@@ -183,6 +184,7 @@ public class UpdatePremiumStorageCommand(
                     Items = BuildPhaseItemsWithStorage(phase1.Items, storagePriceId, additionalStorageGb),
                     Discounts = phase1.Discounts?.Select(d =>
                         new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                    Metadata = phase1.Metadata,
                     ProrationBehavior = phase1.ProrationBehavior
                 });
             }
@@ -203,12 +205,14 @@ public class UpdatePremiumStorageCommand(
                     StartDate = phase2.StartDate,
                     EndDate = phase2.EndDate,
                     Items = BuildPhaseItemsWithStorage(phase2.Items, storagePriceId, additionalStorageGb),
-                    // When Phase 2 is already active, its one-time migration discount has been
-                    // applied and consumed. Re-including it would cause Stripe to re-apply it.
+                    // Phase 2 active (Phase 1 ended): its consumed one-time discount must not be re-applied
+                    // — suppress. Future Phase 2: carry the customer discount so a storage change doesn't
+                    // strand the coupon the schedule-creation path put there.
                     Discounts = phase1Ended
                         ? []
-                        : phase2.Discounts?.Select(d =>
-                            new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                        : (subscription.Customer?.Discount).MergeDiscountCouponIds(
+                            phase2.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
+                    Metadata = phase2.Metadata,
                     ProrationBehavior = phase2.ProrationBehavior
                 });
             }

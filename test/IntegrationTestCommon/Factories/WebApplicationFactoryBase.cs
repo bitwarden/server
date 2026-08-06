@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -47,6 +48,8 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// This will need to be set BEFORE using the <c>Server</c> property
     /// </remarks>
     public bool ManagesDatabase { get; set; } = true;
+
+    public bool StripeEnabled { get; set; } = false;
 
     protected readonly List<Action<IServiceCollection>> _configureTestServices = new();
     private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
@@ -118,6 +121,20 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { key, value },
             });
         });
+    }
+
+    protected override IHostBuilder? CreateHostBuilder()
+    {
+        var builder = base.CreateHostBuilder();
+        // Disable OTel to prevent OTLP export attempts hanging test runs in CI.
+        builder?.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "OpenTelemetry:Enabled", "false" },
+            });
+        });
+        return builder;
     }
 
     /// <summary>
@@ -232,9 +249,12 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
 
             // Noop StripePaymentService - this could be changed to integrate with our Stripe test account
-            Replace(services, Substitute.For<IStripePaymentService>());
+            if (!StripeEnabled)
+            {
+                Replace(services, Substitute.For<IStripePaymentService>());
 
-            Replace(services, Substitute.For<IOrganizationBillingService>());
+                Replace(services, Substitute.For<IOrganizationBillingService>());
+            }
         });
 
         foreach (var configureTestService in _configureTestServices)

@@ -247,7 +247,11 @@ public class GetBitwardenSubscriptionQuery(
                 .Select(d => d.Coupon));
         }
 
-        return coupons;
+        // The customer coupon can appear both here and in the mirrored Phase 2 list.
+        return coupons
+            .Where(coupon => coupon is not null)
+            .DistinctBy(coupon => coupon.Id, StringComparer.Ordinal)
+            .ToList();
     }
 
     private static (Coupon? CartLevel, List<Coupon> ProductLevel) PartitionCouponsByScope(

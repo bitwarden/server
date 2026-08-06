@@ -6,7 +6,11 @@ BEGIN
 
     SELECT TOP 1
         *
-    FROM [dbo].[OrganizationReportView]
-    WHERE [OrganizationId] = @OrganizationId
-    ORDER BY [RevisionDate] DESC
+    FROM
+        [dbo].[OrganizationReportView]
+    WHERE
+        [OrganizationId] = @OrganizationId
+        AND [ReportData] <> ''
+    ORDER BY
+        [RevisionDate] DESC
 END

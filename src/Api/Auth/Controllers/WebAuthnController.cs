@@ -53,7 +53,7 @@ public class WebAuthnController : Controller
         _policyRequirementQuery = policyRequirementQuery;
     }
 
-    [Authorize(Policies.Web)]
+    [Authorize(Policies.Application)]
     [HttpGet("")]
     public async Task<ListResponseModel<WebAuthnCredentialResponseModel>> Get()
     {
@@ -81,7 +81,7 @@ public class WebAuthnController : Controller
         };
     }
 
-    [Authorize(Policies.Web)]
+    [Authorize(Policies.Application)]
     [HttpPost("assertion-options")]
     public async Task<WebAuthnLoginAssertionOptionsResponseModel> AssertionOptions([FromBody] SecretVerificationRequestModel model)
     {

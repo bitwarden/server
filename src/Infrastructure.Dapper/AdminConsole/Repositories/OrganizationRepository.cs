@@ -3,6 +3,7 @@ using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -119,18 +120,6 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
-    public async Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync()
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<OrganizationAbility>(
-                "[dbo].[Organization_ReadAbilities]",
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
     public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -243,6 +232,16 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         await using var connection = new SqlConnection(ConnectionString);
         return (await connection.QueryAsync<Organization>(
             $"[{Schema}].[{Table}_ReadManyByIds]",
+            new { OrganizationIds = ids.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure))
+            .ToList();
+    }
+
+    public async Task<ICollection<OrganizationPlanType>> GetPlanTypesByOrganizationIdsAsync(IEnumerable<Guid> ids)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        return (await connection.QueryAsync<OrganizationPlanType>(
+            $"[{Schema}].[Organization_ReadPlanTypesByIds]",
             new { OrganizationIds = ids.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure))
             .ToList();

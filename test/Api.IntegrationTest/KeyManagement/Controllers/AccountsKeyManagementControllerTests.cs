@@ -191,6 +191,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupRotateUserAccountUnlockData(request, user);
         SetupRotateUserAccountData(request);
         SetupRotateUserAccountKeys(request, isV2Crypto: false);
+        var originalMasterPassword = user.MasterPassword;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
         var responseMessage = await response.Content.ReadAsStringAsync();
@@ -203,6 +204,23 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations, userNewState.KdfIterations);
         Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory, userNewState.KdfMemory);
         Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism, userNewState.KdfParallelism);
+
+        // Parity preservation: master-key-wrapped user key and hint are applied from the request
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey, userNewState.Key);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordHint, userNewState.MasterPasswordHint);
+
+        // Parity preservation: master password hash is rewritten and verifies against the new authentication hash
+        Assert.NotEqual(originalMasterPassword, userNewState.MasterPassword);
+        Assert.Equal(
+            PasswordVerificationResult.Success,
+            _passwordHasher.VerifyHashedPassword(
+                userNewState,
+                userNewState.MasterPassword!,
+                request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyAuthenticationHash));
+
+        // PM-38811 parity gap closer: LastPasswordChangeDate is set on this path via MasterPasswordService
+        Assert.NotNull(userNewState.LastPasswordChangeDate);
+        Assert.Equal(DateTime.UtcNow, userNewState.LastPasswordChangeDate.Value, TimeSpan.FromMinutes(1));
     }
 
     [Theory]
@@ -1197,5 +1215,90 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             KeyConnectorKeyWrappedUserKey = _mockEncryptedType7String
         };
         SetupCommonRotate(request, upgradeToken);
+    }
+
+    [Fact]
+    public async Task GetKeyRotationDataAsync_NotLoggedIn_Unauthorized()
+    {
+        var response = await _client.GetAsync("/accounts/key-management/key-rotation-data");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetKeyRotationDataAsync_NoData_ReturnsEmptyCollections()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.GetAsync("/accounts/key-management/key-rotation-data");
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<KeyRotationDataResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.Empty(result.OrganizationPasswordResetKeyData);
+        Assert.Empty(result.EmergencyAccessKeyData);
+        Assert.Empty(result.TrustedDeviceKeyData);
+        Assert.Empty(result.PasskeyKeyData);
+    }
+
+    [Fact]
+    public async Task GetKeyRotationDataAsync_WithTrustedDeviceAndGrantedEmergencyAccess_ReturnsFilteredData()
+    {
+        var grantee = await CreateGrantedEmergencyAccessAsync(EmergencyAccessStatusType.Confirmed);
+        await CreateTrustedDeviceAsync();
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.GetAsync("/accounts/key-management/key-rotation-data");
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<KeyRotationDataResponseModel>();
+
+        Assert.NotNull(result);
+
+        var emergencyAccess = Assert.Single(result.EmergencyAccessKeyData);
+        Assert.Equal(grantee.Id, emergencyAccess.GranteeId);
+        Assert.Equal(grantee.PublicKey, emergencyAccess.PublicKey);
+
+        var device = Assert.Single(result.TrustedDeviceKeyData);
+        Assert.Equal(_mockEncryptedString, device.EncryptedUserKey);
+    }
+
+    private async Task<User> CreateGrantedEmergencyAccessAsync(EmergencyAccessStatusType emergencyAccessStatus)
+    {
+        var granteeEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(granteeEmail);
+
+        var grantee = await _userRepository.GetByEmailAsync(granteeEmail);
+        var grantor = await _userRepository.GetByEmailAsync(_ownerEmail);
+        await _emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor!.Id,
+            GranteeId = grantee!.Id,
+            KeyEncrypted = _mockEncryptedString,
+            Status = emergencyAccessStatus,
+            Type = EmergencyAccessType.View,
+            WaitTimeDays = 10,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow
+        });
+
+        return grantee;
+    }
+
+    private async Task CreateTrustedDeviceAsync()
+    {
+        var owner = await _userRepository.GetByEmailAsync(_ownerEmail);
+        await _deviceRepository.CreateAsync(new Device
+        {
+            UserId = owner!.Id,
+            Name = "test-device",
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+            EncryptedUserKey = _mockEncryptedString,
+            EncryptedPublicKey = _mockEncryptedString,
+            EncryptedPrivateKey = _mockEncryptedString,
+        });
     }
 }

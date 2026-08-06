@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Services;
@@ -189,6 +190,7 @@ public class GetChurnMitigationOfferQuery(
         new(
             CouponId: coupon.Id,
             PercentOff: coupon.PercentOff,
+            AmountOff: coupon.AmountOff.ToMajor(),
             Duration: coupon.Duration,
             DurationInMonths: (int?)coupon.DurationInMonths,
             Name: coupon.Name);

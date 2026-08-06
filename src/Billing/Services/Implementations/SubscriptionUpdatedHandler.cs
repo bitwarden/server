@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using System.Globalization;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
@@ -8,6 +9,7 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
@@ -18,7 +20,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
-using Stripe.TestHelpers;
 using static Bit.Core.Billing.Constants.StripeConstants;
 using Event = Stripe.Event;
 
@@ -143,10 +144,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 break;
             case Organization organization:
                 {
-                    if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-                    {
-                        await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
-                    }
+                    await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
 
                     await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
 
@@ -321,10 +319,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     {
         await _priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
 
-        if (subscription.TestClock != null)
-        {
-            await WaitForTestClockToAdvanceAsync(subscription.TestClock);
-        }
+        await _stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
 
         var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
@@ -438,19 +433,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         if (subscriptionHasSecretsManagerTrial)
         {
             await _stripeAdapter.DeleteSubscriptionDiscountAsync(subscription.Id);
-        }
-    }
-
-    private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
-    {
-        while (testClock.Status != "ready")
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2));
-            testClock = await _stripeAdapter.GetTestClockAsync(testClock.Id);
-            if (testClock.Status == "internal_failure")
-            {
-                throw new Exception("Stripe Test Clock encountered an internal failure");
-            }
         }
     }
 
@@ -607,7 +589,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             var sourcePlan = await _pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
-            var sourcePriceId = GetPasswordManagerPriceId(sourcePlan);
+
+            // A Packaged source (Teams Starter via HasNonSeatBased, Teams 2019 via ActualUsage) is identified
+            // by its base price, which is present even when a sub-5 org has no seat-overage line; a Scalable
+            // source by its per-seat price.
+            var isPackagedSourcePlan = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy);
+            var sourcePriceId = isPackagedSourcePlan
+                ? sourcePlan.PasswordManager.StripePlanId
+                : sourcePlan.PasswordManager.StripeSeatPlanId;
             if (string.IsNullOrEmpty(sourcePriceId))
             {
                 _logger.LogWarning(
@@ -645,7 +634,56 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             organization.ChangePlan(targetPlan);
+
+            // Packaged source plans (Teams Starter's flat bundle cap, Teams 2019's base seat allotment) store a
+            // seat count in Seats that doesn't match the billed per-seat quantity; reconcile to what was billed.
+            // Also floor Seats on the DB SmSeats value to keep SM <= PM in the persisted record. Idempotent.
+            if (isPackagedSourcePlan)
+            {
+                var billedSeatQuantity = subscription.Items
+                    .First(item => item.Price?.Id == targetPriceId).Quantity;
+                organization.Seats = (int)Math.Max(Math.Max(1L, billedSeatQuantity), (long)(organization.SmSeats ?? 0));
+            }
+
             await _organizationRepository.ReplaceAsync(organization);
+
+            var sourceProvidedServiceAccounts = sourcePlan.SecretsManager?.BaseServiceAccount ?? 0;
+            var targetProvidedServiceAccounts = targetPlan.SecretsManager?.BaseServiceAccount ?? 0;
+            var grace = Math.Max(0, sourceProvidedServiceAccounts - targetProvidedServiceAccounts);
+
+            var sourceSecretsManagerSeatPlanId = sourcePlan.SecretsManager?.StripeSeatPlanId;
+            var previousSubscriptionHasSecretsManager = sourceSecretsManagerSeatPlanId != null &&
+                previousSubscription.Items.Data.Any(item => item.Price?.Id == sourceSecretsManagerSeatPlanId);
+
+            if (grace > 0 && previousSubscriptionHasSecretsManager)
+            {
+                var metadata = new Dictionary<string, string>(subscription.Metadata)
+                {
+                    [MetadataKeys.MigrationGraceServiceAccounts] = grace.ToString(CultureInfo.InvariantCulture)
+                };
+
+                await _stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
+
+                try
+                {
+                    await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+                        new SubscriptionUpdateOptions { Metadata = metadata });
+                }
+                catch (Exception graceException)
+                {
+                    // Surface as a BillingException so the generic catch below does not swallow it; the
+                    // webhook returns 500 and Stripe retries. Because MigratedDate is not yet stamped,
+                    // the replay re-runs this method: re-ChangePlan is a structural no-op and re-writing
+                    // the same metadata key/value is idempotent.
+                    _logger.LogError(
+                        graceException,
+                        "Business migration applied to organization ({OrganizationId}) but failed to write SM grace metadata; Stripe retry will re-apply",
+                        organizationId);
+                    throw new BillingException(
+                        message: "Partial business migration write: organization updated but grace metadata write failed.",
+                        innerException: graceException);
+                }
+            }
 
             try
             {

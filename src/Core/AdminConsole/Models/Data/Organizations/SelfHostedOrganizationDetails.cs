@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Organizations.Models;
@@ -22,7 +23,7 @@ public class SelfHostedOrganizationDetails : Organization
     public SsoConfig SsoConfig { get; set; }
     public IEnumerable<OrganizationConnection> ScimConnections { get; set; }
 
-    public bool CanUseLicense(OrganizationLicense license, out string exception)
+    public bool CanUseLicense(OrganizationLicense license, bool useSharedFolderTerminology, out string exception)
     {
         if (license.Seats.HasValue && OccupiedSeatCount > license.Seats.Value)
         {
@@ -33,9 +34,10 @@ public class SelfHostedOrganizationDetails : Organization
 
         if (license.MaxCollections.HasValue && CollectionCount > license.MaxCollections.Value)
         {
-            exception = $"Your organization currently has {CollectionCount} collections. " +
-                $"Your new license allows for a maximum of ({license.MaxCollections.Value}) collections. " +
-                "Remove some collections.";
+            var collectionTerm = CollectionTerminology.Plural(useSharedFolderTerminology);
+            exception = $"Your organization currently has {CollectionCount} {collectionTerm}. " +
+                $"Your new license allows for a maximum of ({license.MaxCollections.Value}) {collectionTerm}. " +
+                $"Remove some {collectionTerm}.";
             return false;
         }
 
@@ -161,6 +163,7 @@ public class SelfHostedOrganizationDetails : Organization
             UseAutomaticUserConfirmation = UseAutomaticUserConfirmation,
             UseMyItems = UseMyItems,
             UseInviteLinks = UseInviteLinks,
+            UsePam = UsePam,
         };
     }
 }

@@ -26,6 +26,12 @@ internal static class OrganizationPlanMigrationPriceMapper
 
     private static string? Resolve(string sourcePriceId, Plan source, Plan target) => sourcePriceId switch
     {
+        // Packaged -> Scalable PM base price (Teams Starter -> Teams Current): a packaged source holds its
+        // flat price in StripePlanId, mapped to the target's per-seat price. The IsNullOrEmpty guard keeps a
+        // null == null match from mis-mapping Scalable sources, whose StripePlanId is null.
+        _ when !string.IsNullOrEmpty(source.PasswordManager.StripePlanId) &&
+            sourcePriceId == source.PasswordManager.StripePlanId =>
+            target.PasswordManager.StripeSeatPlanId,
         _ when sourcePriceId == source.PasswordManager.StripeSeatPlanId =>
             target.PasswordManager.StripeSeatPlanId,
         _ when sourcePriceId == source.PasswordManager.StripeStoragePlanId =>

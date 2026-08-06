@@ -219,6 +219,45 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task Run_NoCoupons_CreatesSubscriptionWithNoDiscounts_NoCustomerDiscountInjected(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Creation-site guard (#12): fresh customer, so no pre-existing discount to carry. With no
+        // coupons supplied, Discounts must be null — pins that nothing is ever injected here.
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupons = null
+        };
+
+        var mockCustomer = CreateMockCustomer();
+        var mockSubscription = CreateMockActiveSubscription();
+
+        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(
+            Arg.Is<SubscriptionCreateOptions>(opts => opts.Discounts == null));
+    }
+
+    [Theory, BitAutoData]
     public async Task Run_ValidPaymentMethodTypes_PayPal_Success(
         User user,
         TokenizedPaymentMethod paymentMethod,

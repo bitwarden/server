@@ -39,18 +39,17 @@ public class AzureQueuePushEngineTests
         _fakeTimeProvider.SetUtcNow(DateTime.UtcNow);
     }
 
-    [Theory]
-    [InlineData("6a5bbe1b-cf16-49a6-965f-5c2eac56a531", null)]
-    [InlineData(null, "b9a3fcb4-2447-45c1-aad2-24de43c88c44")]
-    public async Task PushSyncCipherCreateAsync_SendsExpectedResponse(string? userId, string? organizationId)
+    [Fact]
+    public async Task PushSyncCipherCreateAsync_PersonalCipher_SendsExpectedResponse()
     {
+        var userId = Guid.Parse("6a5bbe1b-cf16-49a6-965f-5c2eac56a531");
         var collectionId = Guid.NewGuid();
 
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),
-            UserId = userId != null ? Guid.Parse(userId) : null,
-            OrganizationId = organizationId != null ? Guid.Parse(organizationId) : null,
+            UserId = userId,
+            OrganizationId = null,
             RevisionDate = DateTime.UtcNow,
         };
 
@@ -61,42 +60,43 @@ public class AzureQueuePushEngineTests
             {
                 ["Id"] = cipher.Id,
                 ["UserId"] = cipher.UserId,
-                ["OrganizationId"] = cipher.OrganizationId,
                 ["CollectionIds"] = new JsonArray(collectionId),
                 ["RevisionDate"] = cipher.RevisionDate,
             },
             ["ContextId"] = _deviceIdentifier,
         };
 
-        if (!cipher.UserId.HasValue)
-        {
-            expectedPayload["Payload"]!.AsObject().Remove("UserId");
-        }
-
-        if (!cipher.OrganizationId.HasValue)
-        {
-            expectedPayload["Payload"]!.AsObject().Remove("OrganizationId");
-            expectedPayload["Payload"]!.AsObject().Remove("CollectionIds");
-        }
-
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherCreateAsync(cipher, [collectionId]),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncCipherCreate,
+                Target = NotificationTarget.User,
+                TargetId = userId,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = [collectionId],
+                },
+                ExcludeCurrentContext = true,
+            }),
             expectedPayload
         );
     }
 
-    [Theory]
-    [InlineData("6a5bbe1b-cf16-49a6-965f-5c2eac56a531", null)]
-    [InlineData(null, "b9a3fcb4-2447-45c1-aad2-24de43c88c44")]
-    public async Task PushSyncCipherUpdateAsync_SendsExpectedResponse(string? userId, string? organizationId)
+    [Fact]
+    public async Task PushSyncCipherUpdateAsync_PersonalCipher_SendsExpectedResponse()
     {
+        var userId = Guid.Parse("6a5bbe1b-cf16-49a6-965f-5c2eac56a531");
         var collectionId = Guid.NewGuid();
 
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),
-            UserId = userId != null ? Guid.Parse(userId) : null,
-            OrganizationId = organizationId != null ? Guid.Parse(organizationId) : null,
+            UserId = userId,
+            OrganizationId = null,
             RevisionDate = DateTime.UtcNow,
         };
 
@@ -107,26 +107,28 @@ public class AzureQueuePushEngineTests
             {
                 ["Id"] = cipher.Id,
                 ["UserId"] = cipher.UserId,
-                ["OrganizationId"] = cipher.OrganizationId,
                 ["CollectionIds"] = new JsonArray(collectionId),
                 ["RevisionDate"] = cipher.RevisionDate,
             },
             ["ContextId"] = _deviceIdentifier,
         };
 
-        if (!cipher.UserId.HasValue)
-        {
-            expectedPayload["Payload"]!.AsObject().Remove("UserId");
-        }
-
-        if (!cipher.OrganizationId.HasValue)
-        {
-            expectedPayload["Payload"]!.AsObject().Remove("OrganizationId");
-            expectedPayload["Payload"]!.AsObject().Remove("CollectionIds");
-        }
-
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherUpdateAsync(cipher, [collectionId]),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncCipherUpdate,
+                Target = NotificationTarget.User,
+                TargetId = userId,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = [collectionId],
+                },
+                ExcludeCurrentContext = true,
+            }),
             expectedPayload
         );
     }
@@ -134,8 +136,6 @@ public class AzureQueuePushEngineTests
     [Fact]
     public async Task PushSyncCipherDeleteAsync_SendsExpectedResponse()
     {
-        var collectionId = Guid.NewGuid();
-
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),
@@ -157,7 +157,21 @@ public class AzureQueuePushEngineTests
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherDeleteAsync(cipher),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncLoginDelete,
+                Target = NotificationTarget.User,
+                TargetId = cipher.UserId!.Value,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = null,
+                },
+                ExcludeCurrentContext = true,
+            }),
             expectedPayload
         );
     }
@@ -733,6 +747,40 @@ public class AzureQueuePushEngineTests
     //         async () => await _sut.SendPayloadToOrganizationAsync("organization_id", PushType.AuthRequest, new {}, null)
     //     );
     // }
+
+    private async Task VerifyNoNotificationAsync(Func<IPushNotificationService, Task> test)
+    {
+        var queueClient = Substitute.For<QueueClient>();
+
+        var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+
+        var httpContext = new DefaultHttpContext();
+
+        var serviceCollection = new ServiceCollection();
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.DeviceIdentifier = _deviceIdentifier;
+        serviceCollection.AddSingleton(currentContext);
+
+        httpContext.RequestServices = serviceCollection.BuildServiceProvider();
+
+        httpContextAccessor.HttpContext
+            .Returns(httpContext);
+
+        var globalSettings = new Core.Settings.GlobalSettings();
+
+        var sut = new AzureQueuePushEngine(
+            queueClient,
+            httpContextAccessor,
+            globalSettings,
+            NullLogger<AzureQueuePushEngine>.Instance
+        );
+
+        await test(new EngineWrapper(sut, _fakeTimeProvider, _globalSettings.Installation.Id));
+
+        await queueClient
+            .Received(0)
+            .SendMessageAsync(Arg.Any<string>());
+    }
 
     private async Task VerifyNotificationAsync(Func<IPushNotificationService, Task> test, JsonNode expectedMessage)
     {

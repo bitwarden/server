@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -61,5 +62,21 @@ public class OrganizationPlanMigrationCohortRepository(
             commandType: CommandType.StoredProcedure);
 
         return results.SingleOrDefault();
+    }
+
+    public async Task<IReadOnlyList<OrganizationPlanMigrationCohort>> GetManyByNamesAsync(IEnumerable<string> names)
+    {
+        var payload = names
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(name => new { Name = name });
+
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<OrganizationPlanMigrationCohort>(
+            $"[{Schema}].[{Table}_ReadManyByNames]",
+            new { JsonData = JsonSerializer.Serialize(payload) },
+            commandType: CommandType.StoredProcedure);
+
+        return [.. results];
     }
 }

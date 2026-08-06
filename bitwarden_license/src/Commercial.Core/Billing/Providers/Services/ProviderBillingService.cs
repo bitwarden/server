@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -19,7 +18,6 @@ using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -40,7 +38,6 @@ using static StripeConstants;
 public class ProviderBillingService(
     IBraintreeGateway braintreeGateway,
     IEventService eventService,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -59,6 +56,14 @@ public class ProviderBillingService(
         Organization organization,
         string key)
     {
+        var existingProviderOrganization =
+            await providerOrganizationRepository.GetByOrganizationId(organization.Id);
+
+        if (existingProviderOrganization != null)
+        {
+            throw new ConflictException("Organization already belongs to a provider.");
+        }
+
         await priceIncreaseScheduler.Release(
             organization.GatewayCustomerId,
             organization.GatewaySubscriptionId,
@@ -112,6 +117,7 @@ public class ProviderBillingService(
         organization.UsersGetPremium = plan.UsersGetPremium;
         organization.UseCustomPermissions = plan.HasCustomPermissions;
         organization.UseScim = plan.HasScim;
+        organization.UseRiskInsights = plan.HasRiskInsights;
         organization.UseKeyConnector = plan.HasKeyConnector;
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
         organization.BillingEmail = provider.BillingEmail!;
@@ -274,17 +280,6 @@ public class ProviderBillingService(
                 ]
         };
 
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(providerCustomer.Address?.Country, providerCustomer.TaxExempt);
-            customerCreateOptions.TaxExempt = providerCustomer switch
-            {
-                { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus } when
-                    determinedTaxExemptStatus != customerTaxExemptStatus => determinedTaxExemptStatus,
-                _ => providerCustomer.TaxExempt
-            };
-        }
-
         var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
 
         organization.GatewayCustomerId = customer.Id;
@@ -293,11 +288,12 @@ public class ProviderBillingService(
     }
 
     public async Task<byte[]> GenerateClientInvoiceReport(
+        Guid providerId,
         string invoiceId)
     {
         ArgumentException.ThrowIfNullOrEmpty(invoiceId);
 
-        var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoiceId);
+        var invoiceItems = await providerInvoiceItemRepository.GetByProviderIdAndInvoiceId(providerId, invoiceId);
 
         if (invoiceItems.Count == 0)
         {
@@ -508,11 +504,6 @@ public class ProviderBillingService(
             },
             Metadata = new Dictionary<string, string> { { "region", globalSettings.BaseServiceUri.CloudRegion } }
         };
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            options.TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
-        }
 
         if (billingAddress.TaxId != null)
         {

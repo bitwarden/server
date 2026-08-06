@@ -20,7 +20,7 @@ public class IconHttpResponseTests
         _mockedUriService = Substitute.For<IUriService>();
         _mockedUriService.TryGetUri(Arg.Any<Uri>(), out Arg.Any<IconUri>()).Returns(x =>
         {
-            x[1] = new IconUri(new Uri("https://icon.test"), IPAddress.Parse("192.0.2.1"));
+            x[1] = new IconUri(new Uri("https://icon.test"), IPAddress.Parse("8.8.8.8"));
             return true;
         });
     }

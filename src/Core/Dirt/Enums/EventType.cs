@@ -80,6 +80,11 @@ public enum EventType : int
     OrganizationUser_AdminResetTwoFactor = 1519,
     OrganizationUser_Revoked_TwoFactorNonCompliance = 1520,
     OrganizationUser_Revoked_SingleOrganizationNonCompliance = 1521,
+    OrganizationUser_NotificationBannerActionClicked = 1522,
+    OrganizationUser_Staged = 1523, // Member provisioned without an invitation (e.g. via SCIM / Directory Connector)
+    OrganizationUser_InviteLinkAccepted = 1524, // User was accepted into an organization invite via invite link
+    OrganizationUser_AdminChangedEmail = 1525, // Admin changed a member's email address
+    OrganizationUser_InviteLinkConfirmed = 1526, // User was confirmed into an organization via invite link
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
@@ -106,6 +111,13 @@ public enum EventType : int
     Organization_AutoConfirmDisabled_Admin = 1621,
     Organization_AutoConfirmEnabled_Portal = 1622,
     Organization_AutoConfirmDisabled_Portal = 1623,
+    Organization_InviteLinkCreated = 1624, // Admin generated an organization invite link
+    Organization_InviteLinkDomainsEdited = 1625, // Admin edited the domains of an organization invite link
+    Organization_InviteLinkDeleted = 1626, // Admin deleted an organization invite link
+    Organization_InviteLinkClientCopied = 1627, // Admin copied an organization invite link (client-side event)
+    Organization_InviteLinkRefreshed = 1628, // Admin refreshed an organization invite link
+    Organization_InviteLinkConfirmEnabled = 1629, // Admin enabled automatic confirmation for an organization invite link
+    Organization_InviteLinkConfirmDisabled = 1630, // Admin disabled automatic confirmation for an organization invite link
 
     Policy_Updated = 1700,
 

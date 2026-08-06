@@ -42,6 +42,7 @@ public class OrganizationUserTests
     [InlineData(OrganizationUserStatusTypeNew.Invited, OrganizationUserStatusType.Invited)]
     [InlineData(OrganizationUserStatusTypeNew.Accepted, OrganizationUserStatusType.Accepted)]
     [InlineData(OrganizationUserStatusTypeNew.Confirmed, OrganizationUserStatusType.Confirmed)]
+    [InlineData(OrganizationUserStatusTypeNew.Staged, OrganizationUserStatusType.Staged)]
     public void GetPriorActiveOrganizationUserStatusType_StatusNewPopulated_ReturnsStatusNew_RegardlessOfArrangement(
         OrganizationUserStatusTypeNew statusNew,
         OrganizationUserStatusType expected)

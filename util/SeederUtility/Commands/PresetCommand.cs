@@ -11,7 +11,7 @@ namespace Bit.SeederUtility.Commands;
 public class PresetCommand
 {
     [DefaultCommand]
-    public void Execute(PresetArgs args)
+    public async Task ExecuteAsync(PresetArgs args)
     {
         try
         {
@@ -25,28 +25,28 @@ public class PresetCommand
 
             if (IsIndividualPreset(args.Name!))
             {
-                RunIndividualPreset(args);
+                await RunIndividualPresetAsync(args);
             }
             else
             {
-                RunOrganizationPreset(args);
+                await RunOrganizationPresetAsync(args);
             }
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
+            await Console.Error.WriteLineAsync($"Error: {ex.Message}");
             Environment.Exit(1);
         }
     }
 
-    private static void RunOrganizationPreset(PresetArgs args)
+    private static async Task RunOrganizationPresetAsync(PresetArgs args)
     {
         using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
 
-        Console.Error.WriteLine($"Seeding organization from preset '{args.Name}'...");
-        var result = ConsoleProgressReporter.RunWithProgress(
+        await Console.Error.WriteLineAsync($"Seeding organization from preset '{args.Name}'...");
+        var result = await ConsoleProgressReporter.RunWithProgressAsync(
             deps.ToDependencies(),
-            d => new OrganizationRecipe(d).Seed(args.Name!, args.Password, args.KdfIterations));
+            d => new OrganizationRecipe(d).SeedAsync(args.Name!, args.Password, args.KdfIterations, args.OrgName, args.OwnerEmail));
 
         ConsoleOutput.PrintRow("Organization", result.OrganizationId);
         if (result.OwnerEmail is not null)
@@ -64,16 +64,21 @@ public class PresetCommand
         ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
         ConsoleOutput.PrintMangleMap(deps);
+
+        if (result.SsoIdentifier is not null)
+        {
+            ConsoleOutput.PrintSsoWiring(result.OrganizationId, result.SsoIdentifier, result.OwnerEmail);
+        }
     }
 
-    private static void RunIndividualPreset(PresetArgs args)
+    private static async Task RunIndividualPresetAsync(PresetArgs args)
     {
         using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
 
-        Console.Error.WriteLine($"Seeding individual user from preset '{args.Name}'...");
-        var result = ConsoleProgressReporter.RunWithProgress(
+        await Console.Error.WriteLineAsync($"Seeding individual user from preset '{args.Name}'...");
+        var result = await ConsoleProgressReporter.RunWithProgressAsync(
             deps.ToDependencies(),
-            d => new IndividualUserRecipe(d).Seed(args.Name!, args.Password, args.KdfIterations));
+            d => new IndividualUserRecipe(d).SeedAsync(args.Name!, args.Password, args.KdfIterations));
 
         ConsoleOutput.PrintRow("User", result.UserId);
         if (result.Email is not null)

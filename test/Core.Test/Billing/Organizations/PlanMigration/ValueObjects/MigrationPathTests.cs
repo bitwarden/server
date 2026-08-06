@@ -15,6 +15,15 @@ public class MigrationPathTests
     }
 
     [Fact]
+    public void FromId_TeamsStarterIds_ReturnTheMatchingPaths()
+    {
+        Assert.Same(MigrationPaths.TeamsStarterToCurrent,
+            MigrationPaths.FromId(MigrationPaths.TeamsStarterToCurrent.Id));
+        Assert.Same(MigrationPaths.TeamsStarter2023ToCurrent,
+            MigrationPaths.FromId(MigrationPaths.TeamsStarter2023ToCurrent.Id));
+    }
+
+    [Fact]
     public void FromId_UnknownId_ReturnsNull()
     {
         // 0 is reserved as "not assigned" and 255 is not registered. Both should

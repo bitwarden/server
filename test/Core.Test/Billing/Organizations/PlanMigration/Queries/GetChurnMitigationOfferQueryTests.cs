@@ -85,11 +85,12 @@ public class GetChurnMitigationOfferQueryTests
         Assert.NotNull(result);
         Assert.Equal(ChurnCouponCode, result.CouponId);
         Assert.Equal(15m, result.PercentOff);
+        Assert.Null(result.AmountOff);
         Assert.Equal(CouponDurations.Once, result.Duration);
     }
 
     [Fact]
-    public async Task Run_MigrationCohort_AmountOffCoupon_PercentOffIsNull_ResultStillConstructs()
+    public async Task Run_MigrationCohort_AmountOffCoupon_MapsAmountOffToDollars()
     {
         var organization = CreateOrganization();
         SetupMigrationCohort(organization);
@@ -111,6 +112,7 @@ public class GetChurnMitigationOfferQueryTests
 
         Assert.NotNull(result);
         Assert.Null(result.PercentOff);
+        Assert.Equal(5m, result.AmountOff);   // 500 cents -> $5.00
         Assert.Equal(ChurnCouponCode, result.CouponId);
     }
 
@@ -308,6 +310,45 @@ public class GetChurnMitigationOfferQueryTests
     }
 
     [Fact]
+    public async Task Run_ChurnOnlyCohort_AmountOffOnceCouponNeverRedeemed_ReturnsOfferWithAmountOff()
+    {
+        var organization = CreateOrganization();
+        SetupChurnOnlyCohort(organization);
+
+        SetupGetCoupon(CreateAmountOffCoupon(duration: CouponDurations.Once));
+
+        var subscription = CreateSubscription();
+        SetupGetSubscription(organization, subscription);
+
+        var result = await _query.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.Equal(15m, result.AmountOff);   // 1500 cents -> $15.00
+        Assert.Null(result.PercentOff);
+        Assert.Equal(CouponDurations.Once, result.Duration);
+    }
+
+    [Fact]
+    public async Task Run_ChurnOnlyCohort_AmountOffRepeatingCoupon_ReturnsOfferWithAmountOffAndDuration()
+    {
+        var organization = CreateOrganization();
+        SetupChurnOnlyCohort(organization);
+
+        SetupGetCoupon(CreateAmountOffCoupon(duration: CouponDurations.Repeating, durationInMonths: 3));
+
+        var subscription = CreateSubscription();
+        SetupGetSubscription(organization, subscription);
+
+        var result = await _query.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.Equal(15m, result.AmountOff);   // amount + duration coexist on the offer
+        Assert.Null(result.PercentOff);
+        Assert.Equal(CouponDurations.Repeating, result.Duration);
+        Assert.Equal(3, result.DurationInMonths);
+    }
+
+    [Fact]
     public async Task Run_ChurnOnlyCohort_ForeverCouponNotOnSubscription_ReturnsOffer()
     {
         var organization = CreateOrganization();
@@ -422,6 +463,20 @@ public class GetChurnMitigationOfferQueryTests
             Duration = duration,
             DurationInMonths = durationInMonths,
             Name = "Churn 15% off",
+            Valid = true
+        };
+
+    private static Coupon CreateAmountOffCoupon(
+        string duration = CouponDurations.Once,
+        long? durationInMonths = null) =>
+        new()
+        {
+            Id = ChurnCouponCode,
+            AmountOff = 1500,
+            PercentOff = null,
+            Duration = duration,
+            DurationInMonths = durationInMonths,
+            Name = "Churn $15 off",
             Valid = true
         };
 

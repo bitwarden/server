@@ -64,7 +64,8 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UseDisableSmAdsForUsers BIT = 0,
     @UseMyItems BIT = 0,
     @ExemptFromBillingAutomation BIT = 0,
-    @UseInviteLinks BIT = 0
+    @UseInviteLinks BIT = 0,
+    @UsePam BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -137,7 +138,8 @@ BEGIN
         [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers,
         [UseMyItems] = @UseMyItems,
         [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation,
-        [UseInviteLinks] = @UseInviteLinks
+        [UseInviteLinks] = @UseInviteLinks,
+        [UsePam] = @UsePam
     WHERE
         [Id] = @Id;
 END

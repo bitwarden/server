@@ -21,7 +21,7 @@ public class UpdateDeviceLastActivityCommandTests
         string clientVersion)
     {
         sutProvider.GetDependency<IDeviceLastActivityCacheService>()
-            .IsUpToDateAsync(device.UserId, device.Identifier, clientVersion)
+            .IsUpToDateAsync(device.UserId, device.Identifier)
             .Returns(true);
 
         await sutProvider.Sut.UpdateAsync(device, clientVersion);
@@ -31,7 +31,7 @@ public class UpdateDeviceLastActivityCommandTests
             .UpdateLastActivityByIdAsync(Arg.Any<Guid>(), Arg.Any<string>());
         await sutProvider.GetDependency<IDeviceLastActivityCacheService>()
             .DidNotReceive()
-            .RecordUpdateAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>());
+            .RecordUpdateAsync(Arg.Any<Guid>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -41,7 +41,7 @@ public class UpdateDeviceLastActivityCommandTests
         string clientVersion)
     {
         sutProvider.GetDependency<IDeviceLastActivityCacheService>()
-            .IsUpToDateAsync(device.UserId, device.Identifier, clientVersion)
+            .IsUpToDateAsync(device.UserId, device.Identifier)
             .Returns(false);
 
         await sutProvider.Sut.UpdateAsync(device, clientVersion);
@@ -51,7 +51,7 @@ public class UpdateDeviceLastActivityCommandTests
             .UpdateLastActivityByIdAsync(device.Id, clientVersion);
         await sutProvider.GetDependency<IDeviceLastActivityCacheService>()
             .Received(1)
-            .RecordUpdateAsync(device.UserId, device.Identifier, clientVersion);
+            .RecordUpdateAsync(device.UserId, device.Identifier);
     }
 
     [Theory, BitAutoData]
@@ -60,7 +60,7 @@ public class UpdateDeviceLastActivityCommandTests
         Device device)
     {
         sutProvider.GetDependency<IDeviceLastActivityCacheService>()
-            .IsUpToDateAsync(device.UserId, device.Identifier, null)
+            .IsUpToDateAsync(device.UserId, device.Identifier)
             .Returns(false);
 
         await sutProvider.Sut.UpdateAsync(device, null);
@@ -70,7 +70,7 @@ public class UpdateDeviceLastActivityCommandTests
             .UpdateLastActivityByIdAsync(device.Id, null);
         await sutProvider.GetDependency<IDeviceLastActivityCacheService>()
             .Received(1)
-            .RecordUpdateAsync(device.UserId, device.Identifier, null);
+            .RecordUpdateAsync(device.UserId, device.Identifier);
     }
 
     // --- UpdateByIdentifierAndUserIdAsync ---
@@ -83,7 +83,7 @@ public class UpdateDeviceLastActivityCommandTests
         string clientVersion)
     {
         sutProvider.GetDependency<IDeviceLastActivityCacheService>()
-            .IsUpToDateAsync(userId, identifier, clientVersion)
+            .IsUpToDateAsync(userId, identifier)
             .Returns(true);
 
         await sutProvider.Sut.UpdateByIdentifierAndUserIdAsync(identifier, userId, clientVersion);
@@ -93,7 +93,7 @@ public class UpdateDeviceLastActivityCommandTests
             .UpdateLastActivityByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
         await sutProvider.GetDependency<IDeviceLastActivityCacheService>()
             .DidNotReceive()
-            .RecordUpdateAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>());
+            .RecordUpdateAsync(Arg.Any<Guid>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -104,7 +104,7 @@ public class UpdateDeviceLastActivityCommandTests
         string clientVersion)
     {
         sutProvider.GetDependency<IDeviceLastActivityCacheService>()
-            .IsUpToDateAsync(userId, identifier, clientVersion)
+            .IsUpToDateAsync(userId, identifier)
             .Returns(false);
 
         await sutProvider.Sut.UpdateByIdentifierAndUserIdAsync(identifier, userId, clientVersion);
@@ -114,6 +114,6 @@ public class UpdateDeviceLastActivityCommandTests
             .UpdateLastActivityByIdentifierAndUserIdAsync(identifier, userId, clientVersion);
         await sutProvider.GetDependency<IDeviceLastActivityCacheService>()
             .Received(1)
-            .RecordUpdateAsync(userId, identifier, clientVersion);
+            .RecordUpdateAsync(userId, identifier);
     }
 }

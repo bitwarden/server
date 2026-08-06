@@ -102,6 +102,7 @@ public class DatabaseDataAttribute : DataAttribute
         services.AddLogging(logging =>
         {
             logging.AddProvider(new XUnitLoggerProvider());
+            logging.AddFakeLogging();
         });
         if (UseFakeTimeProvider)
         {

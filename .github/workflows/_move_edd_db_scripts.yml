@@ -178,6 +178,7 @@ jobs:
             --base "main" \
             --head "$BRANCH" \
             --label "automated pr" \
+            --label "t:misc" \
             --body "
               Automated movement of EDD database scripts.
 

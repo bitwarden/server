@@ -10,6 +10,7 @@ public static class OrganizationUserStatusTypeNewExtensions
             OrganizationUserStatusTypeNew.Invited => OrganizationUserStatusType.Invited,
             OrganizationUserStatusTypeNew.Accepted => OrganizationUserStatusType.Accepted,
             OrganizationUserStatusTypeNew.Confirmed => OrganizationUserStatusType.Confirmed,
+            OrganizationUserStatusTypeNew.Staged => OrganizationUserStatusType.Staged,
             _ => throw new ArgumentOutOfRangeException(nameof(status), status,
                 "Unknown OrganizationUserStatusTypeNew value."),
         };

@@ -1,8 +1,10 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -11,7 +13,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Test.Common.AutoFixture;
@@ -60,7 +61,7 @@ public class SelfHostedOrganizationSignUpCommandTests
                 key.Type == OrganizationApiKeyType.Default &&
                 !string.IsNullOrEmpty(key.ApiKey)));
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .UpsertOrganizationAbilityAsync(result.organization);
 
@@ -268,7 +269,7 @@ public class SelfHostedOrganizationSignUpCommandTests
             .Received(1)
             .DeleteAsync(Arg.Any<Organization>());
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .DeleteOrganizationAbilityAsync(Arg.Any<Guid>());
     }
@@ -295,7 +296,7 @@ public class SelfHostedOrganizationSignUpCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(license, owner, ownerKey, collectionName, publicKey, privateKey));
 
-        Assert.Contains("You may not create an organization. You belong to an organization which has a policy that prohibits you from being a member of any other organization.", exception.Message);
+        Assert.Contains(new UserCannotCreateOrg().Message, exception.Message);
     }
 
     [Theory, BitAutoData]

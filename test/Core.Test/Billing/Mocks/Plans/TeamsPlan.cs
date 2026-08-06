@@ -39,7 +39,6 @@ public record TeamsPlan : Plan
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 20;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -49,6 +48,7 @@ public record TeamsPlan : Plan
 
             if (isAnnual)
             {
+                BaseServiceAccount = 50;
                 StripeSeatPlanId = "secrets-manager-teams-seat-annually";
                 StripeServiceAccountPlanId = "secrets-manager-service-account-2024-annually";
                 SeatPrice = 72;
@@ -56,6 +56,7 @@ public record TeamsPlan : Plan
             }
             else
             {
+                BaseServiceAccount = 20;
                 StripeSeatPlanId = "secrets-manager-teams-seat-monthly";
                 StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
                 SeatPrice = 7;

@@ -19,23 +19,23 @@ public class UpdateDeviceLastActivityCommand : IUpdateDeviceLastActivityCommand
 
     public async Task UpdateAsync(Device device, string? clientVersion)
     {
-        if (await _cache.IsUpToDateAsync(device.UserId, device.Identifier, clientVersion))
+        if (await _cache.IsUpToDateAsync(device.UserId, device.Identifier))
         {
             return;
         }
 
         await _deviceRepository.UpdateLastActivityByIdAsync(device.Id, clientVersion);
-        await _cache.RecordUpdateAsync(device.UserId, device.Identifier, clientVersion);
+        await _cache.RecordUpdateAsync(device.UserId, device.Identifier);
     }
 
     public async Task UpdateByIdentifierAndUserIdAsync(string identifier, Guid userId, string? clientVersion)
     {
-        if (await _cache.IsUpToDateAsync(userId, identifier, clientVersion))
+        if (await _cache.IsUpToDateAsync(userId, identifier))
         {
             return;
         }
 
         await _deviceRepository.UpdateLastActivityByIdentifierAndUserIdAsync(identifier, userId, clientVersion);
-        await _cache.RecordUpdateAsync(userId, identifier, clientVersion);
+        await _cache.RecordUpdateAsync(userId, identifier);
     }
 }

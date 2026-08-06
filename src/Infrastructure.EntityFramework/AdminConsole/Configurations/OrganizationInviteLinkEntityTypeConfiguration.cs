@@ -17,11 +17,6 @@ public class OrganizationInviteLinkEntityTypeConfiguration : IEntityTypeConfigur
             .IsUnique()
             .IsClustered(false);
 
-        builder
-            .HasIndex(e => e.Code)
-            .IsUnique()
-            .IsClustered(false);
-
         builder.ToTable(nameof(OrganizationInviteLink));
     }
 }
