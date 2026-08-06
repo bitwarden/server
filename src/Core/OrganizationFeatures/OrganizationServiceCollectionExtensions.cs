@@ -210,6 +210,7 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IGetOrganizationInviteLinkPoliciesQuery, GetOrganizationInviteLinkPoliciesQuery>();
         services.TryAddScoped<IValidateOrganizationInviteLinkEmailDomainQuery, ValidateOrganizationInviteLinkEmailDomainQuery>();
         services.TryAddScoped<IGetOrganizationInviteLinkStatusQuery, GetOrganizationInviteLinkStatusQuery>();
+        services.TryAddScoped<IValidateOrganizationInviteLinkQuery, ValidateOrganizationInviteLinkQuery>();
         services.TryAddScoped<IUpdateOrganizationInviteLinkCommand, UpdateOrganizationInviteLinkCommand>();
         services.TryAddScoped<IUpdateInviteSupportConfirmCommand, UpdateInviteSupportConfirmCommand>();
         services.TryAddScoped<IDeleteOrganizationInviteLinkCommand, DeleteOrganizationInviteLinkCommand>();
