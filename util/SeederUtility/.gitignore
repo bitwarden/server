@@ -1,0 +1,8 @@
+docker/dp-keys/
+docker/licenses/
+docker/seed.sql
+docker/**/seed.sql
+docker/**/seed.bak
+docker/**/*.mdf
+docker/**/*.ldf
+docker/*/build/

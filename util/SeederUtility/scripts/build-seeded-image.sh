@@ -12,6 +12,7 @@
 #   GIT_SHA            Override git SHA (default: current HEAD short SHA)
 #   DP_KEY_XML         Data protection key XML content (for CI; written to key stores)
 #   KEEP_BUILD_DIR=1   Preserve the per-preset build directory after completion
+#   ASPNETCORE_ENVIRONMENT  Seeder config environment (default: Development)
 #
 # Parallel invocations:
 #   The script is safe to run concurrently for different <preset, db-type>
@@ -43,11 +44,15 @@ GIT_SHA="${GIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')}
 BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 PUSH="${PUSH:-false}"
 
+# Seeding resolves Azure-backed repositories whose constructors require the connection
+# strings in appsettings.Development.json; GlobalSettingsFactory otherwise defaults to
+# Production and the seed fails on a null connection string.
+export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Development}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SEEDER_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${SEEDER_DIR}/../.." && pwd)"
 DOCKER_DIR="${SEEDER_DIR}/docker/${DB_TYPE}"
-METADATA_FILE="${SCRIPT_DIR}/presets-metadata.json"
 
 # --- Validate DB type ---
 case "${DB_TYPE}" in
@@ -78,26 +83,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Look up preset metadata for OCI labels. Requires `jq`. Missing entries
-# fall back to sensible defaults so the build still succeeds; downstream
-# tooling that reads labels should handle empty values gracefully.
-PRESET_CATEGORY="unknown"
-PRESET_DESCRIPTION=""
-if command -v jq >/dev/null 2>&1 && [[ -f "${METADATA_FILE}" ]]; then
-    PRESET_CATEGORY=$(jq -r --arg p "${PRESET_NAME}" \
-        '.presets[$p].category // "unknown"' "${METADATA_FILE}")
-    PRESET_DESCRIPTION=$(jq -r --arg p "${PRESET_NAME}" \
-        '.presets[$p].description // ""' "${METADATA_FILE}")
-else
-    echo "WARNING: jq or ${METADATA_FILE} not found; OCI labels will be minimal"
-fi
+# Preset names are <category>.<name>, matching their fixture folder under Seeds/fixtures/presets/
+PRESET_CATEGORY="${PRESET_NAME%%.*}"
 
 echo "==> Building seeded ${DB_TYPE} image for preset: ${PRESET_NAME}"
 echo "    Stable:    ${IMAGE_STABLE}"
 echo "    Versioned: ${IMAGE_VERSIONED}"
 echo "    Git SHA:   ${GIT_SHA}"
 echo "    Category:  ${PRESET_CATEGORY}"
-echo "    Desc:      ${PRESET_DESCRIPTION}"
 echo "    Container: ${CONTAINER_NAME}"
 echo "    Build dir: ${WORK_DIR}"
 
@@ -118,8 +111,6 @@ _docker_build_and_push() {
         --platform linux/amd64 \
         --build-arg "PRESET_NAME=${PRESET_NAME}" \
         --build-arg "PRESET_CATEGORY=${PRESET_CATEGORY}" \
-        --build-arg "PRESET_DESCRIPTION=${PRESET_DESCRIPTION}" \
-        --build-arg "DB_TYPE=${DB_TYPE}" \
         --build-arg "GIT_SHA=${GIT_SHA}" \
         --build-arg "BUILD_DATE=${BUILD_DATE}" \
         -t "${IMAGE_STABLE}" \

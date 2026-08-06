@@ -15,7 +15,7 @@ Builds pre-seeded database Docker images from seeder presets, ready for ephemera
 PUSH=true ./build-seeded-image.sh qa.dunder-mifflin-enterprise-full postgres
 
 # List all available presets
-dotnet run --project ../. -- preset --list --output json
+dotnet run --project .. -- preset --list --output json
 ```
 
 ## Supported Database Types
@@ -47,21 +47,16 @@ Images are pushed to `bitwardenprod.azurecr.io/shot/`.
 
 ## Traceability
 
-Every seeded image includes two levels of traceability:
+Traceability lives entirely in the Docker image labels (`docker inspect`):
 
-**Docker image labels** (`docker inspect`):
 ```
 bitwarden.seeder.preset=qa.dunder-mifflin-enterprise-full
+bitwarden.seeder.category=qa
 org.opencontainers.image.revision=abc1234
 org.opencontainers.image.created=2026-04-16T00:00:00Z
 ```
 
-**`_SeederMetadata` table in the database**:
-```sql
-SELECT * FROM "_SeederMetadata";  -- Postgres/MariaDB
-SELECT * FROM [_SeederMetadata];  -- MSSQL
-```
-Returns `preset`, `git_sha`, and `built_at`.
+The category is derived from the preset name prefix, which matches the fixture folder under `Seeds/fixtures/presets/`.
 
 ## Data Protection Key
 
@@ -69,7 +64,7 @@ The seeder encrypts certain database fields (e.g. `MasterPassword`, `Key`, `Priv
 
 **Key file**: `key-9aa06f19-9afe-414b-8791-189be3b5650f.xml`
 
-**Known issue**: `ServiceCollectionExtension.cs` does not call `PersistKeysToFileSystem`, so the seeder ignores `appsettings.json`'s `dataProtection.directory` and falls back to `~/.aspnet/DataProtection-Keys/`. The workaround is to copy the key file into `~/.aspnet/DataProtection-Keys/` before running the seeder. The build script handles this automatically.
+`ServiceCollectionExtension.cs` honours `dataProtection.directory` when it is set; otherwise Data Protection discovers keys in `~/.aspnet/DataProtection-Keys/`. The build script writes the key to that default location, so no configuration is required.
 
 For CI, set the `DP_KEY_XML` environment variable with the XML content and the script writes it to both locations.
 
@@ -81,6 +76,8 @@ For CI, set the `DP_KEY_XML` environment variable with the XML content and the s
 | `REGISTRY` | `bitwardenprod.azurecr.io` | ACR registry |
 | `GIT_SHA` | Current HEAD | Git SHA for versioned tag |
 | `DP_KEY_XML` | (empty) | Data protection key XML content (for CI) |
+| `KEEP_BUILD_DIR` | (unset) | Set to `1` to preserve the per-preset build directory |
+| `ASPNETCORE_ENVIRONMENT` | `Development` | Seeder config environment |
 
 ## GitHub Actions
 
