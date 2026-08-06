@@ -715,7 +715,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_Phase1DiscountsEmpty_LeavesPhase1DiscountsNull()
+    public async Task Run_SubscriptionDiscountsEmpty_LeavesPhase1DiscountsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         var monthlyPlan = new TeamsPlan(false);
@@ -723,12 +723,11 @@ public class RedeemAnnualUpgradeOfferCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
-        // An empty (but non-null) collection is what Stripe actually returns when a phase has no
-        // discounts; a null-only check on this would let an empty array slip through instead of
-        // being normalized to null.
+        // An empty (but non-null) collection, not the null-source case the happy path already
+        // covers -- ReusedPhaseDiscounts must normalize it to null rather than emit an empty list.
         var (_, schedule) = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
-            phase1Discounts: []);
+            subscriptionDiscounts: []);
 
         var result = await _command.Run(organization);
 
