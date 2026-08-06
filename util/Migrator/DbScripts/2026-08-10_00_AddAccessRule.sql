@@ -57,6 +57,32 @@ BEGIN
 END
 GO
 
+-- Carry AccessRuleId in the covering index too. UserCollectionDetails seeks Collection on
+-- OrganizationId and projects C.*, so a column the index does not include costs a key lookup
+-- per collection on the sync path. Guard on the included column rather than the index name:
+-- the index already exists, so only its column list tells us whether this has run.
+IF NOT EXISTS (
+    SELECT 1
+    FROM [sys].[index_columns] IC
+    INNER JOIN [sys].[columns] C
+        ON C.[object_id] = IC.[object_id]
+        AND C.[column_id] = IC.[column_id]
+    INNER JOIN [sys].[indexes] I
+        ON I.[object_id] = IC.[object_id]
+        AND I.[index_id] = IC.[index_id]
+    WHERE I.[name] = 'IX_Collection_OrganizationId_IncludeAll'
+        AND I.[object_id] = OBJECT_ID('[dbo].[Collection]')
+        AND C.[name] = 'AccessRuleId'
+        AND IC.[is_included_column] = 1
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Collection_OrganizationId_IncludeAll]
+        ON [dbo].[Collection] ([OrganizationId] ASC)
+        INCLUDE ([CreationDate], [Name], [RevisionDate], [Type], [AccessRuleId])
+        WITH (DROP_EXISTING = ON)
+END
+GO
+
 -- Refresh CollectionView and the UserCollectionDetails function so they surface the new
 -- AccessRuleId column before the read procedures below reference it. A SELECT * view/function
 -- does not pick up new base-table columns until refreshed, and UserCollectionDetails
