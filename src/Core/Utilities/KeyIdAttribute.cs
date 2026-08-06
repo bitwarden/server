@@ -4,13 +4,13 @@ using Bit.Core.KeyManagement.Models.Data;
 namespace Bit.Core.Utilities;
 
 /// <summary>
-/// Validates that a string is a well-formed user key id, by deferring to <see cref="KeyId"/> itself so
+/// Validates that a string is a well-formed key id, by deferring to <see cref="KeyId"/> itself so
 /// the format lives in one place. Null is considered valid; the key id is always optional on requests.
 /// </summary>
-public class UserKeyIdAttribute : ValidationAttribute
+public class KeyIdAttribute : ValidationAttribute
 {
-    public UserKeyIdAttribute()
-        : base("{0} is not a valid user key id.")
+    public KeyIdAttribute()
+        : base("{0} is not a valid key id.")
     { }
 
     public override bool IsValid(object? value)
