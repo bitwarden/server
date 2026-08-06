@@ -19,11 +19,12 @@ BEGIN
     --   [MasterPasswordSalt] IS NULL  — only ever fill a blank; never overwrite an existing salt.
     --   [MasterPassword] IS NOT NULL  — Key Connector / TDE users have no master password, so there
     --                                   is no salt to prefill.
-    --   LOWER(LTRIM(RTRIM([Email]))) = @MasterPasswordSalt
-    --                                 — the value written must genuinely be this user's normalized
-    --                                   email. This is what makes the backfill unobservable to
-    --                                   clients (it matches what they already derive) and stops a
-    --                                   caller passing an arbitrary salt for someone else's row.
+    --
+    -- @MasterPasswordSalt is written verbatim; this procedure does no normalization and does not
+    -- verify the value against [Email]. Deriving the salt — lowercasing and trimming the email — is
+    -- deliberately the caller's job, so that normalization lives in exactly one place
+    -- (UpdateMasterPasswordSaltCommand) rather than being restated in T-SQL and in EF LINQ where the
+    -- three could drift. Do not reintroduce a LOWER/LTRIM/RTRIM comparison here.
     --
     -- RevisionDate / AccountRevisionDate are deliberately not bumped: the stored value equals what
     -- clients already derive, so there is nothing for them to re-sync.
@@ -35,6 +36,5 @@ BEGIN
         [Id] = @Id
         AND [MasterPasswordSalt] IS NULL
         AND [MasterPassword] IS NOT NULL
-        AND LOWER(LTRIM(RTRIM([Email]))) = @MasterPasswordSalt
 END
 GO

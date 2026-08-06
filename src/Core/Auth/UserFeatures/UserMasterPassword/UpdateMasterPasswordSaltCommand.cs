@@ -22,6 +22,9 @@ public class UpdateMasterPasswordSaltCommand : IUpdateMasterPasswordSaltCommand
             return;
         }
 
+        // The only place the salt is normalized. Both the stored procedure and the EF query write
+        // whatever they are handed, so this line — matching User.GetMasterPasswordSalt, which is what
+        // clients derive — is what keeps the backfill unobservable to them.
         await _userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, user.Email.ToLowerInvariant().Trim());
     }
 }

@@ -28,18 +28,21 @@ public interface IUserRepository : IRepository<User, Guid>
     /// </summary>
     /// <remarks>
     /// <para>A conditional write, not a read-modify-write. The row is only updated when it still has
-    /// no salt, has a master password, and <paramref name="masterPasswordSalt"/> genuinely is that
-    /// user's normalized email. Those guards live in the database rather than the caller, so the
-    /// operation is idempotent and safe when several token refreshes for the same user race.</para>
+    /// no salt and has a master password. Those guards live in the database rather than the caller,
+    /// so the operation is idempotent and safe when several token refreshes for the same user
+    /// race.</para>
     /// <para>Does not bump <c>RevisionDate</c> / <c>AccountRevisionDate</c>: the stored value equals
     /// what clients already derive, so there is nothing to re-sync.</para>
-    /// <para>Silently no-ops when any guard fails — including when no such user exists. Callers get
-    /// no signal about whether a row was written; nothing downstream needs one.</para>
+    /// <para>Silently no-ops when either guard fails — including when no such user exists. Callers
+    /// get no signal about whether a row was written; nothing downstream needs one.</para>
     /// </remarks>
     /// <param name="id">The user to backfill.</param>
     /// <param name="masterPasswordSalt">
-    /// The user's normalized (lowercased, trimmed) email. Verified against the stored email by the
-    /// query itself, so a mismatched value writes nothing rather than corrupting the row.
+    /// The user's normalized (lowercased, trimmed) email. Written verbatim — the query performs no
+    /// normalization and does not check the value against the stored email, so supplying the correct
+    /// value is entirely the caller's responsibility. Normalization is centralized in
+    /// <see cref="Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces.IUpdateMasterPasswordSaltCommand"/>
+    /// so that it is expressed once rather than restated in T-SQL and EF LINQ.
     /// </param>
     Task SetMasterPasswordSaltIfNullAsync(Guid id, string masterPasswordSalt);
     Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids);

@@ -22,6 +22,13 @@ public interface IUpdateMasterPasswordSaltCommand
     /// stale entity cannot overwrite a salt that another request has since written.</para>
     /// <para>A no-op unless the user has no salt stored and has a master password. Users without a
     /// master password (Key Connector, TDE) have no salt to prefill.</para>
+    /// <para><b>This command is the single place the salt is normalized.</b> Lowercasing and trimming
+    /// the email happens here and nowhere else — the stored procedure and the EF query both write the
+    /// supplied value verbatim and perform no normalization of their own. Keeping the rule in one
+    /// place stops the C#, T-SQL, and EF LINQ expressions of it from drifting apart, and avoids
+    /// relying on lower/trim semantics that differ across the four supported databases. The
+    /// corollary is that neither the procedure nor the EF query validates what it is given, so any
+    /// new caller must derive the salt the same way.</para>
     /// </remarks>
     /// <param name="user">
     /// The already-resolved user to backfill. Resolution is the caller's responsibility — this

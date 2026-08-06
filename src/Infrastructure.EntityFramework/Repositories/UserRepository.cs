@@ -187,15 +187,15 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         // request just wrote. ExecuteUpdate issues a single conditional UPDATE — no read-modify-write,
         // no change tracking, and RevisionDate / AccountRevisionDate are left alone.
         //
-        // Email.Trim().ToLower() translates to LOWER(LTRIM(RTRIM(...))) on SQL Server and the
-        // equivalent lower(trim(...)) on PostgreSQL, MySQL, and SQLite. Lowercasing both sides keeps
-        // the comparison correct on case-sensitive collations (PostgreSQL) as well as case-insensitive
-        // ones, since the caller supplies an already-normalized salt.
+        // masterPasswordSalt is written verbatim. Deriving it — lowercasing and trimming the email —
+        // is deliberately the caller's job, so normalization lives in exactly one place
+        // (UpdateMasterPasswordSaltCommand) instead of being restated here and in T-SQL, where the
+        // three could drift. Keeping it out of the predicate also sidesteps the fact that a
+        // lower/trim comparison would behave differently across the four supported providers.
         await GetDbSet(dbContext)
             .Where(u => u.Id == id
                 && u.MasterPasswordSalt == null
-                && u.MasterPassword != null
-                && u.Email.Trim().ToLower() == masterPasswordSalt)
+                && u.MasterPassword != null)
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.MasterPasswordSalt, masterPasswordSalt));
     }
 

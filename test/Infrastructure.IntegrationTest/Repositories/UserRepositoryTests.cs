@@ -962,11 +962,12 @@ public class UserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task SetMasterPasswordSaltIfNullAsync_MixedCaseEmail_MatchesCaseInsensitively(
+    public async Task SetMasterPasswordSaltIfNullAsync_MixedCaseEmail_StillWritesTheSuppliedSalt(
         IUserRepository userRepository)
     {
-        // The email guard must hold on case-sensitive collations (PostgreSQL) as well as
-        // case-insensitive ones, which is why both sides are lowercased.
+        // The query does not compare against [Email] at all, so a non-normalized stored email is
+        // irrelevant to whether the write happens. Normalizing is the caller's job — see
+        // UpdateMasterPasswordSaltCommand, the single place it is done.
         var id = CoreHelpers.GenerateComb();
         var user = await CreateSaltBackfillUserAsync(userRepository, email: $"MiXeD.{id}@Example.COM");
 
@@ -1002,17 +1003,19 @@ public class UserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task SetMasterPasswordSaltIfNullAsync_SaltIsNotTheUsersEmail_DoesNotWrite(
+    public async Task SetMasterPasswordSaltIfNullAsync_WritesTheSuppliedValueVerbatim(
         IUserRepository userRepository)
     {
-        // The query verifies the salt really is this user's normalized email, so a caller cannot
-        // write an arbitrary value into the column.
+        // Pins the contract boundary: the query neither normalizes the value nor checks it against
+        // [Email]. Supplying the right salt is entirely the caller's responsibility, which is why
+        // normalization is centralized in UpdateMasterPasswordSaltCommand. If someone reintroduces a
+        // LOWER/LTRIM/RTRIM email comparison in the SP or the EF predicate, this test fails.
         var user = await CreateSaltBackfillUserAsync(userRepository);
 
-        await userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, "someone.else@example.com");
+        await userRepository.SetMasterPasswordSaltIfNullAsync(user.Id, "not-the-users-email");
 
         var updated = await userRepository.GetByIdAsync(user.Id);
-        Assert.Null(updated!.MasterPasswordSalt);
+        Assert.Equal("not-the-users-email", updated!.MasterPasswordSalt);
     }
 
     [DatabaseTheory, DatabaseData]
