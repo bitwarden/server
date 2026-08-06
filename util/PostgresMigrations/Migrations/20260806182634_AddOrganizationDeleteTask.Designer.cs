@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260805161830_AddEventOrganizationIdIndex")]
-    partial class AddEventOrganizationIdIndex
+    [Migration("20260806182634_AddOrganizationDeleteTask")]
+    partial class AddOrganizationDeleteTask
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1651,10 +1651,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
 
-                    b.HasIndex("OrganizationId")
-                        .HasDatabaseName("IX_Event_OrganizationId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
                     b.HasIndex("OrganizationId", "SendId", "Date")
                         .HasDatabaseName("IX_Event_OrganizationIdSendIdDate")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -2278,6 +2274,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("TwoFactorRecoveryCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("UserKeyId")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
