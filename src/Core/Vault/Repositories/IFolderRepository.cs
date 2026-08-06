@@ -10,6 +10,14 @@ public interface IFolderRepository : IRepository<Folder, Guid>
     Task<ICollection<Folder>> GetManyByUserIdAsync(Guid userId);
 
     /// <summary>
+    /// Deletes the given folders and re-assigns any of the user's ciphers that were filed under them to no folder.
+    /// Ids that do not belong to the user are ignored.
+    /// </summary>
+    /// <param name="folderIds">The folders to delete</param>
+    /// <param name="userId">The owner of the folders</param>
+    Task DeleteManyAsync(IEnumerable<Guid> folderIds, Guid userId);
+
+    /// <summary>
     /// Updates encrypted data for folders during a key rotation
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>

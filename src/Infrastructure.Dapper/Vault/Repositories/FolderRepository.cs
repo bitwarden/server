@@ -48,6 +48,16 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
     }
 
     /// <inheritdoc />
+    public async Task DeleteManyAsync(IEnumerable<Guid> folderIds, Guid userId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[Folder_DeleteByIds]",
+            new { Ids = folderIds.ToGuidIdArrayTVP(), UserId = userId },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<Folder> folders)
     {
