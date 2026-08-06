@@ -260,10 +260,22 @@ case "${DB_TYPE}" in
     ;;
 esac
 
-# Discover the ephemeral host port chosen by Docker
-HOST_PORT=$(docker inspect \
-    --format="{{(index (index .NetworkSettings.Ports \"${INTERNAL_PORT}/tcp\") 0).HostPort}}" \
-    "${CONTAINER_NAME}")
+# Discover the ephemeral host port chosen by Docker. The binding is not always in place
+# the moment `docker run` returns, so poll. `with` yields an empty string rather than
+# failing the template while the port list is still empty.
+for _ in $(seq 1 30); do
+    HOST_PORT=$(docker inspect \
+        --format="{{with index .NetworkSettings.Ports \"${INTERNAL_PORT}/tcp\"}}{{(index . 0).HostPort}}{{end}}" \
+        "${CONTAINER_NAME}")
+    [[ -n "${HOST_PORT}" ]] && break
+    sleep 1
+done
+
+if [[ -z "${HOST_PORT}" ]]; then
+    echo "ERROR: ${DB_TYPE} container never published port ${INTERNAL_PORT}"
+    docker logs --tail 50 "${CONTAINER_NAME}" || true
+    exit 1
+fi
 echo "==> ${DB_TYPE} host port: ${HOST_PORT}"
 
 # --- Wait for readiness (bounded so a stuck container fails fast) ---
