@@ -109,7 +109,12 @@ internal sealed class CreateCipherAttachmentsStep : IAsyncStep
                 var fileBytes = reader.ReadBytes(attachment.File);
                 var displayName = attachment.FileName ?? attachment.File;
 
-                var (id, meta, blob) = AttachmentSeeder.Create(fileBytes, vaultKey, wrappedCipherKey, displayName, version);
+                var (id, meta, blob) = AttachmentSeeder.Create(
+                    fileBytes,
+                    vaultKey: vaultKey,
+                    wrappedCipherKey: wrappedCipherKey,
+                    fileName: displayName,
+                    version: version);
 
                 cipher.AddAttachment(id, meta);
 
