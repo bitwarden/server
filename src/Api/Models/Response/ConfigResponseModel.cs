@@ -9,7 +9,6 @@ using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bitwarden.Server.Sdk.Environment;
 
 namespace Bit.Api.Models.Response;
