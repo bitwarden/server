@@ -1,5 +1,6 @@
 docker/dp-keys/
 docker/licenses/
+docker/bundles/
 docker/seed.sql
 docker/**/seed.sql
 docker/**/seed.bak

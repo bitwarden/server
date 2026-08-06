@@ -58,15 +58,50 @@ org.opencontainers.image.created=2026-04-16T00:00:00Z
 
 The category is derived from the preset name prefix, which matches the fixture folder under `Seeds/fixtures/presets/`.
 
-## Data Protection Key
+## Core Bundle
 
-The seeder encrypts certain database fields (e.g. `MasterPassword`, `Key`, `PrivateKey`) using ASP.NET Data Protection. The target deployment environment must have the same key to decrypt these fields.
+Two things the seeder produces are read by the **application**, not the database, so they cannot travel inside the database image:
 
-**Key file**: `key-9aa06f19-9afe-414b-8791-189be3b5650f.xml`
+- **Data protection keys** — the seeder encrypts some fields (`MasterPassword`, `Key`, `PrivateKey`) with ASP.NET Data Protection. Without the same key, logins fail.
+- **Attachment blobs** — the encrypted file bodies. The database only holds attachment metadata.
 
-`ServiceCollectionExtension.cs` honours `dataProtection.directory` when it is set; otherwise Data Protection discovers keys in `~/.aspnet/DataProtection-Keys/`. The build script writes the key to that default location, so no configuration is required.
+Both live under `/etc/bitwarden/core` in a deployment, so each build writes them to one tarball next to the image:
 
-For CI, set the `DP_KEY_XML` environment variable with the XML content and the script writes it to both locations.
+```
+docker/bundles/seeded-core-{preset}-{git-sha}.tar.gz
+└── core/
+    ├── aspnet-dataprotection/key-….xml
+    └── attachments/{cipherId}/{attachmentId}
+```
+
+Set `DP_KEY_XML` to pin a known key (recommended for CI, so rebuilds stay interchangeable). Without it the seeder generates one into the bundle, which still works — the key just changes each build.
+
+### Consuming the bundle
+
+**Self-host / ephemeral environments** — unpack over the app's core volume:
+
+```bash
+tar -xzf seeded-core-*.tar.gz -C /etc/bitwarden
+```
+
+**Local development, local disk** — unpack anywhere and point the app at it:
+
+```
+globalSettings__attachment__baseDirectory=<dir>/core/attachments
+globalSettings__dataProtection__directory=<dir>/core/aspnet-dataprotection
+```
+
+**Local development, azurite** — attachment paths in the tarball are byte-identical to Azure blob names, so import the tree as-is:
+
+```bash
+az storage blob upload-batch \
+  --connection-string "UseDevelopmentStorage=true" \
+  -d attachments -s core/attachments
+```
+
+Leave `attachment.connectionString` set (azurite wins over `baseDirectory`) and point `dataProtection.directory` at the unpacked keys.
+
+> The bundled key is the **filesystem** form. Deployments using `PersistKeysToAzureBlobStorage` expect a single aggregated `keys.xml` in an `aspnet-dataprotection` container instead, so the key needs converting for that path.
 
 ## Environment Variables
 
@@ -112,4 +147,4 @@ self-host:
       tag: qa-dunder-mifflin-enterprise-full
 ```
 
-**Note**: Self-host deployments also need the Data Protection key mounted at `/etc/bitwarden/core/aspnet-dataprotection/` for login to work with seeded data.
+**Note**: Both charts also need the [core bundle](#core-bundle) unpacked at `/etc/bitwarden/core` — without the data protection key, login fails against seeded data.

@@ -153,6 +153,16 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+      # Data protection key and attachment blobs, mounted by the consumer at
+      # /etc/bitwarden/core. Not in the database image — the application reads them.
+      - name: Upload core bundle
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: seeded-core-${{ matrix.database }}-${{ matrix.preset }}
+          path: util/SeederUtility/docker/bundles/seeded-core-*.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Job summary
         if: always()
         env:

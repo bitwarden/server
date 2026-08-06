@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Builds a seeded database Docker image for a given preset and database type.
+# Builds a seeded database Docker image for a given preset and database type, plus a
+# "core bundle" tarball (data protection key + attachment blobs) under docker/bundles/
+# that the consuming environment unpacks at /etc/bitwarden/core. See README.md.
 #
 # Usage:
 #   ./build-seeded-image.sh <preset-name> [db-type]
@@ -10,7 +12,7 @@
 #   PUSH=true          Push images to ACR after build
 #   REGISTRY           ACR registry (default: bitwardenprod.azurecr.io)
 #   GIT_SHA            Override git SHA (default: current HEAD short SHA)
-#   DP_KEY_XML         Data protection key XML content (for CI; written to key stores)
+#   DP_KEY_XML         Data protection key XML content (for CI; written into the bundle)
 #   KEEP_BUILD_DIR=1   Preserve the per-preset build directory after completion
 #   ASPNETCORE_ENVIRONMENT  Seeder config environment (default: Development)
 #
@@ -76,8 +78,9 @@ WORK_DIR="${DOCKER_DIR}/build/${TAG}"
 cleanup() {
     local status=$?
     docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
-    if [[ "${KEEP_BUILD_DIR:-0}" != "1" && -d "${WORK_DIR}" ]]; then
-        rm -rf "${WORK_DIR}"
+    if [[ "${KEEP_BUILD_DIR:-0}" != "1" ]]; then
+        # BUNDLE_STAGE holds key material; the tarball is already written elsewhere
+        rm -rf "${WORK_DIR}" "${DOCKER_DIR}/build/${TAG}-bundle"
     fi
     return "${status}"
 }
@@ -175,23 +178,46 @@ case "${DB_TYPE}" in
     ;;
 esac
 
-# --- Data protection key setup ---
-DP_KEYS_DIR="${HOME}/.aspnet/DataProtection-Keys"
+# --- Core bundle ---
+# Data protection keys and attachment blobs are read by the application, not the
+# database, so they cannot travel inside the database image. Both live under
+# /etc/bitwarden/core in a deployment, so the seeder writes them into one tree that
+# ships alongside the image as a tarball.
+# Staged outside WORK_DIR so key material never enters the Docker build context.
+BUNDLE_STAGE="${DOCKER_DIR}/build/${TAG}-bundle"
+CORE_DIR="${BUNDLE_STAGE}/core"
+DP_KEYS_DIR="${CORE_DIR}/aspnet-dataprotection"
+ATTACHMENTS_DIR="${CORE_DIR}/attachments"
+BUNDLE_DIR="${SEEDER_DIR}/docker/bundles"
+BUNDLE_FILE="${BUNDLE_DIR}/seeded-core-${DB_TYPE}-${TAG}-${GIT_SHA}.tar.gz"
+mkdir -p "${DP_KEYS_DIR}" "${ATTACHMENTS_DIR}" "${BUNDLE_DIR}"
+
 DP_KEY_FILENAME="key-9aa06f19-9afe-414b-8791-189be3b5650f.xml"
 DP_KEY_SRC="${SEEDER_DIR}/docker/dp-keys/${DP_KEY_FILENAME}"
-mkdir -p "${DP_KEYS_DIR}" "${SEEDER_DIR}/docker/dp-keys"
 
 if [[ -n "${DP_KEY_XML:-}" ]]; then
-    echo "==> Writing data protection key from environment variable"
+    echo "==> Using data protection key from DP_KEY_XML"
     echo "${DP_KEY_XML}" > "${DP_KEYS_DIR}/${DP_KEY_FILENAME}"
-    echo "${DP_KEY_XML}" > "${DP_KEY_SRC}"
 elif [[ -f "${DP_KEY_SRC}" ]]; then
-    echo "==> Copying data protection key to system key store"
+    echo "==> Using data protection key from ${DP_KEY_SRC}"
     cp "${DP_KEY_SRC}" "${DP_KEYS_DIR}/"
 else
-    echo "WARNING: Data protection key not found at ${DP_KEY_SRC}."
-    echo "         Encrypted fields may not be decryptable in the target environment."
+    echo "==> No pre-existing data protection key; one will be generated into the bundle"
 fi
+
+# Attachment storage picks Azure whenever a connection string is set, so blank it to
+# force local disk. Keys and blobs land in the bundle rather than the host's key store.
+SEED_ENV=(
+    "globalSettings__dataProtection__directory=${DP_KEYS_DIR}"
+    "globalSettings__attachment__connectionString="
+    "globalSettings__attachment__baseDirectory=${ATTACHMENTS_DIR}"
+)
+
+_write_core_bundle() {
+    tar -czf "${BUNDLE_FILE}" -C "${BUNDLE_STAGE}" core
+    echo "==> Core bundle: ${BUNDLE_FILE}"
+    echo "    Unpack with: tar -xzf $(basename "${BUNDLE_FILE}") -C /etc/bitwarden"
+}
 
 # ============================================================
 # SQLite — no container needed, seeder writes directly to file
@@ -204,10 +230,12 @@ if [[ "${DB_TYPE}" == "sqlite" ]]; then
 
     echo "==> Seeding SQLite database with preset: ${PRESET_NAME}"
     cd "${SEEDER_DIR}"
-    globalSettings__databaseProvider=sqlite \
-    globalSettings__sqlite__connectionString="Data Source=${SQLITE_FILE}" \
-    dotnet run --project . -- preset --name "${PRESET_NAME}"
+    env "${SEED_ENV[@]}" \
+        globalSettings__databaseProvider=sqlite \
+        globalSettings__sqlite__connectionString="Data Source=${SQLITE_FILE}" \
+        dotnet run --project . -- preset --name "${PRESET_NAME}"
 
+    _write_core_bundle
     _docker_build_and_push
     echo "==> Done: ${PRESET_NAME} (${DB_TYPE}) → ${TAG}"
     exit 0
@@ -337,21 +365,23 @@ echo "==> Seeding database with preset: ${PRESET_NAME}"
 cd "${SEEDER_DIR}"
 case "${DB_TYPE}" in
   postgres)
-    globalSettings__databaseProvider=postgreSql \
-    globalSettings__postgreSql__connectionString="Host=localhost;Port=${HOST_PORT};Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASS}" \
-    dotnet run --project . -- preset --name "${PRESET_NAME}"
+    DB_PROVIDER="postgreSql"
+    DB_CONNECTION="globalSettings__postgreSql__connectionString=Host=localhost;Port=${HOST_PORT};Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASS}"
     ;;
   mysql|mariadb)
-    globalSettings__databaseProvider=mySQL \
-    globalSettings__mySql__connectionString="Server=localhost;Port=${HOST_PORT};Database=${DB_NAME};Uid=${DB_USER};Pwd=${DB_PASS};" \
-    dotnet run --project . -- preset --name "${PRESET_NAME}"
+    DB_PROVIDER="mySQL"
+    DB_CONNECTION="globalSettings__mySql__connectionString=Server=localhost;Port=${HOST_PORT};Database=${DB_NAME};Uid=${DB_USER};Pwd=${DB_PASS};"
     ;;
   mssql)
-    globalSettings__databaseProvider=sqlServer \
-    globalSettings__sqlServer__connectionString="Server=localhost,${HOST_PORT};Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASS};TrustServerCertificate=true;" \
-    dotnet run --project . -- preset --name "${PRESET_NAME}"
+    DB_PROVIDER="sqlServer"
+    DB_CONNECTION="globalSettings__sqlServer__connectionString=Server=localhost,${HOST_PORT};Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASS};TrustServerCertificate=true;"
     ;;
 esac
+
+env "${SEED_ENV[@]}" \
+    "globalSettings__databaseProvider=${DB_PROVIDER}" \
+    "${DB_CONNECTION}" \
+    dotnet run --project . -- preset --name "${PRESET_NAME}"
 
 # --- Dump database ---
 case "${DB_TYPE}" in
@@ -379,5 +409,6 @@ esac
 echo "==> Stopping ${DB_TYPE} container"
 docker rm -f "${CONTAINER_NAME}" >/dev/null
 
+_write_core_bundle
 _docker_build_and_push
 echo "==> Done: ${PRESET_NAME} (${DB_TYPE}) → ${TAG}"
