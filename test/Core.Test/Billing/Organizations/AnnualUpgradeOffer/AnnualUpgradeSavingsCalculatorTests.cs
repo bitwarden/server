@@ -254,7 +254,7 @@ public class AnnualUpgradeSavingsCalculatorTests
     }
 
     [Fact]
-    public void Build_CustomerAndSubscriptionCoupons_AnnualCarriesBothMonthlyCarriesSubscriptionsOwn()
+    public void Build_CustomerAndSubscriptionCoupons_BothSidesCarrySubscriptionsOwnNotTheCustomers()
     {
         var subscription = Subscription(Item(_currentPlan.PasswordManager.StripeSeatPlanId, 5));
         subscription.Discounts = [Discount("sub_coupon")];
@@ -262,12 +262,10 @@ public class AnnualUpgradeSavingsCalculatorTests
 
         var requests = Build(subscription, Lines(subscription, _annualLatestPlan.PasswordManager.StripeSeatPlanId));
 
-        Assert.Equal(
-            new[] { "cus_coupon", "sub_coupon" },
-            requests.Annual.Discounts.Select(discount => discount.Coupon));
-        Assert.Equal(
-            new[] { "sub_coupon" },
-            requests.Monthly.Discounts.Select(discount => discount.Coupon));
+        // The annual phase carries the subscription's own discount by reuse and does not activate the
+        // dormant customer coupon, so the quote must not add it to the annual side either.
+        Assert.Equal(new[] { "sub_coupon" }, requests.Annual.Discounts.Select(discount => discount.Coupon));
+        Assert.Equal(new[] { "sub_coupon" }, requests.Monthly.Discounts.Select(discount => discount.Coupon));
     }
 
     [Fact]

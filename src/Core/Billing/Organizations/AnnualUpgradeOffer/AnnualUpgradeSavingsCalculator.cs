@@ -12,8 +12,9 @@ internal readonly record struct AnnualUpgradeSavings(decimal CurrentAnnualCost, 
 
 /// <summary>
 /// The two invoice previews the quote compares: the same quantities priced once on the
-/// subscription's current monthly price IDs and once on their annual equivalents. The annual side
-/// also carries the customer's coupon, because the annual phase will.
+/// subscription's current monthly price IDs and once on their annual equivalents. Both sides carry
+/// the same invoice-level coupons: the subscription's own when it has any, otherwise the customer's.
+/// Only forever coupons are modeled, since a temporary one will not exist at renewal.
 /// </summary>
 internal readonly record struct AnnualUpgradePreviewRequests(
     InvoiceCreatePreviewOptions Monthly,
@@ -22,15 +23,18 @@ internal readonly record struct AnnualUpgradePreviewRequests(
 /// <summary>
 /// Prices a monthly-to-annual switch by asking Stripe to preview two invoices from the
 /// subscription's own line items: one on the current monthly price IDs and one on their annual
-/// equivalents, with the same quantities on both. The annual side also carries the customer's
-/// coupon, because the annual phase will. Stripe reports the discount it actually applied per line.
+/// equivalents, with the same quantities on both. Both previews carry the same invoice-level
+/// coupons: the subscription's own when it has any, otherwise the customer's. Only forever coupons
+/// are modeled, since a temporary one will not exist at renewal. Stripe reports the discount it
+/// actually applied per line.
 /// </summary>
 internal static class AnnualUpgradeSavingsCalculator
 {
     /// <summary>
     /// Builds the two preview payloads: the same quantities priced once on the subscription's
-    /// current price ids and once on the annual equivalents in <paramref name="lines"/>. The monthly
-    /// side carries what applies today; the annual side carries what the annual phase will apply.
+    /// current price ids and once on the annual equivalents in <paramref name="lines"/>. Both sides
+    /// carry the same invoice-level coupons: the subscription's own when it has any, otherwise the
+    /// customer's. Only forever coupons are modeled, since a temporary one will not exist at renewal.
     /// </summary>
     /// <remarks>
     /// The caller must load the subscription with <c>customer</c>, <c>discounts.coupon</c>,
@@ -41,7 +45,7 @@ internal static class AnnualUpgradeSavingsCalculator
     {
         return new AnnualUpgradePreviewRequests(
             BuildPreviewOptions(subscription, lines, ApplicableDiscountOptions(InvoiceLevelCoupons(subscription)), annual: false),
-            BuildPreviewOptions(subscription, lines, ApplicableDiscountOptions(AnnualPhaseCoupons(subscription)), annual: true));
+            BuildPreviewOptions(subscription, lines, ApplicableDiscountOptions(InvoiceLevelCoupons(subscription)), annual: true));
     }
 
     private static InvoiceCreatePreviewOptions BuildPreviewOptions(
@@ -126,28 +130,4 @@ internal static class AnnualUpgradeSavingsCalculator
         [.. coupons
             .Where(coupon => coupon.IsForever() && !string.IsNullOrEmpty(coupon.Id))
             .Select(coupon => new InvoiceDiscountOptions { Coupon = coupon.Id })];
-
-    // Customer first, matching MergeDiscountCouponIds, because Stripe applies discounts in order.
-    private static IReadOnlyList<Coupon> AnnualPhaseCoupons(Subscription subscription)
-    {
-        var coupons = new List<Coupon>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-
-        void Add(Coupon? coupon)
-        {
-            if (coupon is not null && !string.IsNullOrEmpty(coupon.Id) && seen.Add(coupon.Id))
-            {
-                coupons.Add(coupon);
-            }
-        }
-
-        Add(subscription.Customer?.Discount?.Coupon);
-
-        foreach (var discount in subscription.Discounts ?? [])
-        {
-            Add(discount?.Coupon);
-        }
-
-        return coupons;
-    }
 }
