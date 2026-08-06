@@ -83,6 +83,7 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteUnverifiedOrganizationDomainsJob), everyDayAtTwoAmUtcTrigger),
+            new Tuple<Type, ITrigger>(typeof(OrganizationDeleteTasksJob), everyFiveMinutesTrigger),
         };
 
         if (!(_globalSettings.SqlServer?.DisableDatabaseMaintenanceJobs ?? false))
@@ -94,11 +95,6 @@ public class JobsHostedService : BaseJobsHostedService
         if (!_globalSettings.SelfHosted)
         {
             jobs.Add(new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger));
-            // Cloud only, deliberately. The events-cleanup handler purges through IEventRepository,
-            // which resolves to the Table Storage implementation on cloud and to the SQL-backed
-            // Dapper/EF implementations on self-host. Self-host event cleanup is not wired up, so
-            // tasks enqueued there stay pending rather than being processed against the wrong store.
-            jobs.Add(new Tuple<Type, ITrigger>(typeof(OrganizationDeleteTasksJob), everyFiveMinutesTrigger));
         }
 
         Jobs = jobs;
@@ -110,10 +106,10 @@ public class JobsHostedService : BaseJobsHostedService
         if (!selfHosted)
         {
             services.AddTransient<AliveJob>();
-            services.AddTransient<OrganizationDeleteTasksJob>();
-            services.TryAddEnumerable(
-                ServiceDescriptor.Transient<IOrganizationDeleteTaskHandler, EventsCleanupOrganizationDeleteTaskHandler>());
         }
+        services.AddTransient<OrganizationDeleteTasksJob>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Transient<IOrganizationDeleteTaskHandler, EventsCleanupOrganizationDeleteTaskHandler>());
         services.AddTransient<DatabaseUpdateStatisticsJob>();
         services.AddTransient<DatabaseRebuildlIndexesJob>();
         services.AddTransient<DatabaseExpiredGrantsJob>();
