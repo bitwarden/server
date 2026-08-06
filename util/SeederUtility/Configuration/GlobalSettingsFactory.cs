@@ -1,4 +1,5 @@
-﻿using Bit.Core.Settings;
+﻿using System.Reflection;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Configuration;
 
 namespace Bit.SeederUtility.Configuration;
@@ -14,10 +15,15 @@ public static class GlobalSettingsFactory
 
     private static GlobalSettings LoadGlobalSettings()
     {
+        var directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+                        ?? Directory.GetCurrentDirectory();
+
         var configBuilder = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
+            .SetBasePath(directory)
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
+            .AddJsonFile(
+                $"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json",
+                optional: true, reloadOnChange: true)
             .AddUserSecrets("bitwarden-seeder-utility")
             .AddEnvironmentVariables();
 
