@@ -1074,6 +1074,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         // Modern V1 MP JIT request shape: MPAD + MPUD + legacy Keys, no AccountKeys.
         // V2 MP JIT flag is left OFF (default mock behavior), so this routes to the V1 command.
+        // Salt must equal the email during Stage 1 (PM-27044) — ValidateSaltUnchangedForUser rejects
+        // divergent salts until clients consume the explicit salt from prelogin (Stage 3 / PM-28143).
         var request = new
         {
             masterPasswordAuthentication = new
@@ -1136,8 +1138,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Null(updatedUser.KdfParallelism);
 
         // MasterPasswordSalt column must never be null/empty after a successful set-password.
-        // Modern V1 MP JIT path persists the MPUD-provided salt (set to userEmail in the request).
-        Assert.Equal(userEmail, updatedUser.MasterPasswordSalt);
+        // Modern V1 MP JIT path persists the MPUD-provided salt.
+        var expectedSalt = request.masterPasswordUnlock.salt;
+        Assert.Equal(expectedSalt, updatedUser.MasterPasswordSalt);
 
         // Verify timestamps are updated
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
@@ -1252,7 +1255,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Null(updatedUser.KdfParallelism);
 
         // MasterPasswordSalt column must never be null/empty after a successful set-password.
-        // TDE command persists the MPUD-provided salt (the helper sends userEmail as the salt value).
+        // TDE command persists the MPUD-provided salt (CreateV2SetPasswordRequestJson sets salt = userEmail).
         Assert.Equal(userEmail, updatedUser.MasterPasswordSalt);
 
         // Verify timestamps are updated
@@ -1797,6 +1800,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         return await _client.SendAsync(message);
     }
 
+    // Salt is set to userEmail because during Stage 1 (PM-27044) the server requires
+    // salt == email. SetInitialPasswordData.ValidateDataForUser rejects divergent salts
+    // until Stage 3 (PM-28143).
     private static string CreateV2SetPasswordRequestJson(
         string userEmail,
         string orgIdentifier,
