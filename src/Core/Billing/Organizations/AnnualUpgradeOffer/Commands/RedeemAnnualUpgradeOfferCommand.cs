@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.Schedules;
@@ -55,7 +54,7 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, _logger, organization,
-            ["customer", "customer.discount.coupon", "discounts.coupon", "items.data.discounts.coupon", "schedule"]);
+            ["discounts.coupon", "items.data.discounts.coupon", "schedule"]);
         if (subscription is null)
         {
             return new BadRequest(OfferNoLongerAvailable);
@@ -144,23 +143,11 @@ public class RedeemAnnualUpgradeOfferCommand(
                         Discounts = itemDiscounts
                     };
                 })],
-                Discounts = phase1.Discounts is { Count: > 0 } ?
-                [
-                    .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                    {
-                        Coupon = d.CouponId
-                    })
-                ] : null,
+                Discounts = ReusedPhaseDiscounts(subscription),
                 // Only the marker's presence is read; the value is for triage.
                 Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = sourcePlanType },
                 ProrationBehavior = ProrationBehavior.None
             };
-
-            // Only forever coupons merge: a phase discount is redeemed fresh, so a temporary one would restart.
-            var customerDiscount = subscription.Customer?.Discount;
-            var phase2Discounts = ((customerDiscount?.Coupon).IsForever() ? customerDiscount : null)
-                .MergeDiscountCouponIds(subscription.Discounts?.Select(discount => discount.Coupon?.Id))
-                .ToPhaseDiscountOptions();
 
             // Stripe requires every phase to be bounded (end_date or duration); Phase 2 runs
             // exactly one annual term, then the schedule releases per EndBehavior below.
@@ -169,7 +156,7 @@ public class RedeemAnnualUpgradeOfferCommand(
                 StartDate = phase1.EndDate,
                 EndDate = phase1.EndDate.AddYears(1),
                 Items = phase2Items,
-                Discounts = phase2Discounts is { Count: > 0 } ? phase2Discounts : null,
+                Discounts = ReusedPhaseDiscounts(subscription),
                 Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = sourcePlanType },
                 ProrationBehavior = ProrationBehavior.None
             };
@@ -212,6 +199,14 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         return new None();
     });
+
+    // Annual upgrade carries the subscription's own discounts forward by reusing their existing
+    // discount objects, so nothing is re-minted and no temporary coupon restarts at renewal. Null
+    // when the subscription has none, so Stripe inherits the customer's discount at renewal.
+    private static List<SubscriptionSchedulePhaseDiscountOptions>? ReusedPhaseDiscounts(Subscription subscription) =>
+        subscription.Discounts is { Count: > 0 }
+            ? [.. subscription.Discounts.Select(discount => new SubscriptionSchedulePhaseDiscountOptions { Discount = discount.Id })]
+            : null;
 
     // An item-bound coupon does not travel with the customer or subscription discounts.
     // Out-of-scope coupons are accepted and applied as zero, so copying can only help.
