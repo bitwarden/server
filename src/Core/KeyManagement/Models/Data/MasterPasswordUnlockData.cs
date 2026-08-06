@@ -35,7 +35,7 @@ public class MasterPasswordUnlockData
 
         if (this.ContainedKeyId is null)
         {
-            // no key sent, this is an old client, and we do not current validate
+            // no key sent, this is an old client, and we do not currently validate
             return;
         }
 
