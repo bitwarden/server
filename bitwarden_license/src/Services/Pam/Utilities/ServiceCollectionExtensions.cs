@@ -1,4 +1,5 @@
 ﻿using Bit.HttpExtensions;
+using Bit.Pam.Services;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Engine;
@@ -24,6 +25,10 @@ public static class ServiceCollectionExtensions
 
         // Resolves the access rule governing a cipher for a caller, then evaluates it via the engine.
         services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
+
+        // Read-path cipher gating. Overrides SharedWeb's NoopCipherLeaseGate by last-registration-wins:
+        // AddPamServices runs after AddDefaultServices in Startup, so the real gate is what resolves.
+        services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
 
         // AccessRule write path.
         services.TryAddSingleton(TimeProvider.System);

@@ -90,5 +90,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Infrastructure.IntegrationTest" />
+    <InternalsVisibleTo Include="Pam" />
   </ItemGroup>
 </Project>
