@@ -10,7 +10,10 @@ namespace Bit.SeederApi.Utilities;
 
 public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticationOptions>
 {
-    private readonly SeederSettings _seederSettings;
+    private static readonly byte[] _dummyPassword = Encoding.UTF8.GetBytes(
+        "dummy-password-for-timing-equalization");
+
+    private readonly Dictionary<string, byte[]> _accounts;
 
     public BasicAuthenticationHandler(
         IOptionsMonitor<BasicAuthenticationOptions> options,
@@ -19,7 +22,12 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
         IOptions<SeederSettings> seederSettings)
         : base(options, logger, encoder)
     {
-        _seederSettings = seederSettings.Value;
+        // Drop half-configured entries
+        // Repeated usernames use the first configured password
+        _accounts = seederSettings.Value.Accounts
+            .Where(a => !string.IsNullOrEmpty(a.Username) && !string.IsNullOrEmpty(a.Password))
+            .GroupBy(a => a.Username, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => Encoding.UTF8.GetBytes(g.First().Password), StringComparer.Ordinal);
     }
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -30,7 +38,7 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 
-        if (string.IsNullOrEmpty(_seederSettings.Username) || string.IsNullOrEmpty(_seederSettings.Password))
+        if (_accounts.Count == 0)
         {
             Logger.LogWarning("Seeder credentials are not configured");
             return Task.FromResult(AuthenticateResult.Fail("Seeder credentials not configured"));
@@ -65,15 +73,15 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
             return Task.FromResult(AuthenticateResult.Fail("Invalid Basic credential format"));
         }
 
-        var expectedUsername = Encoding.UTF8.GetBytes(_seederSettings.Username);
-        var expectedPassword = Encoding.UTF8.GetBytes(_seederSettings.Password);
-        var providedUsername = Encoding.UTF8.GetBytes(username);
+        // Equalize the miss path: if the username isn't found we still run FixedTimeEquals
+        // against a dummy so the branch cost matches a hit. Combine with bitwise & so the
+        // final decision doesn't short-circuit on the userExists check.
+        var userExists = _accounts.TryGetValue(username, out var storedPassword);
+        var comparisonTarget = storedPassword ?? _dummyPassword;
         var providedPassword = Encoding.UTF8.GetBytes(password);
+        var passwordMatches = CryptographicOperations.FixedTimeEquals(providedPassword, comparisonTarget);
 
-        var usernameMatch = CryptographicOperations.FixedTimeEquals(expectedUsername, providedUsername);
-        var passwordMatch = CryptographicOperations.FixedTimeEquals(expectedPassword, providedPassword);
-
-        if (!usernameMatch || !passwordMatch)
+        if (!(userExists & passwordMatches))
         {
             Logger.LogWarning("Invalid credentials provided for SeederApi");
             return Task.FromResult(AuthenticateResult.Fail("Invalid credentials"));

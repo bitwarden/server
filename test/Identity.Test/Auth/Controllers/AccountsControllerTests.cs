@@ -321,6 +321,29 @@ public class AccountsControllerTests : IDisposable
             .Run(email, name, receiveMarketingEmails, fromMarketing);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task PostRegisterSendEmailVerification_PassesSealedOpenOrgInviteDataToCommandAsync(
+        string email, string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var sealedOpenOrgInviteData = "opaque-base64url-blob";
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            SealedOpenOrgInviteData = sealedOpenOrgInviteData,
+        };
+
+        // Act
+        await _sut.PostRegisterSendVerificationEmail(model);
+
+        // Assert
+        await _sendVerificationEmailForRegistrationCommand.Received(1)
+            .Run(email, name, receiveMarketingEmails, null, sealedOpenOrgInviteData);
+    }
+
     [Theory, BitAutoData, SignatureKeyPairRequestModelCustomizeAttribute]
     public async Task PostRegisterFinish_WhenGivenOrgInvite_ShouldRegisterUser(
         string email, string masterPasswordHash, string orgInviteToken, Guid organizationUserId, string userSymmetricKey,
