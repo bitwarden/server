@@ -74,6 +74,15 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 0 2 ? * * *")
             .Build();
+        // Quartz keys triggers by identity, so a trigger instance cannot be shared between jobs:
+        // scheduling the second one throws because the key already exists. Every job below has its
+        // own instance, hence a dedicated five-minute trigger here rather than reusing the one
+        // DeleteSendsJob holds.
+        var organizationDeleteTasksTrigger = TriggerBuilder.Create()
+            .WithIdentity("OrganizationDeleteTasksTrigger")
+            .StartNow()
+            .WithCronSchedule("0 */5 * * * ?")
+            .Build();
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
@@ -83,7 +92,7 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteUnverifiedOrganizationDomainsJob), everyDayAtTwoAmUtcTrigger),
-            new Tuple<Type, ITrigger>(typeof(OrganizationDeleteTasksJob), everyFiveMinutesTrigger),
+            new Tuple<Type, ITrigger>(typeof(OrganizationDeleteTasksJob), organizationDeleteTasksTrigger),
         };
 
         if (!(_globalSettings.SqlServer?.DisableDatabaseMaintenanceJobs ?? false))
