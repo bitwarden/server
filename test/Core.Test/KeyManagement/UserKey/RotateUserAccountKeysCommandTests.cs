@@ -1081,6 +1081,8 @@ public class RotateUserAccountKeysCommandTests
             Salt = _mockSalt,
             Kdf = testKdf,
             MasterKeyWrappedUserKey = _mockEncryptedType2String,
+            // The wrapped user key is the new user key, so it carries the new user key's id.
+            ContainedKeyId = model.BaseData.NewUserKeyId,
         };
         model.MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
         {
@@ -1142,7 +1144,9 @@ public class RotateUserAccountKeysCommandTests
             {
                 Kdf = testKdf,
                 MasterKeyWrappedUserKey = _mockEncryptedType2String,
-                Salt = _mockSalt
+                Salt = _mockSalt,
+                // The wrapped user key is the new user key, so it carries the new user key's id.
+                ContainedKeyId = model.BaseData.NewUserKeyId
             },
             BaseData = model.BaseData
         };

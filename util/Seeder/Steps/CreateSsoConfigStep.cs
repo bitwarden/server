@@ -44,7 +44,7 @@ internal sealed class CreateSsoConfigStep(
         // argument list: an unreachable IdP must still throw with the identifier already applied.
         var signingCertificate = await FetchIdpSigningCertificateAsync(LocalSamlIdp.EntityId);
 
-        var ssoConfig = SsoConfigSeeder.CreateSaml2(
+        var ssoConfig = SsoConfigSeeder.Create(
             organization.Id,
             LocalSamlIdp.EntityId,
             LocalSamlIdp.SingleSignOnServiceUrl,
