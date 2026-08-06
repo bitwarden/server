@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
@@ -256,6 +257,46 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         return (organization, inviteLink);
     }
 
+    private static async Task<(Organization Org, OrganizationInviteLink InviteLink)> SeedOrgWithInviteLinkAndTwoFactorPolicyAsync(
+        IdentityApplicationFactory factory)
+    {
+        var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
+        var policyRepository = factory.Services.GetRequiredService<IPolicyRepository>();
+        var organizationInviteLinkRepository = factory.Services.GetRequiredService<IOrganizationInviteLinkRepository>();
+
+        var organization = new Organization
+        {
+            Name = $"TwoFactorOrg-{Guid.NewGuid():N}",
+            BillingEmail = $"billing+{Guid.NewGuid():N}@example.com",
+            Plan = "Enterprise",
+            Enabled = true,
+            UsePolicies = true,
+            UseInviteLinks = true,
+        };
+        organization = await organizationRepository.CreateAsync(organization);
+
+        var twoFactorPolicy = new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.TwoFactorAuthentication,
+            Enabled = true,
+        };
+        await policyRepository.CreateAsync(twoFactorPolicy);
+
+        var inviteLink = new OrganizationInviteLink
+        {
+            OrganizationId = organization.Id,
+            Invite = "opaque-invite-blob",
+            SupportsConfirmation = false,
+        };
+        inviteLink.SetAllowedDomains(Array.Empty<string>());
+        inviteLink.SetNewId();
+        inviteLink.SetNewCode();
+        await organizationInviteLinkRepository.CreateAsync(inviteLink);
+
+        return (organization, inviteLink);
+    }
+
     private static async Task<(Organization Org, OrganizationInviteLink InviteLink)> SeedOrgWithInviteLinkAsync(
         IdentityApplicationFactory factory)
     {
@@ -483,6 +524,71 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.NotNull(user);
         Assert.Equal(email, user.Email);
         Assert.Equal(name, user.Name);
+
+        // Seeded org has no Require 2FA policy — user must not be initialized with 2FA providers.
+        Assert.Null(user.GetTwoFactorProviders());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndTwoFactorPolicyEnabled_SeedsEmail2Fa(
+        [Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+
+        var email = $"test+2fapolicy+{name}@email.com";
+        var (_, inviteLink) = await SeedOrgWithInviteLinkAndTwoFactorPolicyAsync(localFactory);
+
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status204NoContent, sendCtx.Response.StatusCode);
+        Assert.NotNull(localFactory.RegistrationTokens[email]);
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = localFactory.RegistrationTokens[email],
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.NotNull(user);
+
+        var providers = user.GetTwoFactorProviders();
+        Assert.NotNull(providers);
+        Assert.True(providers.TryGetValue(TwoFactorProviderType.Email, out var emailProvider));
+        Assert.True(emailProvider!.Enabled);
+        Assert.Equal(email.ToLowerInvariant(), emailProvider.MetaData["Email"]?.ToString());
     }
 
     [Theory, BitAutoData]

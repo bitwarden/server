@@ -306,6 +306,8 @@ public class RegisterUserCommand : IRegisterUserCommand
 
         var tokenable = ValidateRegistrationEmailVerificationTokenable(emailVerificationToken, user.Email);
 
+        await SetUserEmail2FaIfOrgPolicyEnabledByOrgIdAsync(openOrgInvite.OrganizationId, user);
+
         user.EmailVerified = true;
         user.Name = tokenable.Name;
         user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
@@ -313,10 +315,35 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, registerFinishData);
         if (result == IdentityResult.Success)
         {
-            await SendWelcomeEmailAsync(user);
+            var organization = await _organizationRepository.GetByIdAsync(openOrgInvite.OrganizationId);
+            await SendWelcomeEmailAsync(user, organization);
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Parallel of <see cref="SetUserEmail2FaIfOrgPolicyEnabledAsync"/> for callers that already know
+    /// the target organization id and have no OrganizationUser row to look up (e.g. open-org-invite,
+    /// where the invite has not yet been accepted).
+    /// </summary>
+    private async Task SetUserEmail2FaIfOrgPolicyEnabledByOrgIdAsync(Guid organizationId, User user)
+    {
+        var twoFactorPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.TwoFactorAuthentication);
+        if (!twoFactorPolicy.Enabled)
+        {
+            return;
+        }
+
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                Enabled = true
+            }
+        });
+        _userService.SetTwoFactorProvider(user, TwoFactorProviderType.Email);
     }
 
     public async Task<IdentityResult> RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(User user, RegisterFinishData registerFinishData,
