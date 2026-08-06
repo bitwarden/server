@@ -1,6 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -96,38 +99,31 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
-    public async Task PostRegisterSendEmailVerification_WithSealedOpenOrgInviteData_ReturnsNoContent(string name, bool receiveMarketingEmails)
+    public async Task PostRegisterSendEmailVerification_WithOpenOrgInvite_InvalidLink_ReturnsBadRequest(string name, bool receiveMarketingEmails)
     {
-        // Localized factory so we can inspect the mail service in isolation.
-        var localFactory = new IdentityApplicationFactory();
-
-        var email = $"test+register+sealed+{name}@email.com";
-        var sealedOpenOrgInviteData = "opaque-base64url-blob-representing-a-realistic-sdk-output";
+        // OpenOrgInvite payload without a matching invite link on the org is rejected.
+        var email = $"test+register+badlink+{name}@email.com";
 
         var model = new RegisterSendVerificationEmailRequestModel
         {
             Email = email,
             Name = name,
             ReceiveMarketingEmails = receiveMarketingEmails,
-            SealedOpenOrgInviteData = sealedOpenOrgInviteData,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = Guid.NewGuid(),
+                Code = Guid.NewGuid(),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
         };
 
-        var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
+        var context = await _factory.PostRegisterSendEmailVerificationAsync(model);
 
-        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
-
-        // The passthrough must reach the mail service unchanged — the server never parses it.
-        await localFactory.GetService<Bit.Core.Services.IMailService>()
-            .Received(1)
-            .SendRegistrationVerificationEmailAsync(
-                Arg.Is<string>(e => e == email),
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Is<string>(s => s == sealedOpenOrgInviteData));
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
     }
 
     [Theory, BitAutoData]
-    public async Task PostRegisterSendEmailVerification_WithOversizedSealedOpenOrgInviteData_ReturnsBadRequest(string name, bool receiveMarketingEmails)
+    public async Task PostRegisterSendEmailVerification_WithOpenOrgInvite_OversizedSealedData_ReturnsBadRequest(string name, bool receiveMarketingEmails)
     {
         var email = $"test+register+oversize+{name}@email.com";
         // Length cap in the request model is 4096; 4097+ must be rejected by model validation.
@@ -138,7 +134,12 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             Email = email,
             Name = name,
             ReceiveMarketingEmails = receiveMarketingEmails,
-            SealedOpenOrgInviteData = oversized,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = Guid.NewGuid(),
+                Code = Guid.NewGuid(),
+                SealedOpenOrgInviteData = oversized,
+            },
         };
 
         var context = await _factory.PostRegisterSendEmailVerificationAsync(model);
@@ -147,33 +148,144 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
-    public async Task PostRegisterSendEmailVerification_WithSealedOpenOrgInviteData_ForExistingUser_SilentlyDiscardsSealedData(string name, bool receiveMarketingEmails)
+    public async Task PostRegisterSendEmailVerification_WithMatchingOrgInvite_BypassesClaimedDomainBlock(string name, bool receiveMarketingEmails)
     {
-        // Existing user + sealed data → 204 with no mail sent (anti-enumeration).
+        // Isolated factory to keep the seeded org/policy/domain out of the shared fixture.
         var localFactory = new IdentityApplicationFactory();
 
-        var email = $"test+register+existing+{name}@email.com";
-        await CreateUserAsync(email, name, localFactory);
+        var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
+        var email = $"test+claimed+{name}@{claimedDomain}";
+        var (_, inviteLink) = await SeedOrgWithClaimedDomainAndInviteLinkAsync(localFactory, claimedDomain);
 
         var model = new RegisterSendVerificationEmailRequestModel
         {
             Email = email,
             Name = name,
             ReceiveMarketingEmails = receiveMarketingEmails,
-            SealedOpenOrgInviteData = "opaque-base64url-blob",
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
         };
 
         var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
 
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+    }
 
-        await localFactory.GetService<Bit.Core.Services.IMailService>()
-            .DidNotReceive()
-            .SendRegistrationVerificationEmailAsync(
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Any<string>());
+    [Theory, BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WithDifferentOrgInvite_StillBlocksClaimedDomain(string name, bool receiveMarketingEmails)
+    {
+        // Attacker scenario: sender's invite belongs to OrgB, but the email's domain is claimed by OrgA.
+        // OrgA's block policy must still fire because the exclusion is scoped to OrgB, not OrgA.
+        var localFactory = new IdentityApplicationFactory();
+
+        var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
+        var email = $"test+attacker+{name}@{claimedDomain}";
+        await SeedOrgWithClaimedDomainAndInviteLinkAsync(localFactory, claimedDomain);
+        var (_, attackerInviteLink) = await SeedOrgWithInviteLinkAsync(localFactory);
+
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = attackerInviteLink.OrganizationId,
+                Code = Guid.Parse(attackerInviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+
+        var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+    }
+
+    private static async Task<(Organization Org, OrganizationInviteLink InviteLink)> SeedOrgWithClaimedDomainAndInviteLinkAsync(
+        IdentityApplicationFactory factory, string claimedDomain)
+    {
+        var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
+        var organizationDomainRepository = factory.Services.GetRequiredService<IOrganizationDomainRepository>();
+        var policyRepository = factory.Services.GetRequiredService<IPolicyRepository>();
+        var organizationInviteLinkRepository = factory.Services.GetRequiredService<IOrganizationInviteLinkRepository>();
+
+        var organization = new Organization
+        {
+            Name = $"ClaimedDomainOrg-{Guid.NewGuid():N}",
+            BillingEmail = $"billing+{Guid.NewGuid():N}@example.com",
+            Plan = "Enterprise",
+            Enabled = true,
+            UsePolicies = true,
+            UseOrganizationDomains = true,
+            UseInviteLinks = true,
+        };
+        organization = await organizationRepository.CreateAsync(organization);
+
+        var domain = new OrganizationDomain
+        {
+            OrganizationId = organization.Id,
+            DomainName = claimedDomain,
+            Txt = "bw-test",
+        };
+        domain.SetVerifiedDate();
+        await organizationDomainRepository.CreateAsync(domain);
+
+        var policy = new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.BlockClaimedDomainAccountCreation,
+            Enabled = true,
+        };
+        await policyRepository.CreateAsync(policy);
+
+        var inviteLink = new OrganizationInviteLink
+        {
+            OrganizationId = organization.Id,
+            Invite = "opaque-invite-blob",
+            SupportsConfirmation = false,
+        };
+        inviteLink.SetAllowedDomains(new[] { claimedDomain });
+        inviteLink.SetNewId();
+        inviteLink.SetNewCode();
+        await organizationInviteLinkRepository.CreateAsync(inviteLink);
+
+        return (organization, inviteLink);
+    }
+
+    private static async Task<(Organization Org, OrganizationInviteLink InviteLink)> SeedOrgWithInviteLinkAsync(
+        IdentityApplicationFactory factory)
+    {
+        var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
+        var organizationInviteLinkRepository = factory.Services.GetRequiredService<IOrganizationInviteLinkRepository>();
+
+        var organization = new Organization
+        {
+            Name = $"OtherOrg-{Guid.NewGuid():N}",
+            BillingEmail = $"billing+{Guid.NewGuid():N}@example.com",
+            Plan = "Enterprise",
+            Enabled = true,
+            UsePolicies = true,
+            UseInviteLinks = true,
+        };
+        organization = await organizationRepository.CreateAsync(organization);
+
+        var inviteLink = new OrganizationInviteLink
+        {
+            OrganizationId = organization.Id,
+            Invite = "opaque-invite-blob",
+            SupportsConfirmation = false,
+            AllowedDomains = "[]",
+        };
+        inviteLink.SetAllowedDomains(Array.Empty<string>());
+        inviteLink.SetNewId();
+        inviteLink.SetNewCode();
+        await organizationInviteLinkRepository.CreateAsync(inviteLink);
+
+        return (organization, inviteLink);
     }
 
 
@@ -312,6 +424,190 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         var postRegisterFinishHttpContext = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
 
         Assert.Equal(StatusCodes.Status400BadRequest, postRegisterFinishHttpContext.Response.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithMatchingOpenOrgInvite_Succeeds([Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, [Required] string userSymmetricKey,
+        [Required] KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
+    {
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+
+        var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
+        var email = $"test+claimedfinish+{name}@{claimedDomain}";
+        var (_, inviteLink) = await SeedOrgWithClaimedDomainAndInviteLinkAsync(localFactory, claimedDomain);
+
+        // Register-start with the matching invite — bypasses the claimed-domain block, yields a token.
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status204NoContent, sendCtx.Response.StatusCode);
+        Assert.NotNull(localFactory.RegistrationTokens[email]);
+
+        // Register-finish with the same invite — the domain-block check must exclude this org.
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = localFactory.RegistrationTokens[email],
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.NotNull(user);
+        Assert.Equal(email, user.Email);
+        Assert.Equal(name, user.Name);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithInvalidOpenOrgInvite_ReturnsBadRequest([Required] string name,
+        [StringLength(1000), Required] string masterPasswordHash, [Required] string userSymmetricKey,
+        [Required] KeysRequestModel userAsymmetricKeys)
+    {
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+
+        var email = $"test+register+badfinishlink+{name}@email.com";
+
+        // Register-start with no invite to obtain a plain email verification token.
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status204NoContent, sendCtx.Response.StatusCode);
+
+        // Register-finish carrying a bogus OpenOrgInvite — validator query returns InviteLinkNotFound → 400.
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            EmailVerificationToken = localFactory.RegistrationTokens[email],
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = Guid.NewGuid(),
+                Code = Guid.NewGuid(),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, finishCtx.Response.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithDifferentOrgOpenOrgInvite_StillBlocksClaimedDomain([Required] string name,
+        [StringLength(1000), Required] string masterPasswordHash, [Required] string userSymmetricKey,
+        [Required] KeysRequestModel userAsymmetricKeys)
+    {
+        // Attacker at register-finish: the token was obtained via OrgA's invite (the legitimate claimant),
+        // but the caller now swaps OrgB's invite into the register-finish body hoping to reach past OrgA's
+        // block policy. The domain-block check must still exclude only OrgB, so OrgA's policy fires → 400.
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+
+        var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
+        var email = $"test+attackerfinish+{name}@{claimedDomain}";
+        var (_, orgAInvite) = await SeedOrgWithClaimedDomainAndInviteLinkAsync(localFactory, claimedDomain);
+        var (_, orgBInvite) = await SeedOrgWithInviteLinkAsync(localFactory);
+
+        // Register-start with OrgA's invite so the claimed-domain block is bypassed and we receive a token.
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = orgAInvite.OrganizationId,
+                Code = Guid.Parse(orgAInvite.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status204NoContent, sendCtx.Response.StatusCode);
+        Assert.NotNull(localFactory.RegistrationTokens[email]);
+
+        // Register-finish swaps to OrgB's invite. Exclusion is scoped to OrgB, OrgA's policy still fires.
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            EmailVerificationToken = localFactory.RegistrationTokens[email],
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = orgBInvite.OrganizationId,
+                Code = Guid.Parse(orgBInvite.Code),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, finishCtx.Response.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterFinish_WithOpenOrgInviteAndOrgInviteToken_ReturnsBadRequest([Required] string name,
+        [StringLength(1000), Required] string masterPasswordHash, [Required] string userSymmetricKey,
+        [Required] KeysRequestModel userAsymmetricKeys, string orgInviteToken)
+    {
+        // DTO validation: OpenOrgInvite is only compatible with the EmailVerification token type.
+        // Sending it alongside an OrgInviteToken must be rejected at the model-validation layer → 400.
+        userAsymmetricKeys.AccountKeys = null;
+        var email = $"test+register+dtoreject+{name}@email.com";
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            OrgInviteToken = orgInviteToken,
+            OrganizationUserId = Guid.NewGuid(),
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = Guid.NewGuid(),
+                Code = Guid.NewGuid(),
+            },
+        };
+
+        var finishCtx = await _factory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, finishCtx.Response.StatusCode);
     }
 
     [Theory, BitAutoData]

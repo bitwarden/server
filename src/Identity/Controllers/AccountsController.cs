@@ -103,7 +103,7 @@ public class AccountsController : Controller
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
-            model.ReceiveMarketingEmails, model.FromMarketing, model.SealedOpenOrgInviteData);
+            model.ReceiveMarketingEmails, model.FromMarketing, model.OpenOrgInvite);
 
         if (token != null)
         {
@@ -143,10 +143,16 @@ public class AccountsController : Controller
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
-                identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
-                    user,
-                    registerFinishData,
-                    model.EmailVerificationToken!);
+                identityResult = model.OpenOrgInvite is not null
+                    ? await _registerUserCommand.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+                        user,
+                        registerFinishData,
+                        model.EmailVerificationToken!,
+                        model.OpenOrgInvite)
+                    : await _registerUserCommand.RegisterUserViaEmailVerificationToken(
+                        user,
+                        registerFinishData,
+                        model.EmailVerificationToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrganizationInvite:

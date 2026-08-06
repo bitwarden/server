@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -323,17 +324,22 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostRegisterSendEmailVerification_PassesSealedOpenOrgInviteDataToCommandAsync(
-        string email, string name, bool receiveMarketingEmails)
+    public async Task PostRegisterSendEmailVerification_ForwardsOpenOrgInvite(
+        string email, string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
     {
         // Arrange
-        var sealedOpenOrgInviteData = "opaque-base64url-blob";
+        var openOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+        {
+            OrganizationId = organizationId,
+            Code = code,
+            SealedOpenOrgInviteData = "opaque-base64url-blob",
+        };
         var model = new RegisterSendVerificationEmailRequestModel
         {
             Email = email,
             Name = name,
             ReceiveMarketingEmails = receiveMarketingEmails,
-            SealedOpenOrgInviteData = sealedOpenOrgInviteData,
+            OpenOrgInvite = openOrgInvite,
         };
 
         // Act
@@ -341,7 +347,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         await _sendVerificationEmailForRegistrationCommand.Received(1)
-            .Run(email, name, receiveMarketingEmails, null, sealedOpenOrgInviteData);
+            .Run(email, name, receiveMarketingEmails, null, openOrgInvite);
     }
 
     [Theory, BitAutoData, SignatureKeyPairRequestModelCustomizeAttribute]
@@ -601,6 +607,57 @@ public class AccountsControllerTests : IDisposable
             u.Email == newUser.Email &&
             u.MasterPasswordHint == newUser.MasterPasswordHint
         ), newData, emailVerificationToken);
+    }
+
+    [Theory, BitAutoData, SignatureKeyPairRequestModelCustomize]
+    public async Task PostRegisterFinish_EmailVerification_ForwardsOpenOrgInvite(
+        string email, string emailVerificationToken, string userSymmetricKey, string masterPasswordHash,
+        AccountKeysRequestModel accountKeys, Guid organizationId, Guid code)
+    {
+        // Arrange
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        var kdfModel = new KdfRequestModel
+        {
+            KdfType = KdfType.Argon2id,
+            Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            Memory = KdfConstants.ARGON2_MEMORY.Default,
+            Parallelism = KdfConstants.ARGON2_PARALLELISM.Default,
+        };
+
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            OpenOrgInvite = openOrgInvite,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Kdf = kdfModel,
+                Salt = email.ToLowerInvariant().Trim(),
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdfModel,
+                MasterKeyWrappedUserKey = userSymmetricKey,
+                Salt = email.ToLowerInvariant().Trim(),
+            },
+            AccountKeys = accountKeys,
+        };
+
+        _registerUserCommand.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            Arg.Any<User>(), Arg.Any<RegisterFinishData>(), emailVerificationToken, openOrgInvite)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        var result = await _sut.PostRegisterFinish(model);
+
+        // Assert
+        Assert.NotNull(result);
+        await _registerUserCommand.Received(1).RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            Arg.Any<User>(), Arg.Any<RegisterFinishData>(), emailVerificationToken, openOrgInvite);
+        await _registerUserCommand.DidNotReceive().RegisterUserViaEmailVerificationToken(
+            Arg.Any<User>(), Arg.Any<RegisterFinishData>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData, SignatureKeyPairRequestModelCustomize]
