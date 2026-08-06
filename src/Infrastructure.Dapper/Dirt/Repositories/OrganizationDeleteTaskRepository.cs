@@ -10,9 +10,6 @@ namespace Bit.Infrastructure.Dapper.Dirt.Repositories;
 
 public class OrganizationDeleteTaskRepository : BaseRepository, IOrganizationDeleteTaskRepository
 {
-    private const int LeaseDurationMinutes = 10;
-    private const int MaxFailureCount = 5;
-
     public OrganizationDeleteTaskRepository(GlobalSettings globalSettings)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     { }
@@ -33,7 +30,12 @@ public class OrganizationDeleteTaskRepository : BaseRepository, IOrganizationDel
         using var connection = new SqlConnection(ConnectionString);
         return await connection.QuerySingleOrDefaultAsync<OrganizationDeleteTask>(
             "[dbo].[OrganizationDeleteTask_UpdateClaimNextPending]",
-            new { Now = now, StaleLeaseThreshold = now.AddMinutes(-LeaseDurationMinutes), MaxFailureCount },
+            new
+            {
+                Now = now,
+                StaleLeaseThreshold = now.AddMinutes(-OrganizationDeleteTask.LeaseDurationMinutes),
+                OrganizationDeleteTask.MaxFailureCount,
+            },
             commandType: CommandType.StoredProcedure);
     }
 
