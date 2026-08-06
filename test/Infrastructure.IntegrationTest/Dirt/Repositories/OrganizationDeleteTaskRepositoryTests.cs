@@ -14,7 +14,7 @@ namespace Bit.Infrastructure.IntegrationTest.Dirt.Repositories;
 
 public class OrganizationDeleteTaskRepositoryTests
 {
-    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
+    [Theory, DatabaseData]
     public async Task ClaimNextPendingAsync_PendingRow_ReturnsRowWithLeaseSet(
         IOrganizationDeleteTaskRepository sut)
     {
@@ -35,23 +35,23 @@ public class OrganizationDeleteTaskRepositoryTests
         Assert.Null(claimed.CompletedDate);
     }
 
-    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
+    [Theory, DatabaseData]
     public async Task UpdateProgressAsync_And_UpdateCompletedAsync_UpdatesRow(
-        IOrganizationDeleteTaskRepository sut, Database database)
+        IOrganizationDeleteTaskRepository sut, Database database, IServiceProvider services)
     {
         var task = new OrganizationDeleteTask { OrganizationId = Guid.NewGuid() };
         await sut.CreateAsync(task);
 
         await sut.UpdateProgressAsync(task.Id, 42);
-        var afterProgress = await QueryRowAsync(database.ConnectionString, task.Id);
+        var afterProgress = await GetTaskByIdAsync(services, database, task.Id);
         Assert.Equal(42, afterProgress.ItemsDeletedCount);
 
         await sut.UpdateCompletedAsync(task.Id);
-        var afterCompletion = await QueryRowAsync(database.ConnectionString, task.Id);
+        var afterCompletion = await GetTaskByIdAsync(services, database, task.Id);
         Assert.NotNull(afterCompletion.CompletedDate);
     }
 
-    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
+    [Theory, DatabaseData]
     public async Task ClaimNextPendingAsync_ConcurrentCalls_RowClaimedOnlyOnce(
         IOrganizationDeleteTaskRepository sut)
     {
@@ -69,9 +69,9 @@ public class OrganizationDeleteTaskRepositoryTests
         Assert.Equal(1, results.Count(r => r?.Id == task.Id));
     }
 
-    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
+    [Theory, DatabaseData]
     public async Task ClaimNextPendingAsync_StaleRevisionDate_RowIsReclaimable(
-        IOrganizationDeleteTaskRepository sut, Database database)
+        IOrganizationDeleteTaskRepository sut, Database database, IServiceProvider services)
     {
         var task = new OrganizationDeleteTask
         {
@@ -84,14 +84,16 @@ public class OrganizationDeleteTaskRepositoryTests
         Assert.NotNull(firstClaim);
         Assert.Equal(task.Id, firstClaim.Id);
 
-        await BackdateRevisionDateAsync(database.ConnectionString, task.Id, minutes: -15);
+        // Push the lease past OrganizationDeleteTask.LeaseDurationMinutes so it reads as abandoned.
+        await BackdateRevisionDateAsync(services, database, task.Id,
+            minutes: -(OrganizationDeleteTask.LeaseDurationMinutes + 5));
 
         var secondClaim = await sut.ClaimNextPendingAsync();
         Assert.NotNull(secondClaim);
         Assert.Equal(task.Id, secondClaim.Id);
     }
 
-    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
+    [Theory, DatabaseData]
     public async Task ClaimNextPendingAsync_FailureCountAtMax_RowNotClaimed(
         IOrganizationDeleteTaskRepository sut)
     {
@@ -102,7 +104,7 @@ public class OrganizationDeleteTaskRepositoryTests
         };
         await sut.CreateAsync(task);
 
-        for (var i = 0; i < 5; i++)
+        for (var i = 0; i < OrganizationDeleteTask.MaxFailureCount; i++)
         {
             await sut.UpdateErrorAsync(task.Id, $"Error {i + 1}");
         }
@@ -222,6 +224,46 @@ public class OrganizationDeleteTaskRepositoryTests
             .Where(t => t.OrganizationId == organizationId)
             .ToListAsync();
         return rows.Cast<OrganizationDeleteTask>().ToList();
+    }
+
+    /// <summary>
+    /// Reads a cleanup-task row by id across providers, mirroring
+    /// <see cref="GetTaskByOrganizationIdAsync"/>. There is no read-by-id repository method, so
+    /// tests verifying the update operations have to read the row out of band.
+    /// </summary>
+    private static async Task<OrganizationDeleteTask> GetTaskByIdAsync(
+        IServiceProvider services, Database database, Guid id)
+    {
+        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+        {
+            return await QueryRowAsync(database.ConnectionString, id);
+        }
+
+        using var scope = services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        return await dbContext.OrganizationDeleteTasks
+            .AsNoTracking()
+            .FirstAsync(t => t.Id == id);
+    }
+
+    /// <summary>
+    /// Ages a task's lease so it reads as abandoned, across providers.
+    /// </summary>
+    private static async Task BackdateRevisionDateAsync(
+        IServiceProvider services, Database database, Guid id, int minutes)
+    {
+        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+        {
+            await BackdateRevisionDateAsync(database.ConnectionString, id, minutes);
+            return;
+        }
+
+        var revisionDate = DateTime.UtcNow.AddMinutes(minutes);
+        using var scope = services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        await dbContext.OrganizationDeleteTasks
+            .Where(t => t.Id == id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(t => t.RevisionDate, revisionDate));
     }
 
     private static async Task<OrganizationDeleteTask> QueryRowAsync(string connectionString, Guid id)
