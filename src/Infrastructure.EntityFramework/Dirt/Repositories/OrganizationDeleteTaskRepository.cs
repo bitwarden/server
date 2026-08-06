@@ -96,7 +96,7 @@ public class OrganizationDeleteTaskRepository : BaseEntityFrameworkRepository, I
                 .SetProperty(t => t.RevisionDate, now));
     }
 
-    public async Task UpdateErrorAsync(Guid id, string message)
+    public async Task<int> UpdateErrorAsync(Guid id, string message)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -108,6 +108,14 @@ public class OrganizationDeleteTaskRepository : BaseEntityFrameworkRepository, I
                 .SetProperty(t => t.FailureCount, t => t.FailureCount + 1)
                 .SetProperty(t => t.LastError, message)
                 .SetProperty(t => t.RevisionDate, now));
+
+        // ExecuteUpdate reports rows affected, not the new value, so read the count back. This is
+        // the failure path, so the extra round trip is not worth avoiding.
+        return await dbContext.OrganizationDeleteTasks
+            .AsNoTracking()
+            .Where(t => t.Id == id)
+            .Select(t => t.FailureCount)
+            .FirstOrDefaultAsync();
     }
 
     public async Task UpdateCompletedAsync(Guid id)

@@ -181,6 +181,40 @@ public class OrganizationDeleteTasksJobTests
     }
 
     [Fact]
+    public async Task Execute_DeleteThrows_BelowFailureCap_DoesNotLogAbandonment()
+    {
+        var pending = CreatePending();
+        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        _cleanupRepository.UpdateErrorAsync(pending.Id, Arg.Any<string>())
+            .Returns(OrganizationDeleteTask.MaxFailureCount - 1);
+        _handler
+            .DeleteBatchAsync(pending, Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("boom"));
+
+        await _sut.Execute(CreateContext());
+
+        // The task will be reclaimed once its lease goes stale, so this is not an abandonment.
+        AssertNotLoggedContaining(LogLevel.Error, "Abandoning");
+    }
+
+    [Fact]
+    public async Task Execute_DeleteThrows_AtFailureCap_LogsAbandonment()
+    {
+        var pending = CreatePending();
+        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        _cleanupRepository.UpdateErrorAsync(pending.Id, Arg.Any<string>())
+            .Returns(OrganizationDeleteTask.MaxFailureCount);
+        _handler
+            .DeleteBatchAsync(pending, Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("boom"));
+
+        await _sut.Execute(CreateContext());
+
+        // Past the cap the task is never claimed again, so the GDPR cleanup has silently stopped.
+        AssertLoggedContaining(LogLevel.Error, "Abandoning");
+    }
+
+    [Fact]
     public async Task Execute_DeleteThrows_DoesNotLeakRowKeyIdentifiersInError()
     {
         var pending = CreatePending();
@@ -198,6 +232,26 @@ public class OrganizationDeleteTasksJobTests
             pending.Id,
             Arg.Is<string>(error => !error.Contains("UserId") && !error.Contains("CipherId")));
     }
+
+    /// <summary>
+    /// Matches a specific log entry by content. Needed where <c>BaseJob.Execute</c> also logs at the
+    /// same level after the rethrow, so asserting on level alone would match both.
+    /// </summary>
+    private void AssertLoggedContaining(LogLevel level, string fragment) =>
+        _logger.Received(1).Log(
+            level,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains(fragment)),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
+
+    private void AssertNotLoggedContaining(LogLevel level, string fragment) =>
+        _logger.DidNotReceive().Log(
+            level,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains(fragment)),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
 
     private void AssertLogged(LogLevel level) =>
         _logger.Received(1).Log(

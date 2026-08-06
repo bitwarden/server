@@ -12,6 +12,8 @@ BEGIN
         [FailureCount] = [FailureCount] + 1,
         [LastError] = @Message,
         [RevisionDate] = @Now
+    OUTPUT
+        inserted.[FailureCount]
     WHERE
         [Id] = @Id
 END

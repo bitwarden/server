@@ -114,7 +114,10 @@ public class OrganizationDeleteTaskRepositoryTests
 
         for (var i = 0; i < OrganizationDeleteTask.MaxFailureCount; i++)
         {
-            await sut.UpdateErrorAsync(task.Id, $"Error {i + 1}");
+            // The running count is what tells the job a task has been abandoned, so every provider
+            // has to report it accurately rather than just incrementing the column.
+            var failureCount = await sut.UpdateErrorAsync(task.Id, $"Error {i + 1}");
+            Assert.Equal(i + 1, failureCount);
         }
 
         var claimed = await sut.ClaimNextPendingAsync();

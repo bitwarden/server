@@ -48,10 +48,10 @@ public class OrganizationDeleteTaskRepository : BaseRepository, IOrganizationDel
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task UpdateErrorAsync(Guid id, string message)
+    public async Task<int> UpdateErrorAsync(Guid id, string message)
     {
         using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
+        return await connection.ExecuteScalarAsync<int>(
             "[dbo].[OrganizationDeleteTask_UpdateError]",
             new { Id = id, Message = message, Now = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);

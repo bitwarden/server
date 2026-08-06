@@ -2,6 +2,7 @@
 
 using Azure;
 using Bit.Core;
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
@@ -114,7 +115,19 @@ public class OrganizationDeleteTasksJob : BaseJob
         {
             // Store a sanitized error, never ex.Message: Azure SDK messages can embed
             // row-key identifiers (e.g. UserId=..., CipherId=...) that must not be persisted.
-            await _cleanupRepository.UpdateErrorAsync(pending.Id, BuildSanitizedError(ex));
+            var failureCount = await _cleanupRepository.UpdateErrorAsync(pending.Id, BuildSanitizedError(ex));
+
+            // Individual failures surface through the rethrow below, but the transition to
+            // "abandoned" would not: once the cap is reached the task stops being claimed and goes
+            // quiet. Deleting these logs is a GDPR obligation, so a cleanup that has stopped
+            // retrying for good needs to be alertable rather than inferred from counting retries.
+            if (failureCount >= OrganizationDeleteTask.MaxFailureCount)
+            {
+                _logger.LogError(Constants.BypassFiltersEventId,
+                    "Abandoning {TaskType} cleanup for organization {OrganizationId} (task {TaskId}) after {FailureCount} failures; it will not be retried.",
+                    pending.TaskType, pending.OrganizationId, pending.Id, failureCount);
+            }
+
             throw;
         }
     }
