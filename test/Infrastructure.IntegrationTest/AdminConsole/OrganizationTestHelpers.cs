@@ -24,6 +24,7 @@ public static class OrganizationTestHelpers
             Email = $"{id}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
+            AccountRevisionDate = DateTime.UtcNow.AddMinutes(-10),
         });
     }
 
