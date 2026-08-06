@@ -1,4 +1,5 @@
 ﻿using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Steps;
@@ -15,19 +16,17 @@ internal sealed class CreateIndividualUserStep(
         var password = context.GetPassword();
 
         var (userEntity, keys) = UserSeeder.Create(
-            email,
+            new UserSeed
+            {
+                Email = email,
+                EmailVerified = emailVerified,
+                Premium = premium,
+                MaxStorageGb = maxStorageGb > 0 ? Math.Min(maxStorageGb, (short)5) : null,
+                Password = password,
+                KdfIterations = kdfIterations
+            },
             context.GetPasswordHasher(),
-            context.GetMangler(),
-            premium: premium,
-            maxStorageGb: maxStorageGb > 0 ? Math.Min(maxStorageGb, (short)5) : null,
-            password: password,
-            kdfIterations: kdfIterations,
-            emailVerified: emailVerified);
-
-        if (premium)
-        {
-            userEntity.PremiumExpirationDate = DateTime.UtcNow.AddYears(1);
-        }
+            context.GetMangler());
 
         context.Users.Add(userEntity);
         context.Owner = userEntity;

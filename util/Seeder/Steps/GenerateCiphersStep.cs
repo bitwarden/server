@@ -30,8 +30,6 @@ internal sealed class GenerateCiphersStep(
     DensityProfile? density = null,
     int repromptEveryNthCipher = 0) : IStep
 {
-    private readonly DensityProfile? _density = density;
-
     public void Execute(SeederContext context)
     {
         if (count == 0)
@@ -44,7 +42,7 @@ internal sealed class GenerateCiphersStep(
         var orgId = context.RequireOrgId();
         var orgKey = context.RequireOrgKey();
         var collectionIds = context.Registry.CollectionIds;
-        var typeDistribution = typeDist ?? _density?.CipherTypeDistribution ?? CipherTypeDistributions.Realistic;
+        var typeDistribution = typeDist ?? density?.CipherTypeDistribution ?? CipherTypeDistributions.Realistic;
         var passwordDistribution = pwDist ?? PasswordDistributions.Realistic;
         var companies = Companies.All;
 
@@ -59,8 +57,8 @@ internal sealed class GenerateCiphersStep(
         // archiving requires at least one user to exist.
         var (archivedOrgTarget, _, bothOrgTarget, deletedOnlyOrgTarget) = ArchiveDeleteDistribution.ComputeTargets(
             count,
-            _density?.ArchivedCipherRate ?? 0, _density?.DeletedCipherRate ?? 0, _density?.ArchivedAndDeletedOverlapRate ?? 0,
-            _density?.MaxArchivedCiphers ?? 0, _density?.MaxDeletedCiphers ?? 0,
+            density?.ArchivedCipherRate ?? 0, density?.DeletedCipherRate ?? 0, density?.ArchivedAndDeletedOverlapRate ?? 0,
+            density?.MaxArchivedCiphers ?? 0, density?.MaxDeletedCiphers ?? 0,
             canArchive);
 
         var selection = ArchiveDeleteDistribution.Select(count, archivedOrgTarget, bothOrgTarget, deletedOnlyOrgTarget);
@@ -99,7 +97,7 @@ internal sealed class GenerateCiphersStep(
 
         if (collectionIds.Count > 0)
         {
-            if (_density == null)
+            if (density == null)
             {
                 for (var i = 0; i < ciphers.Count; i++)
                 {
@@ -121,14 +119,14 @@ internal sealed class GenerateCiphersStep(
             }
             else
             {
-                var orphanCount = (int)(count * _density.OrphanCipherRate);
+                var orphanCount = (int)(count * density.OrphanCipherRate);
                 var nonOrphanCount = count - orphanCount;
                 var primaryIndices = new int[nonOrphanCount];
 
                 for (var i = 0; i < nonOrphanCount; i++)
                 {
                     int collectionIndex;
-                    if (_density.CipherSkew == CipherCollectionSkew.HeavyRight)
+                    if (density.CipherSkew == CipherCollectionSkew.HeavyRight)
                     {
                         // Sqrt curve: later collections accumulate more ciphers (right-heavy skew)
                         var normalized = Math.Pow((double)i / nonOrphanCount, 0.5);
@@ -148,12 +146,12 @@ internal sealed class GenerateCiphersStep(
                     });
                 }
 
-                if (_density.MultiCollectionRate > 0 && collectionIds.Count > 1)
+                if (density.MultiCollectionRate > 0 && collectionIds.Count > 1)
                 {
-                    var multiCount = (int)(nonOrphanCount * _density.MultiCollectionRate);
+                    var multiCount = (int)(nonOrphanCount * density.MultiCollectionRate);
                     for (var i = 0; i < multiCount; i++)
                     {
-                        var extraCount = 1 + (i % Math.Max(_density.MaxCollectionsPerCipher - 1, 1));
+                        var extraCount = 1 + (i % Math.Max(density.MaxCollectionsPerCipher - 1, 1));
                         extraCount = Math.Min(extraCount, collectionIds.Count - 1);
                         for (var j = 0; j < extraCount; j++)
                         {

@@ -9,10 +9,14 @@ namespace Bit.Core.Utilities;
 public static class LoggerFactoryExtensions
 {
     /// <summary>
-    ///
+    /// Configures file logging via Serilog when not running in the Development environment.
+    /// Reads configuration from <c>Logging:PathFormat</c> if present; otherwise falls back to
+    /// the legacy <c>GlobalSettings:LogDirectory</c> / <c>LogDirectoryByProject</c> settings.
     /// </summary>
-    /// <param name="hostBuilder"></param>
-    /// <returns></returns>
+    /// <remarks>
+    /// Only use this in services that run as part of a self-hosted Bitwarden Lite deployment.
+    /// Cloud-hosted services should rely solely on the logging provided by the Bitwarden Server SDK.
+    /// </remarks>
     public static IHostBuilder AddSerilogFileLogging(this IHostBuilder hostBuilder)
     {
         return hostBuilder.ConfigureLogging((context, logging) =>
