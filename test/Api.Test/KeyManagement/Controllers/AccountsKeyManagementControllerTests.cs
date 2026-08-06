@@ -197,6 +197,32 @@ public class AccountsKeyManagementControllerTests
             ));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_WithoutKeyIds_PassesNullsToCommand(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        RotateUserAccountKeysAndDataRequestModel data, User user)
+    {
+        data.AccountKeys.SignatureKeyPair = null;
+        // Old clients send neither the key id of the user key contained in the unlock data, nor the key id of the
+        // key being rotated to.
+        data.AccountUnlockData.MasterPasswordUnlockData.ContainedKeyId = null;
+        data.NewUserKeyId = null;
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IRotateUserAccountKeysCommand>()
+            .PasswordChangeAndRotateUserAccountKeysAsync(Arg.Any<User>(),
+                Arg.Any<PasswordChangeAndRotateUserAccountKeysData>())
+            .Returns(IdentityResult.Success);
+
+        await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(data);
+
+        await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
+            .PasswordChangeAndRotateUserAccountKeysAsync(Arg.Is(user),
+                Arg.Is<PasswordChangeAndRotateUserAccountKeysData>(d =>
+                    d.MasterPasswordUnlockData.ContainedKeyId == null
+                    && d.BaseData.NewUserKeyId == null));
+    }
+
 
     [Theory]
     [BitAutoData]
@@ -730,6 +756,26 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task RotateUserKeysAsync_MasterPassword_WithoutKeyIds_PassesNullsToCommand(
+        SutProvider<AccountsKeyManagementController> sutProvider, RotateUserKeysRequestModel request, User user)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        // Old clients send neither the key id of the user key contained in the unlock data, nor the key id of the
+        // key being rotated to.
+        request = SetupValidRotateUserKeysRequest(request, null);
+
+        await sutProvider.Sut.RotateUserKeysAsync(request);
+
+        await AssertCommonValidatorsCalledAsync(sutProvider, request);
+
+        await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
+            .MasterPasswordRotateUserAccountKeysAsync(Arg.Is(user), Arg.Is<MasterPasswordRotateUserAccountKeysData>(d =>
+                d.MasterPasswordUnlockData.ContainedKeyId == null
+                && d.BaseData.NewUserKeyId == null));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task RotateUserKeysAsync_Tde_Success(
         SutProvider<AccountsKeyManagementController> sutProvider, RotateUserKeysRequestModel request, User user)
     {
@@ -837,7 +883,8 @@ public class AccountsKeyManagementControllerTests
             .ValidateAsync(Arg.Any<User>(), Arg.Is(request.AccountData.Sends));
     }
 
-    private static RotateUserKeysRequestModel SetupValidRotateUserKeysRequest(RotateUserKeysRequestModel request)
+    private static RotateUserKeysRequestModel SetupValidRotateUserKeysRequest(RotateUserKeysRequestModel request,
+        string? keyId = _mockKeyId)
     {
         request.WrappedAccountCryptographicState.SignatureKeyPair = new SignatureKeyPairRequestModel
         {
@@ -858,11 +905,11 @@ public class AccountsKeyManagementControllerTests
                     Iterations = 6000,
                     KdfType = KdfType.PBKDF2_SHA256,
                 },
-                ContainedKeyId = _mockKeyId
+                ContainedKeyId = keyId
             },
             KeyConnectorKeyWrappedUserKey = null,
         };
-        request.NewUserKeyId = _mockKeyId;
+        request.NewUserKeyId = keyId;
         return request;
     }
 }
