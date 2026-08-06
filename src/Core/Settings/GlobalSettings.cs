@@ -569,6 +569,10 @@ public class GlobalSettings : IGlobalSettings
         public string BlobName { get; set; } = "dataprotection.pfx";
 
         public string? CertificatePassword { get; set; }
+
+        public KeyProtectionPolicyType KeyProtectionPolicy { get; set; } =
+            KeyProtectionPolicyType.Certificate;
+
         public string Directory
         {
             get => _globalSettings.BuildDirectory(_directory, "/core/aspnet-dataprotection");
@@ -576,6 +580,24 @@ public class GlobalSettings : IGlobalSettings
         }
 
         public CertificateInfo[] UnprotectCertificates { get; set; } = [];
+
+        /// <summary>
+        /// Defines how ASP.NET Core data-protection keys are protected at rest.
+        /// Migration between types is not supported.
+        /// </summary>
+        public enum KeyProtectionPolicyType
+        {
+            /// <summary>
+            /// ASP.NET Core data-protection keys are wrapped using the configured certificate.
+            /// </summary>
+            Certificate = 0,
+
+            /// <summary>
+            /// Keys are persisted without application-level certificate wrapping and rely on storage
+            /// encryption at rest and access controls.
+            /// </summary>
+            StorageManaged = 1,
+        }
 
         public class CertificateInfo
         {
