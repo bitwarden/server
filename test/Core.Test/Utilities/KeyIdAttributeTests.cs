@@ -15,7 +15,7 @@ public class UserKeyIdAttributeTests
     [InlineData("ffffffffffffffffffffffffffffffff")]
     public void IsValid_ReturnsTrue_WhenValid(string? input)
     {
-        var sut = new UserKeyIdAttribute();
+        var sut = new KeyIdAttribute();
 
         Assert.True(sut.IsValid(input));
     }
@@ -30,7 +30,7 @@ public class UserKeyIdAttributeTests
     [InlineData("0x23456789abcdef0123456789abcdef")] // Hex prefix inside the value
     public void IsValid_ReturnsFalse_WhenInvalid(string input)
     {
-        var sut = new UserKeyIdAttribute();
+        var sut = new KeyIdAttribute();
 
         Assert.False(sut.IsValid(input));
     }
@@ -38,7 +38,7 @@ public class UserKeyIdAttributeTests
     [Fact]
     public void IsValid_ReturnsFalse_WhenNotAString()
     {
-        var sut = new UserKeyIdAttribute();
+        var sut = new KeyIdAttribute();
 
         Assert.False(sut.IsValid(1234));
     }
