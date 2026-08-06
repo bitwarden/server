@@ -30,6 +30,10 @@ public static class ServiceCollectionExtensions
         // AddPamServices runs after AddDefaultServices in Startup, so the real gate is what resolves.
         services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
 
+        // Leasing request→activate flow (automatic path; human approval deferred).
+        services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
+        services.AddScoped<IActivateAccessRequestCommand, ActivateAccessRequestCommand>();
+
         // AccessRule write path.
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
