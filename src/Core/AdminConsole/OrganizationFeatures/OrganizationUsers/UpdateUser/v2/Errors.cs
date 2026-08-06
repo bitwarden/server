@@ -27,8 +27,12 @@ public record NewEmailDomainNotClaimedError()
     : EmailValidationError("The new email address must be on a domain claimed by the organization.", "new_email_domain_not_claimed");
 public record EmailAlreadyInUseError()
     : EmailValidationError("Email already in use.", "email_already_in_use");
+public record EmailAlreadyInUseByAnotherMemberError()
+    : EmailValidationError("Email already in use by another organization member.", "email_taken_by_organization_member");
+public record EmailTakenOutsideOrganizationError()
+    : EmailValidationError("Email is already in use outside organization.", "email_taken_outside_organization");
 public record EmailClaimedByAnotherOrganizationError()
-    : EmailValidationError("This email address is claimed by an organization using Bitwarden.", "email_claimed_by_another_organization");
+    : EmailValidationError("This email domain is claimed by an organization using Bitwarden.", "email_claimed_by_another_organization");
 public record EmailChangeFailedError(string Message)
     : EmailValidationError(Message, "email_change_failed");
 

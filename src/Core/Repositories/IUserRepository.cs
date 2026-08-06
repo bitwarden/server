@@ -95,6 +95,16 @@ public interface IUserRepository : IRepository<User, Guid>
     Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions);
 
     UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData);
+
+    /// <summary>
+    /// Sets the user key id for a user, overwriting any existing value.
+    /// <para>
+    /// For flows that establish the user key itself, where the supplied key id is authoritative.
+    /// </para>
+    /// </summary>
+    /// <param name="userId">The user identifier.</param>
+    /// <param name="userKeyId">Key id of the user key being established.</param>
+    UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId);
 }
 
 /// <summary>

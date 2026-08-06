@@ -34,7 +34,6 @@ public class NonAnonymousSendCommandTests
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly IEventService _eventService;
-    private readonly IFeatureService _featureService;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
 
     private readonly ILogger<NonAnonymousSendCommand> _logger;
@@ -48,7 +47,6 @@ public class NonAnonymousSendCommandTests
         _currentContext = Substitute.For<ICurrentContext>();
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
         _eventService = Substitute.For<IEventService>();
-        _featureService = Substitute.For<IFeatureService>();
         _logger = Substitute.For<ILogger<NonAnonymousSendCommand>>();
 
         _nonAnonymousSendCommand = new NonAnonymousSendCommand(
@@ -58,7 +56,6 @@ public class NonAnonymousSendCommandTests
             _sendValidationService,
             _sendCoreHelperService,
             _eventService,
-            _featureService,
             _logger
         );
     }
@@ -1507,7 +1504,7 @@ public class NonAnonymousSendCommandTests
 
     [Theory]
     [MemberData(nameof(SendCreatedEventTypeData))]
-    public async Task SaveSendAsync_NewSend_FlagOn_LogsExpectedEventType(
+    public async Task SaveSendAsync_NewSend_LogsExpectedEventType(
         SendType sendType, AuthType authType, EventType expectedEventType)
     {
         var userId = Guid.NewGuid();
@@ -1519,7 +1516,6 @@ public class NonAnonymousSendCommandTests
             AuthType = authType,
         };
 
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
         _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
 
         await _nonAnonymousSendCommand.SaveSendAsync(send);
@@ -1540,7 +1536,6 @@ public class NonAnonymousSendCommandTests
             AuthType = null,
         };
 
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
         _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
 
         await _nonAnonymousSendCommand.SaveSendAsync(send);
@@ -1548,30 +1543,10 @@ public class NonAnonymousSendCommandTests
         await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), EventType.Send_Created_Text);
     }
 
-    [Fact]
-    public async Task SaveSendAsync_NewSend_FlagOff_DoesNotLogEvent()
-    {
-        var userId = Guid.NewGuid();
-        var send = new Send
-        {
-            Id = default,
-            Type = SendType.Text,
-            UserId = userId,
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
-        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
-
-        await _nonAnonymousSendCommand.SaveSendAsync(send);
-
-        await _sendRepository.Received(1).CreateAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
-    }
-
     [Theory]
     [InlineData(SendType.Text, EventType.Send_Edited_Text)]
     [InlineData(SendType.File, EventType.Send_Edited_File)]
-    public async Task SaveSendAsync_ExistingSend_FlagOn_LogsExpectedEventType(
+    public async Task SaveSendAsync_ExistingSend_LogsExpectedEventType(
         SendType sendType, EventType expectedEventType)
     {
         var userId = Guid.NewGuid();
@@ -1582,7 +1557,6 @@ public class NonAnonymousSendCommandTests
             UserId = userId,
         };
 
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
         _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
 
         await _nonAnonymousSendCommand.SaveSendAsync(send);
@@ -1591,30 +1565,10 @@ public class NonAnonymousSendCommandTests
         await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
     }
 
-    [Fact]
-    public async Task SaveSendAsync_ExistingSend_FlagOff_DoesNotLogEvent()
-    {
-        var userId = Guid.NewGuid();
-        var send = new Send
-        {
-            Id = Guid.NewGuid(),
-            Type = SendType.Text,
-            UserId = userId,
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
-        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
-
-        await _nonAnonymousSendCommand.SaveSendAsync(send);
-
-        await _sendRepository.Received(1).UpsertAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
-    }
-
     [Theory]
     [InlineData(SendType.Text, EventType.Send_Deleted_Text)]
     [InlineData(SendType.File, EventType.Send_Deleted_File)]
-    public async Task DeleteSendAsync_FlagOn_LogsExpectedEventType(
+    public async Task DeleteSendAsync_LogsExpectedEventType(
         SendType sendType, EventType expectedEventType)
     {
         var userId = Guid.NewGuid();
@@ -1624,32 +1578,11 @@ public class NonAnonymousSendCommandTests
             Type = sendType,
             UserId = userId,
         };
-
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
 
         await _nonAnonymousSendCommand.DeleteSendAsync(send);
 
         await _sendRepository.Received(1).DeleteAsync(send);
         await _pushNotificationService.Received(1).PushSyncSendDeleteAsync(send);
         await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
-    }
-
-    [Fact]
-    public async Task DeleteSendAsync_FlagOff_DoesNotLogEvent()
-    {
-        var userId = Guid.NewGuid();
-        var send = new Send
-        {
-            Id = Guid.NewGuid(),
-            Type = SendType.Text,
-            UserId = userId,
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
-
-        await _nonAnonymousSendCommand.DeleteSendAsync(send);
-
-        await _sendRepository.Received(1).DeleteAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 }

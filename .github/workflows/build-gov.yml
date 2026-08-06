@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  _REGISTRY: "bitwardenprod.azurecr.io"
+  _REGISTRY: "bwfedrampdev.azurecr.io"
   _TAG_SUFFIX: "-gov"
 
 permissions: {}
@@ -154,7 +154,7 @@ jobs:
 
       - name: Log in to registry
         # use ACR for testing
-        run: az acr login -n bitwardenprod
+        run: az acr login -n bwfedrampdev
 
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
