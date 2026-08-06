@@ -200,9 +200,7 @@ public class RedeemAnnualUpgradeOfferCommand(
         return new None();
     });
 
-    // Annual upgrade carries the subscription's own discounts forward by reusing their existing
-    // discount objects, so nothing is re-minted and no temporary coupon restarts at renewal. Null
-    // when the subscription has none, so Stripe inherits the customer's discount at renewal.
+    // Reuse existing discounts (nothing re-minted); null lets Stripe inherit the customer's at renewal.
     private static List<SubscriptionSchedulePhaseDiscountOptions>? ReusedPhaseDiscounts(Subscription subscription) =>
         subscription.Discounts is { Count: > 0 }
             ? [.. subscription.Discounts.Select(discount => new SubscriptionSchedulePhaseDiscountOptions { Discount = discount.Id })]

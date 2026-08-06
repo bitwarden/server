@@ -5,7 +5,6 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
-using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Organizations.Schedules;
@@ -164,8 +163,7 @@ public class UpdateOrganizationSubscriptionCommand(
                     "{Command}: Active migration schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating {PhaseCount} active phase(s)",
                     CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
 
-                // Annual upgrade reproduces the existing discount state by reuse and adds no coupon,
-                // so it owns its phase rebuilding. Migration keeps the shared merge path unchanged.
+                // Annual upgrade reuses existing discounts and adds no coupon.
                 var phases = annualUpgradePlans is not null
                     ? AnnualUpgradeSchedulePhaseRebuilder.BuildUpdatedPhases(
                         migrationPhases, changeSet.Changes, plans.source, plans.target)
@@ -375,7 +373,7 @@ public class UpdateOrganizationSubscriptionCommand(
         Discount? customerDiscount)
     {
         var phase1IsPostMigration = migrationPhases.Count == 1
-            && IsPostMigrationPhase(migrationPhases[0], targetPlan);
+            && SchedulePhaseMapper.PhaseUsesTargetPlanPrices(migrationPhases[0], targetPlan);
 
         var phases = new List<SubscriptionSchedulePhaseOptions>();
 
@@ -400,28 +398,6 @@ public class UpdateOrganizationSubscriptionCommand(
         return phases;
     }
 
-    // A lone remaining phase counts as post-migration only when it actually uses target-plan price
-    // IDs. A legacy source-priced single-phase schedule (cancelled without releasing) would otherwise
-    // have its still-valid migration discount wrongly suppressed.
-    private static bool IsPostMigrationPhase(SubscriptionSchedulePhase phase, Plan target)
-    {
-        var targetIds = new HashSet<string>(StringComparer.Ordinal)
-        {
-            target.PasswordManager.StripeSeatPlanId,
-            target.PasswordManager.StripeStoragePlanId
-        };
-        if (target.SecretsManager?.StripeSeatPlanId is { } smSeat)
-        {
-            targetIds.Add(smSeat);
-        }
-        if (target.SecretsManager?.StripeServiceAccountPlanId is { } smServiceAccount)
-        {
-            targetIds.Add(smServiceAccount);
-        }
-
-        return phase.Items.Any(item => targetIds.Contains(item.PriceId));
-    }
-
     private static SubscriptionSchedulePhaseOptions BuildPhaseOptions(
         SubscriptionSchedulePhase sourcePhase,
         IReadOnlyList<OrganizationSubscriptionChange> changes,
@@ -433,7 +409,7 @@ public class UpdateOrganizationSubscriptionCommand(
         {
             StartDate = sourcePhase.StartDate,
             EndDate = sourcePhase.EndDate,
-            Items = ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
+            Items = SchedulePhaseMapper.ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
             // A future phase carries the customer-level discount so it stacks at renewal; the active
             // phase (customerDiscount is null) mirrors verbatim — re-adding would double-apply now.
             Discounts = suppressDiscounts
@@ -446,80 +422,4 @@ public class UpdateOrganizationSubscriptionCommand(
             Metadata = sourcePhase.Metadata,
             ProrationBehavior = sourcePhase.ProrationBehavior
         };
-
-    private static List<SubscriptionSchedulePhaseItemOptions> ApplyChangesToPhaseItems(
-        IList<SubscriptionSchedulePhaseItem> phaseItems,
-        IReadOnlyList<OrganizationSubscriptionChange> changes,
-        Plan sourcePlan,
-        Plan targetPlan)
-    {
-        string Translate(string priceId) =>
-            OrganizationPlanMigrationPriceMapper.MapOrPassThrough(priceId, sourcePlan, targetPlan);
-
-        var items = phaseItems
-            .Select(i => new SubscriptionSchedulePhaseItemOptions
-            {
-                Price = i.PriceId,
-                Quantity = i.Quantity,
-                Discounts = i.Discounts is { Count: > 0 }
-                    ? i.Discounts.Select(d => new SubscriptionSchedulePhaseItemDiscountOptions { Coupon = d.CouponId }).ToList()
-                    : null
-            })
-            .ToList();
-
-        foreach (var change in changes)
-        {
-            change.Switch(
-                addItem => items.Add(new SubscriptionSchedulePhaseItemOptions
-                {
-                    Price = Translate(addItem.PriceId),
-                    Quantity = addItem.Quantity
-                }),
-                changeItemPrice =>
-                {
-                    var translatedCurrent = Translate(changeItemPrice.CurrentPriceId);
-                    var translatedUpdated = Translate(changeItemPrice.UpdatedPriceId);
-                    var existing = items.FirstOrDefault(i => i.Price == translatedCurrent);
-                    if (existing != null)
-                    {
-                        existing.Price = translatedUpdated;
-                        if (changeItemPrice.Quantity.HasValue)
-                        {
-                            existing.Quantity = changeItemPrice.Quantity.Value;
-                        }
-                    }
-                },
-                removeItem =>
-                {
-                    var translated = Translate(removeItem.PriceId);
-                    items.RemoveAll(i => i.Price == translated);
-                },
-                updateItemQuantity =>
-                {
-                    var translated = Translate(updateItemQuantity.PriceId);
-                    if (updateItemQuantity.Quantity == 0)
-                    {
-                        items.RemoveAll(i => i.Price == translated);
-                    }
-                    else
-                    {
-                        var existing = items.FirstOrDefault(i => i.Price == translated);
-                        if (existing != null)
-                        {
-                            existing.Quantity = updateItemQuantity.Quantity;
-                        }
-                        else
-                        {
-                            items.Add(new SubscriptionSchedulePhaseItemOptions
-                            {
-                                Price = translated,
-                                Quantity = updateItemQuantity.Quantity
-                            });
-                        }
-                    }
-                });
-        }
-
-        return items;
-    }
 }

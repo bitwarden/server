@@ -11,30 +11,20 @@ namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 internal readonly record struct AnnualUpgradeSavings(decimal CurrentAnnualCost, decimal NewAnnualCost);
 
 /// <summary>
-/// The two invoice previews the quote compares: the same quantities priced once on the
-/// subscription's current monthly price IDs and once on their annual equivalents. Both sides carry
-/// the same invoice-level coupons: the subscription's own when it has any, otherwise the customer's.
-/// Only forever coupons are modeled, since a temporary one will not exist at renewal.
+/// The monthly and annual invoice previews the quote compares.
 /// </summary>
 internal readonly record struct AnnualUpgradePreviewRequests(
     InvoiceCreatePreviewOptions Monthly,
     InvoiceCreatePreviewOptions Annual);
 
 /// <summary>
-/// Prices a monthly-to-annual switch by asking Stripe to preview two invoices from the
-/// subscription's own line items: one on the current monthly price IDs and one on their annual
-/// equivalents, with the same quantities on both. Both previews carry the same invoice-level
-/// coupons: the subscription's own when it has any, otherwise the customer's. Only forever coupons
-/// are modeled, since a temporary one will not exist at renewal. Stripe reports the discount it
-/// actually applied per line.
+/// Prices a monthly-to-annual switch from two Stripe invoice previews of the subscription's line
+/// items, one on the current monthly prices and one on their annual equivalents.
 /// </summary>
 internal static class AnnualUpgradeSavingsCalculator
 {
     /// <summary>
-    /// Builds the two preview payloads: the same quantities priced once on the subscription's
-    /// current price ids and once on the annual equivalents in <paramref name="lines"/>. Both sides
-    /// carry the same invoice-level coupons: the subscription's own when it has any, otherwise the
-    /// customer's. Only forever coupons are modeled, since a temporary one will not exist at renewal.
+    /// Builds the monthly and annual preview payloads.
     /// </summary>
     /// <remarks>
     /// The caller must load the subscription with <c>customer</c>, <c>discounts.coupon</c>,
