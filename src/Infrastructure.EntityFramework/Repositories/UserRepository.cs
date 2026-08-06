@@ -218,6 +218,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             entity.LastKeyRotationDate = user.LastKeyRotationDate;
             entity.AccountRevisionDate = user.AccountRevisionDate;
             entity.RevisionDate = user.RevisionDate;
+            entity.UserKeyId = user.UserKeyId;
 
             await dbContext.SaveChangesAsync();
 
@@ -278,6 +279,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.SecurityVersion = user.SecurityVersion;
 
         userEntity.V2UpgradeToken = user.V2UpgradeToken;
+
+        userEntity.UserKeyId = user.UserKeyId;
 
         await dbContext.SaveChangesAsync();
 
@@ -623,6 +626,27 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.Key = registerFinishData.MasterKeyWrappedUserKey;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
+    /// <inheritdoc />
+    public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            userEntity.UserKeyId = userKeyId.ToString();
+            userEntity.RevisionDate = DateTime.UtcNow;
 
             await dbContext.SaveChangesAsync();
         };
