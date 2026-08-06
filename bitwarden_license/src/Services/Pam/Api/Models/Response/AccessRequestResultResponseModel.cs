@@ -1,4 +1,5 @@
 ﻿using Bit.HttpExtensions;
+using Bit.Pam.Entities;
 using Bit.Services.Pam.Enums;
 
 namespace Bit.Services.Pam.Api.Models.Response;
@@ -11,6 +12,29 @@ public class AccessRequestResultResponseModel : ResponseModel
     public AccessRequestResultResponseModel()
         : base("accessRequestResult")
     {
+    }
+
+    /// <summary>
+    /// Maps the request the submit command returns onto the submission envelope. The command only supports the
+    /// automatic path in this build — a human-approval rule is rejected before a request is created — so every
+    /// request it returns is already Approved, and the single automatic decision is synthesized here (the command
+    /// does not hand back the <c>AccessDecision</c> it recorded).
+    /// </summary>
+    public AccessRequestResultResponseModel(AccessRequest request)
+        : base("accessRequestResult")
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        ApprovalMode = AccessApprovalMode.Automatic;
+        Request = new AccessRequestDetailsResponseModel(request, new[]
+        {
+            new AccessRequestDecisionResponseModel
+            {
+                DeciderKind = DeciderKind.Automatic,
+                Verdict = AccessDecisionVerdict.Approve,
+                DecidedAt = (request.ResolvedDate ?? request.CreationDate).AsUtc(),
+            },
+        });
     }
 
     /// <summary>

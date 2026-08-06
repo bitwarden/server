@@ -1,7 +1,10 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
+using Bit.Core.Context;
 using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
@@ -10,11 +13,15 @@ namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 /// resolve this handler from DI.
 /// </summary>
 /// <remarks>
-/// Scaffold only: the method signatures define the wire contract (request/response models, status codes) that the
-/// generated OpenAPI spec and client bindings are built from. The bodies are intentionally unimplemented — the
-/// behavior lands with the rest of the PAM feature.
+/// Only the requester-facing slice of this resource is wired in this build: the caller's own request list
+/// (<see cref="GetMine"/>) and activating an approved request into a lease (<see cref="Activate"/>). The
+/// approver-facing surfaces (inbox, history, details, decide, revoke) are deferred with the rest of the
+/// human-approval/governance slice.
 /// </remarks>
-public class AccessRequestEndpointsHandler
+public class AccessRequestEndpointsHandler(
+    ICurrentContext currentContext,
+    IAccessRequestRepository accessRequestRepository,
+    IActivateAccessRequestCommand activateAccessRequestCommand)
 {
     public Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetInbox(ClaimsPrincipal user)
         => throw new NotImplementedException();
@@ -22,8 +29,13 @@ public class AccessRequestEndpointsHandler
     public Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetHistory(ClaimsPrincipal user)
         => throw new NotImplementedException();
 
-    public Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetMine(ClaimsPrincipal user)
-        => throw new NotImplementedException();
+    public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetMine(ClaimsPrincipal user)
+    {
+        var userId = currentContext.UserId!.Value;
+        var requests = await accessRequestRepository.GetManyByRequesterIdAsync(userId);
+        return new ListResponseModel<AccessRequestDetailsResponseModel>(
+            requests.Select(r => new AccessRequestDetailsResponseModel(r)));
+    }
 
     public Task<AccessRequestDetailsResponseModel> GetDetails(ClaimsPrincipal user, Guid id)
         => throw new NotImplementedException();
@@ -31,8 +43,12 @@ public class AccessRequestEndpointsHandler
     public Task<AccessRequestDetailsResponseModel> Decide(ClaimsPrincipal user, Guid id, AccessDecisionRequestModel model)
         => throw new NotImplementedException();
 
-    public Task<AccessLeaseResponseModel> Activate(ClaimsPrincipal user, Guid id)
-        => throw new NotImplementedException();
+    public async Task<AccessLeaseResponseModel> Activate(ClaimsPrincipal user, Guid id)
+    {
+        var userId = currentContext.UserId!.Value;
+        var lease = await activateAccessRequestCommand.ActivateAsync(userId, id);
+        return new AccessLeaseResponseModel(lease);
+    }
 
     public Task Revoke(ClaimsPrincipal user, Guid id)
         => throw new NotImplementedException();
