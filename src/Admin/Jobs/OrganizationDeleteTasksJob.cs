@@ -80,16 +80,18 @@ public class OrganizationDeleteTasksJob : BaseJob
             pending.TaskType, pending.OrganizationId, pending.Id);
 
         var deadline = DateTime.UtcNow.Add(_runBudget);
-        var deleted = 0;
+        var drained = false;
         var totalDeleted = 0L;
 
         try
         {
             while (DateTime.UtcNow < deadline && !context.CancellationToken.IsCancellationRequested)
             {
-                deleted = await handler.DeleteBatchAsync(pending, context.CancellationToken);
+                var deleted = await handler.DeleteBatchAsync(pending, context.CancellationToken);
                 if (deleted == 0)
                 {
+                    // An empty batch is the only proof there is nothing left to purge.
+                    drained = true;
                     break;
                 }
 
@@ -97,7 +99,10 @@ public class OrganizationDeleteTasksJob : BaseJob
                 totalDeleted += deleted;
             }
 
-            if (deleted == 0)
+            // Completion has to be driven by an empty batch, not by the absence of deletions: if
+            // cancellation was already signalled or the budget already spent, the loop never runs
+            // and marking the task complete would strand the organization's events forever.
+            if (drained)
             {
                 await _cleanupRepository.UpdateCompletedAsync(pending.Id);
                 _logger.LogInformation(Constants.BypassFiltersEventId,

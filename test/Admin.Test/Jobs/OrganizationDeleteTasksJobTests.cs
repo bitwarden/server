@@ -163,6 +163,22 @@ public class OrganizationDeleteTasksJobTests
     }
 
     [Fact]
+    public async Task Execute_CancellationAlreadySignalled_DoesNotCompleteWithoutDeleting()
+    {
+        var pending = CreatePending();
+        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        await _sut.Execute(CreateContext(cts.Token));
+
+        // The loop never runs, so nothing was purged. Completing here would strand the
+        // organization's events permanently with the task marked done.
+        await _handler.DidNotReceiveWithAnyArgs().DeleteBatchAsync(default!, default);
+        await _cleanupRepository.DidNotReceive().UpdateCompletedAsync(pending.Id);
+    }
+
+    [Fact]
     public async Task Execute_DeleteThrows_RecordsErrorAndDoesNotComplete()
     {
         var pending = CreatePending();
