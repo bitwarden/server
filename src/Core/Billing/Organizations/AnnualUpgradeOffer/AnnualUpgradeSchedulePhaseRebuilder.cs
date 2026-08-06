@@ -7,11 +7,9 @@ namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 
 /// <summary>
 /// Rebuilds the phases of an annual-upgrade schedule when the subscription is edited during the
-/// pending window. Annual upgrade introduces no new coupon, so existing phase-level discounts are
-/// carried by reuse (the phase discount field references the existing di_) and the customer-level
-/// discount is never merged. Item-level discounts are copied by coupon because Stripe rejects
-/// item-level reuse. Kept separate from the price-migration rewriter, which adds a coupon and must
-/// merge the customer discount, so that path stays untouched.
+/// pending window. Annual upgrade introduces no new coupon, so existing phase-level discounts reuse
+/// the existing discount objects whereas the price-migration rewriter adds a coupon and must
+/// merge the customer discount.
 /// </summary>
 public static class AnnualUpgradeSchedulePhaseRebuilder
 {
@@ -24,7 +22,7 @@ public static class AnnualUpgradeSchedulePhaseRebuilder
         var result = new List<SubscriptionSchedulePhaseOptions>();
 
         // A lone remaining phase priced on the target plan is the annual phase; its changes must
-        // translate against the target plan. Otherwise the first phase is the active monthly term.
+        // translate against the target plan. Otherwise, the first phase is the active monthly term.
         var phase1UsesTargetPrices = phases.Count == 1 && PhaseUsesTargetPlanPrices(phases[0], target);
 
         result.Add(BuildPhaseOptions(phases[0], changes, source, phase1UsesTargetPrices ? target : source));
@@ -47,8 +45,6 @@ public static class AnnualUpgradeSchedulePhaseRebuilder
             StartDate = sourcePhase.StartDate,
             EndDate = sourcePhase.EndDate,
             Items = ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
-            // Reuse the existing discount object so a temporary coupon is not re-minted (which would
-            // restart it at renewal). Fall back to coupon for any discount not written as a reuse.
             Discounts = sourcePhase.Discounts is { Count: > 0 }
                 ? [.. sourcePhase.Discounts.Select(PreservePhaseDiscount)]
                 : null,
@@ -56,6 +52,8 @@ public static class AnnualUpgradeSchedulePhaseRebuilder
             ProrationBehavior = sourcePhase.ProrationBehavior
         };
 
+    /// Reuses the existing discount object so a temporary coupon is not re-minted (which would
+    /// restart it at renewal). Fall back to coupon for any discountId not available for reuse.
     private static SubscriptionSchedulePhaseDiscountOptions PreservePhaseDiscount(
         SubscriptionSchedulePhaseDiscount discount) =>
         discount.DiscountId is { Length: > 0 }
