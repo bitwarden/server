@@ -49,6 +49,103 @@ public class OrganizationUsersControllerTests
 {
     [Theory]
     [BitAutoData]
+    public async Task BulkEnablePam_GrantsAccessToMembersWithoutIt(Guid orgId,
+        OrganizationUserBulkRequestModel model, Organization organization, List<OrganizationUser> orgUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organization.UsePam = true;
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = orgId;
+            orgUser.AccessPam = false;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+
+        await sutProvider.Sut.BulkEnablePamAsync(orgId, model);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.All(u => u.AccessPam)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkEnablePam_SkipsMembersOfOtherOrganizationsAndThoseWithAccess(Guid orgId,
+        OrganizationUserBulkRequestModel model, Organization organization, OrganizationUser targetUser,
+        OrganizationUser alreadyEnabledUser, OrganizationUser otherOrgUser,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organization.UsePam = true;
+        targetUser.OrganizationId = alreadyEnabledUser.OrganizationId = orgId;
+        targetUser.AccessPam = false;
+        alreadyEnabledUser.AccessPam = true;
+        otherOrgUser.AccessPam = false;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids)
+            .Returns([targetUser, alreadyEnabledUser, otherOrgUser]);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+
+        await sutProvider.Sut.BulkEnablePamAsync(orgId, model);
+
+        Assert.False(otherOrgUser.AccessPam);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users =>
+                users.Count() == 1 && users.Single().Id == targetUser.Id && users.Single().AccessPam));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkEnablePam_WhenOrganizationDoesNotUsePam_Throws(Guid orgId,
+        OrganizationUserBulkRequestModel model, Organization organization, List<OrganizationUser> orgUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organization.UsePam = false;
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = orgId;
+            orgUser.AccessPam = false;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.BulkEnablePamAsync(orgId, model));
+
+        Assert.Contains("must have PAM enabled", exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceManyAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkEnablePam_WhenNoMembersNeedAccess_Throws(Guid orgId,
+        OrganizationUserBulkRequestModel model, List<OrganizationUser> orgUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = orgId;
+            orgUser.AccessPam = true;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.BulkEnablePamAsync(orgId, model));
+
+        Assert.Equal("Users invalid.", exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceManyAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PutResetPasswordEnrollment_InvitedUser_AcceptsInvite(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
         User user, OrganizationUser orgUser, SutProvider<OrganizationUsersController> sutProvider)
     {

@@ -66,6 +66,44 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task UpdateUserAsync_WhenGrantingPam_PersistsAccessPam(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = false;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.AccessPam),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenRevokingPam_PersistsAccessPamAsFalse(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = true;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: false);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => !ou.AccessPam),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task UpdateUserAsync_WhenEmailChanged_NotifiesMemberAtPreviousEmail(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
@@ -429,7 +467,8 @@ public class UpdateOrganizationUserCommandTests
         bool targetAccessSecretsManager = false,
         string defaultUserCollectionName = null,
         string newEmail = null,
-        string newName = null)
+        string newName = null,
+        bool targetAccessPam = false)
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
         organizationUser.OrganizationId = organization.Id;
@@ -446,6 +485,7 @@ public class UpdateOrganizationUserCommandTests
             type,
             null,
             targetAccessSecretsManager,
+            targetAccessPam,
             collections,
             groups,
             newEmail,
