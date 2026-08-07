@@ -723,7 +723,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -766,7 +766,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new InviteLinkNotFound()));
 
         // Act & Assert
@@ -790,7 +790,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new InviteLinkNotAvailable()));
 
         // Act & Assert
@@ -816,7 +816,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         // Excluded-org path returns false; unfiltered path would return true.
@@ -871,7 +871,7 @@ public class RegisterUserCommandTests
         // Short-circuit: registration guard must run before the invite validator and token check.
         await sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
             .DidNotReceiveWithAnyArgs()
-            .ValidateAsync(default, default);
+            .ValidateAsync(default, default, default!);
         sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
             .DidNotReceiveWithAnyArgs()
             .TryUnprotect(default, out Arg.Any<RegistrationEmailVerificationTokenable>());
@@ -891,7 +891,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -930,7 +930,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -995,7 +995,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -1054,7 +1054,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organization.Id, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organization.Id, code)
+            .ValidateAsync(organization.Id, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -1117,7 +1117,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organization.Id, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organization.Id, code)
+            .ValidateAsync(organization.Id, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -1171,7 +1171,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         // The excluded-org filter still returns true — some OTHER org has claimed the domain.
@@ -1204,7 +1204,7 @@ public class RegisterUserCommandTests
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organization.Id, Code = code };
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organization.Id, code)
+            .ValidateAsync(organization.Id, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()

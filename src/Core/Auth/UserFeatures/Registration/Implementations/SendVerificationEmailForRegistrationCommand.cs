@@ -67,7 +67,7 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         if (openOrgInvite is not null)
         {
             var validationResult = await _validateOrganizationInviteLinkQuery.ValidateAsync(
-                openOrgInvite.OrganizationId, openOrgInvite.Code);
+                openOrgInvite.OrganizationId, openOrgInvite.Code, email);
             if (validationResult.IsError)
             {
                 throw new BadRequestException("Invalid or expired organization invite link.");

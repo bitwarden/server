@@ -343,7 +343,7 @@ public class SendVerificationEmailForRegistrationCommandTests
             .Returns(false);
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         var mockedToken = "token";
@@ -387,7 +387,7 @@ public class SendVerificationEmailForRegistrationCommandTests
             .Returns(false);
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         // Act
@@ -433,7 +433,7 @@ public class SendVerificationEmailForRegistrationCommandTests
 
         await sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
             .DidNotReceive()
-            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -457,7 +457,7 @@ public class SendVerificationEmailForRegistrationCommandTests
             .DisableUserRegistration = false;
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -487,7 +487,7 @@ public class SendVerificationEmailForRegistrationCommandTests
             .DisableUserRegistration = false;
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new InviteLinkNotFound()));
 
         // Act & Assert
@@ -510,7 +510,7 @@ public class SendVerificationEmailForRegistrationCommandTests
             .DisableUserRegistration = false;
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new InviteLinkNotAvailable()));
 
         // Act & Assert
@@ -540,7 +540,7 @@ public class SendVerificationEmailForRegistrationCommandTests
             .DisableUserRegistration = false;
 
         sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .ValidateAsync(organizationId, code)
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
             .Returns(new CommandResult(new None()));
 
         // Excluded-org path returns false; unfiltered path would return true. Verifies the excludeOrganizationId branch is taken.

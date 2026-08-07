@@ -296,7 +296,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         ValidateOpenRegistrationAllowed();
 
         var validationResult = await _validateOrganizationInviteLinkQuery.ValidateAsync(
-            openOrgInvite.OrganizationId, openOrgInvite.Code);
+            openOrgInvite.OrganizationId, openOrgInvite.Code, user.Email);
         if (validationResult.IsError)
         {
             throw new BadRequestException("Invalid or expired organization invite link.");
