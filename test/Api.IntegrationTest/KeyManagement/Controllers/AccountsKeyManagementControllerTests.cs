@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System.Net;
 using System.Text.Json;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.KeyManagement.Models.Requests;
@@ -791,6 +792,71 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             signatureKeyPair.WrappedSigningKey);
         Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.VerifyingKey,
             signatureKeyPair.VerifyingKey);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_V1ToV2Rotation_OrganizationUserEnrolledInAccountRecovery_SetsTokenOnMembership(
+        RotateUserKeysRequestModel request)
+    {
+        // Arrange
+        var (organization, organizationUser) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        var user = await SetupUserForKeyRotationAsync();
+
+        organizationUser.ResetPasswordKey = _mockEncryptedString;
+        await _organizationUserRepository.ReplaceAsync(organizationUser);
+
+        SetupMasterPasswordRotateUserAccount(request, user, upgradeToken: true);
+        request.UnlockData.OrganizationAccountRecoveryUnlockData =
+        [
+            new ResetPasswordWithOrgIdRequestModel
+            {
+                OrganizationId = organization.Id,
+                ResetPasswordKey = _mockEncryptedString
+            }
+        ];
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        // Assert - The admin reaches the same token through the membership
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.NotNull(userNewState.V2UpgradeToken);
+
+        var membership = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(membership);
+        Assert.Equal(userNewState.V2UpgradeToken, membership.V2UpgradeToken);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_V1ToV2Rotation_OrganizationUserNotEnrolledInAccountRecovery_DoesNotSetTokenOnMembership(
+        RotateUserKeysRequestModel request)
+    {
+        // Arrange - The member is not enrolled in account recovery, so the row has no account recovery key
+        var (_, organizationUser) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        var user = await SetupUserForKeyRotationAsync();
+
+        SetupMasterPasswordRotateUserAccount(request, user, upgradeToken: true);
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        // Assert - The user keeps the token, but the membership does not get a copy
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.NotNull(userNewState.V2UpgradeToken);
+
+        var membership = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(membership);
+        Assert.Null(membership.V2UpgradeToken);
     }
 
     [Theory]

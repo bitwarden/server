@@ -337,11 +337,15 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             user.SecurityStamp = Guid.NewGuid().ToString();
         }
 
-        // Share the token with each enrolled organization, so an admin can unwrap the V2 user key through
-        // account recovery and update the account recovery key without prompting the member.
+        // Each membership enrolled in account recovery gets a copy of the token. Account recovery gives the admin
+        // the V1 user key, so the admin can unwrap the V2 user key from the token. The admin then re-wraps the
+        // account recovery key with it, and the member sees no prompt. Without an account recovery key the token
+        // is of no use.
         foreach (var organizationUser in baseModel.OrganizationUsers)
         {
-            organizationUser.V2UpgradeToken = user.V2UpgradeToken;
+            organizationUser.V2UpgradeToken = organizationUser.IsEnrolledInAccountRecovery()
+                ? user.V2UpgradeToken
+                : null;
         }
 
         await UpdateAccountKeysAsync(baseModel, user, saveEncryptedDataActions);

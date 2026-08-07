@@ -816,7 +816,7 @@ public class RotateUserAccountKeysCommandTests
         };
         model.BaseData.V2UpgradeToken = token;
 
-        var organizationUser = CreateEnrolledOrganizationUser();
+        var organizationUser = CreateOrganizationUserEnrolledInAccountRecovery();
         model.BaseData.OrganizationUsers = [organizationUser];
 
         // Act
@@ -846,7 +846,7 @@ public class RotateUserAccountKeysCommandTests
         model.BaseData.V2UpgradeToken = null;
 
         // Membership carries a stale token from an earlier upgrade rotation
-        var organizationUser = CreateEnrolledOrganizationUser();
+        var organizationUser = CreateOrganizationUserEnrolledInAccountRecovery();
         organizationUser.V2UpgradeToken = new V2UpgradeTokenData
         {
             WrappedUserKey1 = _mockEncryptedType7String,
@@ -883,13 +883,46 @@ public class RotateUserAccountKeysCommandTests
             WrappedUserKey2 = _mockEncryptedType2String
         };
 
-        var organizationUser = CreateEnrolledOrganizationUser();
+        var organizationUser = CreateOrganizationUserEnrolledInAccountRecovery();
         model.BaseData.OrganizationUsers = [organizationUser];
 
         // Act
         await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
 
         // Assert - The token is meaningless for a user who is already V2
+        Assert.Null(organizationUser.V2UpgradeToken);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .UpdateForKeyRotation(user.Id, Arg.Is<IEnumerable<OrganizationUser>>(organizationUsers =>
+                HasSingleOrganizationUserWithToken(organizationUsers, organizationUser.Id, null)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_V1UserNotEnrolledInAccountRecovery_DoesNotSetTokenOnOrganizationUser(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        // Arrange
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model.BaseData);
+
+        model.BaseData.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+
+        var organizationUser = CreateOrganizationUserNotEnrolledInAccountRecovery();
+        model.BaseData.OrganizationUsers = [organizationUser];
+
+        // Act
+        await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
+
+        // Assert - The user keeps the token, but the membership does not get a copy
+        Assert.NotNull(user.V2UpgradeToken);
         Assert.Null(organizationUser.V2UpgradeToken);
 
         sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
@@ -1280,13 +1313,23 @@ public class RotateUserAccountKeysCommandTests
             && updated[0].V2UpgradeToken == expectedToken;
     }
 
-    private static OrganizationUser CreateEnrolledOrganizationUser()
+    private static OrganizationUser CreateOrganizationUserEnrolledInAccountRecovery()
     {
         return new OrganizationUser
         {
             Id = Guid.NewGuid(),
             OrganizationId = Guid.NewGuid(),
             ResetPasswordKey = _mockEncryptedType2String,
+        };
+    }
+
+    private static OrganizationUser CreateOrganizationUserNotEnrolledInAccountRecovery()
+    {
+        return new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            ResetPasswordKey = null,
         };
     }
 }
