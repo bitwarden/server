@@ -2,7 +2,7 @@
 #nullable disable
 
 using System.Data;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
@@ -48,11 +48,14 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid userId, IEnumerable<Folder> folders)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (dbConnection, dbTransaction) =>
         {
+            var connection = (SqlConnection)dbConnection;
+            var transaction = (SqlTransaction)dbTransaction;
+
             // Create temp table
             var sqlCreateTemp = @"
                             SELECT TOP 0 *
