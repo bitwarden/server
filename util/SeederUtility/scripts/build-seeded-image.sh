@@ -12,7 +12,7 @@
 #   PUSH=true          Push images to ACR after build
 #   REGISTRY           ACR registry (default: bitwardenprod.azurecr.io)
 #   GIT_SHA            Override git SHA (default: current HEAD short SHA)
-#   DP_KEY_XML         Data protection key XML content (for CI; written into the bundle)
+#   DP_KEY_XML         Data protection key XML content
 #   KEEP_BUILD_DIR=1   Preserve the per-preset build directory after completion
 #
 # Parallel invocations:
@@ -73,7 +73,7 @@ cleanup() {
     local status=$?
     docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
     if [[ "${KEEP_BUILD_DIR:-0}" != "1" ]]; then
-        # BUNDLE_STAGE holds key material. The tarball is written outside it.
+        # BUNDLE_STAGE holds key material
         rm -rf "${WORK_DIR}" "${DOCKER_DIR}/build/${TAG}-bundle"
     fi
     return "${status}"
@@ -173,10 +173,8 @@ case "${DB_TYPE}" in
 esac
 
 # --- Core bundle ---
-# Data protection keys and attachment blobs belong to the application, not the
-# database, so the image cannot carry them. In a deployment both live under
-# /etc/bitwarden/core, and they ship as one tarball beside the image.
-# Staged outside WORK_DIR to keep key material out of the Docker build context.
+# Data protection keys and attachment blobs, tarred for the consumer to unpack at
+# /etc/bitwarden/core. Staged outside WORK_DIR, which is the Docker build context.
 BUNDLE_STAGE="${DOCKER_DIR}/build/${TAG}-bundle"
 CORE_DIR="${BUNDLE_STAGE}/core"
 DP_KEYS_DIR="${CORE_DIR}/aspnet-dataprotection"
@@ -195,17 +193,13 @@ elif [[ -f "${DP_KEY_SRC}" ]]; then
     echo "==> Using data protection key from ${DP_KEY_SRC}"
     cp "${DP_KEY_SRC}" "${DP_KEYS_DIR}/"
 else
-    echo "==> No pre-existing data protection key; one will be generated into the bundle"
+    echo "ERROR: No data protection key. Set DP_KEY_XML or place a key at ${DP_KEY_SRC}."
+    exit 1
 fi
 
-# Self-hosted mode makes LicensingService read the licensing certificates embedded in
-# Core instead of the machine's X509 store, which a CI runner does not have. It also
-# replaces the Azure-backed event repository with a no-op, so the seeder needs no
-# storage connection strings. Installation ID is required when self-hosted; any value
-# works for seeding.
-#
-# Attachment storage prefers Azure whenever a connection string is set, so blank it to
-# select local disk. Keys and blobs then land in the bundle, not the host's key store.
+# Self-hosted mode uses the licensing certificates embedded in Core and a no-op event
+# repository. Installation ID is required when self-hosted. A blank attachment
+# connection string selects local disk over Azure.
 SEED_ENV=(
     "globalSettings__selfHosted=true"
     "globalSettings__installation__id=e6b8a9c4-0d3f-4a71-9c2e-5f7a1b3d8e02"
@@ -289,9 +283,7 @@ case "${DB_TYPE}" in
     ;;
 esac
 
-# Discover the ephemeral host port Docker chose. The binding is not always in place
-# when `docker run` returns, so poll for it. `with` returns an empty string instead of
-# failing the template while the port list is empty.
+# Poll for the published host port. `with` yields an empty string while unbound.
 for _ in $(seq 1 30); do
     HOST_PORT=$(docker inspect \
         --format="{{with index .NetworkSettings.Ports \"${INTERNAL_PORT}/tcp\"}}{{(index . 0).HostPort}}{{end}}" \

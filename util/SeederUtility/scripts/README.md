@@ -43,7 +43,40 @@ Each build produces two tags:
 - **Stable**: `seeded-{db}:{preset-name}` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full`
 - **Versioned**: `seeded-{db}:{preset-name}-{git-sha}` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full-abc1234`
 
-Images are pushed to `bitwardenprod.azurecr.io/shot/`.
+Either tag works with any core bundle, because CI pins one data protection key for every build.
+
+Local builds tag for `bitwardenprod.azurecr.io/shot/` and push there only when you pass `PUSH=true`. The GitHub Actions workflow sets `PUSH: "false"` and has no registry login, so nothing it builds reaches the registry. Take those images from the run's artifacts instead.
+
+## Getting an image from a CI build
+
+Each matrix job uploads two artifacts, named after the database and preset. They are deleted 7 days after the run.
+
+```bash
+RUN=31203415095
+PRESET=qa.dunder-mifflin-enterprise-full
+
+gh run download "$RUN" --name "seeded-postgres-$PRESET"
+docker load -i seeded-postgres-*.tar
+
+gh run download "$RUN" --name "seeded-core-postgres-$PRESET"
+tar -xf seeded-core-postgres-*.tar.gz -C ~/bitwarden-seed
+```
+
+Use `tar -xf` rather than double-clicking the tarball. Browsers may decompress it during download while keeping the `.tar.gz` name, and macOS Archive Utility then reports "unsupported format". Run `file` on it to tell the two apart.
+
+Start the database and point the application at the unpacked bundle:
+
+```bash
+docker run -d -p 5432:5432 \
+  bitwardenprod.azurecr.io/shot/seeded-postgres:qa-dunder-mifflin-enterprise-full
+```
+
+The seed runs on first boot for postgres, mysql, and mariadb, so the server accepts connections before the data is loaded. Poll for a seeded table rather than trusting `pg_isready`:
+
+```bash
+until docker exec <container> psql -U postgres -d vault_dev \
+  -tAc 'select 1 from "Organization" limit 1' >/dev/null 2>&1; do sleep 2; done
+```
 
 ## Traceability
 
@@ -71,7 +104,7 @@ docker/bundles/seeded-core-{db}-{preset}-{git-sha}.tar.gz
     └── attachments/{cipherId}/{attachmentId}
 ```
 
-Set `DP_KEY_XML` to pin a known key, which CI should do so rebuilds stay interchangeable. Without it the seeder generates one into the bundle. That still works; the key just changes each build.
+CI pulls the key from the `gh-org-bitwarden` Azure Key Vault as `DP-KEY-XML` and passes it in as `DP_KEY_XML`, so every build and every database in a build share one key and their bundles are interchangeable. A local build without `DP_KEY_XML` falls back to `docker/dp-keys/`. With neither, the build fails rather than letting Data Protection mint a throwaway key, which would produce an image whose encrypted fields open only with that one build's bundle.
 
 ### Consuming the bundle
 
@@ -107,7 +140,7 @@ Leave `attachment.connectionString` set (azurite wins over `baseDirectory`) and 
 | `PUSH` | `false` | Set to `true` to push images to ACR |
 | `REGISTRY` | `bitwardenprod.azurecr.io` | ACR registry |
 | `GIT_SHA` | Current HEAD | Git SHA for versioned tag |
-| `DP_KEY_XML` | (empty) | Data protection key XML content (for CI) |
+| `DP_KEY_XML` | (empty) | Data protection key XML content. CI supplies this from Key Vault; locally it falls back to `docker/dp-keys/` |
 | `KEEP_BUILD_DIR` | (unset) | Set to `1` to preserve the per-preset build directory |
 
 ## GitHub Actions
