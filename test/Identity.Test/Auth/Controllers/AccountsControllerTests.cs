@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text;
+using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration;
@@ -19,6 +20,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Controllers;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
@@ -38,6 +40,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
 
 
@@ -49,6 +52,7 @@ public class AccountsControllerTests : IDisposable
         _getWebAuthnLoginCredentialAssertionOptionsCommand = Substitute.For<IGetWebAuthnLoginCredentialAssertionOptionsCommand>();
         _sendVerificationEmailForRegistrationCommand = Substitute.For<ISendVerificationEmailForRegistrationCommand>();
         _registrationEmailVerificationTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
+        _featureService = Substitute.For<IFeatureService>();
         _globalSettings = Substitute.For<GlobalSettings>();
 
         _sut = new AccountsController(
@@ -58,6 +62,7 @@ public class AccountsControllerTests : IDisposable
             _getWebAuthnLoginCredentialAssertionOptionsCommand,
             _sendVerificationEmailForRegistrationCommand,
             _registrationEmailVerificationTokenDataFactory,
+            _featureService,
             _globalSettings
         );
     }
@@ -328,6 +333,7 @@ public class AccountsControllerTests : IDisposable
         string email, string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
     {
         // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.GenerateInviteLink).Returns(true);
         var openOrgInvite = new RegisterStartOpenOrgInviteRequestModel
         {
             OrganizationId = organizationId,
@@ -348,6 +354,58 @@ public class AccountsControllerTests : IDisposable
         // Assert
         await _sendVerificationEmailForRegistrationCommand.Received(1)
             .Run(email, name, receiveMarketingEmails, null, openOrgInvite);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WithOpenOrgInviteAndFeatureFlagOff_ThrowsBadRequest(
+        string email, string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.GenerateInviteLink).Returns(false);
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = organizationId,
+                Code = code,
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+
+        // Act & Assert — mirrors [RequireFeature] behavior on the other invite-link surfaces (→ 404).
+        await Assert.ThrowsAsync<FeatureUnavailableException>(() =>
+            _sut.PostRegisterSendVerificationEmail(model));
+
+        // Short-circuit: the underlying command must not be invoked when the flag gates the payload out.
+        await _sendVerificationEmailForRegistrationCommand
+            .DidNotReceiveWithAnyArgs()
+            .Run(default!, default, default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WithoutOpenOrgInvite_DoesNotConsultFeatureFlag(
+        string email, string name, bool receiveMarketingEmails)
+    {
+        // Arrange — flag is off, but the payload has no OpenOrgInvite, so vanilla registration proceeds.
+        _featureService.IsEnabled(FeatureFlagKeys.GenerateInviteLink).Returns(false);
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+        };
+
+        // Act
+        await _sut.PostRegisterSendVerificationEmail(model);
+
+        // Assert
+        await _sendVerificationEmailForRegistrationCommand.Received(1)
+            .Run(email, name, receiveMarketingEmails, null);
     }
 
     [Theory, BitAutoData, SignatureKeyPairRequestModelCustomizeAttribute]
@@ -615,6 +673,7 @@ public class AccountsControllerTests : IDisposable
         AccountKeysRequestModel accountKeys, Guid organizationId, Guid code)
     {
         // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.GenerateInviteLink).Returns(true);
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
 
         var kdfModel = new KdfRequestModel
@@ -658,6 +717,53 @@ public class AccountsControllerTests : IDisposable
             Arg.Any<User>(), Arg.Any<RegisterFinishData>(), emailVerificationToken, openOrgInvite);
         await _registerUserCommand.DidNotReceive().RegisterUserViaEmailVerificationToken(
             Arg.Any<User>(), Arg.Any<RegisterFinishData>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData, SignatureKeyPairRequestModelCustomize]
+    public async Task PostRegisterFinish_WithOpenOrgInviteAndFeatureFlagOff_ThrowsBadRequest(
+        string email, string emailVerificationToken, string userSymmetricKey, string masterPasswordHash,
+        AccountKeysRequestModel accountKeys, Guid organizationId, Guid code)
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.GenerateInviteLink).Returns(false);
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        var kdfModel = new KdfRequestModel
+        {
+            KdfType = KdfType.Argon2id,
+            Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            Memory = KdfConstants.ARGON2_MEMORY.Default,
+            Parallelism = KdfConstants.ARGON2_PARALLELISM.Default,
+        };
+
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            OpenOrgInvite = openOrgInvite,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Kdf = kdfModel,
+                Salt = email.ToLowerInvariant().Trim(),
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdfModel,
+                MasterKeyWrappedUserKey = userSymmetricKey,
+                Salt = email.ToLowerInvariant().Trim(),
+            },
+            AccountKeys = accountKeys,
+        };
+
+        // Act & Assert — mirrors [RequireFeature] behavior on the other invite-link surfaces (→ 404).
+        await Assert.ThrowsAsync<FeatureUnavailableException>(() => _sut.PostRegisterFinish(model));
+
+        // Short-circuit: neither command variant may be invoked when the flag gates the payload out.
+        await _registerUserCommand.DidNotReceiveWithAnyArgs().RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            default!, default!, default!, default!);
+        await _registerUserCommand.DidNotReceiveWithAnyArgs().RegisterUserViaEmailVerificationToken(
+            default!, default!, default!);
     }
 
     [Theory, BitAutoData, SignatureKeyPairRequestModelCustomize]
