@@ -1276,7 +1276,8 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.7.2, )",
-          "HttpExtensions": "[2026.7.2, )"
+          "HttpExtensions": "[2026.7.2, )",
+          "OrganizationAuthorization": "[0.0.1, )"
         }
       },
       "serilogfilelogging": {
