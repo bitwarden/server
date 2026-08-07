@@ -25,6 +25,13 @@ public interface IEvent
     DateTime Date { get; set; }
     EventSystemUser? SystemUser { get; set; }
     string DomainName { get; set; }
+    /// <summary>
+    /// A snapshot of the client organization's name at the time a provider-organization event
+    /// (created/added/removed/vault accessed) was logged. ProviderOrganization rows are hard-deleted
+    /// on unlink, so the name can no longer be resolved by joining through ProviderOrganizationId
+    /// once that happens - this column preserves it permanently on the event itself.
+    /// </summary>
+    string OrganizationName { get; set; }
     Guid? SecretId { get; set; }
     Guid? ProjectId { get; set; }
     Guid? ServiceAccountId { get; set; }

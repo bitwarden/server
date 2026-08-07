@@ -34,6 +34,7 @@ public class AzureEvent : ITableEntity
     public Guid? ActingUserId { get; set; }
     public int? SystemUser { get; set; }
     public string DomainName { get; set; }
+    public string OrganizationName { get; set; }
     public Guid? SecretId { get; set; }
     public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
@@ -67,6 +68,7 @@ public class AzureEvent : ITableEntity
             ActingUserId = ActingUserId,
             SystemUser = SystemUser.HasValue ? (EventSystemUser)SystemUser.Value : null,
             DomainName = DomainName,
+            OrganizationName = OrganizationName,
             SecretId = SecretId,
             ServiceAccountId = ServiceAccountId,
             ProjectId = ProjectId,
@@ -100,6 +102,7 @@ public class EventTableEntity : IEvent
         ActingUserId = e.ActingUserId;
         SystemUser = e.SystemUser;
         DomainName = e.DomainName;
+        OrganizationName = e.OrganizationName;
         SecretId = e.SecretId;
         ProjectId = e.ProjectId;
         ServiceAccountId = e.ServiceAccountId;
@@ -130,6 +133,7 @@ public class EventTableEntity : IEvent
     public Guid? ActingUserId { get; set; }
     public EventSystemUser? SystemUser { get; set; }
     public string DomainName { get; set; }
+    public string OrganizationName { get; set; }
     public Guid? SecretId { get; set; }
     public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
@@ -163,6 +167,7 @@ public class EventTableEntity : IEvent
             ActingUserId = ActingUserId,
             SystemUser = SystemUser.HasValue ? (int)SystemUser.Value : null,
             DomainName = DomainName,
+            OrganizationName = OrganizationName,
             SecretId = SecretId,
             ProjectId = ProjectId,
             ServiceAccountId = ServiceAccountId,
