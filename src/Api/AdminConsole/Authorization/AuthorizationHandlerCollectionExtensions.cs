@@ -15,6 +15,7 @@ public static class AuthorizationHandlerCollectionExtensions
         services.TryAddEnumerable([
             ServiceDescriptor.Scoped<IAuthorizationHandler, BulkCollectionAuthorizationHandler>(),
             ServiceDescriptor.Scoped<IAuthorizationHandler, CollectionAuthorizationHandler>(),
+            ServiceDescriptor.Scoped<IAuthorizationHandler, CollectionUserAuthorizationHandler>(),
             ServiceDescriptor.Scoped<IAuthorizationHandler, OrganizationCollectionManagementAccessHandler>(),
             ServiceDescriptor.Scoped<IAuthorizationHandler, OrgUserLinkedToUserIdHandler>(),
             ServiceDescriptor.Scoped<IAuthorizationHandler, RecoverAccountAuthorizationHandler>(),

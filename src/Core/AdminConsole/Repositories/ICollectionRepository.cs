@@ -57,6 +57,19 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users);
     Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users);
     Task DeleteUserAsync(Guid collectionId, Guid organizationUserId);
+
+    /// <summary>
+    /// Atomically applies the same user-access upserts and removals to one or more collections.
+    /// </summary>
+    /// <param name="organizationId">The Organization ID.</param>
+    /// <param name="collectionIds">The Collection IDs to apply the change to.</param>
+    /// <param name="upserts">The user access selections to create or update.</param>
+    /// <param name="removeOrganizationUserIds">The Organization User IDs to remove access for.</param>
+    /// <param name="revisionDate">The revision date to use for the collections.</param>
+    Task ModifyUserAccessAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> upserts, IEnumerable<Guid> removeOrganizationUserIds,
+        DateTime revisionDate);
+
     Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users);
     Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id);
     Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
