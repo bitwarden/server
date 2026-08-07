@@ -60,38 +60,35 @@ The category is derived from the preset name prefix, which matches the fixture f
 
 ## Core Bundle
 
-Two things the seeder produces are read by the **application**, not the database, so they cannot travel inside the database image:
+The application reads two of the seeder's outputs, not the database, so the database image cannot carry them. Data protection keys come first: the seeder encrypts `MasterPassword`, `Key`, and `PrivateKey` with ASP.NET Data Protection, and logins fail without the same key. Attachment blobs are the other, since the database holds only attachment metadata.
 
-- **Data protection keys** — the seeder encrypts some fields (`MasterPassword`, `Key`, `PrivateKey`) with ASP.NET Data Protection. Without the same key, logins fail.
-- **Attachment blobs** — the encrypted file bodies. The database only holds attachment metadata.
-
-Both live under `/etc/bitwarden/core` in a deployment, so each build writes them to one tarball next to the image:
+In a deployment both live under `/etc/bitwarden/core`, so each build writes them to one tarball next to the image:
 
 ```
-docker/bundles/seeded-core-{preset}-{git-sha}.tar.gz
+docker/bundles/seeded-core-{db}-{preset}-{git-sha}.tar.gz
 └── core/
     ├── aspnet-dataprotection/key-….xml
     └── attachments/{cipherId}/{attachmentId}
 ```
 
-Set `DP_KEY_XML` to pin a known key (recommended for CI, so rebuilds stay interchangeable). Without it the seeder generates one into the bundle, which still works — the key just changes each build.
+Set `DP_KEY_XML` to pin a known key, which CI should do so rebuilds stay interchangeable. Without it the seeder generates one into the bundle. That still works; the key just changes each build.
 
 ### Consuming the bundle
 
-**Self-host / ephemeral environments** — unpack over the app's core volume:
+For self-host and ephemeral environments, unpack over the app's core volume:
 
 ```bash
 tar -xzf seeded-core-*.tar.gz -C /etc/bitwarden
 ```
 
-**Local development, local disk** — unpack anywhere and point the app at it:
+For local development on local disk, unpack anywhere and point the app at it:
 
 ```
 globalSettings__attachment__baseDirectory=<dir>/core/attachments
 globalSettings__dataProtection__directory=<dir>/core/aspnet-dataprotection
 ```
 
-**Local development, azurite** — attachment paths in the tarball are byte-identical to Azure blob names, so import the tree as-is:
+For local development on azurite, the attachment paths in the tarball match Azure blob names exactly, so import the tree as-is:
 
 ```bash
 az storage blob upload-batch \
@@ -112,7 +109,6 @@ Leave `attachment.connectionString` set (azurite wins over `baseDirectory`) and 
 | `GIT_SHA` | Current HEAD | Git SHA for versioned tag |
 | `DP_KEY_XML` | (empty) | Data protection key XML content (for CI) |
 | `KEEP_BUILD_DIR` | (unset) | Set to `1` to preserve the per-preset build directory |
-| `ASPNETCORE_ENVIRONMENT` | `Development` | Seeder config environment |
 
 ## GitHub Actions
 
@@ -147,4 +143,4 @@ self-host:
       tag: qa-dunder-mifflin-enterprise-full
 ```
 
-**Note**: Both charts also need the [core bundle](#core-bundle) unpacked at `/etc/bitwarden/core` — without the data protection key, login fails against seeded data.
+**Note**: Both charts also need the [core bundle](#core-bundle) unpacked at `/etc/bitwarden/core`. Login fails against seeded data without the data protection key.

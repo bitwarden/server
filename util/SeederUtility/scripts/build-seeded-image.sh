@@ -14,7 +14,6 @@
 #   GIT_SHA            Override git SHA (default: current HEAD short SHA)
 #   DP_KEY_XML         Data protection key XML content (for CI; written into the bundle)
 #   KEEP_BUILD_DIR=1   Preserve the per-preset build directory after completion
-#   ASPNETCORE_ENVIRONMENT  Seeder config environment (default: Development)
 #
 # Parallel invocations:
 #   The script is safe to run concurrently for different <preset, db-type>
@@ -46,11 +45,6 @@ GIT_SHA="${GIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')}
 BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 PUSH="${PUSH:-false}"
 
-# Seeding resolves Azure-backed repositories whose constructors require the connection
-# strings in appsettings.Development.json; GlobalSettingsFactory otherwise defaults to
-# Production and the seed fails on a null connection string.
-export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Development}"
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SEEDER_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${SEEDER_DIR}/../.." && pwd)"
@@ -79,7 +73,7 @@ cleanup() {
     local status=$?
     docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
     if [[ "${KEEP_BUILD_DIR:-0}" != "1" ]]; then
-        # BUNDLE_STAGE holds key material; the tarball is already written elsewhere
+        # BUNDLE_STAGE holds key material. The tarball is written outside it.
         rm -rf "${WORK_DIR}" "${DOCKER_DIR}/build/${TAG}-bundle"
     fi
     return "${status}"
@@ -179,11 +173,10 @@ case "${DB_TYPE}" in
 esac
 
 # --- Core bundle ---
-# Data protection keys and attachment blobs are read by the application, not the
-# database, so they cannot travel inside the database image. Both live under
-# /etc/bitwarden/core in a deployment, so the seeder writes them into one tree that
-# ships alongside the image as a tarball.
-# Staged outside WORK_DIR so key material never enters the Docker build context.
+# Data protection keys and attachment blobs belong to the application, not the
+# database, so the image cannot carry them. In a deployment both live under
+# /etc/bitwarden/core, and they ship as one tarball beside the image.
+# Staged outside WORK_DIR to keep key material out of the Docker build context.
 BUNDLE_STAGE="${DOCKER_DIR}/build/${TAG}-bundle"
 CORE_DIR="${BUNDLE_STAGE}/core"
 DP_KEYS_DIR="${CORE_DIR}/aspnet-dataprotection"
@@ -205,9 +198,17 @@ else
     echo "==> No pre-existing data protection key; one will be generated into the bundle"
 fi
 
-# Attachment storage picks Azure whenever a connection string is set, so blank it to
-# force local disk. Keys and blobs land in the bundle rather than the host's key store.
+# Self-hosted mode makes LicensingService read the licensing certificates embedded in
+# Core instead of the machine's X509 store, which a CI runner does not have. It also
+# replaces the Azure-backed event repository with a no-op, so the seeder needs no
+# storage connection strings. Installation ID is required when self-hosted; any value
+# works for seeding.
+#
+# Attachment storage prefers Azure whenever a connection string is set, so blank it to
+# select local disk. Keys and blobs then land in the bundle, not the host's key store.
 SEED_ENV=(
+    "globalSettings__selfHosted=true"
+    "globalSettings__installation__id=e6b8a9c4-0d3f-4a71-9c2e-5f7a1b3d8e02"
     "globalSettings__dataProtection__directory=${DP_KEYS_DIR}"
     "globalSettings__attachment__connectionString="
     "globalSettings__attachment__baseDirectory=${ATTACHMENTS_DIR}"
@@ -288,9 +289,9 @@ case "${DB_TYPE}" in
     ;;
 esac
 
-# Discover the ephemeral host port chosen by Docker. The binding is not always in place
-# the moment `docker run` returns, so poll. `with` yields an empty string rather than
-# failing the template while the port list is still empty.
+# Discover the ephemeral host port Docker chose. The binding is not always in place
+# when `docker run` returns, so poll for it. `with` returns an empty string instead of
+# failing the template while the port list is empty.
 for _ in $(seq 1 30); do
     HOST_PORT=$(docker inspect \
         --format="{{with index .NetworkSettings.Ports \"${INTERNAL_PORT}/tcp\"}}{{(index . 0).HostPort}}{{end}}" \
