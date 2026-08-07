@@ -62,13 +62,21 @@ public class FinishSsoJitProvisionMasterPasswordCommand : IFinishSsoJitProvision
             throw new BadRequestException("User not found within organization.");
         }
 
-        var updateUserData =
+        var updateUserDataTasks = new List<UpdateUserData>
+        {
             _masterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword(
                 user,
-                masterPasswordDataModel.ToSetInitialPasswordData());
+                masterPasswordDataModel.ToSetInitialPasswordData())
+        };
+
+        var containedKeyId = masterPasswordDataModel.MasterPasswordUnlock.ContainedKeyId;
+        if (containedKeyId is not null)
+        {
+            updateUserDataTasks.Add(_userRepository.SetUserKeyId(user.Id, containedKeyId));
+        }
 
         await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, masterPasswordDataModel.AccountKeys,
-            [updateUserData]);
+            updateUserDataTasks);
 
         await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
 
