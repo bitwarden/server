@@ -371,6 +371,65 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         return (organization, inviteLink);
     }
 
+    private static async Task<(Organization Org, OrganizationInviteLink InviteLink)> SeedOrgWithClaimedDomainAndTwoFactorPolicyAndInviteLinkAsync(
+        IdentityApplicationFactory factory, string claimedDomain, IEnumerable<string>? allowedDomains = null)
+    {
+        var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
+        var organizationDomainRepository = factory.Services.GetRequiredService<IOrganizationDomainRepository>();
+        var policyRepository = factory.Services.GetRequiredService<IPolicyRepository>();
+        var organizationInviteLinkRepository = factory.Services.GetRequiredService<IOrganizationInviteLinkRepository>();
+
+        var organization = new Organization
+        {
+            Name = $"ClaimedDomain2FaOrg-{Guid.NewGuid():N}",
+            BillingEmail = $"billing+{Guid.NewGuid():N}@example.com",
+            Plan = "Enterprise",
+            Enabled = true,
+            UsePolicies = true,
+            UseOrganizationDomains = true,
+            UseInviteLinks = true,
+        };
+        organization = await organizationRepository.CreateAsync(organization);
+
+        var domain = new OrganizationDomain
+        {
+            OrganizationId = organization.Id,
+            DomainName = claimedDomain,
+            Txt = "bw-test",
+        };
+        domain.SetVerifiedDate();
+        await organizationDomainRepository.CreateAsync(domain);
+
+        var domainBlockPolicy = new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.BlockClaimedDomainAccountCreation,
+            Enabled = true,
+        };
+        await policyRepository.CreateAsync(domainBlockPolicy);
+
+        var twoFactorPolicy = new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.TwoFactorAuthentication,
+            Enabled = true,
+        };
+        await policyRepository.CreateAsync(twoFactorPolicy);
+
+        var inviteLink = new OrganizationInviteLink
+        {
+            OrganizationId = organization.Id,
+            Invite = "opaque-invite-blob",
+            SupportsConfirmation = false,
+        };
+        inviteLink.SetAllowedDomains(allowedDomains ?? new[] { claimedDomain });
+        inviteLink.SetNewId();
+        inviteLink.SetNewCode();
+        await organizationInviteLinkRepository.CreateAsync(inviteLink);
+
+        return (organization, inviteLink);
+    }
+
     private static async Task<(Organization Org, OrganizationInviteLink InviteLink)> SeedOrgWithInviteLinkAsync(
         IdentityApplicationFactory factory, IEnumerable<string>? allowedDomains = null)
     {
@@ -659,6 +718,79 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         var user = await database.Users.SingleAsync(u => u.Email == email);
         Assert.NotNull(user);
 
+        var providers = user.GetTwoFactorProviders();
+        Assert.NotNull(providers);
+        Assert.True(providers.TryGetValue(TwoFactorProviderType.Email, out var emailProvider));
+        Assert.True(emailProvider!.Enabled);
+        Assert.Equal(email.ToLowerInvariant(), emailProvider.MetaData["Email"]?.ToString());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndClaimedDomainAndTwoFactorPolicy_BypassesDomainAndSeedsEmail2Fa(
+        [Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        // Exercises the interaction: one org has BOTH a claimed-domain block AND a Require-2FA
+        // policy. Registering via that org's open invite must (a) skip the domain block because
+        // the invite matches the claiming org and (b) still seed Email 2FA before the user row
+        // is persisted. Neither fix in isolation covers this cross-feature path.
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
+
+        var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
+        var email = $"test+bothpolicies+{name}@{claimedDomain}";
+        var (_, inviteLink) = await SeedOrgWithClaimedDomainAndTwoFactorPolicyAndInviteLinkAsync(localFactory, claimedDomain);
+
+        // Register-start with the matching invite — bypasses claimed-domain block.
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status204NoContent, sendCtx.Response.StatusCode);
+        Assert.NotNull(localFactory.RegistrationTokens[email]);
+
+        // Register-finish — the domain-block check must exclude this org AND the 2FA policy must fire.
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = localFactory.RegistrationTokens[email],
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.NotNull(user);
+        Assert.Equal(email, user.Email);
+
+        // Assert both feature paths fired: the domain bypass produced a user row, AND Email 2FA
+        // was seeded because the same org has Require-2FA on.
         var providers = user.GetTwoFactorProviders();
         Assert.NotNull(providers);
         Assert.True(providers.TryGetValue(TwoFactorProviderType.Email, out var emailProvider));

@@ -1267,6 +1267,72 @@ public class RegisterUserCommandTests
             .SendOrganizationUserWelcomeEmailAsync(user, organization.Name);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_ClaimedDomainBypassedAnd2FaPolicyEnabled_SeedsEmail2Fa(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, bool receiveMarketingMaterials, Guid organizationId, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, true)] PolicyStatus policy)
+    {
+        // Arrange — an email on a domain claimed by the invite's own org, plus Require-2FA policy on
+        // that same org. Both fixes must fire together: the domain-block exclusion allows the user
+        // to register at all, and the 2FA policy check must still seed Email 2FA before create.
+        user.Email = "user@claimed.example.com";
+        user.TwoFactorProviders = null;
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        // Domain is globally claimed; only the invite's org exclusion unblocks it. If the code
+        // failed to pass the excludeOrgId, this test would trip the block and throw.
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Is<Guid?>(g => g == null))
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organizationId)
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        string? twoFactorProvidersAtCreate = null;
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(Arg.Do<User>(u => twoFactorProvidersAtCreate = u.TwoFactorProviders), registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        // Domain check ran with the invite's org as the exclusion — proves the bypass path was taken.
+        await sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .Received(1)
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organizationId);
+
+        // 2FA policy consulted and Email 2FA seeded before create.
+        await sutProvider.GetDependency<IPolicyQuery>()
+            .Received(1)
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication);
+        sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .SetTwoFactorProvider(user, TwoFactorProviderType.Email);
+        Assert.NotNull(twoFactorProvidersAtCreate);
+    }
+
     // -----------------------------------------------------------------------------------------------
     // RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken tests
     // -----------------------------------------------------------------------------------------------
