@@ -70,6 +70,18 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
         IEnumerable<CollectionAccessSelection> upserts, IEnumerable<Guid> removeOrganizationUserIds,
         DateTime revisionDate);
 
+    /// <summary>
+    /// Atomically applies the same group-access upserts and removals to one or more collections.
+    /// </summary>
+    /// <param name="organizationId">The Organization ID.</param>
+    /// <param name="collectionIds">The Collection IDs to apply the change to.</param>
+    /// <param name="upserts">The group access selections to create or update.</param>
+    /// <param name="removeGroupIds">The Group IDs to remove access for.</param>
+    /// <param name="revisionDate">The revision date to use for the collections.</param>
+    Task ModifyGroupAccessAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> upserts, IEnumerable<Guid> removeGroupIds,
+        DateTime revisionDate);
+
     Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users);
     Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id);
     Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
