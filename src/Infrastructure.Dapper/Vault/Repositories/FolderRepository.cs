@@ -51,10 +51,24 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
     public async Task DeleteManyAsync(IEnumerable<Guid> folderIds, Guid userId)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
-            $"[{Schema}].[Folder_DeleteByIds]",
-            new { Ids = folderIds.ToGuidIdArrayTVP(), UserId = userId },
-            commandType: CommandType.StoredProcedure);
+        await connection.OpenAsync();
+
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[Folder_DeleteByIds]",
+                new { Ids = folderIds.ToGuidIdArrayTVP(), UserId = userId },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     /// <inheritdoc />
