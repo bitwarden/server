@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 
