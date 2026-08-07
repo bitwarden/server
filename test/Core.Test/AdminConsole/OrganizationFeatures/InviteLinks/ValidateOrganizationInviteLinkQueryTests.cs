@@ -111,6 +111,8 @@ public class ValidateOrganizationInviteLinkQueryTests
         var code = Guid.NewGuid();
         organization.Id = inviteLink.OrganizationId;
         organization.Enabled = false;
+        // Explicit so this test pins "disabled trumps UseInviteLinks" independent of autofixture defaults.
+        organization.UseInviteLinks = true;
         inviteLink.Code = code.ToString();
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
