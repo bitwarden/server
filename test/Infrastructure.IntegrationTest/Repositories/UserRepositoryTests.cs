@@ -5,9 +5,10 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Microsoft.Data.SqlClient;
 using Xunit;
@@ -771,7 +772,7 @@ public class UserRepositoryTests
         user.RevisionDate = DateTime.UtcNow;
 
         var actionWasInvoked = false;
-        UpdateEncryptedDataForKeyRotation action = (_, _) =>
+        DatabaseTransactionAction action = (_, _) =>
         {
             actionWasInvoked = true;
             return Task.CompletedTask;
@@ -782,6 +783,26 @@ public class UserRepositoryTests
 
         // Assert
         Assert.True(actionWasInvoked);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateUserKeyAndEncryptedDataV2Async_WithRepositoryUpdateDataAction_PersistsRotatedData(
+        IUserRepository userRepository, IFolderRepository folderRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var folder = await folderRepository.CreateAsync(new Folder { UserId = user.Id, Name = "2.original-name" });
+        folder.Name = "2.rotated-name";
+        user.RevisionDate = DateTime.UtcNow;
+
+        // Act
+        await userRepository.UpdateUserKeyAndEncryptedDataV2Async(
+            user, [folderRepository.UpdateForKeyRotation(user.Id, [folder])]);
+
+        // Assert
+        var rotatedFolder = await folderRepository.GetByIdAsync(folder.Id);
+        Assert.NotNull(rotatedFolder);
+        Assert.Equal("2.rotated-name", rotatedFolder.Name);
     }
 
     [Theory, DatabaseData]
