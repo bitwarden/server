@@ -358,7 +358,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostRegisterSendEmailVerification_WithOpenOrgInviteAndFeatureFlagOff_ThrowsBadRequest(
+    public async Task PostRegisterSendEmailVerification_WithOpenOrgInviteAndFeatureFlagOff_ThrowsFeatureUnavailable(
         string email, string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
     {
         // Arrange
@@ -720,7 +720,7 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Theory, BitAutoData, SignatureKeyPairRequestModelCustomize]
-    public async Task PostRegisterFinish_WithOpenOrgInviteAndFeatureFlagOff_ThrowsBadRequest(
+    public async Task PostRegisterFinish_WithOpenOrgInviteAndFeatureFlagOff_ThrowsFeatureUnavailable(
         string email, string emailVerificationToken, string userSymmetricKey, string masterPasswordHash,
         AccountKeysRequestModel accountKeys, Guid organizationId, Guid code)
     {
