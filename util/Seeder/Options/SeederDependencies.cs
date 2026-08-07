@@ -18,7 +18,8 @@ public sealed record SeederDependencies(
     IPasswordHasher<User> PasswordHasher,
     IManglerService ManglerService,
     ILicensingService LicensingService,
-    IAttachmentStorageService AttachmentStorageService)
+    IAttachmentStorageService AttachmentStorageService,
+    ISeederLicenseSigner LicenseSigner)
 {
     /// <summary>
     /// Optional progress reporter. When null, the pipeline runs silently.

@@ -41,8 +41,10 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal IAttachmentStorageService AttachmentStorageService { get; }
 
+    internal ISeederLicenseSigner LicenseSigner { get; }
+
     internal SeederDependencies ToDependencies()
-        => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService);
+        => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService, LicenseSigner);
 
     private readonly ServiceProvider _provider;
 
@@ -59,6 +61,7 @@ internal sealed class SeederServiceScope : IDisposable
         Mangler = sp.GetRequiredService<IManglerService>();
         LicensingService = sp.GetRequiredService<ILicensingService>();
         AttachmentStorageService = sp.GetRequiredService<IAttachmentStorageService>();
+        LicenseSigner = sp.GetRequiredService<ISeederLicenseSigner>();
     }
 
     public void Dispose()

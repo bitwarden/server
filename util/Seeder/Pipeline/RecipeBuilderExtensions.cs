@@ -9,6 +9,7 @@ using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Bit.Seeder.Steps;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Pipeline;
 
@@ -172,7 +173,10 @@ public static class RecipeBuilderExtensions
         builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb, true));
         if (selfHosted)
         {
-            builder.AddAsyncStep(sp => new GenerateSelfHostUserLicenseStep(sp.GetRequiredService<ILicensingService>()));
+            builder.AddAsyncStep(sp => new GenerateSelfHostUserLicenseStep(
+                sp.GetRequiredService<ILicensingService>(),
+                sp.GetRequiredService<ISeederLicenseSigner>(),
+                sp.GetRequiredService<ILogger<GenerateSelfHostUserLicenseStep>>()));
         }
         return builder;
     }

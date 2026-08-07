@@ -125,6 +125,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             new PasswordHasher<User>(),
             mangler,
             null!,
+            null!,
             null!);
         return new RecipeOrchestrator(deps);
     }

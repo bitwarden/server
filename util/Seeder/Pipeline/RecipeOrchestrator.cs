@@ -142,6 +142,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         services.AddSingleton(deps.AttachmentStorageService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
         services.AddSingleton(deps.LicensingService);
+        services.AddSingleton(deps.LicenseSigner);
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);

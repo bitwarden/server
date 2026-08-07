@@ -183,7 +183,9 @@ public class RecipeBuilderValidationTests
         var builder = services.AddRecipe("test");
 
         builder.CreateIndividualUser("user@example.com", true, 1, true);
+        services.AddLogging();
         services.AddSingleton<ILicensingService, StubLicensingService>();
+        services.AddSingleton<ISeederLicenseSigner, StubSeederLicenseSigner>();
 
         using var provider = services.BuildServiceProvider();
         var steps = provider.GetKeyedServices<OrderedStep>("test")
@@ -270,6 +272,12 @@ public class RecipeBuilderValidationTests
         public Task<string?> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo) => throw new NotImplementedException();
         public Task<string?> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo) => throw new NotImplementedException();
         public Task WriteUserLicenseAsync(User user, UserLicense license) => throw new NotImplementedException();
+    }
+
+    private sealed class StubSeederLicenseSigner : ISeederLicenseSigner
+    {
+        public Task<LicenseSigningResult> CreateUserTokenAsync(User user) =>
+            Task.FromResult(LicenseSigningResult.Skipped("no signing certificate configured"));
     }
 
     private sealed class StubSeedReader(bool hasOwner) : ISeedReader
