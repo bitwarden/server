@@ -457,7 +457,14 @@ public class OrganizationsControllerTests : IDisposable
         _currentContext.EditSubscription(organizationId).Returns(true);
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(monthlyPlan);
-        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo());
+        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ScheduleId = "sub_sched_123"
+            }
+        });
 
         var effectiveDate = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
         _getPendingAnnualUpgradeQuery.Run(organization).Returns(new PendingAnnualUpgrade
@@ -500,12 +507,20 @@ public class OrganizationsControllerTests : IDisposable
         _currentContext.EditSubscription(organizationId).Returns(true);
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(monthlyPlan);
-        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo());
+        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ScheduleId = "sub_sched_123"
+            }
+        });
         _getPendingAnnualUpgradeQuery.Run(organization).Returns((PendingAnnualUpgrade)null);
 
         var response = await _sut.GetSubscription(organizationId);
 
         Assert.Null(response.PendingAnnualUpgrade);
+        await _getPendingAnnualUpgradeQuery.Received(1).Run(organization);
     }
 
     [Theory, AutoData]
@@ -521,7 +536,14 @@ public class OrganizationsControllerTests : IDisposable
         _currentContext.EditSubscription(organizationId).Returns(false); // -> hideSensitiveData == true
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(monthlyPlan);
-        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo());
+        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ScheduleId = "sub_sched_123"
+            }
+        });
 
         var effectiveDate = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
         _getPendingAnnualUpgradeQuery.Run(organization).Returns(new PendingAnnualUpgrade
@@ -550,5 +572,40 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Null(response.PendingAnnualUpgrade.LineItems);              // hidden
         Assert.Equal(effectiveDate, response.PendingAnnualUpgrade.EffectiveDate); // preserved
         Assert.Equal(PlanType.TeamsAnnually, response.PendingAnnualUpgrade.Plan.Type); // preserved
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_SkipsPendingAnnualUpgradeQuery_WhenSubscriptionHasNoSchedule(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var monthlyPlan = new TeamsPlan(false);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ScheduleId = null
+            }
+        };
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(monthlyPlan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(subscriptionInfo);
+        // Stub a value the gate must prevent from ever being requested.
+        _getPendingAnnualUpgradeQuery.Run(organization).Returns(new PendingAnnualUpgrade
+        {
+            Plan = new TeamsPlan(true),
+            LineItems = [],
+            EffectiveDate = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.PendingAnnualUpgrade);
+        await _getPendingAnnualUpgradeQuery.DidNotReceive().Run(Arg.Any<Organization>());
     }
 }

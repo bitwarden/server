@@ -90,7 +90,11 @@ public class OrganizationsController(
 
         var hideSensitiveData = !await currentContext.EditSubscription(id);
 
-        var pendingAnnualUpgrade = await getPendingAnnualUpgradeQuery.Run(organization);
+        // A pending annual upgrade requires an attached subscription schedule, so skip the query when
+        // the already-fetched subscription has none.
+        var pendingAnnualUpgrade = string.IsNullOrEmpty(subscriptionInfo.Subscription?.ScheduleId)
+            ? null
+            : await getPendingAnnualUpgradeQuery.Run(organization);
 
         return new OrganizationSubscriptionResponseModel(
             organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade);
