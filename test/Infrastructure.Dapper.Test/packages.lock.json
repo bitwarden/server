@@ -1332,7 +1332,14 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.7.2, )",
-          "Dapper": "[2.1.66, 2.1.66]"
+          "Dapper": "[2.1.66, 2.1.66]",
+          "Pam.Domain": "[2026.7.2, )"
+        }
+      },
+      "pam.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Data": "[0.0.1, )"
         }
       },
       "serilogfilelogging": {
