@@ -156,6 +156,7 @@ public class SubscriptionInfo
                 ? 14
                 : 30;
             ServiceAccountGrace = sub?.GetMigrationGraceServiceAccounts() ?? 0;
+            ScheduleId = sub?.ScheduleId;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -178,6 +179,13 @@ public class SubscriptionInfo
         /// during a pricing migration. Read from Stripe subscription metadata; 0 when none was granted.
         /// </summary>
         public int ServiceAccountGrace { get; set; }
+
+        /// <summary>
+        /// The Stripe subscription schedule id, or null when no schedule is attached. Internal only;
+        /// not mapped to the API response. Used to gate billing lookups that are only meaningful for a
+        /// scheduled subscription.
+        /// </summary>
+        public string? ScheduleId { get; set; }
 
         public class BillingSubscriptionItem
         {

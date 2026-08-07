@@ -297,5 +297,32 @@ public class SubscriptionInfoTests
         Assert.Equal(6, result.DurationInMonths);
         Assert.False(result.Active);
     }
+
+    [Fact]
+    public void BillingSubscription_CopiesScheduleId_FromStripeSubscription()
+    {
+        var subscription = new Subscription
+        {
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+
+        var result = new SubscriptionInfo.BillingSubscription(subscription);
+
+        Assert.Equal("sub_sched_123", result.ScheduleId);
+    }
+
+    [Fact]
+    public void BillingSubscription_ScheduleIdNull_WhenNoScheduleAttached()
+    {
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+
+        var result = new SubscriptionInfo.BillingSubscription(subscription);
+
+        Assert.Null(result.ScheduleId);
+    }
 }
 
