@@ -92,6 +92,9 @@ jobs:
     name: ${{ matrix.database }} / ${{ matrix.preset }}
     needs: setup
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       matrix:
         preset: ${{ fromJson(needs.setup.outputs.presets) }}
@@ -119,6 +122,23 @@ jobs:
       - name: Restore .NET local tools
         run: dotnet tool restore
 
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Retrieve data protection key
+        id: retrieve-secret
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-org-bitwarden
+          secrets: "DP-KEY-XML"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
       - name: Build seeded image
         env:
           PUSH: "false"
@@ -126,6 +146,7 @@ jobs:
           GIT_SHA: ${{ github.sha }}
           MATRIX_PRESET: ${{ matrix.preset }}
           MATRIX_DATABASE: ${{ matrix.database }}
+          DP_KEY_XML: ${{ steps.retrieve-secret.outputs.DP-KEY-XML }}
         run: |
           GIT_SHA="${GIT_SHA:0:7}" \
           bash util/SeederUtility/scripts/build-seeded-image.sh \
@@ -153,8 +174,6 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-      # Data protection key and attachment blobs. The consumer mounts these at
-      # /etc/bitwarden/core; the database image does not contain them.
       - name: Upload core bundle
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
