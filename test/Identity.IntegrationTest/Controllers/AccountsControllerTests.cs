@@ -107,6 +107,9 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     public async Task PostRegisterSendEmailVerification_WithOpenOrgInvite_InvalidLink_ReturnsBadRequest(string name, bool receiveMarketingEmails)
     {
         // OpenOrgInvite payload without a matching invite link on the org is rejected.
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
+
         var email = $"test+register+badlink+{name}@email.com";
 
         var model = new RegisterSendVerificationEmailRequestModel
@@ -122,7 +125,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             },
         };
 
-        var context = await _factory.PostRegisterSendEmailVerificationAsync(model);
+        var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
     }
