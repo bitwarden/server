@@ -125,14 +125,14 @@ public class GetChurnMitigationOfferQuery(
         // Churn-only branch never writes Customer.Discount -- it's managed elsewhere (manual
         // ops adjustments, audience filters via SubscriptionDiscountService). We still inspect
         // it here so an org already carrying this coupon at the customer layer is ineligible.
-        if (subscription.Customer?.Discount?.Coupon?.Id is { Length: > 0 } customerCouponId
+        if (subscription.Customer?.Discount?.Source?.Coupon?.Id is { Length: > 0 } customerCouponId
             && string.Equals(customerCouponId, churnDiscountCouponCode, StringComparison.Ordinal))
         {
             return null;
         }
 
         if (subscription.Discounts is { Count: > 0 }
-            && subscription.Discounts.Any(d => string.Equals(d.Coupon?.Id, churnDiscountCouponCode, StringComparison.Ordinal)))
+            && subscription.Discounts.Any(d => string.Equals(d.Source?.Coupon?.Id, churnDiscountCouponCode, StringComparison.Ordinal)))
         {
             return null;
         }
@@ -145,12 +145,14 @@ public class GetChurnMitigationOfferQuery(
         try
         {
             // `test_clock` is included so the migration-cohort current_phase check is honest
-            // against test customers; `discount`/`discounts.coupon` give us the churn-only
-            // ineligibility surfaces without a second round-trip.
+            // against test customers; `customer.discount.source.coupon` and
+            // `discounts.source.coupon` populate the customer- and subscription-level coupon
+            // ids the ineligibility checks below read (both dereference `.Source.Coupon.Id`
+            // after the 2025-09-30.clover Discount refactor wrapped Coupon under Source).
             return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
                 new SubscriptionGetOptions
                 {
-                    Expand = ["customer", "test_clock", "discounts.coupon"]
+                    Expand = ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]
                 });
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)

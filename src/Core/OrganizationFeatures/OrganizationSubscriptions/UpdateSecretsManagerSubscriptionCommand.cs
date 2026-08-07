@@ -85,7 +85,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 {
                     subscription = await _stripeAdapter.GetSubscriptionAsync(
                         update.Organization.GatewaySubscriptionId,
-                        new SubscriptionGetOptions { Expand = ["customer", "test_clock"] });
+                        new SubscriptionGetOptions { Expand = ["customer", "customer.discount.source.coupon", "test_clock"] });
                 }
                 catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)
                 {

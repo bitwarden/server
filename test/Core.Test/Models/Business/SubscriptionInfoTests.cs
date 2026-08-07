@@ -167,11 +167,14 @@ public class SubscriptionInfoTests
         var discount = new Discount
         {
             End = end,
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                PercentOff = 10m,
-                Duration = "repeating",
-                DurationInMonths = 12
+                Coupon = new Coupon
+                {
+                    PercentOff = 10m,
+                    Duration = "repeating",
+                    DurationInMonths = 12
+                }
             }
         };
 
@@ -192,10 +195,13 @@ public class SubscriptionInfoTests
         var discount = new Discount
         {
             End = null,
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                PercentOff = 10m,
-                Duration = "forever"
+                Coupon = new Coupon
+                {
+                    PercentOff = 10m,
+                    Duration = "forever"
+                }
             }
         };
 
@@ -235,12 +241,15 @@ public class SubscriptionInfoTests
         var discount = new Discount
         {
             End = end,
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                AmountOff = 1500, // $15.00
-                PercentOff = null,
-                Duration = "repeating",
-                DurationInMonths = 6
+                Coupon = new Coupon
+                {
+                    AmountOff = 1500, // $15.00
+                    PercentOff = null,
+                    Duration = "repeating",
+                    DurationInMonths = 6
+                }
             }
         };
 

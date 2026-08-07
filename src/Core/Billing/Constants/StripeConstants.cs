@@ -12,6 +12,12 @@ public static class StripeConstants
         public const string UnrecognizedLocation = "unrecognized_location";
     }
 
+    public static class BillingMode
+    {
+        public const string Classic = "classic";
+        public const string Flexible = "flexible";
+    }
+
     public static class BillingReasons
     {
         public const string AutomaticPendingInvoiceItemInvoice = "automatic_pending_invoice_item_invoice";

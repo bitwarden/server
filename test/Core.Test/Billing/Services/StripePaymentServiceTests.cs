@@ -34,11 +34,14 @@ public class StripePaymentServiceTests
 
         var customerDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 20m,
-                AmountOff = 1400
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 20m,
+                    AmountOff = 1400
+                }
             },
             End = null
         };
@@ -86,11 +89,14 @@ public class StripePaymentServiceTests
 
         var subscriptionDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 15m,
-                AmountOff = null
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 15m,
+                    AmountOff = null
+                }
             },
             End = null
         };
@@ -136,20 +142,26 @@ public class StripePaymentServiceTests
 
         var customerDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 25m
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 25m
+                }
             },
             End = null
         };
 
         var subscriptionDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "different-coupon-id",
-                PercentOff = 10m
+                Coupon = new Coupon
+                {
+                    Id = "different-coupon-id",
+                    PercentOff = 10m
+                }
             },
             End = null
         };
@@ -232,20 +244,26 @@ public class StripePaymentServiceTests
 
         var firstDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "coupon-10-percent",
-                PercentOff = 10m
+                Coupon = new Coupon
+                {
+                    Id = "coupon-10-percent",
+                    PercentOff = 10m
+                }
             },
             End = null
         };
 
         var secondDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "coupon-20-percent",
-                PercentOff = 20m
+                Coupon = new Coupon
+                {
+                    Id = "coupon-20-percent",
+                    PercentOff = 20m
+                }
             },
             End = null
         };
@@ -388,9 +406,35 @@ public class StripePaymentServiceTests
         await stripeAdapter.Received(1).GetSubscriptionAsync(
             subscriber.GatewaySubscriptionId,
             Arg.Is<SubscriptionGetOptions>(o =>
-                o.Expand.Contains("customer.discount.coupon.applies_to") &&
-                o.Expand.Contains("discounts.coupon.applies_to") &&
+                // customer.discount.source.coupon stops at 4 levels — appending .applies_to would
+                // exceed Stripe's cap, so it's overlaid via a separate Coupon refetch instead.
+                o.Expand.Contains("customer.discount.source.coupon") &&
+                o.Expand.Contains("discounts.source.coupon.applies_to") &&
                 o.Expand.Contains("test_clock")));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task HasSecretsManagerStandalone_FetchesCustomerWithDiscountSourceCouponExpanded(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        organization.GatewayCustomerId = "cus_123";
+        organization.UseSecretsManager = true;
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>())
+            .Returns(new Customer { Id = "cus_123" });
+
+        // Act
+        await sutProvider.Sut.HasSecretsManagerStandalone(organization);
+
+        // Assert — the 2025-09-30.clover refactor moved Coupon under Discount.Source, so without
+        // this expand Customer.Discount.Source is null and SM-standalone detection silently fails.
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetCustomerAsync(
+            "cus_123",
+            Arg.Is<CustomerGetOptions>(o => o.Expand.Contains("discount.source.coupon")));
     }
 
     [Theory]
@@ -467,6 +511,8 @@ public class StripePaymentServiceTests
                     ],
                     Discounts =
                     [
+                        // Schedule phase discounts expose Coupon directly (no Source wrapper),
+                        // unlike a subscription/customer Discount.
                         new SubscriptionSchedulePhaseDiscount
                         {
                             Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
@@ -497,6 +543,13 @@ public class StripePaymentServiceTests
         Assert.Equal(25m, result.CustomerDiscount.PercentOff);
         Assert.True(result.CustomerDiscount.Active);
         Assert.True(result.CustomerDiscount.IsFromSchedule);
+
+        // Assert — schedule was fetched with the phase coupon expand path. Coupon is direct on the
+        // phase discount (no `.source` segment); `.applies_to` keeps it within Stripe's 4-level cap.
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetSubscriptionScheduleAsync(
+            "sub_sched_test123",
+            Arg.Is<SubscriptionScheduleGetOptions>(o =>
+                o.Expand.Contains("phases.discounts.coupon.applies_to")));
     }
 
     [Theory]
@@ -520,7 +573,7 @@ public class StripePaymentServiceTests
             {
                 Discount = new Discount
                 {
-                    Coupon = new Coupon { Id = "existing-coupon", PercentOff = 10m },
+                    Source = new DiscountSource { Coupon = new Coupon { Id = "existing-coupon", PercentOff = 10m } },
                     End = null
                 }
             },
@@ -797,7 +850,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
@@ -871,6 +930,8 @@ public class StripePaymentServiceTests
                     ],
                     Discounts =
                     [
+                        // Schedule phase discounts expose Coupon directly (no Source wrapper),
+                        // unlike a subscription/customer Discount.
                         new SubscriptionSchedulePhaseDiscount
                         {
                             Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
@@ -964,7 +1025,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
@@ -1151,6 +1218,75 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AdjustSubscription_FetchesSubscriptionAndCustomerWithDiscountSourceCouponExpanded(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        var plan = new EnterprisePlan(isAnnual: true);
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.Seats = 0;
+        organization.UseSecretsManager = false;
+        organization.MaxStorageGb = null;
+
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Status = "active",
+            Customer = new Customer { Id = "cus_123", Address = new Address { Country = "US" } },
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId },
+                        Plan = new Stripe.Plan { Id = plan.PasswordManager.StripeSeatPlanId },
+                        // A non-zero current quantity forces UpdateNeeded=true so the flow reaches the
+                        // finally block's customer re-fetch (the coupon-preservation net).
+                        Quantity = 10
+                    }
+                ]
+            }
+        };
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.EnterpriseAnnually)
+            .Returns(plan);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(new Subscription { Id = "sub_123", LatestInvoiceId = "inv_123" });
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>())
+            .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>())
+            .Returns(new Customer { Id = "cus_123" });
+
+        // Act
+        await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
+
+        // Assert — the coupon-preservation net reads Customer.Discount.Source.Coupon on both the
+        // subscription and the re-fetched customer; without these expands both read null and the net
+        // silently no-ops (2025-09-30.clover moved Coupon under Discount.Source).
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer.discount.source.coupon")));
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetCustomerAsync(
+            "cus_123",
+            Arg.Is<CustomerGetOptions>(o => o.Expand.Contains("discount.source.coupon")));
+    }
+    [Theory, BitAutoData]
     public async Task AdjustSubscription_WhenCustomerIsExempt_DoesNotUpdateTaxExemption(
         SutProvider<StripePaymentService> sutProvider,
         Organization organization)
@@ -1203,7 +1339,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .GetCustomerAsync("cus_123")
+            .GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>())
             .Returns(new Customer { Id = "cus_123" });
 
         await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);

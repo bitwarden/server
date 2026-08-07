@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bit.IntegrationTestCommon;
 using Bit.Test.Common.Helpers;
@@ -45,6 +46,11 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
                 {
                     ["BillingSettings:StripeWebhookKey"] = WebhookKey,
                     ["BillingSettings:StripeWebhookSecret20250827Basil"] = WebhookSecret,
+                    ["BillingSettings:StripeWebhookSecret20260624Dahlia"] = WebhookSecret,
+                    // Force the EF branch of AddDatabaseRepositories so it doesn't fall through to
+                    // Dapper (which would talk to the user-secret's real SqlServer instead of the
+                    // SQLite-backed DbContext the ITestDatabase registers).
+                    ["globalSettings:databaseProvider"] = "sqlite",
                 };
                 testDatabase.ModifyGlobalSettings(configValues);
                 config.AddInMemoryCollection(configValues);
@@ -76,8 +82,21 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
     /// underlying object from Stripe with the production Expand list — that fetch is
     /// what the test exercises.
     /// </summary>
-    public async Task SendStripeWebhookAsync(string eventType, JsonObject dataObject, string eventId)
+    public async Task SendStripeWebhookAsync(
+        string eventType,
+        JsonObject dataObject,
+        string eventId,
+        JsonObject? previousAttributes = null)
     {
+        var data = new JsonObject { ["object"] = dataObject };
+        if (previousAttributes != null)
+        {
+            // Stripe includes the changed fields' prior values under data.previous_attributes.
+            // Handlers that branch on what changed (e.g. SubscriptionUpdatedHandler reading
+            // previous_attributes.items) need it present to exercise those paths.
+            data["previous_attributes"] = previousAttributes;
+        }
+
         var payload = new JsonObject
         {
             ["id"] = eventId,
@@ -87,10 +106,7 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
             ["livemode"] = false,
             ["pending_webhooks"] = 0,
             ["type"] = eventType,
-            ["data"] = new JsonObject
-            {
-                ["object"] = dataObject,
-            },
+            ["data"] = data,
             ["request"] = new JsonObject
             {
                 ["id"] = $"req_{Guid.NewGuid():N}",
@@ -111,6 +127,17 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
 
         var response = await client.SendAsync(request);
         await Assert.SuccessResponseAsync(response);
+
+        // A 2xx alone doesn't prove the event was handled: the controller returns
+        // 200 { Processed = false } when it drops an event (unrecognized API version /
+        // missing webhook secret, SDK-version mismatch, wrong cloud region, unparseable
+        // body). Assert the event was actually processed so a silent drop fails the test
+        // instead of masquerading as success.
+        var responseBody = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(responseBody);
+        var processed = document.RootElement.TryGetProperty("processed", out var processedElement)
+            && processedElement.GetBoolean();
+        Assert.True(processed, $"Stripe webhook was not processed. Response body: {responseBody}");
     }
 
     public ValueTask DisposeAsync() => _factory.DisposeAsync();
