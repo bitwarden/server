@@ -145,6 +145,7 @@ public static partial class FeatureFlagKeys
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
     public const string ChangeMemberEmailNoMp = "pm-28365-change-member-email-no-mp";
     public const string PM34423StagedStatus = "pm-34423-staged-status";
+    public const string PM35160CollectionAuthorizationHandlers = "pm-35160-collection-user-collection-group-authorization-handlers";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
