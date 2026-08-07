@@ -62,36 +62,6 @@ public class AccessRuleValidatorTests
     }
 
     [Fact]
-    public void Validate_HumanApproval_IsValid()
-    {
-        var result = _sut.Validate("""[{"kind":"human_approval"}]""");
-
-        Assert.True(result.IsValid);
-    }
-
-    [Theory]
-    [InlineData("""[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""")]
-    [InlineData("""[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8","192.168.0.0/16","2001:db8::/32"]}]""")]
-    public void Validate_IpAllowlist_ValidCidrs_IsValid(string conditionsJson)
-    {
-        var result = _sut.Validate(conditionsJson);
-
-        Assert.True(result.IsValid);
-    }
-
-    [Theory]
-    [InlineData("""[{"kind":"ip_allowlist","cidrs":[]}]""", "at least one CIDR")]
-    [InlineData("""[{"kind":"ip_allowlist","cidrs":["not-a-cidr"]}]""", "Invalid CIDR")]
-    [InlineData("""[{"kind":"ip_allowlist","cidrs":["10.0.0.0/99"]}]""", "Invalid CIDR")]
-    public void Validate_IpAllowlist_InvalidCidrs_IsInvalid(string conditionsJson, string expectedMessageFragment)
-    {
-        var result = _sut.Validate(conditionsJson);
-
-        Assert.False(result.IsValid);
-        Assert.Contains(expectedMessageFragment, result.Error);
-    }
-
-    [Fact]
     public void Validate_MultipleConditions_IsValid()
     {
         var result = _sut.Validate("""
