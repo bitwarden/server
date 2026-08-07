@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Xunit;
@@ -29,13 +30,46 @@ public class PartialCipherDataTests
         });
 
         var stripped = PartialCipherData.Strip(CipherType.Login, data);
-        var result = JsonSerializer.Deserialize<CipherLoginData>(stripped);
+        var result = JsonSerializer.Deserialize<CipherLoginData>(stripped, JsonHelpers.IgnoreCase);
 
         Assert.Equal("2.name|encrypted", result.Name);
         Assert.Single(result.Uris);
         Assert.Equal("2.uri|encrypted", result.Uris.First().Uri);
         Assert.Equal("2.checksum|encrypted", result.Uris.First().UriChecksum);
         Assert.Equal(UriMatchType.Host, result.Uris.First().Match);
+    }
+
+    [Fact]
+    public void Strip_Login_EmitsCamelCaseEnvelope()
+    {
+        // The stripped output is the SDK's restricted-decrypt contract: a purpose-built camelCase
+        // envelope of name + uris only. Assert the wire shape directly — a casing change or the
+        // legacy singular `Uri` getter leaking back in would silently break SDK deserialization.
+        var data = JsonSerializer.Serialize(new CipherLoginData
+        {
+            Name = "2.name|encrypted",
+            Uris =
+            [
+                new CipherLoginData.CipherLoginUriData
+                {
+                    Uri = "2.uri|encrypted",
+                    UriChecksum = "2.checksum|encrypted",
+                    Match = UriMatchType.Host,
+                },
+            ],
+        });
+
+        var stripped = PartialCipherData.Strip(CipherType.Login, data);
+
+        using var doc = JsonDocument.Parse(stripped);
+        var root = doc.RootElement;
+        // Top-level allowlist: exactly name + uris — no singular `uri`, no secret fields.
+        Assert.Equal(new[] { "name", "uris" }, root.EnumerateObject().Select(p => p.Name).ToArray());
+
+        var uri = root.GetProperty("uris")[0];
+        Assert.Equal(
+            new[] { "uri", "uriChecksum", "match" },
+            uri.EnumerateObject().Select(p => p.Name).ToArray());
     }
 
     [Fact]
@@ -60,7 +94,7 @@ public class PartialCipherDataTests
         // unexpected key would still be a leak.
         Assert.DoesNotContain("SENTINEL", stripped);
 
-        var result = JsonSerializer.Deserialize<CipherLoginData>(stripped);
+        var result = JsonSerializer.Deserialize<CipherLoginData>(stripped, JsonHelpers.IgnoreCase);
         Assert.Null(result.Username);
         Assert.Null(result.Password);
         Assert.Null(result.PasswordRevisionDate);
