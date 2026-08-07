@@ -14,9 +14,9 @@ using Bit.Core.Tokens;
 using NSubstitute;
 using OtpNet;
 using Xunit;
-using static Bit.Api.IntegrationTest.Controllers.TwoFactor.TwoFactorIntegrationTestHelpers;
+using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
 
-namespace Bit.Api.IntegrationTest.Controllers.TwoFactor;
+namespace Bit.Api.IntegrationTest.Auth.Controllers.TwoFactor;
 
 public class TwoFactorControllerAuthenticatorTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
@@ -76,6 +76,9 @@ public class TwoFactorControllerAuthenticatorTests : IClassFixture<ApiApplicatio
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+
+        var unchanged = await _userRepository.GetByEmailAsync(_userEmail);
+        Assert.Null(unchanged!.GetTwoFactorProvider(TwoFactorProviderType.Authenticator));
     }
 
     [Fact]
