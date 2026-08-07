@@ -24,6 +24,19 @@ public class CreateRosterStepTests
     }
 
     [Fact]
+    public void RosterUsersGetFirstAndLastNameAsDisplayName()
+    {
+        var reader = new StubSeedReader().Add("rosters.test", TwoUserRoster());
+        var context = NewContext(new SeederSettings(), reader);
+        PreloadOrganization(context);
+
+        new CreateRosterStep("test").Execute(context);
+
+        var names = context.Users.Select(u => u.Name).OrderBy(n => n).ToList();
+        Assert.Equal(["Member One", "The Owner"], names);
+    }
+
+    [Fact]
     public void WithOwnerEmailOverride_FirstOwnerRoleUserGetsOverride()
     {
         var reader = new StubSeedReader().Add("rosters.test", TwoUserRoster());

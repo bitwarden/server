@@ -9,4 +9,6 @@ public class KeyConnectorKeysData
     public required AccountKeysRequestModel AccountKeys { get; set; }
 
     public required string OrgIdentifier { get; init; }
+
+    public KeyId? ContainedKeyId { get; init; }
 }
