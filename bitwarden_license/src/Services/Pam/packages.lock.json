@@ -910,6 +910,18 @@
       "httpextensions": {
         "type": "Project"
       },
+      "organizationauthorization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.7.2, )"
+        }
+      },
+      "pam.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Data": "[0.0.1, )"
+        }
+      },
       "serilogfilelogging": {
         "type": "Project",
         "dependencies": {

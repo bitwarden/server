@@ -1,8 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <RootNamespace>Bit.Services.Pam.Test</RootNamespace>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The endpoint authorization tests materialize the PAM route groups, which needs the ASP.NET Core routing types. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
@@ -19,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Services\Pam\Pam.csproj" />
+    <ProjectReference Include="..\..\..\..\test\Core.Test\Core.Test.csproj" />
   </ItemGroup>
 
 </Project>

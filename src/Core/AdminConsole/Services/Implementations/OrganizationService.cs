@@ -1016,6 +1016,11 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
+        if (permissions.ManageAccessRules && !await _currentContext.ManageAccessRules(organizationId))
+        {
+            return false;
+        }
+
         if (permissions.ManageSso && !await _currentContext.ManageSso(organizationId))
         {
             return false;
