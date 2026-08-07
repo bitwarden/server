@@ -127,7 +127,8 @@ public class AccountsKeyManagementController : Controller
                 WebAuthnKeys =
                     await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
                 DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
-                V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
+                // A manual key rotation always logs the user out, so no upgrade token is needed.
+                V2UpgradeToken = null,
                 Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
                 Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
                 Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends)

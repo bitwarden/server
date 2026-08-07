@@ -881,6 +881,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 var updateOrganizationUser =
                     newOrganizationUsers.First(newOrganizationUser => newOrganizationUser.Id == organizationUser.Id);
                 organizationUser.ResetPasswordKey = updateOrganizationUser.ResetPasswordKey;
+                organizationUser.V2UpgradeToken = updateOrganizationUser.V2UpgradeToken;
             }
 
             await dbContext.SaveChangesAsync();

@@ -90,7 +90,11 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         model.ValidateForUser(user);
 
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
-        var shouldPersistV2UpgradeToken = await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
+
+        // A manual key rotation always logs the user out, so a V2 upgrade token is never needed here.
+        // Discard anything the client submitted, which also clears a token left over from an earlier upgrade.
+        model.BaseData.V2UpgradeToken = null;
+        await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
 
         // Delegate the master password mutation (hash, wrapped user key, hint, time markers) to
         // MasterPasswordService.
@@ -113,7 +117,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
 
-        await HandlePushNotificationAsync(shouldPersistV2UpgradeToken, user);
+        await HandlePushNotificationAsync(shouldPersistV2UpgradeToken: false, user);
         return IdentityResult.Success;
     }
 
@@ -331,6 +335,13 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         {
             user.V2UpgradeToken = null;
             user.SecurityStamp = Guid.NewGuid().ToString();
+        }
+
+        // Share the token with each enrolled organization, so an admin can unwrap the V2 user key through
+        // account recovery and update the account recovery key without prompting the member.
+        foreach (var organizationUser in baseModel.OrganizationUsers)
+        {
+            organizationUser.V2UpgradeToken = user.V2UpgradeToken;
         }
 
         await UpdateAccountKeysAsync(baseModel, user, saveEncryptedDataActions);

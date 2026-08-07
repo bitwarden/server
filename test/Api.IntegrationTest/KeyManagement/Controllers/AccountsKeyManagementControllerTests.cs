@@ -502,7 +502,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeys_V1Crypto_WithV2UpgradeToken_PersistsToken_AndDoesNotLogout(
+    public async Task RotateUserAccountKeys_V1Crypto_WithV2UpgradeToken_IgnoresToken_AndLogsOut(
         RotateUserAccountKeysAndDataRequestModel request)
     {
         var user = await SetupUserForKeyRotationAsync();
@@ -520,12 +520,16 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
-        Assert.NotNull(userNewState.V2UpgradeToken);
-        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedType7String}\"", userNewState.V2UpgradeToken);
-        Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
-        Assert.Equal(user.SecurityStamp, userNewState.SecurityStamp);
+
+        // A manual rotation always logs out, so the submitted token is ignored
+        Assert.Null(userNewState.V2UpgradeToken);
+
+        // Security stamp must change (logout occurred)
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+
+        // Standard logout push sent without a reason (full logout, not KeyRotation)
         await _pushNotificationService.Received(1)
-            .PushLogOutAsync(userNewState.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushLogOutAsync(userNewState.Id, false, null);
     }
 
     [Theory]
@@ -621,19 +625,18 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeys_WithExistingV2UpgradeToken_WithNewToken_ReplacesToken_AndDoesNotLogout(
+    public async Task RotateUserAccountKeys_WithExistingV2UpgradeToken_WithNewToken_ClearsToken_AndLogsOut(
         RotateUserAccountKeysAndDataRequestModel request)
     {
         // Arrange
         var user = await SetupUserForKeyRotationAsync();
 
         // Add existing old token to user BEFORE rotation
-        var oldToken = new V2UpgradeTokenData
+        user.V2UpgradeToken = new V2UpgradeTokenData
         {
             WrappedUserKey1 = _mockEncryptedType7String2,
             WrappedUserKey2 = _mockEncryptedType2String2
-        };
-        user.V2UpgradeToken = oldToken.ToJson();
+        }.ToJson();
         await _userRepository.ReplaceAsync(user);
 
         // Setup request WITH new V2UpgradeToken
@@ -653,20 +656,16 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         // Assert
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
-        Assert.NotNull(userNewState.V2UpgradeToken);
 
-        // Verify new token is present
-        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedType7String}\"", userNewState.V2UpgradeToken);
-        Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+        // Neither the old nor the new token survives a manual rotation
+        Assert.Null(userNewState.V2UpgradeToken);
 
-        // Verify old token is NOT present
-        Assert.DoesNotContain(oldToken.WrappedUserKey1, userNewState.V2UpgradeToken);
-        Assert.DoesNotContain(oldToken.WrappedUserKey2, userNewState.V2UpgradeToken);
+        // Security stamp must change (logout occurred)
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
 
-        // Verify NO logout (SecurityStamp should be the same for key rotation with token)
-        Assert.Equal(user.SecurityStamp, userNewState.SecurityStamp);
+        // Standard logout push sent without a reason (full logout, not KeyRotation)
         await _pushNotificationService.Received(1)
-            .PushLogOutAsync(userNewState.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushLogOutAsync(userNewState.Id, false, null);
     }
 
     [Theory]
