@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 
 /// <summary>
 /// Identifying key for an open organization invite link: the target organization and the
@@ -9,9 +7,7 @@ namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 /// </summary>
 public class OpenOrgInviteRequestModel
 {
-    [Required]
     public required Guid OrganizationId { get; set; }
 
-    [Required]
     public required Guid Code { get; set; }
 }
