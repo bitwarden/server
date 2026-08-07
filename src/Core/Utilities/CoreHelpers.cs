@@ -758,6 +758,12 @@ public static class CoreHelpers
                         claims.Add(new KeyValuePair<string, string>(Claims.SecretsManagerAccess, org.Id.ToString()));
                     }
                 }
+
+                // Privileged Access Manager
+                foreach (var org in group.Where(o => o.AccessPam))
+                {
+                    claims.Add(new KeyValuePair<string, string>(Claims.PamAccess, org.Id.ToString()));
+                }
             }
         }
 
