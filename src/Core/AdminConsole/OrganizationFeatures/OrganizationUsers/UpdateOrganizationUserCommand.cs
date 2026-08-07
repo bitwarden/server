@@ -133,6 +133,14 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             }
         }
 
+        // Granting PAM access to a member of an organization without PAM would be inert: claim emission ANDs
+        // AccessPam with the organization's UsePam. Reject so the admin gets an actionable error instead.
+        // Only the grant is gated — revoking access stays possible on an organization whose entitlement has lapsed.
+        if (!originalOrganizationUser.AccessPam && organizationUser.AccessPam && !organization.UsePam)
+        {
+            throw new BadRequestException("To grant PAM access the organization must have PAM enabled.");
+        }
+
         // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
         // updating Stripe
         if (!originalOrganizationUser.AccessSecretsManager && organizationUser.AccessSecretsManager)
