@@ -235,21 +235,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
         if (orgUser != null)
         {
-            var twoFactorPolicy = await _policyQuery.RunAsync(orgUser.OrganizationId,
-                PolicyType.TwoFactorAuthentication);
-            if (twoFactorPolicy.Enabled)
-            {
-                user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-                {
-
-                    [TwoFactorProviderType.Email] = new TwoFactorProvider
-                    {
-                        MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                        Enabled = true
-                    }
-                });
-                _userService.SetTwoFactorProvider(user, TwoFactorProviderType.Email);
-            }
+            await SetUserEmail2FaIfOrgPolicyEnabledByOrgIdAsync(orgUser.OrganizationId, user);
         }
         return orgUser;
     }
