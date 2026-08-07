@@ -13,9 +13,9 @@ using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using NSubstitute;
 using Xunit;
-using static Bit.Api.IntegrationTest.Controllers.TwoFactor.TwoFactorIntegrationTestHelpers;
+using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
 
-namespace Bit.Api.IntegrationTest.Controllers.TwoFactor;
+namespace Bit.Api.IntegrationTest.Auth.Controllers.TwoFactor;
 
 public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
