@@ -28,6 +28,11 @@ public class FolderRepositoryTests
         await folderRepository.DeleteManyAsync([deletedFolder.Id], user.Id);
 
         Assert.Null(await folderRepository.GetByIdAsync(deletedFolder.Id, user.Id));
+        Assert.NotNull(await folderRepository.GetByIdAsync(keptFolder.Id, user.Id));
+
+        Assert.Null((await cipherRepository.GetByIdAsync(cipherInDeletedFolder.Id, user.Id)).FolderId);
+        Assert.Equal(keptFolder.Id, (await cipherRepository.GetByIdAsync(cipherInKeptFolder.Id, user.Id)).FolderId);
+        Assert.Null((await cipherRepository.GetByIdAsync(unfiledCipher.Id, user.Id)).FolderId);
     }
 
     [Theory, DatabaseData]
@@ -67,11 +72,15 @@ public class FolderRepositoryTests
 
         var ownFolder = await CreateFolderAsync(folderRepository, user.Id, "own");
         var otherUsersFolder = await CreateFolderAsync(folderRepository, otherUser.Id, "other");
-        await CreateCipherAsync(cipherRepository, otherUser.Id, otherUsersFolder.Id);
+        var otherUsersCipher = await CreateCipherAsync(cipherRepository, otherUser.Id, otherUsersFolder.Id);
 
         await folderRepository.DeleteManyAsync([ownFolder.Id, otherUsersFolder.Id], user.Id);
 
         Assert.Null(await folderRepository.GetByIdAsync(ownFolder.Id, user.Id));
+        Assert.NotNull(await folderRepository.GetByIdAsync(otherUsersFolder.Id, otherUser.Id));
+        Assert.Equal(
+            otherUsersFolder.Id,
+            (await cipherRepository.GetByIdAsync(otherUsersCipher.Id, otherUser.Id)).FolderId);
     }
 
     [Theory, DatabaseData]
@@ -106,6 +115,7 @@ public class FolderRepositoryTests
         await folderRepository.DeleteAsync(folder);
 
         Assert.Null(await folderRepository.GetByIdAsync(folder.Id, user.Id));
+        Assert.Null((await cipherRepository.GetByIdAsync(cipher.Id, user.Id)).FolderId);
     }
 
     private static Task<User> CreateUserAsync(IUserRepository userRepository)

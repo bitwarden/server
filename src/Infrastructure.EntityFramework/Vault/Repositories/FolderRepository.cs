@@ -73,9 +73,10 @@ public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, G
 
         var deletingFolderIds = deletingFolders.Select(f => f.Id).ToHashSet();
 
+        var userKey = userId.ToString();
         var userCipherDetails = new UserCipherDetailsQuery(userId).Run(dbContext);
         var filedCiphers = from ucd in userCipherDetails
-                           join c in dbContext.Ciphers.Where(c => c.Folders != null)
+                           join c in dbContext.Ciphers.Where(c => c.Folders != null && c.Folders.Contains(userKey))
                                on ucd.Id equals c.Id
                            select c;
 
@@ -89,7 +90,6 @@ public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, G
             }
 
             folders.Remove(userId);
-            dbContext.Attach(cipher);
             cipher.Folders = JsonSerializer.Serialize(folders);
         });
 
