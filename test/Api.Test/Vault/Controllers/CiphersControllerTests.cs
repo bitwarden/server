@@ -186,6 +186,363 @@ public class CiphersControllerTests
         Assert.True(result.Unavailable);
     }
 
+    [Theory, BitAutoData]
+    public async Task PutSharedFolders_ShouldThrowExceptionWhenCipherIsNullOrNoOrgValue(Guid id, CipherCollectionsRequestModel model, User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, user.Id).ReturnsNull();
+
+        var requestAction = async () => await sutProvider.Sut.PutSharedFolders(id, model);
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+        await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutSharedFolders_ShouldSaveUpdatedCipherAndReturnDetails(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
+
+        var result = await sutProvider.Sut.PutSharedFolders(id, model);
+
+        await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
+        Assert.IsType<CipherDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutSharedFolders_vNextShouldThrowExceptionWhenCipherIsNullOrNoOrgValue(Guid id, CipherCollectionsRequestModel model, User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, user.Id).ReturnsNull();
+
+        var requestAction = async () => await sutProvider.Sut.PutSharedFolders_vNext(id, model);
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutSharedFolders_vNextShouldSaveUpdatedCipher(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
+
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
+
+        await sutProvider.Sut.PutSharedFolders_vNext(id, model);
+
+        await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutSharedFolders_vNextReturnOptionalDetailsCipherUnavailableFalse(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
+
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
+
+        var result = await sutProvider.Sut.PutSharedFolders_vNext(id, model);
+
+        Assert.IsType<OptionalCipherDetailsResponseModel>(result);
+        Assert.False(result.Unavailable);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutSharedFolders_vNextReturnOptionalDetailsCipherUnavailableTrue(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails, [(CipherDetails)null]);
+
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+
+        var result = await sutProvider.Sut.PutSharedFolders_vNext(id, model);
+
+        Assert.IsType<OptionalCipherDetailsResponseModel>(result);
+        Assert.True(result.Unavailable);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutSharedFoldersAdmin_ShouldThrowNotFoundWhenCipherIsNull(Guid id, CipherCollectionsRequestModel model, Guid userId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(Arg.Any<Guid>()).ReturnsNull();
+
+        var requestAction = async () => await sutProvider.Sut.PutSharedFoldersAdmin(id.ToString(), model);
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+        await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutSharedFoldersAdmin_ShouldSaveUpdatedCipherAndReturnDetails(Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        var (id, model) = SetupSharedFoldersAdminSuccess(userId, sutProvider);
+
+        var result = await sutProvider.Sut.PutSharedFoldersAdmin(id.ToString(), model);
+
+        await sutProvider.GetDependency<ICipherService>().Received(1).SaveCollectionsAsync(
+            Arg.Any<CipherOrganizationDetails>(), Arg.Any<IEnumerable<Guid>>(), userId, true);
+        Assert.IsType<CipherMiniDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkSharedFolders_WhenAdding_AddsCollectionsForManyCiphers(Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        var model = SetupBulkSharedFoldersSuccess(userId, removeCollections: false, sutProvider);
+
+        await sutProvider.Sut.PostBulkSharedFolders(model);
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>().Received(1)
+            .AddCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .RemoveCollectionsForManyCiphersAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkSharedFolders_WhenRemoving_RemovesCollectionsForManyCiphers(Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        var model = SetupBulkSharedFoldersSuccess(userId, removeCollections: true, sutProvider);
+
+        await sutProvider.Sut.PostBulkSharedFolders(model);
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>().Received(1)
+            .RemoveCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .AddCollectionsForManyCiphersAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkSharedFolders_WhenUnauthorized_ThrowsNotFound(Guid userId, CipherBulkUpdateCollectionsRequestModel model,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        // No organization relationship configured, so the user cannot modify the ciphers
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+
+        var requestAction = async () => await sutProvider.Sut.PostBulkSharedFolders(model);
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .AddCollectionsForManyCiphersAsync(default, default, default);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .RemoveCollectionsForManyCiphersAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutCollections_DelegatesToSharedFolders(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
+
+#pragma warning disable CS0618 // Testing the obsolete backwards-compatible route
+        var result = await sutProvider.Sut.PutCollections(id, model);
+#pragma warning restore CS0618
+
+        await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
+        Assert.IsType<CipherDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostCollections_DelegatesToSharedFolders(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
+
+#pragma warning disable CS0618 // Testing the obsolete backwards-compatible route
+        var result = await sutProvider.Sut.PostCollections(id, model);
+#pragma warning restore CS0618
+
+        await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
+        Assert.IsType<CipherDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostSharedFolders_DelegatesToPutSharedFolders(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
+
+#pragma warning disable CS0618 // Testing the obsolete backwards-compatible route
+        var result = await sutProvider.Sut.PostSharedFolders(id, model);
+#pragma warning restore CS0618
+
+        await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
+        Assert.IsType<CipherDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostCollections_vNextDelegatesToSharedFolders(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
+
+#pragma warning disable CS0618 // Testing the obsolete backwards-compatible route
+        var result = await sutProvider.Sut.PostCollections_vNext(id, model);
+#pragma warning restore CS0618
+
+        await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
+        Assert.IsType<OptionalCipherDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostSharedFolders_vNextDelegatesToPutSharedFolders(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
+
+#pragma warning disable CS0618 // Testing the obsolete backwards-compatible route
+        var result = await sutProvider.Sut.PostSharedFolders_vNext(id, model);
+#pragma warning restore CS0618
+
+        await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
+        Assert.IsType<OptionalCipherDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutCollectionsAdmin_DelegatesToSharedFolders(Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        var (id, model) = SetupSharedFoldersAdminSuccess(userId, sutProvider);
+
+#pragma warning disable CS0618 // Testing the obsolete backwards-compatible route
+        var result = await sutProvider.Sut.PutCollectionsAdmin(id.ToString(), model);
+#pragma warning restore CS0618
+
+        await sutProvider.GetDependency<ICipherService>().Received(1).SaveCollectionsAsync(
+            Arg.Any<CipherOrganizationDetails>(), Arg.Any<IEnumerable<Guid>>(), userId, true);
+        Assert.IsType<CipherMiniDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostCollectionsAdmin_DelegatesToSharedFolders(Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        var (id, model) = SetupSharedFoldersAdminSuccess(userId, sutProvider);
+
+#pragma warning disable CS0618 // Testing the obsolete backwards-compatible route
+        var result = await sutProvider.Sut.PostCollectionsAdmin(id.ToString(), model);
+#pragma warning restore CS0618
+
+        await sutProvider.GetDependency<ICipherService>().Received(1).SaveCollectionsAsync(
+            Arg.Any<CipherOrganizationDetails>(), Arg.Any<IEnumerable<Guid>>(), userId, true);
+        Assert.IsType<CipherMiniDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostSharedFoldersAdmin_DelegatesToPutSharedFoldersAdmin(Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        var (id, model) = SetupSharedFoldersAdminSuccess(userId, sutProvider);
+
+#pragma warning disable CS0618 // Testing the obsolete backwards-compatible route
+        var result = await sutProvider.Sut.PostSharedFoldersAdmin(id.ToString(), model);
+#pragma warning restore CS0618
+
+        await sutProvider.GetDependency<ICipherService>().Received(1).SaveCollectionsAsync(
+            Arg.Any<CipherOrganizationDetails>(), Arg.Any<IEnumerable<Guid>>(), userId, true);
+        Assert.IsType<CipherMiniDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollections_DelegatesToPostBulkSharedFolders(Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        var model = SetupBulkSharedFoldersSuccess(userId, removeCollections: false, sutProvider);
+
+#pragma warning disable CS0618 // Testing the obsolete backwards-compatible route
+        await sutProvider.Sut.PostBulkCollections(model);
+#pragma warning restore CS0618
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>().Received(1)
+            .AddCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
+    }
+
+    private const string _loginCipherDataJson = @"{""Username"":""testuser"",""Password"":""securepassword123""}";
+
+    private (Guid id, CipherCollectionsRequestModel model) SetupSharedFoldersAdminSuccess(Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        var organizationId = Guid.NewGuid();
+        var cipherId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+
+        var cipher = new CipherOrganizationDetails
+        {
+            Id = cipherId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = _loginCipherDataJson
+        };
+
+        var model = new CipherCollectionsRequestModel { CollectionIds = new[] { collectionId.ToString() } };
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.Owner });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId, AllowAdminAccessToAllCollectionItems = true });
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherId).Returns(cipher);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Cipher> { cipher });
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Collection> { new Collection { Id = collectionId, OrganizationId = organizationId } });
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<CollectionCipher>());
+
+        return (cipherId, model);
+    }
+
+    private CipherBulkUpdateCollectionsRequestModel SetupBulkSharedFoldersSuccess(Guid userId, bool removeCollections, SutProvider<CiphersController> sutProvider)
+    {
+        var organizationId = Guid.NewGuid();
+        var cipherId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+
+        var model = new CipherBulkUpdateCollectionsRequestModel
+        {
+            OrganizationId = organizationId,
+            CipherIds = new[] { cipherId },
+            CollectionIds = new[] { collectionId },
+            RemoveCollections = removeCollections
+        };
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.Owner });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId, AllowAdminAccessToAllCollectionItems = true });
+        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Cipher> { new Cipher { Id = cipherId, OrganizationId = organizationId } });
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Collection> { new Collection { Id = collectionId, OrganizationId = organizationId } });
+
+        return model;
+    }
+
     private void SetupUserAndOrgMocks(Guid id, Guid userId, SutProvider<CiphersController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
