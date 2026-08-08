@@ -1,7 +1,6 @@
 ﻿#nullable enable
 using System.Net;
 using System.Text.Json;
-using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.KeyManagement.Models.Requests;
@@ -903,7 +902,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserKeysAsync_V1ToV2Rotation_OrganizationUserEnrolledInAccountRecovery_SetsTokenOnMembership(
+    public async Task RotateUserKeysAsync_V1ToV2Rotation_OrganizationUserEnrolledInAccountRecovery_SetsTokenAndKeepsAccountRecoveryKey(
         RotateUserKeysRequestModel request)
     {
         // Arrange
@@ -915,13 +914,14 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         organizationUser.ResetPasswordKey = _mockEncryptedString;
         await _organizationUserRepository.ReplaceAsync(organizationUser);
 
+        // An upgrade rotation cannot re-encapsulate the account recovery key, so the client sends none
         SetupMasterPasswordRotateUserAccount(request, user, upgradeToken: true);
         request.UnlockData.OrganizationAccountRecoveryUnlockData =
         [
-            new ResetPasswordWithOrgIdRequestModel
+            new OrganizationUserAccountRecoveryRequestModel
             {
                 OrganizationId = organization.Id,
-                ResetPasswordKey = _mockEncryptedString
+                ResetPasswordKey = null
             }
         ];
 
@@ -937,6 +937,44 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var membership = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.NotNull(membership);
         Assert.Equal(userNewState.V2UpgradeToken, membership.V2UpgradeToken);
+
+        // The stored key survives, so the organization keeps account recovery for this member
+        Assert.Equal(_mockEncryptedString, membership.ResetPasswordKey);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_V1ToV2Rotation_WithAccountRecoveryKey_BadRequest(
+        RotateUserKeysRequestModel request)
+    {
+        // Arrange
+        var (organization, organizationUser) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        var user = await SetupUserForKeyRotationAsync();
+
+        organizationUser.ResetPasswordKey = _mockEncryptedString;
+        await _organizationUserRepository.ReplaceAsync(organizationUser);
+
+        SetupMasterPasswordRotateUserAccount(request, user, upgradeToken: true);
+        request.UnlockData.OrganizationAccountRecoveryUnlockData =
+        [
+            new OrganizationUserAccountRecoveryRequestModel
+            {
+                OrganizationId = organization.Id,
+                ResetPasswordKey = _mockEncryptedType2String2
+            }
+        ];
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+
+        // Assert - Sending a key during an upgrade is a client bug, so the whole rotation is refused
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var membership = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(membership);
+        Assert.Equal(_mockEncryptedString, membership.ResetPasswordKey);
     }
 
     [Theory]
