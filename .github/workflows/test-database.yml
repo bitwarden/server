@@ -42,6 +42,7 @@ jobs:
       contents: read
       actions: read
       checks: write
+      code-quality: write
     steps:
       - name: Check out repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -166,6 +167,20 @@ jobs:
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+
+      - name: Merge coverage reports
+        if: ${{ !cancelled() }}
+        run: |
+          dotnet tool install --global dotnet-coverage --version 18.7.0
+          dotnet-coverage merge -f cobertura -o coverage.cobertura.xml "**/coverage.cobertura.xml"
+
+      - name: Upload coverage to GitHub
+        if: ${{ !cancelled() }}
+        uses: actions/upload-code-coverage@b51da2c3c1b23e04d2d6477cfc34350b1f5cd3e9 # v1.2.0
+        with:
+          file: coverage.cobertura.xml
+          language: C#
+          label: code-coverage/database
 
       - name: Docker Compose down
         if: always()
