@@ -22,12 +22,12 @@ jobs:
       contents: read
     steps:
       - name: Check out repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
       - name: Verify format
         run: dotnet format --verify-no-changes
@@ -69,7 +69,7 @@ jobs:
             base_path: ./bitwarden_license/src
     steps:
       - name: Check out repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
 
@@ -128,10 +128,10 @@ jobs:
           echo "Project: ${{ matrix.project_name }}"
 
       - name: Set up QEMU emulators
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
       - name: Log in to Azure
         uses: bitwarden/gh-actions/azure-login@main
@@ -160,7 +160,7 @@ jobs:
         uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Log in to Chainguard registry
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: cgr.dev
           username: ${{ steps.get-kv-secrets.outputs.CHAINGUARD-REGISTRY-USERNAME }}
@@ -168,7 +168,7 @@ jobs:
 
       - name: Build Docker image
         id: build-artifacts
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/gov.Dockerfile
@@ -178,7 +178,7 @@ jobs:
 
       - name: Scan Docker image
         id: container-scan
-        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         with:
           image: ${{ steps.image-tags.outputs.scan_tag }}
           fail-build: false
@@ -190,7 +190,7 @@ jobs:
           docker logout cgr.dev
 
       - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@cdefb33c0f6224e58673d9004f47f7cb3e328b89 # v4.31.10
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           sarif_file: ${{ steps.container-scan.outputs.sarif }}
           sha: ${{ github.sha }}
