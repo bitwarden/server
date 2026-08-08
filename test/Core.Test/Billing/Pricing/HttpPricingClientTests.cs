@@ -3,18 +3,13 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
-using Bit.Test.Common.AutoFixture;
-using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.Extensions.Logging;
-using NSubstitute;
+using Microsoft.Extensions.Logging.Abstractions;
 using RichardSzalay.MockHttp;
 using Xunit;
-using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Test.Billing.Pricing;
 
-[SutProviderCustomize]
-public class PricingClientTests
+public class HttpPricingClientTests
 {
     #region GetPlan Lookup Key Tests
 
@@ -31,15 +26,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/organization/*")
             .Respond("application/json", planJson);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act
         var result = await pricingClient.GetPlan(PlanType.FamiliesAnnually2025);
@@ -60,15 +52,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/organization/*")
             .Respond("application/json", planJson);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act
         var result = await pricingClient.GetPlan(PlanType.FamiliesAnnually2025);
@@ -89,15 +78,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/organization/*")
             .Respond("application/json", planJson);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act
         var result = await pricingClient.GetPlan(PlanType.FamiliesAnnually);
@@ -121,15 +107,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/organization/*")
             .Respond("application/json", planJson);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act
         var result = await pricingClient.GetPlan(PlanType.EnterpriseAnnually);
@@ -156,15 +139,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/organization")
             .Respond("application/json", plansJson);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act
         var result = await pricingClient.ListPlans();
@@ -180,30 +160,20 @@ public class PricingClientTests
 
     #region GetPlan - Additional Coverage
 
-    [Theory, BitAutoData]
-    public async Task GetPlan_WhenSelfHosted_ReturnsNull(
-        SutProvider<PricingClient> sutProvider)
+    [Fact]
+    public async Task GetPlan_WhenLookupKeyNotFound_ReturnsNull()
     {
         // Arrange
-        var globalSettings = sutProvider.GetDependency<GlobalSettings>();
-        globalSettings.SelfHosted = true;
+        var mockHttp = new MockHttpMessageHandler();
+        var httpClient = new HttpClient(mockHttp)
+        {
+            BaseAddress = new Uri("https://test.com/")
+        };
 
-        // Act
-        var result = await sutProvider.Sut.GetPlan(PlanType.FamiliesAnnually2025);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetPlan_WhenLookupKeyNotFound_ReturnsNull(
-        SutProvider<PricingClient> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act - Using PlanType that doesn't have a lookup key mapping
-        var result = await sutProvider.Sut.GetPlan(unchecked((PlanType)999));
+        var result = await pricingClient.GetPlan(unchecked((PlanType)999));
 
         // Assert
         Assert.Null(result);
@@ -217,15 +187,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/organization/*")
             .Respond(HttpStatusCode.NotFound);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act
         var result = await pricingClient.GetPlan(PlanType.FamiliesAnnually2025);
@@ -242,15 +209,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/organization/*")
             .Respond(HttpStatusCode.InternalServerError);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act & Assert
         await Assert.ThrowsAsync<BillingException>(() =>
@@ -261,22 +225,6 @@ public class PricingClientTests
 
     #region ListPlans - Additional Coverage
 
-    [Theory, BitAutoData]
-    public async Task ListPlans_WhenSelfHosted_ReturnsEmptyList(
-        SutProvider<PricingClient> sutProvider)
-    {
-        // Arrange
-        var globalSettings = sutProvider.GetDependency<GlobalSettings>();
-        globalSettings.SelfHosted = true;
-
-        // Act
-        var result = await sutProvider.Sut.ListPlans();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
-    }
-
     [Fact]
     public async Task ListPlans_WhenPricingServiceReturnsError_ThrowsBillingException()
     {
@@ -285,15 +233,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/organization")
             .Respond(HttpStatusCode.InternalServerError);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act & Assert
         await Assert.ThrowsAsync<BillingException>(() =>
@@ -317,15 +262,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/premium")
             .Respond("application/json", plansJson);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act
         var result = await pricingClient.ListPremiumPlans();
@@ -346,21 +288,6 @@ public class PricingClientTests
         Assert.Equal(2019, result[1].LegacyYear);
     }
 
-    [Theory, BitAutoData]
-    public async Task ListPremiumPlans_WhenSelfHosted_ReturnsEmptyList(
-        SutProvider<PricingClient> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = true;
-
-        // Act
-        var result = await sutProvider.Sut.ListPremiumPlans();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
-    }
-
     [Fact]
     public async Task ListPremiumPlans_WhenPricingServiceReturnsError_ThrowsBillingException()
     {
@@ -369,15 +296,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/premium")
             .Respond(HttpStatusCode.InternalServerError);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act & Assert
         await Assert.ThrowsAsync<BillingException>(() =>
@@ -401,15 +325,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/premium")
             .Respond("application/json", plansJson);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act
         var result = await pricingClient.GetAvailablePremiumPlan();
@@ -432,15 +353,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/premium")
             .Respond("application/json", plansJson);
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -455,15 +373,12 @@ public class PricingClientTests
         mockHttp.When(HttpMethod.Get, "*/plans/premium")
             .Respond("application/json", "[]");
 
-        var globalSettings = new GlobalSettings { SelfHosted = false };
-
         var httpClient = new HttpClient(mockHttp)
         {
             BaseAddress = new Uri("https://test.com/")
         };
 
-        var logger = Substitute.For<ILogger<PricingClient>>();
-        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+        var pricingClient = new HttpPricingClient(httpClient, NullLogger<HttpPricingClient>.Instance);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
