@@ -63,7 +63,7 @@ server {
 {{/if}}
 
   location / {
-    proxy_pass http://web:5000/;
+    proxy_pass http://bitwarden-web:5000/;
 {{#if Ssl}}
     include /etc/nginx/security-headers-ssl.conf;
 {{/if}}
@@ -79,7 +79,7 @@ server {
   }
 
   location = /app-id.json {
-    proxy_pass http://web:5000/app-id.json;
+    proxy_pass http://bitwarden-web:5000/app-id.json;
 {{#if Ssl}}
     include /etc/nginx/security-headers-ssl.conf;
 {{/if}}
@@ -89,55 +89,55 @@ server {
   }
 
   location = /duo-connector.html {
-    proxy_pass http://web:5000/duo-connector.html;
+    proxy_pass http://bitwarden-web:5000/duo-connector.html;
   }
 
   location = /webauthn-connector.html {
-    proxy_pass http://web:5000/webauthn-connector.html;
+    proxy_pass http://bitwarden-web:5000/webauthn-connector.html;
   }
 
   location = /webauthn-fallback-connector.html {
-    proxy_pass http://web:5000/webauthn-fallback-connector.html;
+    proxy_pass http://bitwarden-web:5000/webauthn-fallback-connector.html;
   }
 
   location = /sso-connector.html {
-    proxy_pass http://web:5000/sso-connector.html;
+    proxy_pass http://bitwarden-web:5000/sso-connector.html;
   }
 
   location /attachments/ {
-    proxy_pass http://attachments:5000/;
+    proxy_pass http://bitwarden-attachments:5000/;
   }
 
   location /api/ {
-    proxy_pass http://api:5000/;
+    proxy_pass http://bitwarden-api:5000/;
   }
 
   location /icons/ {
-    proxy_pass http://icons:5000/;
+    proxy_pass http://bitwarden-icons:5000/;
   }
 
   location /notifications/ {
-    proxy_pass http://notifications:5000/;
+    proxy_pass http://bitwarden-notifications:5000/;
   }
 
   location /notifications/hub {
-    proxy_pass http://notifications:5000/hub;
+    proxy_pass http://bitwarden-notifications:5000/hub;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $http_connection;
   }
 
   location /notifications/anonymous-hub {
-    proxy_pass http://notifications:5000/anonymous-hub;
+    proxy_pass http://bitwarden-notifications:5000/anonymous-hub;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $http_connection;
   }
 
   location /events/ {
-    proxy_pass http://events:5000/;
+    proxy_pass http://bitwarden-events:5000/;
   }
 
   location /sso {
-    proxy_pass http://sso:5000;
+    proxy_pass http://bitwarden-sso:5000;
 {{#if Ssl}}
     include /etc/nginx/security-headers-ssl.conf;
 {{/if}}
@@ -146,7 +146,7 @@ server {
   }
 
   location /identity {
-    proxy_pass http://identity:5000;
+    proxy_pass http://bitwarden-identity:5000;
 {{#if Ssl}}
     include /etc/nginx/security-headers-ssl.conf;
 {{/if}}
@@ -155,7 +155,7 @@ server {
   }
 
   location /admin {
-    proxy_pass http://admin:5000;
+    proxy_pass http://bitwarden-admin:5000;
 {{#if Ssl}}
     include /etc/nginx/security-headers-ssl.conf;
 {{/if}}
@@ -165,13 +165,13 @@ server {
 
 {{#if EnableKeyConnector}}
   location /key-connector/ {
-    proxy_pass http://key-connector:5000/;
+    proxy_pass http://bitwarden-key-connector:5000/;
   }
 {{/if}}
 {{#if EnableScim}}
 
   location /scim/ {
-    proxy_pass http://scim:5000/;
+    proxy_pass http://bitwarden-scim:5000/;
   }
 {{/if}}
 
