@@ -193,7 +193,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     {
         ValidatePublicKeyEncryptionKeyPairUnchanged(model, user);
 
-        if (IsV2EncryptionUser(user))
+        if (user.HasV2KeyShape())
         {
             await RotateV2AccountKeysAsync(model, user, saveEncryptedDataActions);
         }
@@ -237,14 +237,6 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             var sendsWithUpdatedDate = model.Sends.ToList().Select(s => { s.RevisionDate = now; return s; });
             saveEncryptedDataActions.Add(_sendRepository.UpdateForKeyRotation(user.Id, sendsWithUpdatedDate));
         }
-    }
-
-    private static bool IsV2EncryptionUser(User user)
-    {
-        // Returns whether the user is a V2 user based on the private key's encryption type.
-        ArgumentNullException.ThrowIfNull(user);
-        var isPrivateKeyEncryptionV2 = EncryptionParsing.GetEncryptionType(user.PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
-        return isPrivateKeyEncryptionV2;
     }
 
     private async Task ValidateVerifyingKeyUnchangedAsync(BaseRotateUserAccountKeysData model, User user)
@@ -326,7 +318,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         // V2UpgradeToken is only valid for V1 users transitioning to V2.
         // For V2 users the token is semantically invalid — discard it and perform a full logout.
-        var shouldPersistV2UpgradeToken = baseModel.V2UpgradeToken != null && !IsV2EncryptionUser(user);
+        var shouldPersistV2UpgradeToken = baseModel.V2UpgradeToken != null && !user.HasV2KeyShape();
         if (shouldPersistV2UpgradeToken)
         {
             user.V2UpgradeToken = baseModel.V2UpgradeToken!.ToJson();
