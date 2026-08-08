@@ -764,6 +764,58 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     }
 
     /*
+    * JIT-provisioning must not mark EmailVerified, even when the org has a
+    * DNS-verified domain matching the email.
+    */
+    [Fact]
+    public async Task ExternalCallback_JitProvision_WithVerifiedDomain_DoesNotMarkEmailVerified()
+    {
+        // Arrange - JIT scenario with an SSO-enabled org.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .BuildAsync();
+
+        // SsoTestDataBuilder mocks the IdP to assert emails under @test.com. Seed a
+        // verified OrganizationDomain matching that domain so the JIT flow would see
+        // a verified-domain match if it still consulted it.
+        var verifiedDomain = new OrganizationDomain
+        {
+            OrganizationId = testData.Organization!.Id,
+            DomainName = "test.com",
+            Txt = "bw=verification"
+        };
+        verifiedDomain.SetVerifiedDate();
+        var domainRepo = testData.Factory.Services.GetRequiredService<IOrganizationDomainRepository>();
+        await domainRepo.CreateAsync(verifiedDomain);
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert - Callback should succeed (existing coverage).
+        Assert.True(
+            response.StatusCode == HttpStatusCode.Redirect,
+            $"Expected success/redirect but got {response.StatusCode}");
+
+        // Fetch the newly-provisioned User via the created OrganizationUser row.
+        // The JIT scenario seeds no User, so the org user record just created is the one.
+        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var orgUsers = await orgUserRepo.GetManyByOrganizationAsync(testData.Organization!.Id, type: null);
+        var newOrgUser = Assert.Single(orgUsers);
+        Assert.NotNull(newOrgUser.UserId);
+
+        var userRepo = testData.Factory.Services.GetRequiredService<IUserRepository>();
+        var provisionedUser = await userRepo.GetByIdAsync(newOrgUser.UserId!.Value);
+        Assert.NotNull(provisionedUser);
+
+        Assert.False(provisionedUser!.EmailVerified);
+    }
+
+    /*
     * SUCCESS PATH: Test to verify /Account/ExternalCallback succeeds when an existing user
     * with a valid (Confirmed) organization user status logs in via SSO for the first time.
     */

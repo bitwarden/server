@@ -53,7 +53,6 @@ public class AccountController : Controller
     private readonly IGlobalSettings _globalSettings;
     private readonly Core.Services.IEventService _eventService;
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
-    private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
 
     public AccountController(
@@ -74,7 +73,6 @@ public class AccountController : Controller
         IGlobalSettings globalSettings,
         Core.Services.IEventService eventService,
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
-        IOrganizationDomainRepository organizationDomainRepository,
         IRegisterUserCommand registerUserCommand)
     {
         _schemeProvider = schemeProvider;
@@ -94,7 +92,6 @@ public class AccountController : Controller
         _eventService = eventService;
         _globalSettings = globalSettings;
         _dataProtector = dataProtector;
-        _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
     }
 
@@ -657,19 +654,9 @@ public class AccountController : Controller
             }
         }
 
-        // If the email domain is verified, we can mark the email as verified
         if (string.IsNullOrWhiteSpace(email))
         {
             throw new Exception(_i18nService.T("CannotFindEmailClaim"));
-        }
-
-        var emailVerified = false;
-        var emailDomain = CoreHelpers.GetEmailDomain(email);
-        if (!string.IsNullOrWhiteSpace(emailDomain))
-        {
-            var organizationDomain =
-                await _organizationDomainRepository.GetDomainByOrgIdAndDomainNameAsync(organization.Id, emailDomain);
-            emailVerified = organizationDomain?.VerifiedDate.HasValue ?? false;
         }
 
         //--------------------------------------------------
@@ -679,7 +666,6 @@ public class AccountController : Controller
         {
             Name = name,
             Email = email,
-            EmailVerified = emailVerified,
             ApiKey = CoreHelpers.SecureRandomString(30)
         };
 
