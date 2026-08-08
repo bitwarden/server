@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System.Security.Claims;
-using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.KeyManagement.Controllers;
@@ -105,8 +104,10 @@ public class AccountsKeyManagementControllerTests
 
         await sutProvider.GetDependency<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>>().Received(1)
             .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.EmergencyAccessUnlockData));
-        await sutProvider.GetDependency<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>>().Received(1)
-            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.OrganizationAccountRecoveryUnlockData));
+        await sutProvider.GetDependency<IRotationValidator<OrganizationAccountRecoveryRotationData, IReadOnlyList<OrganizationUser>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is<OrganizationAccountRecoveryRotationData>(d =>
+                d.AccountRecoveryUnlockData == data.AccountUnlockData.OrganizationAccountRecoveryUnlockData
+                && !d.HasV2UpgradeToken));
         await sutProvider.GetDependency<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>>().Received(1)
             .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.PasskeyUnlockData));
 
@@ -158,8 +159,10 @@ public class AccountsKeyManagementControllerTests
 
         await sutProvider.GetDependency<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>>().Received(1)
             .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.EmergencyAccessUnlockData));
-        await sutProvider.GetDependency<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>>().Received(1)
-            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.OrganizationAccountRecoveryUnlockData));
+        await sutProvider.GetDependency<IRotationValidator<OrganizationAccountRecoveryRotationData, IReadOnlyList<OrganizationUser>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is<OrganizationAccountRecoveryRotationData>(d =>
+                d.AccountRecoveryUnlockData == data.AccountUnlockData.OrganizationAccountRecoveryUnlockData
+                && !d.HasV2UpgradeToken));
         await sutProvider.GetDependency<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>>().Received(1)
             .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.PasskeyUnlockData));
 
@@ -868,8 +871,10 @@ public class AccountsKeyManagementControllerTests
     {
         await sutProvider.GetDependency<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>>().Received(1)
             .ValidateAsync(Arg.Any<User>(), Arg.Is(request.UnlockData.EmergencyAccessUnlockData));
-        await sutProvider.GetDependency<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>>().Received(1)
-            .ValidateAsync(Arg.Any<User>(), Arg.Is(request.UnlockData.OrganizationAccountRecoveryUnlockData));
+        await sutProvider.GetDependency<IRotationValidator<OrganizationAccountRecoveryRotationData, IReadOnlyList<OrganizationUser>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is<OrganizationAccountRecoveryRotationData>(d =>
+                d.AccountRecoveryUnlockData == request.UnlockData.OrganizationAccountRecoveryUnlockData
+                && d.HasV2UpgradeToken == (request.UnlockData.V2UpgradeToken != null)));
         await sutProvider.GetDependency<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>>().Received(1)
             .ValidateAsync(Arg.Any<User>(), Arg.Is(request.UnlockData.PasskeyUnlockData));
 
