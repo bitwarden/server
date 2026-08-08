@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -88,7 +87,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>
     /// <param name="resetPasswordKeys">A list of organization users with updated reset password keys</param>
-    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
+    DatabaseTransactionAction UpdateForKeyRotation(Guid userId,
         IEnumerable<OrganizationUser> resetPasswordKeys);
 
     /// <summary>

@@ -2,11 +2,10 @@
 #nullable disable
 
 using AutoMapper;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Repositories;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -43,14 +42,14 @@ public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, G
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid userId, IEnumerable<Core.Vault.Entities.Folder> folders)
     {
-        return async (SqlConnection _, SqlTransaction _) =>
+        return async (connection, transaction) =>
         {
             var newFolders = folders.ToList();
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
             var userFolders = await GetDbSet(dbContext)
                 .Where(f => f.UserId == userId)
                 .ToListAsync();

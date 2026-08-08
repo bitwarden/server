@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
@@ -68,7 +67,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>
     /// <param name="ciphers">A list of ciphers with updated data</param>
-    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
+    DatabaseTransactionAction UpdateForKeyRotation(Guid userId,
         IEnumerable<Cipher> ciphers);
 
     /// <summary>

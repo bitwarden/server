@@ -89,7 +89,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         model.ValidateForUser(user);
 
-        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
+        List<DatabaseTransactionAction> saveEncryptedDataActions = [];
         var shouldPersistV2UpgradeToken = await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
 
         // Delegate the master password mutation (hash, wrapped user key, hint, time markers) to
@@ -124,7 +124,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         model.ValidateForUser(user);
 
-        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
+        List<DatabaseTransactionAction> saveEncryptedDataActions = [];
         var shouldPersistV2UpgradeToken =
             await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
         user.Key = model.MasterPasswordUnlockData.MasterKeyWrappedUserKey;
@@ -141,7 +141,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         model.ValidateForUser(user);
 
-        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
+        List<DatabaseTransactionAction> saveEncryptedDataActions = [];
         var shouldPersistV2UpgradeToken = await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
@@ -156,7 +156,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         model.ValidateForUser(user);
 
-        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
+        List<DatabaseTransactionAction> saveEncryptedDataActions = [];
         var shouldPersistV2UpgradeToken = await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
         user.Key = model.KeyConnectorKeyWrappedUserKey;
 
@@ -165,7 +165,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         await HandlePushNotificationAsync(shouldPersistV2UpgradeToken, user);
     }
 
-    private async Task RotateV2AccountKeysAsync(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    private async Task RotateV2AccountKeysAsync(BaseRotateUserAccountKeysData model, User user, List<DatabaseTransactionAction> saveEncryptedDataActions)
     {
         ValidateV2Encryption(model);
         await ValidateVerifyingKeyUnchangedAsync(model, user);
@@ -176,7 +176,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.SecurityVersion = model.AccountKeys.SecurityStateData.SecurityVersion;
     }
 
-    private void UpgradeV1ToV2Keys(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    private void UpgradeV1ToV2Keys(BaseRotateUserAccountKeysData model, User user, List<DatabaseTransactionAction> saveEncryptedDataActions)
     {
         ValidateV2Encryption(model);
         saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.SetUserSignatureKeyPair(user.Id, model.AccountKeys.SignatureKeyPairData));
@@ -185,7 +185,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.SecurityVersion = model.AccountKeys.SecurityStateData.SecurityVersion;
     }
 
-    internal async Task UpdateAccountKeysAsync(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    internal async Task UpdateAccountKeysAsync(BaseRotateUserAccountKeysData model, User user, List<DatabaseTransactionAction> saveEncryptedDataActions)
     {
         ValidatePublicKeyEncryptionKeyPairUnchanged(model, user);
 
@@ -210,7 +210,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.PrivateKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
     }
 
-    internal void UpdateUserData(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    internal void UpdateUserData(BaseRotateUserAccountKeysData model, User user, List<DatabaseTransactionAction> saveEncryptedDataActions)
     {
         // The revision date has to be updated so that de-synced clients don't accidentally post over the re-encrypted data
         // with an old-user key-encrypted copy
@@ -290,7 +290,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
     }
 
-    private void UpdateBaseUnlockMethods(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    private void UpdateBaseUnlockMethods(BaseRotateUserAccountKeysData model, User user, List<DatabaseTransactionAction> saveEncryptedDataActions)
     {
         if (model.EmergencyAccesses.Any())
         {
@@ -314,7 +314,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     }
 
     private async Task<bool> BaseRotateUserAccountKeysAsync(BaseRotateUserAccountKeysData baseModel, User user,
-        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+        List<DatabaseTransactionAction> saveEncryptedDataActions)
     {
         var now = DateTime.UtcNow;
         user.RevisionDate = user.AccountRevisionDate = now;
