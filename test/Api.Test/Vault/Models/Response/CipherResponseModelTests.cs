@@ -308,4 +308,42 @@ public class CipherResponseModelTests
         Assert.Null(response.Fields);
         Assert.Null(response.PasswordHistory);
     }
+
+    [Fact]
+    public void Constructor_DoesNotSetPartialData()
+    {
+        var cipher = new Cipher
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData { Name = "2.name|encrypted" }),
+            RevisionDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+        };
+
+        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+
+        // PartialData is the declared wire contract for PAM credential leasing; nothing populates it
+        // yet, so every response is still full.
+        Assert.Null(response.PartialData);
+        Assert.Equal(cipher.Data, response.Data);
+    }
+
+    [Fact]
+    public void Serialize_NullPartialData_OmitsTheProperty()
+    {
+        var cipher = new Cipher
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData { Name = "2.name|encrypted" }),
+            RevisionDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+        };
+
+        var json = JsonSerializer.Serialize(new CipherMiniResponseModel(cipher, _globalSettings, false));
+
+        // Null-suppressed, so adding the property leaves existing responses byte-identical.
+        Assert.DoesNotContain("partialData", json, StringComparison.OrdinalIgnoreCase);
+    }
 }
