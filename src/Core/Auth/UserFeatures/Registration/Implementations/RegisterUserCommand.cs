@@ -17,6 +17,10 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using AutoFixture;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;

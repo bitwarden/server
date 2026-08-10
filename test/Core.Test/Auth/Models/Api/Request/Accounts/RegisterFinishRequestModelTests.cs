@@ -4,6 +4,7 @@ using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Xunit;
 
 namespace Bit.Core.Test.Auth.Models.Api.Request.Accounts;
 

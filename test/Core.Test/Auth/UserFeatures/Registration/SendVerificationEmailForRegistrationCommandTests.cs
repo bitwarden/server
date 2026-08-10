@@ -5,11 +5,16 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using NSubstitute.ReturnsExtensions;
+using OneOf.Types;
+using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Test.Auth.UserFeatures.Registration;

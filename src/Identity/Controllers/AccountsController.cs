@@ -18,6 +18,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Identity.Models.Response.Accounts;
 using Bit.SharedWeb.Utilities;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 

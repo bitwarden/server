@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.Registration;
 

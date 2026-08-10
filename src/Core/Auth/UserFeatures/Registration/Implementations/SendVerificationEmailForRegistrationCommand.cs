@@ -8,6 +8,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 

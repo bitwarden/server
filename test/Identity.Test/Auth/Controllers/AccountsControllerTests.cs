@@ -20,6 +20,12 @@ using Bit.Core.Utilities;
 using Bit.Identity.Controllers;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using NSubstitute;
+using NSubstitute.ReturnsExtensions;
+using Xunit;
 using SignatureKeyPairRequestModelCustomizeAttribute = Bit.Test.Common.AutoFixture.SignatureKeyPairRequestModelCustomizeAttribute;
 
 namespace Bit.Identity.Test.Auth.Controllers;
