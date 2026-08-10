@@ -92,10 +92,11 @@ public sealed class SeederLicenseSigner(
                 "Skipping premium license generation.");
         }
 
-        if (!certificate.HasPrivateKey)
+        using var rsa = certificate.GetRSAPrivateKey();
+        if (rsa is null)
         {
             return Unusable(logger,
-                "Configured licensing certificate has no private key and cannot sign licenses. " +
+                "Configured licensing certificate has no RSA private key and cannot sign licenses. " +
                 "Skipping premium license generation.");
         }
 

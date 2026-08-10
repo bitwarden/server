@@ -102,11 +102,6 @@ public class DestroySceneCommand(
     /// </remarks>
     private void DeleteSeededUserLicenseFiles(List<Guid?> userIds, string playId)
     {
-        if (!globalSettings.SelfHosted)
-        {
-            return;
-        }
-
         foreach (var userId in userIds.Where(id => id.HasValue))
         {
             var filePath = Path.Combine(globalSettings.LicenseDirectory, "user", $"{userId!.Value}.json");

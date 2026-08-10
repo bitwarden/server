@@ -62,7 +62,7 @@ public sealed class DestroySceneCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task DestroyAsync_NotSelfHosted_LeavesLicenseFileUntouched()
+    public async Task DestroyAsync_NotSelfHosted_StillDeletesSeededLicenseFile()
     {
         var playId = Guid.NewGuid().ToString();
         var user = await SeedUserWithPlayItemAsync(playId);
@@ -70,7 +70,7 @@ public sealed class DestroySceneCommandTests : IDisposable
 
         await BuildCommand(selfHosted: false).DestroyAsync(playId);
 
-        Assert.True(File.Exists(licenseFile));
+        Assert.False(File.Exists(licenseFile));
         Assert.False(UserExists(user.Id));
     }
 
