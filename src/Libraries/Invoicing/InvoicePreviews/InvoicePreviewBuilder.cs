@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Microsoft.Extensions.Logging;

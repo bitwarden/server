@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Services;
+﻿using Bit.Core.Billing.Services;
 using Bit.Invoicing.InvoicePreviews.Stripe;
 using NSubstitute;
 using Stripe;

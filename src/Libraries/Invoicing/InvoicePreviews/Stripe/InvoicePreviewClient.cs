@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Services;
+﻿using Bit.Core.Billing.Services;
 using Stripe;
 
 namespace Bit.Invoicing.InvoicePreviews.Stripe;

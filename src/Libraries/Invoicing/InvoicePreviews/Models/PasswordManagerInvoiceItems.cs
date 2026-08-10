@@ -1,4 +1,4 @@
-namespace Bit.Invoicing.InvoicePreviews.Models;
+﻿namespace Bit.Invoicing.InvoicePreviews.Models;
 
 /// <summary>Password Manager positions. Seats is required; a preview without it is invalid.</summary>
 public record PasswordManagerInvoiceItems
