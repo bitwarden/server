@@ -1307,7 +1307,7 @@
           "Quartz.Extensions.Hosting": "[3.15.1, 3.15.1]",
           "RabbitMQ.Client": "[7.1.2, 7.1.2]",
           "SendGrid": "[9.29.3, 9.29.3]",
-          "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]",
+          "SerilogFileLogging": "[0.0.1, )",
           "SsrfProtection": "[0.0.1, )",
           "Stripe.net": "[48.5.0, 48.5.0]",
           "YubicoDotNetClient": "[1.2.0, 1.2.0]",
@@ -1322,7 +1322,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.7.2, )"
+          "HttpExtensions": "[2026.8.0, )"
         }
       },
       "httpextensions": {
@@ -1331,8 +1331,14 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "Dapper": "[2.1.66, 2.1.66]"
+        }
+      },
+      "serilogfilelogging": {
+        "type": "Project",
+        "dependencies": {
+          "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]"
         }
       },
       "ssrfprotection": {

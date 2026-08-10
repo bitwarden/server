@@ -11,20 +11,20 @@ public class SsoConfigSeederTests
     private const string _idpCert = "FAKE-TEST-CERT-BASE64==";
 
     [Fact]
-    public void CreateSaml2_ProducesEnabledConfigForOrganization()
+    public void Create_ProducesEnabledConfigForOrganization()
     {
         var orgId = Guid.NewGuid();
 
-        var config = SsoConfigSeeder.CreateSaml2(orgId, _idpEntityId, _idpSsoUrl, _idpCert);
+        var config = SsoConfigSeeder.Create(orgId, _idpEntityId, _idpSsoUrl, _idpCert);
 
         Assert.Equal(orgId, config.OrganizationId);
         Assert.True(config.Enabled);
     }
 
     [Fact]
-    public void CreateSaml2_SerializesSamlDataThatRoundTrips()
+    public void Create_SerializesSamlDataThatRoundTrips()
     {
-        var config = SsoConfigSeeder.CreateSaml2(Guid.NewGuid(), _idpEntityId, _idpSsoUrl, _idpCert);
+        var config = SsoConfigSeeder.Create(Guid.NewGuid(), _idpEntityId, _idpSsoUrl, _idpCert);
 
         var data = config.GetData();
 
@@ -38,9 +38,9 @@ public class SsoConfigSeederTests
     }
 
     [Fact]
-    public void CreateSaml2_HonorsMemberDecryptionTypeOverride()
+    public void Create_HonorsMemberDecryptionTypeOverride()
     {
-        var config = SsoConfigSeeder.CreateSaml2(
+        var config = SsoConfigSeeder.Create(
             Guid.NewGuid(), _idpEntityId, _idpSsoUrl, _idpCert,
             MemberDecryptionType.TrustedDeviceEncryption);
 

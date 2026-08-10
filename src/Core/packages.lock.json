@@ -444,21 +444,6 @@
           "starkbank-ecdsa": "[1.3.3, 2.0.0)"
         }
       },
-      "Serilog.Extensions.Logging.File": {
-        "type": "Direct",
-        "requested": "[3.0.0, 3.0.0]",
-        "resolved": "3.0.0",
-        "contentHash": "bUYjMHn7NhpK+/8HDftG7+G5hpWzD49XTSvLoUFZGgappDa6FoseqFOsLrjLRjwe1zM+igH5mySFJv3ntb+qcg==",
-        "dependencies": {
-          "Microsoft.Extensions.Configuration.Abstractions": "6.0.0",
-          "Microsoft.Extensions.Configuration.Binder": "6.0.0",
-          "Serilog": "2.10.0",
-          "Serilog.Extensions.Logging": "3.1.0",
-          "Serilog.Formatting.Compact": "1.1.0",
-          "Serilog.Sinks.Async": "1.5.0",
-          "Serilog.Sinks.RollingFile": "3.3.0"
-        }
-      },
       "Stripe.net": {
         "type": "Direct",
         "requested": "[48.5.0, 48.5.0]",
@@ -1090,6 +1075,20 @@
           "Serilog": "2.9.0"
         }
       },
+      "Serilog.Extensions.Logging.File": {
+        "type": "Transitive",
+        "resolved": "3.0.0",
+        "contentHash": "bUYjMHn7NhpK+/8HDftG7+G5hpWzD49XTSvLoUFZGgappDa6FoseqFOsLrjLRjwe1zM+igH5mySFJv3ntb+qcg==",
+        "dependencies": {
+          "Microsoft.Extensions.Configuration.Abstractions": "6.0.0",
+          "Microsoft.Extensions.Configuration.Binder": "6.0.0",
+          "Serilog": "2.10.0",
+          "Serilog.Extensions.Logging": "3.1.0",
+          "Serilog.Formatting.Compact": "1.1.0",
+          "Serilog.Sinks.Async": "1.5.0",
+          "Serilog.Sinks.RollingFile": "3.3.0"
+        }
+      },
       "Serilog.Formatting.Compact": {
         "type": "Transitive",
         "resolved": "1.1.0",
@@ -1217,11 +1216,17 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.7.2, )"
+          "HttpExtensions": "[2026.8.0, )"
         }
       },
       "httpextensions": {
         "type": "Project"
+      },
+      "serilogfilelogging": {
+        "type": "Project",
+        "dependencies": {
+          "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]"
+        }
       },
       "ssrfprotection": {
         "type": "Project"

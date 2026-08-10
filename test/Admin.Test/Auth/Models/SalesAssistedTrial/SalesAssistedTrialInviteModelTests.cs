@@ -11,7 +11,7 @@ public class SalesAssistedTrialInviteModelTests
         Email = "prospect@example.com",
         Name = "Prospect Company",
         ProductTier = ProductTierType.Enterprise,
-        Products = new[] { ProductType.PasswordManager },
+        Product = ProductType.PasswordManager,
         TrialLength = 30,
     };
 
@@ -37,6 +37,35 @@ public class SalesAssistedTrialInviteModelTests
     {
         var model = BuildValidModel();
         model.ProductTier = productTier;
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Empty(results);
+    }
+
+    // Current constraint of Families plan, appears as validation in the model for
+    // fail-fast feedback to tool users.
+    // PM-41426
+    [Fact]
+    public void Validate_WhenProductTierIsFamiliesAndProductIsSecretsManager_ReturnsError()
+    {
+        var model = BuildValidModel();
+        model.ProductTier = ProductTierType.Families;
+        model.Product = ProductType.SecretsManager;
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains("Families", results[0].ErrorMessage);
+        Assert.Contains(nameof(model.Product), results[0].MemberNames);
+    }
+
+    [Fact]
+    public void Validate_WhenProductTierIsFreeAndProductIsSecretsManager_NoError()
+    {
+        var model = BuildValidModel();
+        model.ProductTier = ProductTierType.Free;
+        model.Product = ProductType.SecretsManager;
 
         var results = model.Validate(new ValidationContext(model)).ToList();
 

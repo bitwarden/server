@@ -1843,7 +1843,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.6.0, 10.6.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1899,7 +1899,7 @@
           "Quartz.Extensions.Hosting": "[3.15.1, 3.15.1]",
           "RabbitMQ.Client": "[7.1.2, 7.1.2]",
           "SendGrid": "[9.29.3, 9.29.3]",
-          "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]",
+          "SerilogFileLogging": "[0.0.1, )",
           "SsrfProtection": "[0.0.1, )",
           "Stripe.net": "[48.5.0, 48.5.0]",
           "YubicoDotNetClient": "[1.2.0, 1.2.0]",
@@ -1913,8 +1913,8 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Common": "[2026.7.2, )",
-          "Core": "[2026.7.2, )",
+          "Common": "[2026.8.0, )",
+          "Core": "[2026.8.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.Diagnostics.Testing": "[10.6.0, 10.6.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1928,7 +1928,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.7.2, )"
+          "HttpExtensions": "[2026.8.0, )"
         }
       },
       "httpextensions": {
@@ -1954,7 +1954,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1962,7 +1962,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1996,7 +1996,7 @@
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
           "Bitwarden.Server.Sdk.WebEssentials": "[0.5.0, )",
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "MessagePack": "[3.1.7, 3.1.7]",
           "Microsoft.AspNetCore.SignalR.Protocols.MessagePack": "[10.0.9, 10.0.9]",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.8, 10.0.8]",
@@ -2007,7 +2007,13 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
-          "SharedWeb": "[2026.7.2, )"
+          "SharedWeb": "[2026.8.0, )"
+        }
+      },
+      "serilogfilelogging": {
+        "type": "Project",
+        "dependencies": {
+          "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]"
         }
       },
       "rustsdk": {
@@ -2028,9 +2034,9 @@
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
-          "Core": "[2026.7.2, )",
-          "Infrastructure.Dapper": "[2026.7.2, )",
-          "Infrastructure.EntityFramework": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
+          "Infrastructure.Dapper": "[2026.8.0, )",
+          "Infrastructure.EntityFramework": "[2026.8.0, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }
