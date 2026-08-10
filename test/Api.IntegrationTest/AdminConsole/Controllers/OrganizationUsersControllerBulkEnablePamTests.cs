@@ -118,6 +118,53 @@ public class OrganizationUsersControllerBulkEnablePamTests
         await AssertAccessPamAsync(otherOrgMember, false);
     }
 
+    [Fact]
+    public async Task BulkEnablePam_GrantsAccessToInvitedAndRevokedMembers()
+    {
+        await SetUsePamAsync(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        // The endpoint filters on AccessPam only, so members who cannot currently use the access are still granted it.
+        var invitedMember = await CreateMemberAsync(status: OrganizationUserStatusType.Invited);
+        var revokedMember = await CreateMemberAsync();
+        await _factory.GetService<IOrganizationUserRepository>()
+            .RevokeAsync(revokedMember.Id, RevocationReason.Manual);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
+            new OrganizationUserBulkRequestModel { Ids = [invitedMember.Id, revokedMember.Id] });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await AssertAccessPamAsync(invitedMember, true);
+        await AssertAccessPamAsync(revokedMember, true);
+    }
+
+    [Fact]
+    public async Task BulkEnablePam_WithUnknownIds_ReturnsBadRequest()
+    {
+        await SetUsePamAsync(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
+            new OrganizationUserBulkRequestModel { Ids = [Guid.NewGuid()] });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(new V1_RestoreUserCommand.UsersInvalid().Message, await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task BulkEnablePam_WithEmptyIds_ReturnsModelStateBadRequest()
+    {
+        await SetUsePamAsync(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
+            new OrganizationUserBulkRequestModel { Ids = [] });
+
+        // Ids is [Required, MinLength(1)], so this is rejected by model validation before the endpoint runs.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("model state is invalid", await response.Content.ReadAsStringAsync());
+    }
+
     [Theory]
     [InlineData(OrganizationUserType.User)]
     [InlineData(OrganizationUserType.Custom)]
@@ -138,11 +185,13 @@ public class OrganizationUsersControllerBulkEnablePamTests
         await AssertAccessPamAsync(member, false);
     }
 
-    private async Task<OrganizationUser> CreateMemberAsync(Guid? organizationId = null)
+    private async Task<OrganizationUser> CreateMemberAsync(Guid? organizationId = null,
+        OrganizationUserStatusType status = OrganizationUserStatusType.Confirmed)
     {
-        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
-            organizationId ?? _organization.Id, OrganizationUserType.User);
-        return member;
+        var email = $"bulk-enable-pam-member-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        return await OrganizationTestHelpers.CreateUserAsync(_factory, organizationId ?? _organization.Id, email,
+            OrganizationUserType.User, userStatusType: status);
     }
 
     private async Task SetUsePamAsync(bool value)

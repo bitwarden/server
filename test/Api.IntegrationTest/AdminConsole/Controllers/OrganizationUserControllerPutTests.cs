@@ -393,6 +393,48 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         await AssertAccessPamAsync(member, true);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Put_OmittingAccessPam_RevokesExistingAccess(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
+        await SetUsePamAsync(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+        await GrantPamAsync(member);
+
+        // A client that predates the field sends no accessPam at all, which binds to the default of false.
+        // Callers must send the member's current value to preserve it.
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
+            new { type = OrganizationUserType.User, permissions = new Permissions(), collections = Array.Empty<object>(), groups = Array.Empty<Guid>() });
+
+        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        await AssertAccessPamAsync(member, false);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Put_AdminGrantingPamToSelf_Succeeds(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
+        await SetUsePamAsync(true);
+
+        // ManageUsers is the only gate on the endpoint, so an admin can grant themselves the access.
+        var (adminEmail, admin) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Admin);
+        await _loginHelper.LoginAsync(adminEmail);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{admin.Id}",
+            UpdateRequest(accessPam: true, type: OrganizationUserType.Admin));
+
+        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        await AssertAccessPamAsync(admin, true);
+    }
+
     [Fact]
     public async Task Put_WhenChangingRoleAndNameForClaimedMember_ReturnsNoContentAndPersistsBoth()
     {
@@ -683,10 +725,10 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     }
 
     private static OrganizationUserUpdateRequestModel UpdateRequest(string? email = null, string? name = null,
-        bool accessPam = false) =>
+        bool accessPam = false, OrganizationUserType type = OrganizationUserType.User) =>
         new()
         {
-            Type = OrganizationUserType.User,
+            Type = type,
             Permissions = new Permissions(),
             Collections = [],
             Groups = [],
