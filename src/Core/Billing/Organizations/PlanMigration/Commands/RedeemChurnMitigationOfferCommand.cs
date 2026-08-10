@@ -64,7 +64,8 @@ public class RedeemChurnMitigationOfferCommand(
         // on retry: a re-attempt sees the coupon already on Phase 2 and no-ops the Stripe
         // call before writing ChurnDiscountAppliedDate.
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, _logger, organization, ["customer", "test_clock", "discounts.coupon"]);
+            stripeAdapter, _logger, organization,
+            ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]);
         if (subscription is null)
         {
             return DefaultConflict;
@@ -169,7 +170,8 @@ public class RedeemChurnMitigationOfferCommand(
         string churnDiscountCouponCode)
     {
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, _logger, organization, ["customer", "test_clock", "discounts.coupon"]);
+            stripeAdapter, _logger, organization,
+            ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]);
         if (subscription is null)
         {
             return DefaultConflict;

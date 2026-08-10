@@ -38,11 +38,9 @@ public class GetChurnMitigationOfferQuery(
         Organization organization,
         string churnDiscountCouponCode)
     {
-        // `test_clock` is included so the migration-cohort current_phase check is honest
-        // against test customers; `discount`/`discounts.coupon` give us the churn-only
-        // ineligibility surfaces without a second round-trip.
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, logger, organization, ["customer", "test_clock", "discounts.coupon"]);
+            stripeAdapter, logger, organization,
+            ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]);
         if (subscription is null)
         {
             return null;
@@ -114,11 +112,9 @@ public class GetChurnMitigationOfferQuery(
             return null;
         }
 
-        // `test_clock` is included so the migration-cohort current_phase check is honest
-        // against test customers; `discount`/`discounts.coupon` give us the churn-only
-        // ineligibility surfaces without a second round-trip.
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, logger, organization, ["customer", "test_clock", "discounts.coupon"]);
+            stripeAdapter, logger, organization,
+            ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]);
         if (subscription is null)
         {
             return null;
