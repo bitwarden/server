@@ -8,7 +8,6 @@ on:
       - util/SeederUtility/**
       - util/Seeder/**
   schedule:
-    # Rebuild all presets x databases weekly (Sunday 02:00 UTC)
     - cron: "0 2 * * 0"
   workflow_dispatch:
     inputs:
@@ -30,12 +29,19 @@ on:
 
 env:
   _AZ_REGISTRY: bitwardenprod.azurecr.io
-  # Curated preset list built on cron and bare dispatch. Dispatch with
-  # preset=all to build every preset instead.
-  _DEFAULT_PRESETS: '["qa.dunder-mifflin-enterprise-full"]'
+  _DEFAULT_PRESETS: >-
+    ["qa.dunder-mifflin-enterprise-full",
+    "scale.md-balanced-sterling-cooper",
+    "scale.lg-balanced-wayne-enterprises",
+    "scale.lg-highperm-tyrell-corp",
+    "scale.xl-broad-initech"]
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   setup:
