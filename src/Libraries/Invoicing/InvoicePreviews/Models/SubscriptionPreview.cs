@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Subscriptions.Models;
+﻿using Bit.Core.Billing.Subscriptions.Models;
 
 namespace Bit.Invoicing.InvoicePreviews.Models;
 

@@ -1,4 +1,4 @@
-using Bit.Invoicing.InvoicePreviews;
+﻿using Bit.Invoicing.InvoicePreviews;
 using Stripe;
 using Xunit;
 

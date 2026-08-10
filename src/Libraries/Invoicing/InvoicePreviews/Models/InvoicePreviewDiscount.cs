@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Utilities;
 

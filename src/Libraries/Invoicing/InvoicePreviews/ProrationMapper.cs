@@ -1,4 +1,4 @@
-using Bit.Invoicing.InvoicePreviews.Models;
+﻿using Bit.Invoicing.InvoicePreviews.Models;
 using Stripe;
 
 namespace Bit.Invoicing.InvoicePreviews;

@@ -1,4 +1,4 @@
-namespace Bit.Invoicing.InvoicePreviews.Models;
+﻿namespace Bit.Invoicing.InvoicePreviews.Models;
 
 /// <summary>One resolved line of the preview. Carries the purchasable reference, not a translation key; the client maps reference + plan tier + flow context to a key.</summary>
 public record InvoicePreviewItem

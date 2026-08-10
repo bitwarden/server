@@ -1,4 +1,4 @@
-namespace Bit.Invoicing.InvoicePreviews.Models;
+﻿namespace Bit.Invoicing.InvoicePreviews.Models;
 
 /// <summary>One product's proration lines collapsed into a single renderable credit row. All amounts are dollars.</summary>
 public record PurchasableProration
