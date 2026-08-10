@@ -108,11 +108,13 @@ CI pulls the key from the `gh-org-bitwarden` Azure Key Vault as `DP-KEY-XML` and
 
 ### Consuming the bundle
 
-For self-host and ephemeral environments, unpack over the app's core volume:
+The bundle's `core/` layout matches classic self-host, where the app reads `/etc/bitwarden/core`. Unpack it over that volume:
 
 ```bash
 tar -xzf seeded-core-*.tar.gz -C /etc/bitwarden
 ```
+
+BW Lite reads different paths, so the same command puts the key somewhere lite never reads and login fails. See [Running BW Lite against a seeded image](#running-bw-lite-against-a-seeded-image) for the layout it expects.
 
 For local development on local disk, unpack anywhere and point the app at it:
 
@@ -132,6 +134,46 @@ az storage blob upload-batch \
 Leave `attachment.connectionString` set (azurite wins over `baseDirectory`) and point `dataProtection.directory` at the unpacked keys.
 
 > The bundled key is the **filesystem** form. Deployments using `PersistKeysToAzureBlobStorage` expect a single aggregated `keys.xml` in an `aspnet-dataprotection` container instead, so the key needs converting for that path.
+
+## Running BW Lite against a seeded image
+
+Load the image and unpack the bundle first, as described in [Getting an image from a CI build](#getting-an-image-from-a-ci-build).
+
+Lite reads `/etc/bitwarden/data-protection`, `/etc/bitwarden/attachments`, and `/etc/bitwarden/licenses`, which do not match the bundle's `core/` layout. Stage a directory in the shape lite expects:
+
+```bash
+mkdir -p ~/bwlite-etc/{data-protection,attachments,licenses/organization,licenses/user}
+cp ~/bitwarden-seed/core/aspnet-dataprotection/*.xml ~/bwlite-etc/data-protection/
+cp -R ~/bitwarden-seed/core/attachments/. ~/bwlite-etc/attachments/
+```
+
+Start the database on a named network:
+
+```bash
+docker network create bwlite
+docker run -d --name bwlite-db --network bwlite -p 5433:5432 bitwardenprod.azurecr.io/shot/seeded-postgres:scale-lg-balanced-wayne-enterprises
+```
+
+Start lite against it:
+
+```bash
+docker run -d --name bwlite --network bwlite -p 8080:8080 -v "$HOME/bwlite-etc:/etc/bitwarden" -e BW_DOMAIN=localhost:8080 -e BW_DB_PROVIDER=postgresql -e BW_DB_SERVER=bwlite-db -e BW_DB_PORT=5432 -e BW_DB_DATABASE=vault_dev -e BW_DB_USERNAME=postgres -e BW_DB_PASSWORD='Password1!' -e BW_INSTALLATION_ID=e6b8a9c4-0d3f-4a71-9c2e-5f7a1b3d8e02 -e BW_INSTALLATION_KEY=seederlocaltest ghcr.io/bitwarden/lite:beta
+```
+
+Confirm all six services start:
+
+```bash
+docker logs bwlite 2>&1 | grep -E "entered RUNNING state|FATAL state"
+```
+
+Open `http://localhost:8080` and log in as the preset's owner. Seeded accounts use the password `asdfasdfasdf` unless the preset overrides it.
+
+Notes:
+
+- Pass `BW_INSTALLATION_ID`, not `globalSettings__installation__id`. The entrypoint overwrites the latter with an empty string, and every service then dies on a Guid parse error. The symptom is a supervisord loop of `terminated by SIGABRT` and `entered FATAL state`, with only nginx surviving.
+- A successful login confirms the data protection key is correct. The seeder encrypts `MasterPassword`, `Key`, and `PrivateKey`, so nothing authenticates without it.
+- Admins see only the collections assigned to them, because presets leave `AllowAdminAccessToAllCollectionItems` off. The owner of a large org sees a small slice of it.
+- Seeded organizations have no license file, so `ValidateOrganizationsAsync` disables them within twelve hours on self-host. Short sessions are unaffected.
 
 ## Environment Variables
 
