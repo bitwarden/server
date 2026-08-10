@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
-using Bitwarden.Server.Sdk.Environment;
 using Bit.Icons.Extensions;
 using Bit.Icons.Models;
+using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Net.Http.Headers;
 
 namespace Bit.Icons;
