@@ -5,6 +5,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
+using Stripe;
 
 namespace Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 
@@ -55,6 +56,14 @@ public class GetAnnualUpgradeOfferQuery(
             return null;
         }
 
+        foreach (var source in (subscription.Items?.Data ?? [])
+            .SelectMany(item => item.Discounts ?? [])
+            .Select(discount => discount?.Source)
+            .Where(source => source is { CouponId.Length: > 0, Coupon: null }))
+        {
+            source!.Coupon = await TryGetCouponAsync(source.CouponId);
+        }
+
         var lines = AnnualUpgradeLineMapper.MapOrNull(
             logger, organization.Id, subscription, currentPlan, annualLatestPlan);
         if (lines is null)
@@ -93,5 +102,20 @@ public class GetAnnualUpgradeOfferQuery(
 
         return new AnnualUpgradeOfferResult(
             savings.Value.CurrentAnnualCost, savings.Value.NewAnnualCost, difference);
+    }
+
+    private async Task<Coupon?> TryGetCouponAsync(string couponId)
+    {
+        try
+        {
+            return await stripeAdapter.GetCouponAsync(couponId, new CouponGetOptions { Expand = ["applies_to"] });
+        }
+        catch (StripeException stripeException)
+        {
+            logger.LogWarning(
+                "{Caller}: Could not retrieve item-level coupon ({CouponId}) | Code = {Code}",
+                nameof(GetAnnualUpgradeOfferQuery), couponId, stripeException.StripeError?.Code);
+            return null;
+        }
     }
 }
