@@ -495,4 +495,41 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         Assert.NotNull(updatedOrgUser);
         Assert.Equal(OrganizationUserStatusType.Revoked, updatedOrgUser.Status);
     }
+
+    [Fact]
+    public async Task Put_FillAssistPolicy_Success()
+    {
+        // Arrange
+        var policyType = PolicyType.FillAssist;
+        const string rulesUrl = "https://github.com/bitwarden/map-the-web/releases/latest/download";
+        var request = new SavePolicyRequest
+        {
+            Policy = new PolicyRequestModel
+            {
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "rulesUrl", rulesUrl }
+                }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var policyRepository = _factory.GetService<IPolicyRepository>();
+        var policy = await policyRepository.GetByOrganizationIdTypeAsync(_organization.Id, policyType);
+
+        Assert.NotNull(policy);
+        Assert.True(policy.Enabled);
+        Assert.Equal(policyType, policy.Type);
+        Assert.Equal(_organization.Id, policy.OrganizationId);
+
+        var resultData = policy.GetDataModel<FillAssistPolicyData>();
+        Assert.Equal(rulesUrl, resultData.RulesUrl);
+    }
 }
