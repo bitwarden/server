@@ -1,24 +1,20 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using Bit.Seeder.Models;
 
 namespace Bit.Seeder.Factories;
 
 internal static class EventSeeder
 {
-    internal static Event Create(
-        Guid organizationId,
-        EventType type,
-        DateTime date,
-        Guid? actingUserId = null)
+    internal static Event Create(EventSeed seed)
     {
         return new Event
         {
             Id = CombGuid.Generate(),
-            OrganizationId = organizationId,
-            Type = type,
-            Date = date,
-            ActingUserId = actingUserId
+            OrganizationId = seed.OrganizationId,
+            Type = seed.Type,
+            Date = seed.Date,
+            ActingUserId = seed.ActingUserId
         };
     }
 }
