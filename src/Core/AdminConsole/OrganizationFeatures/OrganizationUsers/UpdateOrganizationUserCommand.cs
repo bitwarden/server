@@ -14,6 +14,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
@@ -138,7 +139,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         // Only the grant is gated — revoking access stays possible on an organization whose entitlement has lapsed.
         if (!originalOrganizationUser.AccessPam && organizationUser.AccessPam && !organization.UsePam)
         {
-            throw new BadRequestException("To grant PAM access the organization must have PAM enabled.");
+            throw new BadRequestException(new V2_UpdateUserCommand.PamNotEnabled().Message);
         }
 
         // Only autoscale (if required) after all validation has passed so that we know it's a valid request before

@@ -23,6 +23,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
@@ -215,7 +216,7 @@ public class UpdateOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateUserAsync(newUserData, OrganizationUserType.User, savingUser.UserId, null, null));
 
-        Assert.Contains("must have PAM enabled", exception.Message);
+        Assert.Equal(new V2_UpdateUserCommand.PamNotEnabled().Message, exception.Message);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(default, default(IEnumerable<CollectionAccessSelection>));

@@ -39,6 +39,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using OneOf.Types;
 using Xunit;
+using V1_RestoreUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
@@ -115,7 +116,7 @@ public class OrganizationUsersControllerTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.BulkEnablePamAsync(orgId, model));
 
-        Assert.Contains("must have PAM enabled", exception.Message);
+        Assert.Equal(new V2_UpdateUserCommand.PamNotEnabled().Message, exception.Message);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceManyAsync(default);
@@ -138,7 +139,7 @@ public class OrganizationUsersControllerTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.BulkEnablePamAsync(orgId, model));
 
-        Assert.Equal("Users invalid.", exception.Message);
+        Assert.Equal(new V1_RestoreUserCommand.UsersInvalid().Message, exception.Message);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceManyAsync(default);

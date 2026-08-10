@@ -813,7 +813,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             .Where(ou => ou.OrganizationId == orgId && !ou.AccessPam).ToList();
         if (orgUsers.Count == 0)
         {
-            throw new BadRequestException("Users invalid.");
+            throw new BadRequestException(new UsersInvalid().Message);
         }
 
         // Granting access on an organization without PAM would be inert: claim emission ANDs AccessPam with the
@@ -821,7 +821,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var organization = await _organizationRepository.GetByIdAsync(orgId);
         if (organization is not { UsePam: true })
         {
-            throw new BadRequestException("To grant PAM access the organization must have PAM enabled.");
+            throw new BadRequestException(new V2_UpdateUserCommand.PamNotEnabled().Message);
         }
 
         foreach (var orgUser in orgUsers)
