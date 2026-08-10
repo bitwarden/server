@@ -18,9 +18,9 @@ public class GetAnnualUpgradeOfferQuery(
     [
         "schedule",
         "customer",
-        "customer.discount.coupon",
-        "discounts.coupon",
-        "items.data.discounts.coupon"
+        "customer.discount.source.coupon",
+        "discounts.source.coupon",
+        "items.data.discounts.source"
     ];
 
     public async Task<AnnualUpgradeOfferResult?> Run(Organization organization)
