@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using AutoFixture;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
@@ -31,6 +30,7 @@ internal class RegisterFinishRequestModelCustomization : ICustomization
             .With(o => o.OrgSponsoredFreeFamilyPlanToken, OrgSponsoredFreeFamilyPlanToken)
             .With(o => o.AcceptEmergencyAccessInviteToken, AcceptEmergencyAccessInviteToken)
             .With(o => o.ProviderInviteToken, ProviderInviteToken)
+            .Without(o => o.OpenOrgInvite)
             .Without(o => o.MasterPasswordAuthentication)
             .Without(o => o.MasterPasswordUnlock));
     }

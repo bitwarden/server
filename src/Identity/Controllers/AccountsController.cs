@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
@@ -32,6 +33,7 @@ public class AccountsController : Controller
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly IFeatureService _featureService;
 
     private readonly byte[]? _defaultKdfHmacKey = null;
     internal static readonly List<UserKdfInformation> _defaultKdfResults =
@@ -83,6 +85,7 @@ public class AccountsController : Controller
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
+        IFeatureService featureService,
         GlobalSettings globalSettings
         )
     {
@@ -92,6 +95,7 @@ public class AccountsController : Controller
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
+        _featureService = featureService;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
         {
@@ -102,8 +106,10 @@ public class AccountsController : Controller
     [HttpPost("register/send-verification-email")]
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
+        GuardOpenOrgInviteFeatureEnabled(model.OpenOrgInvite);
+
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
-            model.ReceiveMarketingEmails, model.FromMarketing, model.SealedOpenOrgInviteData);
+            model.ReceiveMarketingEmails, model.FromMarketing, model.OpenOrgInvite);
 
         if (token != null)
         {
@@ -111,6 +117,18 @@ public class AccountsController : Controller
         }
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Mirrors <c>[RequireFeature(FeatureFlagKeys.GenerateInviteLink)]</c> on the other invite-link
+    /// surfaces — throws <see cref="FeatureUnavailableException"/> when the flag is off.
+    /// </summary>
+    private void GuardOpenOrgInviteFeatureEnabled(OpenOrgInviteRequestModel? openOrgInvite)
+    {
+        if (openOrgInvite is not null && !_featureService.IsEnabled(FeatureFlagKeys.GenerateInviteLink))
+        {
+            throw new FeatureUnavailableException();
+        }
     }
 
     [HttpPost("register/verification-email-clicked")]
@@ -134,6 +152,8 @@ public class AccountsController : Controller
     [HttpPost("register/finish")]
     public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
+        GuardOpenOrgInviteFeatureEnabled(model.OpenOrgInvite);
+
         var registerFinishData = model.ToData();
         var user = model.ToUser(registerFinishData.IsV2Encryption());
 
@@ -143,10 +163,16 @@ public class AccountsController : Controller
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
-                identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
-                    user,
-                    registerFinishData,
-                    model.EmailVerificationToken!);
+                identityResult = model.OpenOrgInvite is not null
+                    ? await _registerUserCommand.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+                        user,
+                        registerFinishData,
+                        model.EmailVerificationToken!,
+                        model.OpenOrgInvite)
+                    : await _registerUserCommand.RegisterUserViaEmailVerificationToken(
+                        user,
+                        registerFinishData,
+                        model.EmailVerificationToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrganizationInvite:
