@@ -592,7 +592,14 @@ public class RedeemChurnMitigationOfferCommandTests
         Assert.NotNull(appliedDatesAtCallTime[0]);
         Assert.Null(appliedDatesAtCallTime[1]);
 
-        logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Error, default, default!, default, default!);
+        // Two Error calls are expected here: BaseBillingCommand's generic StripeException handler
+        // logs the original Stripe failure, then the rollback's own catch logs its failure too.
+        logger.Received().Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -686,7 +693,12 @@ public class RedeemChurnMitigationOfferCommandTests
         Assert.True(result.IsT2);
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
-        logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Warning, default, default!, default, default!);
+        logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     // ---- helpers ----
