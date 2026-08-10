@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Identity;
 using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
+using Bit.Services.Pam.Api.Authorization;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
@@ -123,10 +124,10 @@ public class AccessRuleEndpointsTests
     [Fact]
     public void MapPamEndpoints_AccessRuleWritesRequireMembershipBesidesThePermission()
     {
-        // ManageAccessRulesRequirement derives from BasePermissionRequirement, whose final arm authorizes any
-        // provider for the organization. The group's MemberRequirement is the only thing keeping providers out of
-        // rule authorship, so each write must carry it *in addition to* the permission — the permission alone would
-        // admit them.
+        // A write must satisfy the group's MemberRequirement *in addition to* the permission: the endpoint policy
+        // adds to the group policy rather than replacing it, so a write is never reachable on weaker terms than a
+        // read. ManageAccessRulesRequirement independently excludes providers — see
+        // ManageAccessRulesRequirementTests.
         var writeRoutes = new[] { "Pam_AccessRules_Post", "Pam_AccessRules_Put", "Pam_AccessRules_Delete" };
 
         var endpoints = MaterializeEndpoints()

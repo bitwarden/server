@@ -21,7 +21,6 @@ public class PermissionRequirementsTests
         new object[] { new AccessEventLogsRequirement(), nameof(Permissions.AccessEventLogs) },
         new object[] { new AccessImportExportRequirement(), nameof(Permissions.AccessImportExport) },
         new object[] { new AccessReportsRequirement(), nameof(Permissions.AccessReports) },
-        new object[] { new ManageAccessRulesRequirement(), nameof(Permissions.ManageAccessRules) },
         new object[] { new ManageAccountRecoveryRequirement(), nameof(Permissions.ManageResetPassword) },
         new object[] { new ManageGroupsRequirement(), nameof(Permissions.ManageGroups) },
         new object[] { new ManagePoliciesRequirement(), nameof(Permissions.ManagePolicies) },

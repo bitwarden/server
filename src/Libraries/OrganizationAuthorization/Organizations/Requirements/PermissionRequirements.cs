@@ -3,7 +3,6 @@
 public class AccessEventLogsRequirement() : BasePermissionRequirement(p => p.AccessEventLogs);
 public class AccessImportExportRequirement() : BasePermissionRequirement(p => p.AccessImportExport);
 public class AccessReportsRequirement() : BasePermissionRequirement(p => p.AccessReports);
-public class ManageAccessRulesRequirement() : BasePermissionRequirement(p => p.ManageAccessRules);
 public class ManageAccountRecoveryRequirement() : BasePermissionRequirement(p => p.ManageResetPassword);
 public class ManageGroupsRequirement() : BasePermissionRequirement(p => p.ManageGroups);
 public class ManagePoliciesRequirement() : BasePermissionRequirement(p => p.ManagePolicies);

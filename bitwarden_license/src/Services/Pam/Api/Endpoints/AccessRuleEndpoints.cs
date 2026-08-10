@@ -1,5 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
+using Bit.Services.Pam.Api.Authorization;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Request;
 
@@ -17,10 +18,9 @@ namespace Bit.Services.Pam.Api.Endpoints;
 /// <para>
 /// The group requirement is deliberately <see cref="MemberRequirement"/> and not
 /// <c>MemberOrProviderRequirement</c>: providers manage an organization's billing and configuration, but access
-/// rules gate who can lease credentials out of it, which is not theirs to change. Note this group gate is the only
-/// thing keeping providers out — <see cref="ManageAccessRulesRequirement"/> derives from
-/// <c>BasePermissionRequirement</c>, which falls back to authorizing a provider for the organization. Removing or
-/// weakening the group requirement would silently readmit them to the write endpoints.
+/// rules gate who can lease credentials out of it, which is not theirs to read or change.
+/// <see cref="ManageAccessRulesRequirement"/> excludes providers on its own, so neither gate depends on the other
+/// to keep them out.
 /// </para>
 /// </remarks>
 internal static class AccessRuleEndpoints
