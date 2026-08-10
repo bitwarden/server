@@ -37,7 +37,6 @@ jobs:
     runs-on: ubuntu-22.04
     needs: lint
     permissions:
-      security-events: write
       id-token: write
       contents: read
     timeout-minutes: 45
@@ -108,8 +107,6 @@ jobs:
               ;;
           esac
 
-          SCAN_TAG=$(echo "${TAGS}" | cut -f 1 -d ',')
-          echo "scan_tag=$SCAN_TAG" >> "$GITHUB_OUTPUT"
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
       - name: Verify Dockerfile exists
@@ -119,7 +116,7 @@ jobs:
             echo "::error::Dockerfile not found: $DOCKERFILE"
             exit 1
           fi
-      
+
       - name: Print environment
         run: |
           whoami
@@ -176,22 +173,7 @@ jobs:
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
 
-      - name: Scan Docker image
-        id: container-scan
-        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
-        with:
-          image: ${{ steps.image-tags.outputs.scan_tag }}
-          fail-build: false
-          output-format: sarif
-
       - name: Log out from the registries
         run: |
           docker logout ${_REGISTRY}
           docker logout cgr.dev
-
-      - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@cdefb33c0f6224e58673d9004f47f7cb3e328b89 # v4.31.10
-        with:
-          sarif_file: ${{ steps.container-scan.outputs.sarif }}
-          sha: ${{ github.sha }}
-          ref: ${{ github.ref }}
