@@ -1747,6 +1747,8 @@
           "OrganizationAuthorization": "[0.0.1, )",
           "Pam": "[2026.8.0, )",
           "SharedWeb": "[2026.8.0, )",
+          "Subscriptions.Organization": "[0.0.1, )",
+          "Subscriptions.User": "[0.0.1, )",
           "Swashbuckle.AspNetCore": "[10.1.7, 10.1.7]"
         }
       },
@@ -1884,6 +1886,12 @@
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
         }
       },
+      "invoicing": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.7.2, )"
+        }
+      },
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
@@ -1925,6 +1933,22 @@
       },
       "ssrfprotection": {
         "type": "Project"
+      },
+      "subscriptions.organization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.7.2, )",
+          "HttpExtensions": "[2026.7.2, )",
+          "Invoicing": "[0.0.1, )"
+        }
+      },
+      "subscriptions.user": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.7.2, )",
+          "HttpExtensions": "[2026.7.2, )",
+          "Invoicing": "[0.0.1, )"
+        }
       }
     }
   }

@@ -1268,6 +1268,12 @@
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
         }
       },
+      "invoicing": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.7.2, )"
+        }
+      },
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
@@ -1309,6 +1315,22 @@
       },
       "ssrfprotection": {
         "type": "Project"
+      },
+      "subscriptions.organization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.7.2, )",
+          "HttpExtensions": "[2026.7.2, )",
+          "Invoicing": "[0.0.1, )"
+        }
+      },
+      "subscriptions.user": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.7.2, )",
+          "HttpExtensions": "[2026.7.2, )",
+          "Invoicing": "[0.0.1, )"
+        }
       }
     }
   }
