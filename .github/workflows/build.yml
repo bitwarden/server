@@ -265,7 +265,7 @@ jobs:
         with:
           username: bitwarden
           password: ${{ steps.get-kv-secrets.outputs.DOCKERHUB-OAT }}
-      
+
       - name: Build Docker image
         id: build-artifacts
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
@@ -648,3 +648,19 @@ jobs:
           azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           task: deploy-server-dev
           description: "Triggered by server build on main"
+
+  trigger-downstream-build:
+    name: Trigger downstream build
+    if: github.event_name == 'push' && contains(fromJSON('["refs/heads/main", "refs/heads/rc", "refs/heads/hotfix-rc"]'), github.ref)
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+    steps:
+      - name: Trigger downstream build
+        uses: bitwarden/gh-actions/trigger-actions@main
+        with:
+          azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          task: build-downstream-artifacts
+          monitor-deployment: false
