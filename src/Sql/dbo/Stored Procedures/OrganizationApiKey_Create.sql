@@ -1,7 +1,7 @@
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
-    @ApiKey VARCHAR(30),
+    @ApiKey VARCHAR(300),
     @Type TINYINT,
     @RevisionDate DATETIME2(7)
 AS

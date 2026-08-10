@@ -53,6 +53,7 @@ public class DatabaseContext : DbContext
     public DbSet<Installation> Installations { get; set; }
     public DbSet<Organization> Organizations { get; set; }
     public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
+    public DbSet<DataMigrationState> DataMigrationStates { get; set; }
     public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
     public DbSet<OrganizationConnection> OrganizationConnections { get; set; }
     public DbSet<PlayItem> PlayItem { get; set; }
@@ -139,6 +140,11 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
         aWebAuthnCredential.Property(ar => ar.Id).ValueGeneratedNever();
+
+        var eDataMigrationState = builder.Entity<DataMigrationState>();
+        eDataMigrationState.Property(s => s.Id).ValueGeneratedNever();
+        eDataMigrationState.HasIndex(s => new { s.Name, s.Partition }).IsUnique();
+        eDataMigrationState.ToTable(nameof(DataMigrationState));
 
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });

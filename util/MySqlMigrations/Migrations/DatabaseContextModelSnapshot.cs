@@ -1455,6 +1455,73 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("CollectionCipher", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.DataMigrationState", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Cursor")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<DateTime?>("LeaseExpiresDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("LeaseOwner")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<int>("Partition")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RangeEnd")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<string>("RangeStart")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("RowsConverted")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RowsFailed")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RowsScanned")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RowsSkippedByRace")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("StartedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("TotalRows")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name", "Partition")
+                        .IsUnique();
+
+                    b.ToTable("DataMigrationState", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1664,8 +1731,8 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("ApiKey")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");

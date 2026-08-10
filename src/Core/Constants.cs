@@ -312,6 +312,9 @@ public static partial class FeatureFlagKeys
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
 
+    /* Admin Console */
+    public const string OrganizationApiKeyProtectionMigration = "pm-40439-org-api-key-protection-migration";
+
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {
         // place overriding values when needed locally (offline), or return null

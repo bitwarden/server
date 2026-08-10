@@ -1,0 +1,21 @@
+CREATE TABLE [dbo].[DataMigrationState] (
+    [Id]                UNIQUEIDENTIFIER NOT NULL,
+    [Name]              VARCHAR(100)     NOT NULL,
+    [Partition]         INT              NOT NULL,
+    [RangeStart]        NVARCHAR(300)    NULL,
+    [RangeEnd]          NVARCHAR(300)    NULL,
+    [Cursor]            NVARCHAR(300)    NULL,
+    [TotalRows]         BIGINT           NOT NULL CONSTRAINT [DF_DataMigrationState_TotalRows] DEFAULT (0),
+    [RowsScanned]       BIGINT           NOT NULL CONSTRAINT [DF_DataMigrationState_RowsScanned] DEFAULT (0),
+    [RowsConverted]     BIGINT           NOT NULL CONSTRAINT [DF_DataMigrationState_RowsConverted] DEFAULT (0),
+    [RowsSkippedByRace] BIGINT           NOT NULL CONSTRAINT [DF_DataMigrationState_RowsSkippedByRace] DEFAULT (0),
+    [RowsFailed]        BIGINT           NOT NULL CONSTRAINT [DF_DataMigrationState_RowsFailed] DEFAULT (0),
+    [LeaseOwner]        VARCHAR(100)     NULL,
+    [LeaseExpiresDate]  DATETIME2(7)     NULL,
+    [StartedDate]       DATETIME2(7)     NULL,
+    [CompletedDate]     DATETIME2(7)     NULL,
+    [CreationDate]      DATETIME2(7)     NOT NULL,
+    [RevisionDate]      DATETIME2(7)     NOT NULL,
+    CONSTRAINT [PK_DataMigrationState] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [IX_DataMigrationState_NamePartition] UNIQUE NONCLUSTERED ([Name] ASC, [Partition] ASC)
+);

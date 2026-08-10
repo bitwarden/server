@@ -2,6 +2,7 @@
 using Bit.Admin.Auth.Jobs;
 using Bit.Admin.Tools.Jobs;
 using Bit.Core.Jobs;
+using Bit.Core.Jobs.DataMigrations;
 using Bit.Core.Settings;
 using Quartz;
 
@@ -71,6 +72,11 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 0 2 ? * * *")
             .Build();
+        var dataMigrationsTrigger = TriggerBuilder.Create()
+            .WithIdentity("DataMigrationsTrigger")
+            .StartNow()
+            .WithCronSchedule("0 */15 * ? * *")
+            .Build();
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
@@ -80,6 +86,7 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteUnverifiedOrganizationDomainsJob), everyDayAtTwoAmUtcTrigger),
+            new Tuple<Type, ITrigger>(typeof(DataMigrationsJob), dataMigrationsTrigger),
         };
 
         if (!(_globalSettings.SqlServer?.DisableDatabaseMaintenanceJobs ?? false))
@@ -111,5 +118,10 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<DeleteCiphersJob>();
         services.AddTransient<DeleteAuthRequestsJob>();
         services.AddTransient<DeleteUnverifiedOrganizationDomainsJob>();
+
+        // One runner job discovers every registered IDataMigration — adding a migration is one
+        // registration line here, never a new trigger.
+        services.AddTransient<DataMigrationsJob>();
+        services.AddTransient<IDataMigration, DataMigrations.OrganizationApiKeyProtectionMigration>();
     }
 }

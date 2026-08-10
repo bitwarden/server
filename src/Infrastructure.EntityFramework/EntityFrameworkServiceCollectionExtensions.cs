@@ -7,6 +7,7 @@ using Bit.Core.Billing.Subscriptions.Repositories;
 using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
+using Bit.Core.Jobs.DataMigrations;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Platform.Installations;
@@ -84,6 +85,8 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IInstallationRepository, InstallationRepository>();
         services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
         services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
+        services.AddSingleton<IOrganizationApiKeyMigrationRepository, OrganizationApiKeyMigrationRepository>();
+        services.AddSingleton<IDataMigrationStateRepository, DataMigrationStateRepository>();
         services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
         services.AddSingleton<IOrganizationIntegrationRepository, OrganizationIntegrationRepository>();
         services.AddSingleton<IOrganizationIntegrationConfigurationRepository, OrganizationIntegrationConfigurationRepository>();
