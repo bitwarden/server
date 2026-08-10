@@ -37,12 +37,16 @@ public class AnnualUpgradeSavingsCalculatorTests
         string? currency = "usd") => new()
         {
             Id = $"di_{couponId}",
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                Duration = duration,
-                PercentOff = percentOff,
-                Currency = currency
+                CouponId = couponId,
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    Duration = duration,
+                    PercentOff = percentOff,
+                    Currency = currency
+                }
             }
         };
 

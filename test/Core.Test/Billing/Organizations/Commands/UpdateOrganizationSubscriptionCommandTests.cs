@@ -1846,7 +1846,7 @@ public class UpdateOrganizationSubscriptionCommandTests
         subscription.Customer = new Customer
         {
             Id = "cus_123",
-            Discount = new Discount { Id = "di_customer", Coupon = new Coupon { Id = "customer-coupon" } }
+            Discount = new Discount { Id = "di_customer", Source = new DiscountSource { CouponId = "customer-coupon", Coupon = new Coupon { Id = "customer-coupon" } } }
         };
         SetupGetSubscription(organization, subscription);
 
