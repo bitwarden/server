@@ -1,5 +1,4 @@
-using Bit.Subscriptions.Organization;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Xunit;
 
 namespace Bit.Subscriptions.Organization.Test;
