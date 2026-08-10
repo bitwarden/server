@@ -156,8 +156,8 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
         string json, string? expectedUserId, string? expectedGroup)
     {
         using var client = await _factory.CreateAuthenticatedClientAsync();
-        using var response = await client.PostAsync("/send",
-            new StringContent(json, Encoding.UTF8, "application/json"));
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("/send", content);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -212,8 +212,8 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
             $"Supported:\n  {string.Join("\n  ", SupportedPayloads)}");
 
         using var client = await _factory.CreateAuthenticatedClientAsync();
-        using var response = await client.PostAsync("/send",
-            new StringContent(captured, Encoding.UTF8, "application/json"));
+        using var content = new StringContent(captured, Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("/send", content);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -240,9 +240,12 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
         var mockClient = new MockHttpMessageHandler();
         var mockIdentityClient = new MockHttpMessageHandler();
 
+        using var notificationsClient = new HttpClient(mockClient);
+        using var identityClient = new HttpClient(mockIdentityClient);
+
         var httpClientFactory = Substitute.For<IHttpClientFactory>();
-        httpClientFactory.CreateClient("client").Returns(new HttpClient(mockClient));
-        httpClientFactory.CreateClient("identity").Returns(new HttpClient(mockIdentityClient));
+        httpClientFactory.CreateClient("client").Returns(notificationsClient);
+        httpClientFactory.CreateClient("identity").Returns(identityClient);
 
         var globalSettings = new GlobalSettings
         {

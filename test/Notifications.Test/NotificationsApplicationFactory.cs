@@ -116,14 +116,14 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable
     private async Task<string> FetchInternalAccessTokenAsync()
     {
         using var client = _identityFactory.CreateClient();
-        var response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(
-            new Dictionary<string, string>
-            {
-                { "grant_type", "client_credentials" },
-                { "client_id", "internal.notifications" },
-                { "client_secret", InternalIdentityKey },
-                { "scope", "internal" },
-            }));
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "client_credentials" },
+            { "client_id", "internal.notifications" },
+            { "client_secret", InternalIdentityKey },
+            { "scope", "internal" },
+        });
+        var response = await client.PostAsync("/connect/token", content);
         response.EnsureSuccessStatusCode();
         using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>();
         return doc!.RootElement.GetProperty("access_token").GetString()!;
