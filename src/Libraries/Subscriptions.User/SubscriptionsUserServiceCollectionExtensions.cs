@@ -1,4 +1,4 @@
-using Bit.HttpExtensions;
+﻿using Bit.HttpExtensions;
 using Bit.Invoicing;
 using Microsoft.Extensions.DependencyInjection;
 
