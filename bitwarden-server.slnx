@@ -26,6 +26,7 @@
     <Project Path="src/Libraries/GlobalSettingsBridge/GlobalSettingsBridge.csproj" />
     <Project Path="src/Libraries/SerilogFileLogging/SerilogFileLogging.csproj" />
     <Project Path="src/Libraries/SsrfProtection/SsrfProtection.csproj" />
+    <Project Path="src/Libraries/Subscriptions.User/Subscriptions.User.csproj" />
     <Project Path="src/Events/Events.csproj" />
     <Project Path="src/EventsProcessor/EventsProcessor.csproj" />
     <Project Path="src/HttpExtensions/HttpExtensions.csproj" />
@@ -75,6 +76,7 @@
     <Project Path="test/Libraries/GlobalSettingsBridge.Test/GlobalSettingsBridge.Test.csproj" />
     <Project Path="test/Libraries/SerilogFileLogging.Test/SerilogFileLogging.Test.csproj" />
     <Project Path="test/Libraries/SsrfProtection.Test/SsrfProtection.Test.csproj" />
+    <Project Path="test/Libraries/Subscriptions.User.Test/Subscriptions.User.Test.csproj" />
     <Project Path="test/Events.IntegrationTest/Events.IntegrationTest.csproj" />
     <Project Path="test/Events.Test/Events.Test.csproj" />
     <Project Path="test/EventsProcessor.Test/EventsProcessor.Test.csproj" />
