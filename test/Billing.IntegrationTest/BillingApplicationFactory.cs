@@ -45,7 +45,6 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
                 var configValues = new Dictionary<string, string?>
                 {
                     ["BillingSettings:StripeWebhookKey"] = WebhookKey,
-                    ["BillingSettings:StripeWebhookSecret20250827Basil"] = WebhookSecret,
                     ["BillingSettings:StripeWebhookSecret20260624Dahlia"] = WebhookSecret,
                     // Force the EF branch of AddDatabaseRepositories so it doesn't fall through to
                     // Dapper (which would talk to the user-secret's real SqlServer instead of the
