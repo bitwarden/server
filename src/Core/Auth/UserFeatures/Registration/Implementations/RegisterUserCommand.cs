@@ -1,8 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -30,6 +32,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IPolicyQuery _policyQuery;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IValidateOrganizationInviteLinkQuery _validateOrganizationInviteLinkQuery;
     private readonly IFeatureService _featureService;
 
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
@@ -53,6 +56,7 @@ public class RegisterUserCommand : IRegisterUserCommand
             IOrganizationRepository organizationRepository,
             IPolicyQuery policyQuery,
             IOrganizationDomainRepository organizationDomainRepository,
+            IValidateOrganizationInviteLinkQuery validateOrganizationInviteLinkQuery,
             IFeatureService featureService,
             IDataProtectionProvider dataProtectionProvider,
             IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
@@ -69,6 +73,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         _organizationRepository = organizationRepository;
         _policyQuery = policyQuery;
         _organizationDomainRepository = organizationDomainRepository;
+        _validateOrganizationInviteLinkQuery = validateOrganizationInviteLinkQuery;
         _featureService = featureService;
 
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
@@ -230,21 +235,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
         if (orgUser != null)
         {
-            var twoFactorPolicy = await _policyQuery.RunAsync(orgUser.OrganizationId,
-                PolicyType.TwoFactorAuthentication);
-            if (twoFactorPolicy.Enabled)
-            {
-                user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-                {
-
-                    [TwoFactorProviderType.Email] = new TwoFactorProvider
-                    {
-                        MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                        Enabled = true
-                    }
-                });
-                _userService.SetTwoFactorProvider(user, TwoFactorProviderType.Email);
-            }
+            await SetUserEmail2FaIfOrgPolicyEnabledByOrgIdAsync(orgUser.OrganizationId, user);
         }
         return orgUser;
     }
@@ -282,6 +273,63 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
 
         return result;
+    }
+
+    public async Task<IdentityResult> RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+        User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, OpenOrgInviteRequestModel openOrgInvite)
+    {
+        ValidateOpenRegistrationAllowed();
+
+        var validationResult = await _validateOrganizationInviteLinkQuery.ValidateAsync(
+            openOrgInvite.OrganizationId, openOrgInvite.Code, user.Email);
+        if (validationResult.IsError)
+        {
+            throw new BadRequestException("Invalid or expired organization invite link.");
+        }
+
+        await ValidateEmailDomainNotBlockedAsync(user.Email, openOrgInvite.OrganizationId);
+
+        var tokenable = ValidateRegistrationEmailVerificationTokenable(emailVerificationToken, user.Email);
+
+        await SetUserEmail2FaIfOrgPolicyEnabledByOrgIdAsync(openOrgInvite.OrganizationId, user);
+
+        user.EmailVerified = true;
+        user.Name = tokenable.Name;
+        user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
+
+        var result = await _userService.CreateUserAsync(user, registerFinishData);
+        if (result == IdentityResult.Success)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(openOrgInvite.OrganizationId);
+            await SendWelcomeEmailAsync(user, organization);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Parallel of <see cref="SetUserEmail2FaIfOrgPolicyEnabledAsync"/> for callers that already know
+    /// the target organization id and have no OrganizationUser row to look up (e.g. open-org-invite,
+    /// where the invite has not yet been accepted).
+    /// </summary>
+    private async Task SetUserEmail2FaIfOrgPolicyEnabledByOrgIdAsync(Guid organizationId, User user)
+    {
+        var twoFactorPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.TwoFactorAuthentication);
+        if (!twoFactorPolicy.Enabled)
+        {
+            return;
+        }
+
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                Enabled = true
+            }
+        });
+        _userService.SetTwoFactorProvider(user, TwoFactorProviderType.Email);
     }
 
     public async Task<IdentityResult> RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(User user, RegisterFinishData registerFinishData,
