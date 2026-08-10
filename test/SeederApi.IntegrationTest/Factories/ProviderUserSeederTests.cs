@@ -3,6 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 using Xunit;
 
@@ -16,7 +17,9 @@ public class ProviderUserSeederTests
         var providerKey = RustSdkService.GenerateOrganizationKeys().Key;
         var ownerKeys = RustSdkService.GenerateUserKeys("owner@provider.test", "asdfasdfasdf");
         var owner = new User { Id = CombGuid.Generate(), PublicKey = ownerKeys.PublicKey };
-        var provider = ProviderSeeder.Create("Acme MSP", "acme-msp.test", ProviderType.Msp, new NoOpManglerService());
+        var provider = ProviderSeeder.Create(
+            new ProviderSeed { Name = "Acme MSP", Domain = "acme-msp.test" },
+            new NoOpManglerService());
 
         var providerUser = ProviderUserSeeder.CreateConfirmedAdmin(provider, owner, providerKey);
 
@@ -42,7 +45,9 @@ public class ProviderUserSeederTests
         bool expectEmail,
         bool expectKey)
     {
-        var provider = ProviderSeeder.Create("Acme MSP", "acme-msp.test", ProviderType.Msp, new NoOpManglerService());
+        var provider = ProviderSeeder.Create(
+            new ProviderSeed { Name = "Acme MSP", Domain = "acme-msp.test" },
+            new NoOpManglerService());
         var user = new User
         {
             Id = CombGuid.Generate(),

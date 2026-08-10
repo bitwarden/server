@@ -1417,7 +1417,7 @@
           "Quartz.Extensions.Hosting": "[3.15.1, 3.15.1]",
           "RabbitMQ.Client": "[7.1.2, 7.1.2]",
           "SendGrid": "[9.29.3, 9.29.3]",
-          "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]",
+          "SerilogFileLogging": "[0.0.1, )",
           "SsrfProtection": "[0.0.1, )",
           "Stripe.net": "[52.1.0, 52.1.0]",
           "YubicoDotNetClient": "[1.2.0, 1.2.0]",
@@ -1432,7 +1432,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.7.2, )"
+          "HttpExtensions": "[2026.8.0, )"
         }
       },
       "httpextensions": {
@@ -1441,7 +1441,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1449,7 +1449,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1466,10 +1466,16 @@
         "type": "Project",
         "dependencies": {
           "Bogus": "[35.6.5, 35.6.5]",
-          "Core": "[2026.7.2, )",
-          "Infrastructure.EntityFramework": "[2026.7.2, )",
-          "RustSdk": "[2026.7.2, )",
-          "SharedWeb": "[2026.7.2, )"
+          "Core": "[2026.8.0, )",
+          "Infrastructure.EntityFramework": "[2026.8.0, )",
+          "RustSdk": "[2026.8.0, )",
+          "SharedWeb": "[2026.8.0, )"
+        }
+      },
+      "serilogfilelogging": {
+        "type": "Project",
+        "dependencies": {
+          "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]"
         }
       },
       "sharedweb": {
@@ -1477,9 +1483,9 @@
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
-          "Core": "[2026.7.2, )",
-          "Infrastructure.Dapper": "[2026.7.2, )",
-          "Infrastructure.EntityFramework": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
+          "Infrastructure.Dapper": "[2026.8.0, )",
+          "Infrastructure.EntityFramework": "[2026.8.0, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }

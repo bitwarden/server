@@ -80,6 +80,14 @@ public interface IPriceIncreaseScheduler
     /// schedule is released, dropping it from the deferred business migration.
     /// </param>
     Task Release(string customerId, string subscriptionId, Guid? organizationId = null);
+
+    /// <summary>
+    /// Releases an already-resolved schedule, skipping the lookup <see cref="Release(string, string, Guid?)"/>
+    /// performs, so a caller that has classified the schedule does not resolve it twice. Pass null when no
+    /// schedule is attached; the cohort assignment is still dropped when <paramref name="organizationId"/> is
+    /// supplied.
+    /// </summary>
+    Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null);
 }
 
 public class PriceIncreaseScheduler(
@@ -220,14 +228,19 @@ public class PriceIncreaseScheduler(
 
     public async Task Release(string customerId, string subscriptionId, Guid? organizationId = null)
     {
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = customerId });
+
+        var activeSchedule = schedules.Data.FirstOrDefault(s =>
+            s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
+
+        await ReleaseSchedule(activeSchedule, organizationId);
+    }
+
+    public async Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null)
+    {
         try
         {
-            var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-                new SubscriptionScheduleListOptions { Customer = customerId });
-
-            var activeSchedule = schedules.Data.FirstOrDefault(s =>
-                s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
-
             if (activeSchedule != null)
             {
                 await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
@@ -246,16 +259,16 @@ public class PriceIncreaseScheduler(
                 catch (Exception ex)
                 {
                     logger.LogError(ex,
-                        "Released the subscription schedule for subscription {SubscriptionId} but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
-                        subscriptionId, organizationId.Value);
+                        "Released the subscription schedule but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
+                        organizationId.Value);
                 }
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to release subscription schedule for subscription {SubscriptionId}. Manual release required.",
-                subscriptionId);
+                "Failed to release subscription schedule ({ScheduleId}). Manual release required.",
+                activeSchedule?.Id);
             throw;
         }
     }

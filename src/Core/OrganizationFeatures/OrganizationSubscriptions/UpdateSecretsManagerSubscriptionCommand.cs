@@ -1,4 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
+// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
 using Bit.Core.AdminConsole.AbilitiesCache;
@@ -85,7 +85,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 {
                     subscription = await _stripeAdapter.GetSubscriptionAsync(
                         update.Organization.GatewaySubscriptionId,
-                        new SubscriptionGetOptions { Expand = ["customer", "customer.discount.source.coupon", "test_clock"] });
+                        new SubscriptionGetOptions { Expand = ["customer", "customer.discount.source.coupon", "test_clock", "schedule"] });
                 }
                 catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)
                 {

@@ -5046,6 +5046,12 @@ public class SubscriptionUpdatedHandlerTests
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(teams2020Monthly);
+        // The annual-upgrade handler also runs on this event; TeamsMonthly2020 resolves to
+        // TeamsAnnually as its upgrade target. Provide the mock so GetPlanOrThrow returns a
+        // real plan (production throws NotFoundException rather than returning null). The
+        // handler then hits its target-price guard, sees the subscription is still on the
+        // monthly seat price, and returns early -- so no ChangePlan/ReplaceAsync runs.
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
         _pricingClient.ListPlans().Returns(MockPlans.Plans);
 
         // Act
@@ -6200,5 +6206,651 @@ public class SubscriptionUpdatedHandlerTests
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.Metadata != null &&
                 options.Metadata.ContainsKey(MetadataKeys.MigrationGraceServiceAccounts)));
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_NoScheduleId_DoesNotUpdatePlanType()
+    {
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_no_schedule",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = null,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        await _sut.HandleAsync(parsedEvent);
+
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_PreviousPriceNotMonthly_DoesNotUpdatePlanType()
+    {
+        var organizationId = Guid.NewGuid();
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = "price_unrelated" },
+                    Plan = new Plan { Id = "price_unrelated" }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_unrelated",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(new TeamsPlan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        await _sut.HandleAsync(parsedEvent);
+
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_MonthlyToAnnualLatest_UpdatesPlanType()
+    {
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_happy",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_happy",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        await _sut.HandleAsync(parsedEvent);
+
+        Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_DuplicateDeliveryAfterFlip_DoesNotReapply()
+    {
+        // Stripe delivers at least once, so the same transition event can arrive twice. The
+        // second delivery must be a no-op: ResolveAnnualLatestPlanType returns null for an
+        // annual PlanType, so the handler returns before reaching pricing or persistence.
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_duplicate",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_duplicate",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        await _sut.HandleAsync(parsedEvent);
+
+        Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
+
+        // Same event object, redelivered.
+        await _sut.HandleAsync(parsedEvent);
+
+        Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_ReplaceAsyncThrows_RethrowsForStripeRetry()
+    {
+        // A transient DB failure while persisting the plan flip must propagate so the
+        // webhook returns non-200 and Stripe retries. The underlying exception surfaces
+        // unwrapped.
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_persist_fails",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_persist_fails",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _organizationRepository.ReplaceAsync(Arg.Any<Organization>())
+            .Returns<Task>(_ => throw new InvalidOperationException("transient DB failure"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.HandleAsync(parsedEvent));
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_PricingServiceThrowsOnTransitionEvent_RethrowsForStripeRetry()
+    {
+        // A pricing-service failure on the one event carrying the monthly to annual swap must
+        // propagate so the webhook returns non-200 and Stripe redelivers the same event. The
+        // guard that recognizes the swap reads previous_attributes, which Stripe preserves on
+        // the redelivery, so a later attempt can still complete the flip.
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_pricing_outage",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_pricing_outage",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        // First call is the annual-upgrade handler's source lookup and fails. Later calls
+        // succeed so that only the handler under test can be the source of the exception.
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly)
+            .Returns(_ => throw new BillingException(message: "pricing service unavailable"), _ => teamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
+
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_PricingLookupThrowsOnUnrelatedItemChange_RethrowsForStripeRetry()
+    {
+        // The source-plan lookup happens before the handler can tell whether this event is the
+        // annual transition, so a pricing outage during an unrelated item change also fails the
+        // webhook. Accepted: Stripe retries for up to three days, and the work sequenced after
+        // this handler runs on the successful attempt.
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_pricing_lookup_throws",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_pricing_lookup_throws",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { Price = new Price { Id = "price_target_current" }, Plan = new Plan { Id = "price_target_current" } }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        // Sequence form for the same reason as the previous test: only the first call, the
+        // handler's own source lookup, may fail.
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly)
+            .Returns(_ => throw new HttpRequestException("pricing service unreachable"), _ => teamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _sut.HandleAsync(parsedEvent));
+
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_SameEventReplayedAfterPricingFailure_AppliesUpgrade()
+    {
+        // Stripe redelivers the same immutable event on retry, previous_attributes included, so
+        // the guard that recognizes the monthly to annual swap still matches on the second
+        // attempt and the flip lands once the pricing service recovers.
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_replay",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_replay",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // First delivery fails the source-plan lookup, second delivery succeeds.
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly)
+            .Returns(_ => throw new BillingException(message: "pricing service unavailable"), _ => teamsMonthly);
+
+        await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        Assert.Equal(PlanType.TeamsMonthly, organization.PlanType);
+
+        // Same event object, unchanged, as Stripe would redeliver it.
+        await _sut.HandleAsync(parsedEvent);
+
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
+        Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_PreviousSubscriptionHasNoItems_DoesNotUpdatePlanType()
+    {
+        var organizationId = Guid.NewGuid();
+        var teamsAnnual = new TeamsPlan(true);
+
+        // Previous attributes deserialize to a subscription with no items collection, so the
+        // handler cannot determine which price changed and must bail before touching the plan type.
+        var previousSubscription = new Subscription();
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_no_prev_items",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_no_prev_items",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(new TeamsPlan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        await _sut.HandleAsync(parsedEvent);
+
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_PreviousItemWithNullPrice_IsSkippedAndUpgradeStillApplies()
+    {
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+        var teamsAnnual = new TeamsPlan(true);
+
+        // One previous line item has no expanded price and must be skipped safely while the monthly
+        // seat line is still detected as the source of the upgrade.
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Price = null, Plan = new Plan { Id = "price_unrelated_addon" } },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_null_price_prev",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_null_price_prev",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        await _sut.HandleAsync(parsedEvent);
+
+        Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_CurrentSubscriptionMissingTargetPrice_DoesNotUpdatePlanType()
+    {
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        // The subscription moved off the monthly seat, but the current items do NOT contain the
+        // annual-latest seat price (plus a line item with no expanded price to skip). The handler
+        // must not flip the plan type.
+        var subscription = new Subscription
+        {
+            Id = "sub_annual_upgrade_no_target",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_annual_upgrade_no_target",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Price = null, Plan = new Plan { Id = "price_unrelated_addon" } },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "price_some_other" },
+                        Plan = new Plan { Id = "price_some_other" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        await _sut.HandleAsync(parsedEvent);
+
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 }
