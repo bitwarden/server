@@ -114,7 +114,13 @@ public class EventRepository : IEventRepository
         // Azure Table Storage caps a single transaction at 100 ops; the outer cap
         // bounds work per call so the background job can interleave other orgs.
         const int batchSize = 100;
-        const int maxBatchesPerCall = 18_000;
+        // 50,000 entities per call, matching Event_DeleteManyByOrganizationId's @MaxRows.
+        // The job only refreshes the claim lease between handler calls, so a single call
+        // has to finish well inside OrganizationDeleteTask.LeaseDurationMinutes: if it
+        // overruns, the task looks stale, another run reclaims it, and both purge the same
+        // partition until the resulting transaction failures exhaust MaxFailureCount. The
+        // job loops until a call returns zero, so a lower bound only means more calls.
+        const int maxBatchesPerCall = 500;
         // Bound concurrent transaction submissions so a large organization doesn't
         // fan out thousands of simultaneous requests and get throttled.
         const int maxConcurrentBatches = 8;
