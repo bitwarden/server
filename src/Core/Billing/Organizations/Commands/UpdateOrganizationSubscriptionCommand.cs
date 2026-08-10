@@ -256,24 +256,7 @@ public class UpdateOrganizationSubscriptionCommand(
         var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
         return (currentPlan, annualLatestPlan);
     }
-    
-  private async Task<Subscription?> FetchSubscriptionAsync(Organization organization)
-    {
-        try
-        {
-            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
-            {
-                Expand = ["customer", "customer.discount.source.coupon", "test_clock"]
-            });
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
-        {
-            _logger.LogError("{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
-                CommandName, organization.GatewaySubscriptionId, organization.Id);
-            return null;
-        }
-    }
-    
+
     private async Task<(Plan source, Plan target)?> ResolveCohortMigrationPhasePlansAsync(
         Organization organization, Subscription subscription)
     {
