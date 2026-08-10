@@ -98,4 +98,4 @@ For agents, commands, hooks, and `CLAUDE.md` entries, start from an existing one
 ### 4. Validate before you push
 
 - Run a local Bitwarden Claude Code review with `/bitwarden-code-review:code-review-local` — it writes findings to files so you can fix them before pushing, without posting anything to GitHub.
-- When you raise the PR, apply the `ai-review` label. Our reusable GitHub workflow watches for it and runs a Claude Code review automatically; without the label, the review doesn't fire.
+- A non-draft PR gets a Claude Code review automatically once per PR, no label needed. Apply `ai-review` to review a draft or re-review after one has posted.
