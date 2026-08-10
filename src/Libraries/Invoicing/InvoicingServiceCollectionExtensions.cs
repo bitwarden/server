@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Bit.Invoicing.InvoicePreviews;
+using Bit.Invoicing.InvoicePreviews.Stripe;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Invoicing;
 
@@ -8,6 +11,9 @@ public static class InvoicingServiceCollectionExtensions
     /// <summary>Registers everything <c>Bit.Invoicing</c> needs, including its owned feature flag keys. Uses TryAdd so feature libraries can call it and still compose.</summary>
     public static IServiceCollection AddInvoicing(this IServiceCollection services)
     {
+        services.TryAddSingleton<IInvoicePreviewService, InvoicePreviewService>();
+        services.TryAddSingleton<IInvoicePreviewClient, InvoicePreviewClient>();
+        services.TryAddSingleton<InvoicePreviewBuilder>();
         services.AddKnownFeatureFlags(InvoicingFeatureFlags.GetKeys());
         return services;
     }
