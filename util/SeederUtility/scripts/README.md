@@ -175,6 +175,40 @@ Notes:
 - Admins see only the collections assigned to them, because presets leave `AllowAdminAccessToAllCollectionItems` off. The owner of a large org sees a small slice of it.
 - Seeded organizations have no license file, so `ValidateOrganizationsAsync` disables them within twelve hours on self-host. Short sessions are unaffected.
 
+## Running self-host against a seeded image
+
+Load the image and unpack the bundle as described in [Getting an image from a CI build](#getting-an-image-from-a-ci-build). Self-host reads `/etc/bitwarden/core`, which the bundle's `core/` layout already matches, so it unpacks straight into `bwdata`.
+
+Get an installation id from https://bitwarden.com/host. The Setup container validates it against the Bitwarden API, so an invented one fails.
+
+```bash
+./bitwarden.sh install ~/bwdata
+```
+
+Swap the database in `bwdata/docker/docker-compose.override.yml`, which `run.sh` merges automatically:
+
+```yaml
+services:
+  mssql:
+    image: bitwardenprod.azurecr.io/shot/seeded-mssql:qa-dunder-mifflin-enterprise-full
+    pull_policy: never
+```
+
+`pull_policy: never` applies to images loaded from a CI artifact. `run.sh` runs `docker compose pull` on start, and the tag names a registry the artifact was never pushed to, so the pull fails without it. Drop it once you are pulling an image that really is in the registry, or compose will keep using a stale local copy.
+
+Unpack the bundle, then start:
+
+```bash
+tar -xzf seeded-core-mssql-*.tar.gz -C ~/bwdata
+./bitwarden.sh start ~/bwdata
+```
+
+Log in at the URL the installer prints, using the preset's owner account.
+
+### Match the app version to the image
+
+An image carries the schema from the commit it was built at, including stored procedures. `bitwarden.sh` pins a released core version, so an image built from `main` can be missing procedures that release still calls, and login fails with `Could not find stored procedure`. Build from the release branch the deployment runs, or pin the app images to a tag built from the same commit.
+
 ## Environment Variables
 
 | Variable | Default | Description |
