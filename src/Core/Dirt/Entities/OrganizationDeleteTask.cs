@@ -28,5 +28,5 @@ public class OrganizationDeleteTask : ITableObject<Guid>
     public long ItemsDeletedCount { get; set; }
     public int FailureCount { get; set; }
     public string? LastError { get; set; }
-    public void SetNewId() => Id = CoreHelpers.GenerateComb();
+    public void SetNewId() => Id = CombGuid.Generate();
 }
