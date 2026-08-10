@@ -31,6 +31,7 @@ internal class RegisterFinishRequestModelCustomization : ICustomization
             .With(o => o.OrgSponsoredFreeFamilyPlanToken, OrgSponsoredFreeFamilyPlanToken)
             .With(o => o.AcceptEmergencyAccessInviteToken, AcceptEmergencyAccessInviteToken)
             .With(o => o.ProviderInviteToken, ProviderInviteToken)
+            .Without(o => o.OpenOrgInvite)
             .Without(o => o.MasterPasswordAuthentication)
             .Without(o => o.MasterPasswordUnlock));
     }
