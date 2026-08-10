@@ -2,7 +2,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -29,8 +28,8 @@ namespace Notifications.Test;
 ///   <item>Whatever <see cref="NotificationsApiPushEngine.PushAsync"/> currently produces must
 ///         be one of those formats, so any wire-format change is caught immediately.</item>
 /// </list>
-/// When <c>PushAsync</c> is updated to produce a new shape, add the new format to
-/// <see cref="SupportedPayloads"/> and update <see cref="EngineInputArgs"/> if needed.
+/// When <c>PushAsync</c> is updated to produce a new shape, add the new entry to
+/// <see cref="RoutingCases"/>. <see cref="SupportedPayloads"/> is derived from it automatically.
 ///
 /// <para><strong>Not every push type is covered intentionally.</strong> The long-term goal is for
 /// <c>POST /send</c> to be a dumb proxy: routing decisions should be driven entirely by
@@ -49,11 +48,16 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
     private static readonly Guid _notifId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
     private const string TestContextId = "test-device-id";
 
+    // Each supported wire format paired with the SignalR routing call it must trigger.
+    // Real payload types are used here because HubHelpers inspects the inner payload to determine
+    // which SignalR group to route to. Once that routing information moves into the envelope itself,
+    // these can be replaced with a simple mock payload type.
     /// <summary>
-    /// Every JSON format that <c>POST /send</c> must accept. When <c>PushAsync</c> changes its
-    /// wire format, add the new shape here. Old shapes must be kept for at least one release to
-    /// support rolling upgrades where the sender (e.g. Api) may still be on the previous version
-    /// while the Notifications service has already been updated.
+    /// Every wire format that <c>POST /send</c> must accept, paired with the SignalR routing call
+    /// it must trigger. When <c>PushAsync</c> changes its wire format, add the new entry here.
+    /// Old entries must be kept for at least one release to support rolling upgrades where the
+    /// sender (e.g. Api) may still be on the previous version while the Notifications service has
+    /// already been updated.
     ///
     /// <para><strong>Do not add a new entry here in the same commit that updates
     /// <c>POST /send</c> to handle it.</strong> A new entry proves the endpoint accepts the new
@@ -62,46 +66,40 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
     /// entry is never tested against a Notifications build that lacks the new handling code, so
     /// you cannot tell from CI alone whether the deployment order matters.</para>
     /// </summary>
-    private static readonly string[] SupportedPayloads =
-    [
-        // User — LogOut, no context exclusion
-        """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Reason":null},"ContextId":null}""",
-        // User — LogOut, with context exclusion
-        """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Reason":null},"ContextId":"test-device-id"}""",
-        // Organization — SyncOrganizationStatusChanged, no context exclusion
-        """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"ContextId":null}""",
-        // Organization — SyncOrganizationStatusChanged, with context exclusion
-        """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"ContextId":"test-device-id"}""",
-        // Installation — Notification (ClientType.All), no context exclusion
-        """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":0,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}""",
-        // Installation — Notification (ClientType.All), with context exclusion
-        """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":0,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":"test-device-id"}""",
-        // User — Notification (ClientType.Mobile), routes to client-type-specific group
-        """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":4,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","OrganizationId":null,"InstallationId":null,"TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}""",
-        // Organization — Notification (ClientType.Mobile), routes to client-type-specific group
-        """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":4,"UserId":null,"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","InstallationId":null,"TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}""",
-        // Installation — Notification (ClientType.Mobile), routes to client-type-specific group
-        """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":4,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}""",
-    ];
-
-    // Each supported payload paired with the SignalR routing call it must trigger.
-    // Real payload types are used here because HubHelpers inspects the inner payload to determine
-    // which SignalR group to route to. Once that routing information moves into the envelope itself,
-    // these can be replaced with a simple mock payload type.
     private sealed record RoutingCase(string Json, string? ExpectedUserId, string? ExpectedGroup);
 
     private static readonly RoutingCase[] RoutingCases =
     [
-        new(SupportedPayloads[0], _userId.ToString(), null),
-        new(SupportedPayloads[1], _userId.ToString(), null),
-        new(SupportedPayloads[2], null, NotificationsHub.GetOrganizationGroup(_orgId)),
-        new(SupportedPayloads[3], null, NotificationsHub.GetOrganizationGroup(_orgId)),
-        new(SupportedPayloads[4], null, NotificationsHub.GetInstallationGroup(_installationId, ClientType.All)),
-        new(SupportedPayloads[5], null, NotificationsHub.GetInstallationGroup(_installationId, ClientType.All)),
-        new(SupportedPayloads[6], null, NotificationsHub.GetUserGroup(_userId, ClientType.Mobile)),
-        new(SupportedPayloads[7], null, NotificationsHub.GetOrganizationGroup(_orgId, ClientType.Mobile)),
-        new(SupportedPayloads[8], null, NotificationsHub.GetInstallationGroup(_installationId, ClientType.Mobile)),
+        // User — LogOut, no context exclusion
+        new("""{"type":11,"payload":{"userId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","reason":null},"contextId":null}""",
+            _userId.ToString(), null),
+        // User — LogOut, with context exclusion
+        new("""{"type":11,"payload":{"userId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","reason":null},"contextId":"test-device-id"}""",
+            _userId.ToString(), null),
+        // Organization — SyncOrganizationStatusChanged, no context exclusion
+        new("""{"type":18,"payload":{"organizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","enabled":true},"contextId":null}""",
+            null, NotificationsHub.GetOrganizationGroup(_orgId)),
+        // Organization — SyncOrganizationStatusChanged, with context exclusion
+        new("""{"type":18,"payload":{"organizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","enabled":true},"contextId":"test-device-id"}""",
+            null, NotificationsHub.GetOrganizationGroup(_orgId)),
+        // Installation — Notification (ClientType.All), no context exclusion
+        new("""{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":0,"global":false,"clientType":0,"userId":null,"organizationId":null,"installationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","taskId":null,"title":null,"body":null,"creationDate":"0001-01-01T00:00:00","revisionDate":"0001-01-01T00:00:00","readDate":null,"deletedDate":null},"contextId":null}""",
+            null, NotificationsHub.GetInstallationGroup(_installationId, ClientType.All)),
+        // Installation — Notification (ClientType.All), with context exclusion
+        new("""{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":0,"global":false,"clientType":0,"userId":null,"organizationId":null,"installationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","taskId":null,"title":null,"body":null,"creationDate":"0001-01-01T00:00:00","revisionDate":"0001-01-01T00:00:00","readDate":null,"deletedDate":null},"contextId":"test-device-id"}""",
+            null, NotificationsHub.GetInstallationGroup(_installationId, ClientType.All)),
+        // User — Notification (ClientType.Mobile), routes to client-type-specific group
+        new("""{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":0,"global":false,"clientType":4,"userId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","organizationId":null,"installationId":null,"taskId":null,"title":null,"body":null,"creationDate":"0001-01-01T00:00:00","revisionDate":"0001-01-01T00:00:00","readDate":null,"deletedDate":null},"contextId":null}""",
+            null, NotificationsHub.GetUserGroup(_userId, ClientType.Mobile)),
+        // Organization — Notification (ClientType.Mobile), routes to client-type-specific group
+        new("""{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":0,"global":false,"clientType":4,"userId":null,"organizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","installationId":null,"taskId":null,"title":null,"body":null,"creationDate":"0001-01-01T00:00:00","revisionDate":"0001-01-01T00:00:00","readDate":null,"deletedDate":null},"contextId":null}""",
+            null, NotificationsHub.GetOrganizationGroup(_orgId, ClientType.Mobile)),
+        // Installation — Notification (ClientType.Mobile), routes to client-type-specific group
+        new("""{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":0,"global":false,"clientType":4,"userId":null,"organizationId":null,"installationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","taskId":null,"title":null,"body":null,"creationDate":"0001-01-01T00:00:00","revisionDate":"0001-01-01T00:00:00","readDate":null,"deletedDate":null},"contextId":null}""",
+            null, NotificationsHub.GetInstallationGroup(_installationId, ClientType.Mobile)),
     ];
+
+    private static readonly string[] SupportedPayloads = RoutingCases.Select(c => c.Json).ToArray();
 
     private readonly NotificationsApplicationFactory _factory = new();
 
@@ -266,9 +264,9 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
             .Expect(HttpMethod.Post, $"{notificationsBase}send")
             .With(request =>
             {
-                if (request.Content is JsonContent jsonContent)
+                if (request.Content is not null)
                 {
-                    capturedJson = JsonSerializer.Serialize(jsonContent.Value);
+                    capturedJson = request.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 }
                 return true;
             })
