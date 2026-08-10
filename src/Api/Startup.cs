@@ -34,6 +34,8 @@ using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Enums;
+using Bit.Subscriptions.Organization;
+using Bit.Subscriptions.User;
 
 
 #if !OSS
@@ -211,6 +213,10 @@ public class Startup
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
+        // Subscriptions
+        services.AddUserSubscriptions();
+        services.AddOrganizationSubscriptions();
+
         // MVC
         services.AddMvc(config =>
         {
@@ -301,6 +307,9 @@ public class Startup
                 {
                     ResponseWriter = HealthCheckServiceExtensions.WriteResponse
                 });
+
+                endpoints.MapUserSubscriptionEndpoints();
+                endpoints.MapOrganizationSubscriptionEndpoints();
             }
         });
 

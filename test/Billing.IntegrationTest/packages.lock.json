@@ -1895,6 +1895,8 @@
           "OrganizationAuthorization": "[0.0.1, )",
           "Pam": "[2026.8.1, )",
           "SharedWeb": "[2026.8.1, )",
+          "Subscriptions.Organization": "[0.0.1, )",
+          "Subscriptions.User": "[0.0.1, )",
           "Swashbuckle.AspNetCore": "[10.1.7, 10.1.7]"
         }
       },
@@ -2076,6 +2078,12 @@
           "Seeder": "[2026.8.1, )"
         }
       },
+      "invoicing": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.8.1, )"
+        }
+      },
       "migrator": {
         "type": "Project",
         "dependencies": {
@@ -2159,6 +2167,22 @@
       },
       "ssrfprotection": {
         "type": "Project"
+      },
+      "subscriptions.organization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.8.1, )",
+          "HttpExtensions": "[2026.8.1, )",
+          "Invoicing": "[0.0.1, )"
+        }
+      },
+      "subscriptions.user": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.8.1, )",
+          "HttpExtensions": "[2026.8.1, )",
+          "Invoicing": "[0.0.1, )"
+        }
       }
     }
   }
