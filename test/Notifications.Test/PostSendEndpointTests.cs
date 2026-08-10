@@ -1,4 +1,4 @@
-using System.Buffers.Text;
+﻿using System.Buffers.Text;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -12,7 +12,6 @@ using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Settings;
 using Bit.Notifications;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using RichardSzalay.MockHttp;
