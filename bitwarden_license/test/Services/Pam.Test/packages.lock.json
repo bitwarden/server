@@ -1317,7 +1317,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.7.2, )"
+          "HttpExtensions": "[2026.8.0, )"
         }
       },
       "httpextensions": {
@@ -1326,8 +1326,8 @@
       "pam": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
-          "HttpExtensions": "[2026.7.2, )"
+          "Core": "[2026.8.0, )",
+          "HttpExtensions": "[2026.8.0, )"
         }
       },
       "serilogfilelogging": {

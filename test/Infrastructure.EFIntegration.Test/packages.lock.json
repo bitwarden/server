@@ -1527,7 +1527,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.6.0, 10.6.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1597,8 +1597,8 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Common": "[2026.7.2, )",
-          "Core": "[2026.7.2, )",
+          "Common": "[2026.8.0, )",
+          "Core": "[2026.8.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.Diagnostics.Testing": "[10.6.0, 10.6.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1612,7 +1612,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.7.2, )"
+          "HttpExtensions": "[2026.8.0, )"
         }
       },
       "httpextensions": {
@@ -1621,7 +1621,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1629,7 +1629,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1642,15 +1642,15 @@
       "mysqlmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
-          "Infrastructure.EntityFramework": "[2026.7.2, )"
+          "Core": "[2026.8.0, )",
+          "Infrastructure.EntityFramework": "[2026.8.0, )"
         }
       },
       "postgresmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
-          "Infrastructure.EntityFramework": "[2026.7.2, )"
+          "Core": "[2026.8.0, )",
+          "Infrastructure.EntityFramework": "[2026.8.0, )"
         }
       },
       "serilogfilelogging": {
@@ -1662,8 +1662,8 @@
       "sqlitemigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
-          "Infrastructure.EntityFramework": "[2026.7.2, )"
+          "Core": "[2026.8.0, )",
+          "Infrastructure.EntityFramework": "[2026.8.0, )"
         }
       },
       "ssrfprotection": {
