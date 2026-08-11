@@ -101,6 +101,7 @@ public class AnnualUpgradeSavingsCalculatorTests
         {
             Assert.Equal("cus_123", options.Customer);
             Assert.False(options.AutomaticTax.Enabled);
+            Assert.Equal(BillingMode.Classic, options.SubscriptionDetails.BillingMode.Type);
             // No Subscription set: the preview prices a fresh full term rather than the remainder
             // of the current period, and nothing prorates against an existing schedule.
             Assert.Null(options.Subscription);

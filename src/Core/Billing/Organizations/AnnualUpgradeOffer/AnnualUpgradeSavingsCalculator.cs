@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Extensions;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Stripe;
 
@@ -51,6 +52,7 @@ internal static class AnnualUpgradeSavingsCalculator
             // No Subscription set on purpose. Passing one would price with prorations, not the full term.
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
                 Items = [.. lines.Select(line => new InvoiceSubscriptionDetailsItemOptions
                 {
                     Price = annual ? line.TargetPriceId : line.Item.Price.Id,
