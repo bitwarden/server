@@ -415,7 +415,7 @@ public class Startup
 
     private static void MapSubscriptionEndpoints(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGroup("/subscriptions")
+        endpoints.MapGroup("/account/billing/subscription/premium")
             .MapUserSubscriptionEndpoints();
         endpoints.MapGroup("/organizations/{organizationId:guid}/billing/subscription")
             .MapOrganizationSubscriptionEndpoints();

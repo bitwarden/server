@@ -11,7 +11,8 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 `AddUserSubscriptions()` registers the endpoint group's services and the `Bit.Invoicing` library
 they depend on. `MapUserSubscriptionEndpoints()` attaches the group's cross-cutting chain — tags,
 the `Application` authorization policy, exception handling, and the `PM36631_PreviewDrivenCart`
-feature gate — to an empty group; the host owns the route prefix and mounts it at `/subscriptions`.
+feature gate — to an empty group; the host owns the route prefix and mounts it at
+`/account/billing/subscription/premium`.
 No endpoints are mapped inside the group yet.
 
 ## Stripe boundary
