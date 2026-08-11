@@ -168,7 +168,7 @@ jobs:
           DB="${MATRIX_DATABASE}"
           SHA_SHORT="${GITHUB_SHA:0:7}"
           docker save \
-            "${_AZ_REGISTRY}/shot/seeded-${DB}:${TAG}" \
+            "${_AZ_REGISTRY}/shot/seeded-${DB}:${TAG}-latest" \
             "${_AZ_REGISTRY}/shot/seeded-${DB}:${TAG}-${SHA_SHORT}" \
             -o "seeded-${DB}-${TAG}-${SHA_SHORT}.tar"
 

@@ -40,8 +40,8 @@ dotnet run --project .. -- preset --list --output json
 
 Each build produces two tags:
 
-- **Stable**: `seeded-{db}:{preset-name}` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full`
-- **Versioned**: `seeded-{db}:{preset-name}-{git-sha}` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full-abc1234`
+- **Latest**: `seeded-{db}:{preset-name}-latest` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full-latest`. Moves with every build.
+- **Versioned**: `seeded-{db}:{preset-name}-{git-sha}` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full-abc1234`. Immutable, so a deployment can pin a known build.
 
 Either tag works with any core bundle, because CI pins one data protection key for every build.
 
@@ -68,7 +68,7 @@ Start the database and point the application at the unpacked bundle:
 
 ```bash
 docker run -d -p 5432:5432 \
-  bitwardenprod.azurecr.io/shot/seeded-postgres:qa-dunder-mifflin-enterprise-full
+  bitwardenprod.azurecr.io/shot/seeded-postgres:qa-dunder-mifflin-enterprise-full-latest
 ```
 
 The seed runs on first boot for postgres, mysql, and mariadb, so the server accepts connections before the data is loaded. Poll for a seeded table rather than trusting `pg_isready`:
@@ -151,7 +151,7 @@ Start the database on a named network:
 
 ```bash
 docker network create bwlite
-docker run -d --name bwlite-db --network bwlite -p 5433:5432 bitwardenprod.azurecr.io/shot/seeded-postgres:scale-lg-balanced-wayne-enterprises
+docker run -d --name bwlite-db --network bwlite -p 5433:5432 bitwardenprod.azurecr.io/shot/seeded-postgres:scale-lg-balanced-wayne-enterprises-latest
 ```
 
 Start lite against it:
@@ -190,7 +190,7 @@ Swap the database in `bwdata/docker/docker-compose.override.yml`, which `run.sh`
 ```yaml
 services:
   mssql:
-    image: bitwardenprod.azurecr.io/shot/seeded-mssql:qa-dunder-mifflin-enterprise-full
+    image: bitwardenprod.azurecr.io/shot/seeded-mssql:qa-dunder-mifflin-enterprise-full-latest
 ```
 
 To pull that image, run `az acr login -n bitwardenprod` first. The registry refuses anonymous pulls, and `run.sh` runs `docker compose pull` on every start.
@@ -257,7 +257,7 @@ database:
   type: postgres  # or mariadb, sqlserver
   image:
     repository: bitwardenprod.azurecr.io/shot/seeded-postgres
-    tag: qa-dunder-mifflin-enterprise-full
+    tag: qa-dunder-mifflin-enterprise-full-latest
 ```
 
 ### Self-host chart
@@ -268,7 +268,7 @@ self-host:
   database:
     image:
       name: bitwardenprod.azurecr.io/shot/seeded-mssql
-      tag: qa-dunder-mifflin-enterprise-full
+      tag: qa-dunder-mifflin-enterprise-full-latest
 ```
 
 **Note**: Both charts also need the [core bundle](#core-bundle) unpacked at `/etc/bitwarden/core`. Login fails against seeded data without the data protection key.

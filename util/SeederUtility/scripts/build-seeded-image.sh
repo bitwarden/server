@@ -62,7 +62,6 @@ esac
 # Sanitize preset name for Docker tag + container name: replace dots with dashes
 TAG="${PRESET_NAME//./-}"
 IMAGE_REPO="${REGISTRY}/shot/seeded-${DB_TYPE}"
-IMAGE_STABLE="${IMAGE_REPO}:${TAG}"
 IMAGE_VERSIONED="${IMAGE_REPO}:${TAG}-${GIT_SHA}"
 IMAGE_LATEST="${IMAGE_REPO}:${TAG}-latest"
 
@@ -85,7 +84,6 @@ trap cleanup EXIT
 PRESET_CATEGORY="${PRESET_NAME%%.*}"
 
 echo "==> Building seeded ${DB_TYPE} image for preset: ${PRESET_NAME}"
-echo "    Stable:    ${IMAGE_STABLE}"
 echo "    Versioned: ${IMAGE_VERSIONED}"
 echo "    Latest:    ${IMAGE_LATEST}"
 echo "    Git SHA:   ${GIT_SHA}"
@@ -112,13 +110,11 @@ _docker_build_and_push() {
         --build-arg "PRESET_CATEGORY=${PRESET_CATEGORY}" \
         --build-arg "GIT_SHA=${GIT_SHA}" \
         --build-arg "BUILD_DATE=${BUILD_DATE}" \
-        -t "${IMAGE_STABLE}" \
         -t "${IMAGE_VERSIONED}" \
         -t "${IMAGE_LATEST}" \
         "${WORK_DIR}" \
         --load
 
-    echo "==> Built: ${IMAGE_STABLE}"
     echo "==> Built: ${IMAGE_VERSIONED}"
     echo "==> Built: ${IMAGE_LATEST}"
 
@@ -126,15 +122,13 @@ _docker_build_and_push() {
         # Caller is responsible for registry auth (e.g. `az acr login` in CI or
         # locally) before invoking with PUSH=true.
         echo "==> Pushing images"
-        docker push "${IMAGE_STABLE}"
         docker push "${IMAGE_VERSIONED}"
         docker push "${IMAGE_LATEST}"
-        echo "==> Pushed: ${IMAGE_STABLE}"
         echo "==> Pushed: ${IMAGE_VERSIONED}"
         echo "==> Pushed: ${IMAGE_LATEST}"
 
         # free up disk after push
-        docker rmi "${IMAGE_STABLE}" "${IMAGE_VERSIONED}" "${IMAGE_LATEST}" >/dev/null 2>&1 || true
+        docker rmi "${IMAGE_VERSIONED}" "${IMAGE_LATEST}" >/dev/null 2>&1 || true
     fi
 }
 
