@@ -157,7 +157,7 @@ public class PreviewOrganizationTaxCommand(
 
             options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
-                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic },
                 Items = items
             };
 
