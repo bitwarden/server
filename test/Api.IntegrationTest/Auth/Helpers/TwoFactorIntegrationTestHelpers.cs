@@ -6,7 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 
-namespace Bit.Api.IntegrationTest.Controllers.TwoFactor;
+namespace Bit.Api.IntegrationTest.Auth.Helpers;
 
 /// <summary>
 /// Shared stateless helpers, JSON fixtures, and HTTP utilities used across the per-provider
