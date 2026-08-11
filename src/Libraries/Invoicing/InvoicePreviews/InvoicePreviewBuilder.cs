@@ -9,14 +9,6 @@ namespace Bit.Invoicing.InvoicePreviews;
 /// <summary>Projects a Stripe invoice or subscription into an <see cref="InvoicePreview"/>. Stripe amounts are cents; every projected amount is dollars.</summary>
 internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logger)
 {
-    private static readonly HashSet<string> KnownReferences =
-    [
-        StripeConstants.PurchasableReferences.PasswordManagerSeat,
-        StripeConstants.PurchasableReferences.PasswordManagerStorage,
-        StripeConstants.PurchasableReferences.SecretsManagerSeat,
-        StripeConstants.PurchasableReferences.SecretsManagerServiceAccount,
-    ];
-
     internal InvoicePreview Build(Invoice invoice, PlanTierType planTier, PlanCadenceType cadence)
     {
         var positions = new Dictionary<string, InvoicePreviewItem>();
@@ -35,7 +27,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             // Proration status lives on the subscription-item detail; top-level line.Proration is always false here.
             if (line.Parent?.SubscriptionItemDetails?.Proration == true)
             {
-                (reference.StartsWith("pm-", StringComparison.Ordinal) ? passwordManagerProrations : secretsManagerProrations).Add(line);
+                (PurchasableReferences.ProductOf(reference) == ProductType.PasswordManager ? passwordManagerProrations : secretsManagerProrations).Add(line);
                 continue;
             }
 
@@ -120,7 +112,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             logger.LogError("Line has no purchasable reference; skipped. Price={PriceId}", price?.Id ?? "unknown");
             return null;
         }
-        if (!KnownReferences.Contains(reference))
+        if (!PurchasableReferences.IsKnown(reference))
         {
             logger.LogError("Unknown purchasable reference {Reference} on price {PriceId}; skipped.", reference, price?.Id ?? "unknown");
             return null;
