@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Auth.Identity;
+﻿using Bit.Core.Auth.Identity;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
