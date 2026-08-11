@@ -191,10 +191,18 @@ Swap the database in `bwdata/docker/docker-compose.override.yml`, which `run.sh`
 services:
   mssql:
     image: bitwardenprod.azurecr.io/shot/seeded-mssql:qa-dunder-mifflin-enterprise-full
-    pull_policy: never
 ```
 
-`pull_policy: never` applies to images loaded from a CI artifact. `run.sh` runs `docker compose pull` on start, and the tag names a registry the artifact was never pushed to, so the pull fails without it. Drop it once you are pulling an image that really is in the registry, or compose will keep using a stale local copy.
+To pull that image, run `az acr login -n bitwardenprod` first. The registry refuses anonymous pulls, and `run.sh` runs `docker compose pull` on every start.
+
+An image loaded from a CI artifact also needs `pull_policy: never`, because the tag names a registry it was never pushed to and the pull fails without it:
+
+```yaml
+services:
+  mssql:
+    image: bitwardenprod.azurecr.io/shot/seeded-mssql:qa-dunder-mifflin-enterprise-full-abc1234
+    pull_policy: never
+```
 
 Unpack the bundle, then start:
 
@@ -208,6 +216,8 @@ Log in at the URL the installer prints, using the preset's owner account.
 ### Match the app version to the image
 
 An image carries the schema from the commit it was built at, including stored procedures. `bitwarden.sh` pins a released core version, so an image built from `main` can be missing procedures that release still calls, and login fails with `Could not find stored procedure`. Build from the release branch the deployment runs, or pin the app images to a tag built from the same commit.
+
+Rule out the cheaper cause first. SQL Server has no arm64 build, so on Apple Silicon it runs emulated and can hit an assertion failure that leaves it reporting existing procedures as missing. Run `docker restart bitwarden-mssql` and try again before chasing a version mismatch.
 
 ## Environment Variables
 
