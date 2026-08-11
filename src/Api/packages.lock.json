@@ -1271,7 +1271,7 @@
       "invoicing": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )"
+          "Core": "[2026.8.0, )"
         }
       },
       "organizationauthorization": {
@@ -1319,7 +1319,7 @@
       "subscriptions.organization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "ExceptionHandling": "[0.0.1, )",
           "Invoicing": "[0.0.1, )"
         }
@@ -1327,7 +1327,7 @@
       "subscriptions.user": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "ExceptionHandling": "[0.0.1, )",
           "Invoicing": "[0.0.1, )"
         }
