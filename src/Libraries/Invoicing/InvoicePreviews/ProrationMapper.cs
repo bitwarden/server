@@ -22,17 +22,9 @@ internal static class ProrationMapper
             Charge = chargeCents / 100m,
             Credit = creditCents / 100m,
             Total = netCents / 100m,
-            Tax = AllocateTax(netCents, invoice),
+            Tax = lines.SelectMany(line => line.Taxes ?? []).Sum(tax => tax.Amount) / 100m,
             Months = MonthsRemaining(lines, invoice),
         };
-    }
-
-    private static decimal AllocateTax(long netCents, Invoice invoice)
-    {
-        var totalTaxCents = invoice.TotalTaxes?.Sum(tax => tax.Amount) ?? 0;
-        return totalTaxCents == 0 || invoice.Total == 0
-            ? 0m
-            : totalTaxCents * (netCents / (decimal)invoice.Total) / 100m;
     }
 
     private static int MonthsRemaining(IReadOnlyList<InvoiceLineItem> lines, Invoice invoice)

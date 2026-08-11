@@ -6,10 +6,11 @@ namespace Bit.Invoicing.Test;
 
 public class ProrationMapperTests
 {
-    private static InvoiceLineItem Line(long amountCents, DateTime? periodEnd = null) => new()
+    private static InvoiceLineItem Line(long amountCents, DateTime? periodEnd = null, long taxCents = 0) => new()
     {
         Amount = amountCents,
         Period = periodEnd is null ? null : new InvoiceLineItemPeriod { End = periodEnd.Value },
+        Taxes = taxCents == 0 ? null : [new InvoiceLineItemTax { Amount = taxCents }],
     };
 
     private static Invoice InvoiceWith(long totalCents, long totalTaxCents, DateTime periodEnd) => new()
@@ -44,18 +45,19 @@ public class ProrationMapperTests
     }
 
     [Fact]
-    public void Summarize_AllocatesTax_ProportionalToNetOverInvoiceTotal()
+    public void Summarize_Tax_SumsPerLineTaxes_InDollars()
     {
-        // net 3_582 of total 11_982; tax 1_207 -> 1207 * (3582/11982) / 100 = 3.6086...
-        var invoice = InvoiceWith(totalCents: 11_982, totalTaxCents: 1_207, periodEnd: new DateTime(2027, 1, 1));
-        var result = ProrationMapper.Summarize([Line(7_355), Line(-3_773)], invoice)!;
-        Assert.Equal(1207m * (3582m / 11982m) / 100m, result.Tax);
+        // charge line tax 736, credit line tax -377 -> (736 + -377) / 100 = 3.59
+        var invoice = InvoiceWith(totalCents: 11_982, totalTaxCents: 0, periodEnd: new DateTime(2027, 1, 1));
+        var result = ProrationMapper.Summarize([Line(7_355, taxCents: 736), Line(-3_773, taxCents: -377)], invoice)!;
+        Assert.Equal(3.59m, result.Tax);
     }
 
     [Fact]
-    public void Summarize_ZeroInvoiceTotal_YieldsZeroTax()
+    public void Summarize_LinesWithoutPerLineTaxes_YieldZeroTax()
     {
-        var invoice = InvoiceWith(totalCents: 0, totalTaxCents: 1_207, periodEnd: new DateTime(2027, 1, 1));
+        // invoice carries tax, but the proration lines have none -> bucket tax is 0 (no allocation from the invoice total)
+        var invoice = InvoiceWith(totalCents: 11_982, totalTaxCents: 1_207, periodEnd: new DateTime(2027, 1, 1));
         var result = ProrationMapper.Summarize([Line(3_582)], invoice)!;
         Assert.Equal(0m, result.Tax);
     }
