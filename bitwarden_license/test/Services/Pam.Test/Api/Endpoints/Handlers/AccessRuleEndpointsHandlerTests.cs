@@ -123,16 +123,17 @@ public class AccessRuleEndpointsHandlerTests
                 model.Collections);
     }
 
+    /// <summary>
+    /// The route's organization is what scopes the delete — the command rejects an ID belonging to any other.
+    /// </summary>
     [Theory, BitAutoData]
     public async Task Delete_DeletesWithinTheRouteOrganization(
-        Guid organizationId, Guid id, Guid userId, SutProvider<AccessRuleEndpointsHandler> sutProvider)
+        Guid organizationId, Guid id, SutProvider<AccessRuleEndpointsHandler> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-
         await sutProvider.Sut.Delete(organizationId, id);
 
         await sutProvider.GetDependency<IDeleteAccessRuleCommand>().Received(1)
-            .DeleteAsync(organizationId, id, userId);
+            .DeleteAsync(organizationId, id);
     }
 
     private static AccessRuleRequestModel RequestModel() => new()

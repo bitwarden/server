@@ -13,7 +13,7 @@ public class DeleteAccessRuleCommand : IDeleteAccessRuleCommand
         _repository = repository;
     }
 
-    public async Task DeleteAsync(Guid organizationId, Guid id, Guid? deletedBy)
+    public async Task DeleteAsync(Guid organizationId, Guid id)
     {
         var existing = await _repository.GetByIdAsync(id);
         if (existing is null || existing.OrganizationId != organizationId)

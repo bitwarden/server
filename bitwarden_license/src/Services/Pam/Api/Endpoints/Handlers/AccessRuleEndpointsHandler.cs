@@ -60,6 +60,6 @@ public class AccessRuleEndpointsHandler(
 
     public async Task Delete(Guid orgId, Guid id)
     {
-        await deleteCommand.DeleteAsync(orgId, id, currentContext.UserId);
+        await deleteCommand.DeleteAsync(orgId, id);
     }
 }

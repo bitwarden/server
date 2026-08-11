@@ -14,13 +14,13 @@ public class DeleteAccessRuleCommandTests
 {
     [Theory, BitAutoData]
     public async Task DeleteAsync_HappyPath_HardDeletes(
-        AccessRule existing, Guid deletedBy, SutProvider<DeleteAccessRuleCommand> sutProvider)
+        AccessRule existing, SutProvider<DeleteAccessRuleCommand> sutProvider)
     {
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetByIdAsync(existing.Id)
             .Returns(existing);
 
-        await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id, deletedBy);
+        await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id);
 
         await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
             .DeleteAsync(existing);
@@ -35,7 +35,7 @@ public class DeleteAccessRuleCommandTests
             .Returns((AccessRule?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), Guid.NewGuid()));
         await sutProvider.GetDependency<IAccessRuleRepository>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }
@@ -49,7 +49,7 @@ public class DeleteAccessRuleCommandTests
             .Returns(existing);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), existing.Id, Guid.NewGuid()));
+            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), existing.Id));
         await sutProvider.GetDependency<IAccessRuleRepository>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }
