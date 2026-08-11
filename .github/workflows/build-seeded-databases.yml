@@ -211,20 +211,17 @@ jobs:
           {
             echo "### Seeded images for \`${SHA_SHORT}\`"
             echo ""
-            echo "| Preset | Database | Result | Image |"
-            echo "| --- | --- | --- | --- |"
+            echo "| Preset | Database | Image |"
+            echo "| --- | --- | --- |"
             while read -r db; do
               while read -r preset; do
                 tag="${preset//./-}"
                 conclusion=$(printf '%s\n' "${results}" \
                   | awk -F'\t' -v name="${db} / ${preset}" '$1 == name { print $2; exit }')
-                case "${conclusion}" in
-                  success) mark="pass" ;;
-                  failure) mark="FAIL" ;;
-                  "")      mark="not run" ;;
-                  *)       mark="${conclusion}" ;;
-                esac
-                echo "| ${preset} | ${db} | ${mark} | \`${_AZ_REGISTRY}/shot/seeded-${db}:${tag}-${SHA_SHORT}\` |"
+                if [ "${conclusion}" != "success" ]; then
+                  continue
+                fi
+                echo "| ${preset} | ${db} | \`${_AZ_REGISTRY}/shot/seeded-${db}:${tag}-${SHA_SHORT}\` |"
               done < <(echo "${PRESETS}" | jq -r '.[]')
             done < <(echo "${DATABASES}" | jq -r '.[]')
             echo ""
