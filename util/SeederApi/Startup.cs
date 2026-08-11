@@ -93,6 +93,7 @@ public class Startup
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllerRoute(name: "default", pattern: "{controller=Seed}/{action=Index}/{id?}");
+            endpoints.MapVersionEndpoint();
         });
     }
 }

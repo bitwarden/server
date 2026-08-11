@@ -1322,7 +1322,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.7.2, )"
+          "HttpExtensions": "[2026.8.0, )"
         }
       },
       "httpextensions": {
@@ -1331,8 +1331,15 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
-          "Dapper": "[2.1.66, 2.1.66]"
+          "Core": "[2026.8.0, )",
+          "Dapper": "[2.1.66, 2.1.66]",
+          "Pam.Domain": "[2026.8.0, )"
+        }
+      },
+      "pam.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Data": "[0.0.1, )"
         }
       },
       "serilogfilelogging": {

@@ -25,6 +25,7 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Infrastructure.Dapper.SecretsManager.Repositories;
 using Bit.Infrastructure.Dapper.Tools.Repositories;
 using Bit.Infrastructure.Dapper.Vault.Repositories;
+using Bit.Pam.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.Dapper;
@@ -54,6 +55,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
         services.AddSingleton<IOrganizationInviteLinkRepository, OrganizationInviteLinkRepository>();
+        services.AddSingleton<IAccessRuleRepository, Pam.Repositories.AccessRuleRepository>();
         services.AddSingleton<IPlayItemRepository, PlayItemRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
