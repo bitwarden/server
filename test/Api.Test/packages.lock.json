@@ -1938,7 +1938,7 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.8.1, )",
-          "HttpExtensions": "[2026.8.1, )",
+          "ExceptionHandling": "[0.0.1, )",
           "Invoicing": "[0.0.1, )"
         }
       },
@@ -1946,7 +1946,7 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.8.1, )",
-          "HttpExtensions": "[2026.8.1, )",
+          "ExceptionHandling": "[0.0.1, )",
           "Invoicing": "[0.0.1, )"
         }
       }

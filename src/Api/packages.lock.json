@@ -1320,7 +1320,7 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.7.2, )",
-          "HttpExtensions": "[2026.7.2, )",
+          "ExceptionHandling": "[0.0.1, )",
           "Invoicing": "[0.0.1, )"
         }
       },
@@ -1328,7 +1328,7 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.7.2, )",
-          "HttpExtensions": "[2026.7.2, )",
+          "ExceptionHandling": "[0.0.1, )",
           "Invoicing": "[0.0.1, )"
         }
       }
