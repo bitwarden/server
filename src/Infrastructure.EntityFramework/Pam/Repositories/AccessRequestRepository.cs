@@ -253,21 +253,25 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         // The caller has already verified (and the application enforces) that the request is still Pending; the
         // WHERE guard keeps the write idempotent under a race so a second approver can't move an already-resolved
-        // request. The decision is inserted unconditionally, matching the stored procedure (no @@ROWCOUNT guard).
-        await dbContext.AccessRequests
+        // request. The decision is recorded only when the transition actually happened, so a losing approver's
+        // verdict is never appended to a request they did not resolve.
+        var rowsAffected = await dbContext.AccessRequests
             .Where(r => r.Id == request.Id && r.Status == AccessRequestStatus.Pending)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(r => r.Status, status)
                 .SetProperty(r => r.ResolvedDate, now));
 
-        var decisionEntity = Mapper.Map<EfDecision>(decision);
-        decisionEntity.DeciderKind = AccessDeciderKind.Human;
-        decisionEntity.ConditionKind = null;
-        decisionEntity.EvaluationContext = null;
-        decisionEntity.CreationDate = now;
+        if (rowsAffected > 0)
+        {
+            var decisionEntity = Mapper.Map<EfDecision>(decision);
+            decisionEntity.DeciderKind = AccessDeciderKind.Human;
+            decisionEntity.ConditionKind = null;
+            decisionEntity.EvaluationContext = null;
+            decisionEntity.CreationDate = now;
 
-        await dbContext.AccessDecisions.AddAsync(decisionEntity);
-        await dbContext.SaveChangesAsync();
+            await dbContext.AccessDecisions.AddAsync(decisionEntity);
+            await dbContext.SaveChangesAsync();
+        }
 
         await transaction.CommitAsync();
     }
@@ -373,7 +377,11 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         requestEntity.CreationDate = now;
         requestEntity.ResolvedDate = now;
 
+        // The automatic decision belongs to the extension request being created, so its request id is derived from
+        // that request rather than trusted from the caller's copy — matching the stored procedure, which reuses its
+        // @AccessRequestId for both inserts.
         var decisionEntity = Mapper.Map<EfDecision>(decision);
+        decisionEntity.AccessRequestId = requestEntity.Id;
         decisionEntity.DeciderKind = AccessDeciderKind.Automatic;
         decisionEntity.ApproverId = null;
         decisionEntity.ConditionKind = null;

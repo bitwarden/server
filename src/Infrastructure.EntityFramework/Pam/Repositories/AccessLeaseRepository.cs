@@ -199,24 +199,35 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         // The reason has no dedicated column, so it is preserved as a human AccessDecision (Deny) against the
-        // lease's originating request, keeping the audit trail without a schema change.
-        await dbContext.AccessLeases
+        // lease's originating request, keeping the audit trail without a schema change. The request id is read from
+        // the lease row rather than trusted from the caller's copy, matching the stored procedure's OUTPUT clause.
+        var accessRequestId = await dbContext.AccessLeases
+            .Where(l => l.Id == lease.Id)
+            .Select(l => l.AccessRequestId)
+            .FirstOrDefaultAsync();
+
+        // The decision is recorded only when the transition actually happened, so a repeat or losing revoke never
+        // appends a Deny verdict for a lease it did not end.
+        var rowsAffected = await dbContext.AccessLeases
             .Where(l => l.Id == lease.Id && l.Status == AccessLeaseStatus.Active)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(l => l.Status, endStatus)
                 .SetProperty(l => l.RevokedDate, now)
                 .SetProperty(l => l.RevokedBy, auditDecision.ApproverId));
 
-        var decisionEntity = Mapper.Map<EfDecision>(auditDecision);
-        decisionEntity.AccessRequestId = lease.AccessRequestId;
-        decisionEntity.DeciderKind = AccessDeciderKind.Human;
-        decisionEntity.ConditionKind = null;
-        decisionEntity.Verdict = AccessDecisionVerdict.Deny;
-        decisionEntity.EvaluationContext = null;
-        decisionEntity.CreationDate = now;
+        if (rowsAffected > 0)
+        {
+            var decisionEntity = Mapper.Map<EfDecision>(auditDecision);
+            decisionEntity.AccessRequestId = accessRequestId;
+            decisionEntity.DeciderKind = AccessDeciderKind.Human;
+            decisionEntity.ConditionKind = null;
+            decisionEntity.Verdict = AccessDecisionVerdict.Deny;
+            decisionEntity.EvaluationContext = null;
+            decisionEntity.CreationDate = now;
 
-        await dbContext.AccessDecisions.AddAsync(decisionEntity);
-        await dbContext.SaveChangesAsync();
+            await dbContext.AccessDecisions.AddAsync(decisionEntity);
+            await dbContext.SaveChangesAsync();
+        }
 
         await transaction.CommitAsync();
     }

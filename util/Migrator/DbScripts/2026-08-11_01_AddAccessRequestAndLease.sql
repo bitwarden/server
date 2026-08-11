@@ -233,15 +233,13 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- A request produces at most one lease ([IX_AccessLease_AccessRequestId] is unique); TOP 1 is belt and braces.
-    SELECT TOP 1
+    -- A request produces at most one lease, enforced by the unique [IX_AccessLease_AccessRequestId].
+    SELECT
         *
     FROM
         [dbo].[AccessLease]
     WHERE
         [AccessRequestId] = @AccessRequestId
-    ORDER BY
-        [CreationDate] DESC
 END
 GO
 
@@ -337,7 +335,6 @@ GO
 -- AccessLease_Revoke
 CREATE OR ALTER PROCEDURE [dbo].[AccessLease_Revoke]
     @AccessLeaseId UNIQUEIDENTIFIER,
-    @AccessRequestId UNIQUEIDENTIFIER,
     @Status TINYINT,
     @RevokedBy UNIQUEIDENTIFIER,
     @AccessDecisionId UNIQUEIDENTIFIER,
@@ -346,18 +343,28 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessLease_Revoke]
 AS
 BEGIN
     SET NOCOUNT ON
+    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
+    -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
+    SET XACT_ABORT ON
 
     -- Atomically end an active lease and capture who/why. @Status is the end state: 2 (Revoked) when an operator ended
     -- it, 3 (Cancelled) when the holder ended their own; RevokedDate/RevokedBy record when/who either way. The reason
     -- has no dedicated column, so it is preserved as a human AccessDecision (Deny) against the lease's originating
     -- request, keeping the audit trail without a schema change. The WHERE guard keeps the end idempotent if two
     -- callers race.
+    --
+    -- OUTPUT captures the ended lease's own AccessRequestId, which does double duty: the decision is written only when
+    -- the transition actually happened (a repeat revoke ends nothing and appends nothing), and it is written against
+    -- the request that lease actually came from rather than one supplied by the caller.
+    DECLARE @Ended TABLE ([AccessRequestId] UNIQUEIDENTIFIER)
+
     BEGIN TRANSACTION AccessLease_Revoke
 
     UPDATE [dbo].[AccessLease]
     SET [Status] = @Status,
         [RevokedDate] = @Now,
         [RevokedBy] = @RevokedBy
+    OUTPUT INSERTED.[AccessRequestId] INTO @Ended
     WHERE [Id] = @AccessLeaseId AND [Status] = 0 -- Active
 
     INSERT INTO [dbo].[AccessDecision]
@@ -365,11 +372,10 @@ BEGIN
         [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
         [Verdict], [Comment], [EvaluationContext], [CreationDate]
     )
-    VALUES
-    (
-        @AccessDecisionId, @AccessRequestId, 1 /* Human */, @RevokedBy, NULL,
+    SELECT
+        @AccessDecisionId, E.[AccessRequestId], 1 /* Human */, @RevokedBy, NULL,
         0 /* Deny */, @Reason, NULL, @Now
-    )
+    FROM @Ended E
 
     COMMIT TRANSACTION AccessLease_Revoke
 END
@@ -408,6 +414,9 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_CancelWithDecision]
 AS
 BEGIN
     SET NOCOUNT ON
+    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
+    -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
+    SET XACT_ABORT ON
 
     -- A managing approver retracts a not-yet-activated request (Pending, or an Approved request the requester has not
     -- activated): transition it to Denied and record the approver's human decision, mirroring
@@ -448,8 +457,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Number of extension requests recorded against the lease. Extensions are always auto-approved, so every such
-    -- request counts toward the governing rule's per-lease maximum.
+    -- Number of extension requests recorded against the lease. A lease may be extended once, so this is 0 or 1; the
+    -- cap itself is enforced in [AccessRequest_CreateApprovedExtension], which counts under the lease lock.
     SELECT COUNT(*)
     FROM [dbo].[AccessRequest]
     WHERE [ExtensionOfLeaseId] = @LeaseId
@@ -612,6 +621,10 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_CreateAutoApproved]
 AS
 BEGIN
     SET NOCOUNT ON
+    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
+    -- only the offending statement, execution falls through to the COMMIT, and the request would be persisted without
+    -- the decision that approved it.
+    SET XACT_ABORT ON
 
     -- Atomically record an auto-approved request and its automatic verdict. No lease is minted here: the requester
     -- activates the approved request later via [AccessLease_CreateFromApprovedRequest], exactly like the human path
@@ -723,7 +736,8 @@ BEGIN
     -- A single access request projected for the dedicated request page, returned as two result sets so the caller can
     -- attach the request's full decision list without an N+1:
     --   1) the request row with the denormalized requester identity. A row that produced a lease carries
-    --      ProducedLeaseId/ProducedLeaseStatus so the client can show (and gate) lease actions.
+    --      ProducedLeaseId/ProducedLeaseStatus so the client can show (and gate) lease actions; a request produces at
+    --      most one lease ([IX_AccessLease_AccessRequestId] is unique), so that join adds at most one row.
     --   2) every decision (human or automatic) for the request, keyed by AccessRequestId and ordered oldest-first;
     --      DeciderKind says which, and a human decision's identity is denormalized from [User].
     -- Authorization (requester or managing approver) is enforced by the caller, not this read.
@@ -747,12 +761,7 @@ BEGIN
         U.[Email] AS [RequesterEmail]
     FROM [dbo].[AccessRequest] LR
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
-    OUTER APPLY (
-        SELECT TOP 1 L.[Id], L.[Status]
-        FROM [dbo].[AccessLease] L
-        WHERE L.[AccessRequestId] = LR.[Id]
-        ORDER BY L.[CreationDate] DESC
-    ) PL
+    LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = LR.[Id]
     WHERE LR.[Id] = @Id
 
     SELECT
@@ -783,7 +792,8 @@ BEGIN
     -- without an N+1:
     --   1) the resolved requests (anything no longer Pending) created on or after @Since, for the supplied
     --      (caller-manageable) collections, with the denormalized requester identity. Rows that produced a lease carry
-    --      ProducedLeaseId/ProducedLeaseStatus so the client can target (and gate) the Revoke action.
+    --      ProducedLeaseId/ProducedLeaseStatus so the client can target (and gate) the Revoke action; a request
+    --      produces at most one lease ([IX_AccessLease_AccessRequestId] is unique), so that join adds at most one row.
     --   2) every decision (human or automatic) for those requests, keyed by AccessRequestId and ordered oldest-first;
     --      DeciderKind says which, and a human decision's identity is denormalized from [User].
     SELECT
@@ -807,12 +817,7 @@ BEGIN
     FROM [dbo].[AccessRequest] LR
     INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
-    OUTER APPLY (
-        SELECT TOP 1 L.[Id], L.[Status]
-        FROM [dbo].[AccessLease] L
-        WHERE L.[AccessRequestId] = LR.[Id]
-        ORDER BY L.[CreationDate] DESC
-    ) PL
+    LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = LR.[Id]
     WHERE LR.[Status] <> 0 -- not Pending
         AND LR.[CreationDate] >= @Since
 
@@ -845,7 +850,8 @@ BEGIN
     -- The approver inbox: pending requests for the supplied (caller-manageable) collections, joined with the
     -- denormalized requester identity the client needs so it avoids an N+1. A pending request has not been decided by
     -- anyone yet, so it carries no approvers (the caller leaves the request's approvers list empty); only the resolved
-    -- reads return a second decision result set.
+    -- reads return a second decision result set. ProducedLease is joined for shape parity with the other request
+    -- projections (and the EF read) -- a lease is only ever minted from an Approved request, so it is always NULL here.
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -867,12 +873,7 @@ BEGIN
     FROM [dbo].[AccessRequest] LR
     INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
-    OUTER APPLY (
-        SELECT TOP 1 L.[Id], L.[Status]
-        FROM [dbo].[AccessLease] L
-        WHERE L.[AccessRequestId] = LR.[Id]
-        ORDER BY L.[CreationDate] DESC
-    ) PL
+    LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = LR.[Id]
     WHERE LR.[Status] = 0 -- Pending
 END
 GO
@@ -889,10 +890,23 @@ BEGIN
     --   1) the caller's requests (TOP 250 most recent), all statuses. Unlike the approver-inbox reads this is a
     --      caller-scoped self-read, so the cipher/collection/requester display-name joins are intentionally omitted
     --      (those names come from the caller's local vault, and the requester is the caller).
-    --   2) every decision (human or automatic) on the caller's requests, keyed by AccessRequestId and ordered
-    --      oldest-first; DeciderKind says which, and a human decision's identity is denormalized from [User] -- the
-    --      requester has no other way to name who decided their request.
-    SELECT TOP (250)
+    --   2) every decision (human or automatic) on those requests, keyed by AccessRequestId and ordered oldest-first;
+    --      DeciderKind says which, and a human decision's identity is denormalized from [User] -- the requester has no
+    --      other way to name who decided their request.
+    --
+    -- The page of ids is materialized first so both result sets are bounded by the same 250 rows. Selecting decisions
+    -- straight from [RequesterId] would return the caller's entire decision history for the caller to then discard
+    -- everything outside the page.
+    DECLARE @RequestIds TABLE ([Id] UNIQUEIDENTIFIER PRIMARY KEY)
+
+    INSERT INTO @RequestIds ([Id])
+    SELECT TOP (250) [Id]
+    FROM [dbo].[AccessRequest]
+    WHERE [RequesterId] = @RequesterId
+    ORDER BY [CreationDate] DESC
+
+    -- A request produces at most one lease ([IX_AccessLease_AccessRequestId] is unique), so this joins at most one row.
+    SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
         LR.[OrganizationId],
@@ -909,13 +923,8 @@ BEGIN
         PL.[Id] AS [ProducedLeaseId],
         PL.[Status] AS [ProducedLeaseStatus]
     FROM [dbo].[AccessRequest] LR
-    OUTER APPLY (
-        SELECT TOP 1 L.[Id], L.[Status]
-        FROM [dbo].[AccessLease] L
-        WHERE L.[AccessRequestId] = LR.[Id]
-        ORDER BY L.[CreationDate] DESC
-    ) PL
-    WHERE LR.[RequesterId] = @RequesterId
+    INNER JOIN @RequestIds RI ON RI.[Id] = LR.[Id]
+    LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = LR.[Id]
     ORDER BY LR.[CreationDate] DESC
 
     SELECT
@@ -928,9 +937,8 @@ BEGIN
         AD.[Verdict] AS [Verdict],
         AD.[CreationDate] AS [DecidedAt]
     FROM [dbo].[AccessDecision] AD
-    INNER JOIN [dbo].[AccessRequest] LR ON LR.[Id] = AD.[AccessRequestId]
+    INNER JOIN @RequestIds RI ON RI.[Id] = AD.[AccessRequestId]
     LEFT JOIN [dbo].[User] AU ON AU.[Id] = AD.[ApproverId]
-    WHERE LR.[RequesterId] = @RequesterId
     ORDER BY AD.[AccessRequestId], AD.[CreationDate] ASC
 END
 GO
@@ -947,10 +955,15 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ResolveWithDecision]
 AS
 BEGIN
     SET NOCOUNT ON
+    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
+    -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
+    SET XACT_ABORT ON
 
     -- Atomically resolve a pending request and record the human approver's decision. The caller has already verified
     -- (and the application enforces) that the request is still Pending; the WHERE guard keeps the write idempotent
-    -- under a race so a second approver can't move an already-resolved request.
+    -- under a race so a second approver can't move an already-resolved request. The decision is recorded only when the
+    -- transition actually happened (@@ROWCOUNT > 0), so a losing approver's verdict is never appended to a request
+    -- they did not resolve -- which would leave the decision log contradicting the request's status.
     --
     -- Approval does not mint the lease: the requester activates the approved request later via
     -- [AccessLease_CreateFromApprovedRequest]. The automatic path ([AccessRequest_CreateAutoApproved]) records the
@@ -962,16 +975,19 @@ BEGIN
         [ResolvedDate] = @Now
     WHERE [Id] = @AccessRequestId AND [Status] = 0 -- Pending
 
-    INSERT INTO [dbo].[AccessDecision]
-    (
-        [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
-        [Verdict], [Comment], [EvaluationContext], [CreationDate]
-    )
-    VALUES
-    (
-        @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
-        @Verdict, @Comment, NULL, @Now
-    )
+    IF @@ROWCOUNT > 0
+    BEGIN
+        INSERT INTO [dbo].[AccessDecision]
+        (
+            [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
+            [Verdict], [Comment], [EvaluationContext], [CreationDate]
+        )
+        VALUES
+        (
+            @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
+            @Verdict, @Comment, NULL, @Now
+        )
+    END
 
     COMMIT TRANSACTION AccessRequest_Resolve
 END
