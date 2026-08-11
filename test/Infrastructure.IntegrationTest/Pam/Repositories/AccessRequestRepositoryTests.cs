@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Bit.Infrastructure.IntegrationTest.Comparers;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
@@ -190,7 +191,9 @@ public class AccessRequestRepositoryTests
         // Verdict and decision timestamp come straight from the AccessDecision row, so the contract exposes what each
         // approver decided and when.
         Assert.Equal(AccessDecisionVerdict.Approve, recorded.Verdict);
-        Assert.Equal(now, recorded.DecidedAt);
+        // Timestamps round-trip within a couple of milliseconds rather than exactly: Dapper binds DateTime as
+        // DbType.DateTime (3.33 ms) on the MSSQL path, and the EF providers store microseconds.
+        Assert.Equal(now, recorded.DecidedAt, LaxDateTimeComparer.Default);
         // The approver id here belongs to no User row, so the identity join yields null name/email and the client
         // falls back to the id. Identity resolution against a real User is covered by the My Requests read test.
         Assert.Null(recorded.Name);
@@ -395,7 +398,7 @@ public class AccessRequestRepositoryTests
         Assert.Equal(approver.Email, resolver.Email);
         Assert.Equal("not now", resolver.Comment);
         Assert.Equal(AccessDecisionVerdict.Deny, resolver.Verdict);
-        Assert.Equal(now, resolver.DecidedAt);
+        Assert.Equal(now, resolver.DecidedAt, LaxDateTimeComparer.Default);
     }
 
     [DatabaseTheory, DatabaseData]

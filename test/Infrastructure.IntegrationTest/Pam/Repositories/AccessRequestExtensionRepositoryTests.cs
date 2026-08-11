@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Bit.Infrastructure.IntegrationTest.Comparers;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
@@ -34,7 +35,9 @@ public class AccessRequestExtensionRepositoryTests
         // The parent lease's end is pushed out in place; no new lease is minted.
         var updatedLease = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.NotNull(updatedLease);
-        Assert.Equal(newNotAfter, updatedLease!.NotAfter);
+        // Timestamps round-trip within a couple of milliseconds rather than exactly: Dapper binds DateTime as
+        // DbType.DateTime (3.33 ms) on the MSSQL path, and the EF providers store microseconds.
+        Assert.Equal(newNotAfter, updatedLease!.NotAfter, LaxDateTimeComparer.Default);
         Assert.Equal(AccessLeaseStatus.Active, updatedLease.Status);
 
         // The extension is recorded as an approved request pointing at the parent lease.
@@ -71,7 +74,7 @@ public class AccessRequestExtensionRepositoryTests
         Assert.Equal(AccessLeaseExtendOutcome.AlreadyExtended, rejected);
         Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
         var updatedLease = await accessLeaseRepository.GetByIdAsync(lease.Id);
-        Assert.Equal(firstNotAfter, updatedLease!.NotAfter);
+        Assert.Equal(firstNotAfter, updatedLease!.NotAfter, LaxDateTimeComparer.Default);
     }
 
     [DatabaseTheory, DatabaseData]
