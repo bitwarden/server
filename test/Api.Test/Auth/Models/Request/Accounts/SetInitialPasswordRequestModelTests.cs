@@ -385,11 +385,13 @@ public class SetInitialPasswordRequestModelTests
             r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.Keys)));
     }
 
+    // Modern (MPAD/MPUD) and legacy (MasterPasswordHash/Key/Kdf) fields are mutually exclusive.
+    // Mixing them is rejected.
     [Theory]
     [BitAutoData]
-    public void Validate_WithMpadAndLegacyMasterPasswordHash_Differing_ReturnsValidationError(string orgIdentifier)
+    public void Validate_WithModernAndLegacyFields_ReturnsValidationError(string orgIdentifier)
     {
-        // Arrange — both MPAD and legacy MasterPasswordHash present with different values
+        // Arrange — MPAD + legacy MasterPasswordHash (mixing shapes)
         var model = new SetInitialPasswordRequestModel
         {
             OrgIdentifier = orgIdentifier,
@@ -401,7 +403,7 @@ public class SetInitialPasswordRequestModelTests
                     KdfType = KdfType.PBKDF2_SHA256,
                     Iterations = 600000
                 },
-                MasterPasswordAuthenticationHash = "differentHash",
+                MasterPasswordAuthenticationHash = "authHash",
                 Salt = "salt"
             },
             MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
@@ -422,56 +424,14 @@ public class SetInitialPasswordRequestModelTests
         // Assert
         Assert.Contains(results, r =>
             r.ErrorMessage != null &&
-            r.ErrorMessage.Contains("both present but differ") &&
-            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.MasterPasswordAuthentication)) &&
-            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.MasterPasswordHash)));
+            r.ErrorMessage.Contains("Cannot mix modern"));
     }
 
     [Theory]
     [BitAutoData]
-    public void Validate_WithMpadAndLegacyMasterPasswordHash_Matching_ReturnsNoMismatchError(string orgIdentifier)
+    public void Validate_WithModernAndLegacyKey_ReturnsValidationError(string orgIdentifier)
     {
-        // Arrange — both present with the same value
-        var model = new SetInitialPasswordRequestModel
-        {
-            OrgIdentifier = orgIdentifier,
-            MasterPasswordHash = "sameHash",
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
-            {
-                Kdf = new KdfRequestModel
-                {
-                    KdfType = KdfType.PBKDF2_SHA256,
-                    Iterations = 600000
-                },
-                MasterPasswordAuthenticationHash = "sameHash",
-                Salt = "salt"
-            },
-            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
-            {
-                Kdf = new KdfRequestModel
-                {
-                    KdfType = KdfType.PBKDF2_SHA256,
-                    Iterations = 600000
-                },
-                MasterKeyWrappedUserKey = "wrappedKey",
-                Salt = "salt"
-            }
-        };
-
-        // Act
-        var results = model.Validate(new ValidationContext(model)).ToList();
-
-        // Assert — no mismatch error (other validation may still pass/fail, but not this rule)
-        Assert.DoesNotContain(results, r =>
-            r.ErrorMessage != null &&
-            r.ErrorMessage.Contains("both present but differ"));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void Validate_WithMpudAndLegacyKey_Differing_ReturnsValidationError(string orgIdentifier)
-    {
-        // Arrange — both MPUD.MasterKeyWrappedUserKey and legacy Key present with different values
+        // Arrange — MPUD + legacy Key (mixing shapes)
         var model = new SetInitialPasswordRequestModel
         {
             OrgIdentifier = orgIdentifier,
@@ -493,7 +453,7 @@ public class SetInitialPasswordRequestModelTests
                     KdfType = KdfType.PBKDF2_SHA256,
                     Iterations = 600000
                 },
-                MasterKeyWrappedUserKey = "differentKey",
+                MasterKeyWrappedUserKey = "wrappedKey",
                 Salt = "salt"
             }
         };
@@ -504,20 +464,18 @@ public class SetInitialPasswordRequestModelTests
         // Assert
         Assert.Contains(results, r =>
             r.ErrorMessage != null &&
-            r.ErrorMessage.Contains("both present but differ") &&
-            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.MasterPasswordUnlock)) &&
-            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.Key)));
+            r.ErrorMessage.Contains("Cannot mix modern"));
     }
 
     [Theory]
     [BitAutoData]
-    public void Validate_WithMpudAndLegacyKey_Matching_ReturnsNoMismatchError(string orgIdentifier)
+    public void Validate_WithModernAndLegacyKdf_ReturnsValidationError(string orgIdentifier)
     {
-        // Arrange — both present with the same value
+        // Arrange — MPAD/MPUD + legacy Kdf (mixing shapes)
         var model = new SetInitialPasswordRequestModel
         {
             OrgIdentifier = orgIdentifier,
-            Key = "sameKey",
+            Kdf = KdfType.PBKDF2_SHA256,
             MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
                 Kdf = new KdfRequestModel
@@ -535,7 +493,7 @@ public class SetInitialPasswordRequestModelTests
                     KdfType = KdfType.PBKDF2_SHA256,
                     Iterations = 600000
                 },
-                MasterKeyWrappedUserKey = "sameKey",
+                MasterKeyWrappedUserKey = "wrappedKey",
                 Salt = "salt"
             }
         };
@@ -543,10 +501,73 @@ public class SetInitialPasswordRequestModelTests
         // Act
         var results = model.Validate(new ValidationContext(model)).ToList();
 
-        // Assert — no mismatch error
+        // Assert
+        Assert.Contains(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("Cannot mix modern"));
+    }
+
+    // Modern-only and legacy-only requests must not trigger the mixed-shape error.
+    [Theory]
+    [BitAutoData]
+    public void Validate_WithModernFieldsOnly_ReturnsNoMixedShapeError(string orgIdentifier)
+    {
+        // Arrange — modern shape only (no legacy fields)
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt"
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterKeyWrappedUserKey = "wrappedKey",
+                Salt = "salt"
+            }
+        };
+
+        // Act
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert
         Assert.DoesNotContain(results, r =>
             r.ErrorMessage != null &&
-            r.ErrorMessage.Contains("both present but differ"));
+            r.ErrorMessage.Contains("Cannot mix modern"));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Validate_WithLegacyFieldsOnly_ReturnsNoMixedShapeError(string orgIdentifier)
+    {
+        // Arrange — legacy shape only (no modern fields)
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            MasterPasswordHash = "hash",
+            Key = "key",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 600000
+        };
+
+        // Act
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert
+        Assert.DoesNotContain(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("Cannot mix modern"));
     }
 
     #endregion
