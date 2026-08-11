@@ -1,5 +1,4 @@
-﻿using Bit.HttpExtensions;
-using Bit.Invoicing;
+﻿using Bit.Invoicing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Subscriptions.User;
@@ -11,10 +10,6 @@ public static class SubscriptionsUserServiceCollectionExtensions
     public static IServiceCollection AddUserSubscriptions(this IServiceCollection services)
     {
         services.AddInvoicing();
-        services.AddUserSubscriptionsOpenApiEndpointDataSource();
         return services;
     }
-
-    private static IServiceCollection AddUserSubscriptionsOpenApiEndpointDataSource(this IServiceCollection services)
-        => services.AddOpenApiEndpointDataSource(endpoints => endpoints.MapUserSubscriptionEndpoints());
 }
