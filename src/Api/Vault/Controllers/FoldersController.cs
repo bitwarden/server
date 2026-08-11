@@ -4,12 +4,14 @@
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -112,6 +114,7 @@ public class FoldersController : Controller
     }
 
     [HttpDelete("")]
+    [RequireFeature(FeatureFlagKeys.VFO1Foundation)]
     public async Task DeleteMany([FromBody] FolderBulkDeleteRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
