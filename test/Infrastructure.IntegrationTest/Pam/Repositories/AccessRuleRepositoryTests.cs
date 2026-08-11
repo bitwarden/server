@@ -2,6 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Bit.Pam.Entities;
+using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Xunit;
@@ -52,6 +53,51 @@ public class AccessRuleRepositoryTests
         var actualCollection = await collectionRepository.GetByIdAsync(collection.Id);
         Assert.NotNull(actualCollection);
         Assert.Null(actualCollection.AccessRuleId);
+    }
+
+    /// <summary>
+    /// A request pins its governing rule in AccessRequest.RuleId, and FK_AccessRequest_AccessRule does not cascade
+    /// (NO ACTION on SQL Server, RESTRICT on the EF providers), so deleting a rule any request has pinned fails
+    /// outright unless the delete path detaches those requests first.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task DeleteAsync_WithPinnedRequests_DetachesRequestsAndDeletesRule(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var rule = await CreateRuleAsync(accessRuleRepository, organization.Id, "Pinned Rule");
+        var now = DateTime.UtcNow;
+
+        var request = await accessRequestRepository.CreateAsync(new AccessRequest
+        {
+            OrganizationId = organization.Id,
+            CollectionId = collection.Id,
+            CipherId = Guid.NewGuid(),
+            RequesterId = Guid.NewGuid(),
+            NotBefore = now,
+            NotAfter = now.AddHours(1),
+            Status = AccessRequestStatus.Pending,
+            CreationDate = now,
+            RuleId = rule.Id,
+        });
+        Assert.Equal(rule.Id, (await accessRequestRepository.GetByIdAsync(request.Id))!.RuleId);
+
+        // Act
+        await accessRuleRepository.DeleteAsync(rule);
+
+        // Assert: the rule is gone and the request survives, detached rather than deleted -- its window and
+        // decision log remain the record of what was granted.
+        Assert.Null(await accessRuleRepository.GetByIdAsync(rule.Id));
+
+        var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
+        Assert.NotNull(persisted);
+        Assert.Null(persisted!.RuleId);
+        Assert.Equal(AccessRequestStatus.Pending, persisted.Status);
     }
 
     /// <summary>
