@@ -30,6 +30,8 @@ dotnet run --project .. -- preset --list --output json
 
 `mysql` and `mariadb` share the same migrations project and seeded data; they differ only in the engine the dump is produced from and restored into.
 
+`sqlite` is local only for now. The workflow's database matrix covers the other four, so no CI run produces a sqlite image.
+
 ### MSSQL Notes
 
 - MSSQL uses file attach (`CREATE DATABASE ... FOR ATTACH`) instead of `.bak` restore. The `.bak` restore approach fails on Kubernetes PVCs due to `ValidateTargetForCreation` errors — a known issue with MSSQL on certain storage backends.
