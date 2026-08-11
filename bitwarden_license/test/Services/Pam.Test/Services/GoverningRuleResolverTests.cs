@@ -125,6 +125,60 @@ public class GoverningRuleResolverTests
     }
 
     [Theory, BitAutoData]
+    public async Task ResolveAsync_ConditionMissingItsKind_FailsSafeToHumanApproval(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // A stored condition with no discriminator cannot be mapped to a kind, and the polymorphic reader reports that
+        // as NotSupportedException rather than JsonException. Unless both are caught it escapes ResolveAsync instead of
+        // taking the fail-safe below, so a document the server cannot interpret would surface as an unhandled
+        // exception rather than routing to an approver.
+        rule.Conditions = """[{"cidrs":["10.0.0.0/8"]}]""";
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.True(result!.RequiresHumanApproval);
+        Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_ConditionWithKindLast_ParsesTheCondition(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // Property order is meaningless in JSON, so a stored document that writes "kind" after the properties it
+        // discriminates has to read back as the condition it names — not fail safe to human approval, which would
+        // route a caller the allowlist auto-approves to an approver instead.
+        rule.Conditions = """[{"cidrs":["10.0.0.0/8"],"kind":"ip_allowlist"}]""";
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.False(result!.RequiresHumanApproval);
+        var ip = Assert.IsType<IpAllowlistCondition>(Assert.Single(result.Conditions));
+        Assert.Equal("10.0.0.0/8", Assert.Single(ip.Cidrs));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_ConditionWithNullCidrs_StillGoverns(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // "cidrs": null parses, so this never reaches Parse's fail-safe: the condition itself has to survive the null
+        // and deny, or the NullReferenceException escapes from inside the engine. The rule still governs — an
+        // allowlist that matches nothing denies, which the auto path surfaces downstream, and a denial is not the
+        // same thing as requiring approval.
+        rule.Conditions = """[{"kind":"ip_allowlist","cidrs":null}]""";
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.False(result!.RequiresHumanApproval);
+        Assert.Empty(Assert.IsType<IpAllowlistCondition>(Assert.Single(result.Conditions)).Cidrs);
+    }
+
+    [Theory, BitAutoData]
     public async Task ResolveAsync_MultipleRules_OldestCreationDateWins(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
         Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)

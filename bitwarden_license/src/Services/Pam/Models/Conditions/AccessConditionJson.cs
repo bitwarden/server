@@ -15,5 +15,13 @@ public static class AccessConditionJson
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true,
+
+        // Property order carries no meaning in JSON, so a document that writes "kind" after the properties it
+        // discriminates is legitimate and a client is free to emit one (anything that canonicalises keys
+        // alphabetically does: "cidrs" sorts before "kind"). Without this, the polymorphic reader demands the
+        // discriminator first and throws NotSupportedException, which is not a JsonException and so escapes the
+        // handling at both call sites. Buffering the object costs nothing at these sizes: the validator caps a
+        // conditions document at ten entries.
+        AllowOutOfOrderMetadataProperties = true,
     };
 }

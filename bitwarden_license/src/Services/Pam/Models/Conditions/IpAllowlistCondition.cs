@@ -14,11 +14,23 @@ namespace Bit.Services.Pam.Models.Conditions;
 /// </remarks>
 public sealed class IpAllowlistCondition : AccessCondition
 {
+    private readonly IReadOnlyList<string> _cidrs = [];
+
     /// <summary>
     /// The allowed source ranges in CIDR notation (e.g. <c>"10.0.0.0/8"</c>). The condition allows when the caller's
     /// IP is in any one of them. At least one required, and each must parse; an empty list denies.
     /// </summary>
-    public IReadOnlyList<string> Cidrs { get; init; } = [];
+    /// <remarks>
+    /// Never null. A <c>"cidrs": null</c> in the document deserializes as a null value, which would otherwise
+    /// replace the empty default and make both members below throw on <c>Count</c> — an unhandled exception in
+    /// place of the loud rejection at write time and the fail-closed deny at evaluation time. Coalescing here
+    /// makes an explicit null behave exactly like an omitted or empty list.
+    /// </remarks>
+    public IReadOnlyList<string> Cidrs
+    {
+        get => _cidrs;
+        init => _cidrs = value ?? [];
+    }
 
     public override AccessEvaluation Evaluate(AccessSignals signals)
     {

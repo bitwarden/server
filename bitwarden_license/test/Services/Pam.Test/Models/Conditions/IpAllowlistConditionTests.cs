@@ -55,6 +55,17 @@ public class IpAllowlistConditionTests
     }
 
     [Fact]
+    public void Evaluate_NullCidrs_DeniesClosed()
+    {
+        // A "cidrs": null in the document deserialises as a null value and would replace the empty default, so the
+        // property coalesces it back. Without that, this denial is a NullReferenceException escaping the engine.
+        var evaluation = new IpAllowlistCondition { Cidrs = null! }.Evaluate(Signals(IPAddress.Parse("10.1.2.3")));
+
+        Assert.Equal(AccessEvaluationOutcome.Deny, evaluation.Outcome);
+        Assert.Equal(DenyReason.NotWithinIpRange, evaluation.Reason);
+    }
+
+    [Fact]
     public void Evaluate_MalformedCidr_DeniesClosed()
     {
         // A present-but-unparseable CIDR matches no address, so a caller with a known IP still fails closed.
@@ -81,6 +92,16 @@ public class IpAllowlistConditionTests
     public void Validate_NoCidrs_IsInvalid()
     {
         var result = new IpAllowlistCondition().Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains("at least one CIDR", result.Error);
+    }
+
+    [Fact]
+    public void Validate_NullCidrs_IsInvalid()
+    {
+        // An explicit null list is rejected the same way an omitted or empty one is, rather than throwing.
+        var result = new IpAllowlistCondition { Cidrs = null! }.Validate();
 
         Assert.False(result.IsValid);
         Assert.Contains("at least one CIDR", result.Error);

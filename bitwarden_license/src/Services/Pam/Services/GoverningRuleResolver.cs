@@ -100,7 +100,11 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         {
             return JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options) ?? FailSafe();
         }
-        catch (JsonException)
+        // NotSupportedException alongside JsonException: the polymorphic reader reports a missing or unreadable
+        // "kind" that way, and it is not a JsonException. Left uncaught it would escape ResolveAsync entirely,
+        // breaking the fail-safe this method exists to provide — a stored document the server cannot interpret has
+        // to route to an approver, not surface as an unhandled exception.
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
             return FailSafe();
         }

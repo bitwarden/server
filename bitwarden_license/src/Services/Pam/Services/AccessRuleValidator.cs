@@ -28,6 +28,13 @@ public sealed class AccessRuleValidator : IAccessRuleValidator
         {
             return AccessRuleValidationResult.Invalid($"Conditions JSON is malformed: {ex.Message}");
         }
+        // The polymorphic reader reports a condition it cannot map to a kind as NotSupportedException, which is not a
+        // JsonException and so escapes as an unhandled exception unless caught here — a 500 for a document the client
+        // could fix. Its message names internal types, so state the requirement instead of relaying it.
+        catch (NotSupportedException)
+        {
+            return AccessRuleValidationResult.Invalid("Each condition must specify a valid 'kind'.");
+        }
 
         if (conditions is null)
         {
