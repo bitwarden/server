@@ -134,15 +134,30 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         {
             if (enforceSingleActiveLease)
             {
-                var conflict = await dbContext.AccessLeases
-                    .AnyAsync(l => l.CipherId == lease.CipherId
-                        && l.Status == AccessLeaseStatus.Active
-                        && l.NotBefore <= now
-                        && l.NotAfter > now);
-                if (conflict)
+                // The cipher is resolved from the request rather than the caller's copy of the lease, matching the
+                // procedure's WHERE [CipherId] = (SELECT [CipherId] FROM [dbo].[AccessRequest] WHERE [Id] = ...).
+                // Otherwise a lease whose CipherId disagrees with its AccessRequestId would be checked for
+                // contention against the wrong cipher and could mint a second concurrent active lease.
+                //
+                // A request that does not exist yields no cipher and the guard is skipped, leaving the precondition
+                // check below to report the failure -- exactly what the procedure's NULL scalar subquery does.
+                var cipherId = await dbContext.AccessRequests
+                    .Where(r => r.Id == lease.AccessRequestId)
+                    .Select(r => (Guid?)r.CipherId)
+                    .FirstOrDefaultAsync();
+
+                if (cipherId is not null)
                 {
-                    await transaction.RollbackAsync();
-                    return AccessLeaseMintOutcome.SingleActiveLeaseConflict;
+                    var conflict = await dbContext.AccessLeases
+                        .AnyAsync(l => l.CipherId == cipherId.Value
+                            && l.Status == AccessLeaseStatus.Active
+                            && l.NotBefore <= now
+                            && l.NotAfter > now);
+                    if (conflict)
+                    {
+                        await transaction.RollbackAsync();
+                        return AccessLeaseMintOutcome.SingleActiveLeaseConflict;
+                    }
                 }
             }
 
@@ -181,11 +196,12 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
 
             return AccessLeaseMintOutcome.Minted;
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException e) when (IsDuplicateKeyException(e))
         {
             // The unique-index backstop ([IX_AccessLease_AccessRequestId]): a concurrent activation won the race
             // after our application-level precondition check passed. Same outcome as the guard catching it -- the
-            // caller re-reads the winner.
+            // caller re-reads the winner. Anything else propagates: on a path that grants access to Vault Data, a
+            // genuine persistence failure must not be reported as a benign outcome.
             await transaction.RollbackAsync();
             return AccessLeaseMintOutcome.PreconditionFailed;
         }
@@ -231,4 +247,27 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
 
         await transaction.CommitAsync();
     }
+
+    /// <summary>
+    /// True when the write failed because a duplicate key was inserted -- here, the unique
+    /// [IX_AccessLease_AccessRequestId] backstop tripping because a concurrent activation minted this request's
+    /// lease first. Deliberately narrow so that any other write failure propagates rather than being reported as a
+    /// benign mint outcome. Mirrors the Dapper counterpart's <c>SqlException.Number is 2601 or 2627</c>.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <c>EntityFrameworkCache.IsDuplicateKeyException</c>, which only recognises primary-key
+    /// violations: the backstop here is a unique <em>index</em>, which reports different codes on SQL Server
+    /// (2601 rather than 2627) and SQLite (2067 rather than 1555).
+    /// </remarks>
+    private static bool IsDuplicateKeyException(DbUpdateException e) => e.InnerException switch
+    {
+        MySqlConnector.MySqlException my => my.ErrorCode == MySqlConnector.MySqlErrorCode.DuplicateKeyEntry,
+        Microsoft.Data.SqlClient.SqlException ms => ms.Errors
+            .Cast<Microsoft.Data.SqlClient.SqlError>()
+            .Any(error => error.Number is 2601 or 2627),
+        Npgsql.PostgresException pg => pg.SqlState == "23505",
+        Microsoft.Data.Sqlite.SqliteException lite => lite.SqliteErrorCode == 19
+            && lite.SqliteExtendedErrorCode is 1555 or 2067,
+        _ => false,
+    };
 }

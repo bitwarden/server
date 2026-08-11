@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
@@ -98,6 +99,95 @@ public class AccessRuleRepositoryTests
         Assert.NotNull(persisted);
         Assert.Null(persisted!.RuleId);
         Assert.Equal(AccessRequestStatus.Pending, persisted.Status);
+    }
+
+    /// <summary>
+    /// Organization cascades to both AccessRequest and AccessLease, while the two reference each other under
+    /// RESTRICT (AccessRequest.ExtensionOfLeaseId and AccessLease.AccessRequestId) and requests additionally pin a
+    /// rule. Whichever cascade a provider fires first is blocked by the other, so this pins that deleting an
+    /// organization holding an extended lease succeeds everywhere rather than depending on cascade order.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task OrganizationDeleteAsync_WithExtendedLease_Succeeds(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var rule = await CreateRuleAsync(accessRuleRepository, organization.Id, "Rule For Extended Lease");
+        var now = DateTime.UtcNow;
+        var requesterId = Guid.NewGuid();
+        var cipherId = Guid.NewGuid();
+
+        // An approved request that pins the rule, activated into a lease...
+        var request = await accessRequestRepository.CreateAsync(new AccessRequest
+        {
+            OrganizationId = organization.Id,
+            CollectionId = collection.Id,
+            CipherId = cipherId,
+            RequesterId = requesterId,
+            NotBefore = now.AddMinutes(-5),
+            NotAfter = now.AddHours(1),
+            Status = AccessRequestStatus.Approved,
+            CreationDate = now,
+            RuleId = rule.Id,
+        });
+
+        var lease = new AccessLease
+        {
+            Id = CombGuid.Generate(),
+            AccessRequestId = request.Id,
+            OrganizationId = organization.Id,
+            CollectionId = collection.Id,
+            CipherId = cipherId,
+            RequesterId = requesterId,
+            Status = AccessLeaseStatus.Active,
+            NotBefore = request.NotBefore,
+            NotAfter = request.NotAfter,
+            CreationDate = now,
+        };
+        Assert.Equal(AccessLeaseMintOutcome.Minted,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now, false));
+
+        // ...and an extension request pointing back at that lease, closing the reference cycle.
+        var extension = new AccessRequest
+        {
+            Id = CombGuid.Generate(),
+            ExtensionOfLeaseId = lease.Id,
+            OrganizationId = organization.Id,
+            CollectionId = collection.Id,
+            CipherId = cipherId,
+            RequesterId = requesterId,
+            NotBefore = lease.NotAfter,
+            NotAfter = lease.NotAfter.AddHours(1),
+            Status = AccessRequestStatus.Approved,
+            CreationDate = now,
+            RuleId = rule.Id,
+        };
+        var extensionDecision = new AccessDecision
+        {
+            Id = CombGuid.Generate(),
+            AccessRequestId = extension.Id,
+            DeciderKind = AccessDeciderKind.Automatic,
+            Verdict = AccessDecisionVerdict.Approve,
+            CreationDate = now,
+        };
+        Assert.Equal(AccessLeaseExtendOutcome.Extended,
+            await accessRequestRepository.CreateApprovedExtensionAsync(extension, extensionDecision, now));
+
+        // Act
+        await organizationRepository.DeleteAsync(organization);
+
+        // Assert: the organization and every PAM row hanging off it is gone.
+        Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
+        Assert.Null(await accessRuleRepository.GetByIdAsync(rule.Id));
+        Assert.Null(await accessLeaseRepository.GetByIdAsync(lease.Id));
+        Assert.Null(await accessRequestRepository.GetByIdAsync(request.Id));
+        Assert.Null(await accessRequestRepository.GetByIdAsync(extension.Id));
     }
 
     /// <summary>
