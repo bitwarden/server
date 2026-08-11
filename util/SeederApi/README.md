@@ -109,6 +109,34 @@ curl -X POST http://localhost:5000/seed \
   }'
 ```
 
+### Seeding a User with Billing Gateway Identity
+
+`SingleUserScene` seeds a standalone user. Beyond `email` and `password`, the request accepts:
+
+- `premium` — when true, marks the account premium (enables 1 GB storage and sets a premium expiration).
+- `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded user resembles a
+  real premium cloud user linked to a Stripe (or other gateway) customer/subscription. Any field left unset leaves the
+  user's existing value unchanged.
+
+Enum fields (`gateway`) must be sent as their **numeric value**. In the example below, `gateway: 0` is `Stripe`.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "SingleUserScene",
+    "arguments": {
+      "email": "premium@example.com",
+      "password": "REPLACE_ME",
+      "premium": true,
+      "gateway": 0,
+      "gatewayCustomerId": "cus_123",
+      "gatewaySubscriptionId": "sub_456"
+    }
+  }'
+```
+
 ### Querying Data
 
 Send a POST request to `/query` to execute read-only queries:

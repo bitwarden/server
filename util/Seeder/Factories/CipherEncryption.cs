@@ -45,14 +45,13 @@ internal static class CipherEncryption
         object data,
         CipherType cipherType,
         Guid? organizationId,
-        Guid? userId,
-        DateTime? deletedDate = null)
+        Guid? userId)
     {
         var dataJson = JsonSerializer.Serialize(data, _serverJsonOptions);
 
         return new Cipher
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organizationId,
             UserId = userId,
             Type = cipherType,
@@ -60,8 +59,7 @@ internal static class CipherEncryption
             Key = encrypted.Key,
             Reprompt = (CipherRepromptType?)encrypted.Reprompt,
             CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
-            DeletedDate = deletedDate
+            RevisionDate = DateTime.UtcNow
         };
     }
 }

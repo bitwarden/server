@@ -25,7 +25,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     private readonly ISendValidationService _sendValidationService;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly IEventService _eventService;
-    private readonly IFeatureService _featureService;
     private readonly ILogger<NonAnonymousSendCommand> _logger;
 
     public NonAnonymousSendCommand(ISendRepository sendRepository,
@@ -34,7 +33,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         ISendValidationService sendValidationService,
         ISendCoreHelperService sendCoreHelperService,
         IEventService eventService,
-        IFeatureService featureService,
         ILogger<NonAnonymousSendCommand> logger)
     {
         _sendRepository = sendRepository;
@@ -43,7 +41,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         _sendValidationService = sendValidationService;
         _sendCoreHelperService = sendCoreHelperService;
         _eventService = eventService;
-        _featureService = featureService;
         _logger = logger;
     }
 
@@ -75,7 +72,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
     private async Task LogSendCreatedEventAsync(Send send)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
+        if (!send.UserId.HasValue)
         {
             return;
         }
@@ -85,7 +82,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
     private async Task LogSendUpdatedEventAsync(Send send)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
+        if (!send.UserId.HasValue)
         {
             return;
         }
@@ -102,7 +99,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
     private async Task LogSendDeletedEventAsync(Send send)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
+        if (!send.UserId.HasValue)
         {
             return;
         }

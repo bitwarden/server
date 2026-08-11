@@ -1,6 +1,11 @@
-﻿using Bit.Api.Billing.Controllers.VNext;
+﻿using System.Reflection;
+using Bit.Api.Billing.Controllers.VNext;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
@@ -8,6 +13,7 @@ using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Subscriptions.Commands;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -24,21 +30,27 @@ public class OrganizationBillingVNextControllerTests
 {
     private readonly IGetChurnMitigationOfferQuery _getChurnMitigationOfferQuery;
     private readonly IRedeemChurnMitigationOfferCommand _redeemChurnMitigationOfferCommand;
+    private readonly IGetAnnualUpgradeOfferQuery _getAnnualUpgradeOfferQuery;
+    private readonly IRedeemAnnualUpgradeOfferCommand _redeemAnnualUpgradeOfferCommand;
     private readonly OrganizationBillingVNextController _sut;
 
     public OrganizationBillingVNextControllerTests()
     {
         _getChurnMitigationOfferQuery = Substitute.For<IGetChurnMitigationOfferQuery>();
         _redeemChurnMitigationOfferCommand = Substitute.For<IRedeemChurnMitigationOfferCommand>();
+        _getAnnualUpgradeOfferQuery = Substitute.For<IGetAnnualUpgradeOfferQuery>();
+        _redeemAnnualUpgradeOfferCommand = Substitute.For<IRedeemAnnualUpgradeOfferCommand>();
 
         _sut = new OrganizationBillingVNextController(
             Substitute.For<ICreateBitPayInvoiceForCreditCommand>(),
+            _getAnnualUpgradeOfferQuery,
             Substitute.For<IGetBillingAddressQuery>(),
             _getChurnMitigationOfferQuery,
             Substitute.For<IGetCreditQuery>(),
             Substitute.For<IGetOrganizationMetadataQuery>(),
             Substitute.For<IGetOrganizationWarningsQuery>(),
             Substitute.For<IGetPaymentMethodQuery>(),
+            _redeemAnnualUpgradeOfferCommand,
             _redeemChurnMitigationOfferCommand,
             Substitute.For<IRestartSubscriptionCommand>(),
             Substitute.For<IUpdateBillingAddressCommand>(),
@@ -128,5 +140,54 @@ public class OrganizationBillingVNextControllerTests
 
         Assert.IsType<Ok<None>>(result);
         await _redeemChurnMitigationOfferCommand.Received(1).Run(organization);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAnnualUpgradeOfferAsync_EligibleOrg_ReturnsOkWithModel(Organization organization)
+    {
+        var offer = new AnnualUpgradeOfferResult(60m, 48m, 12m);
+        _getAnnualUpgradeOfferQuery.Run(organization).Returns(offer);
+
+        var result = await _sut.GetAnnualUpgradeOfferAsync(organization);
+
+        var okResult = Assert.IsType<Ok<AnnualUpgradeOfferResult?>>(result);
+        Assert.NotNull(okResult.Value);
+        Assert.Equal(60m, okResult.Value!.CurrentAnnualCost);
+        Assert.Equal(48m, okResult.Value.NewAnnualCost);
+        Assert.Equal(12m, okResult.Value.Savings);
+        await _getAnnualUpgradeOfferQuery.Received(1).Run(organization);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RedeemAnnualUpgradeOfferAsync_CallsCommand(Organization organization)
+    {
+        _redeemAnnualUpgradeOfferCommand.Run(organization).Returns(new BillingCommandResult<None>(new None()));
+
+        await _sut.RedeemAnnualUpgradeOfferAsync(organization);
+
+        await _redeemAnnualUpgradeOfferCommand.Received(1).Run(organization);
+    }
+
+    [Theory]
+    [InlineData(nameof(OrganizationBillingVNextController.GetAnnualUpgradeOfferAsync))]
+    [InlineData(nameof(OrganizationBillingVNextController.RedeemAnnualUpgradeOfferAsync))]
+    public void AnnualUpgradeOfferEndpoints_AreGatedOnTheirOwnFlag(string methodName)
+    {
+        // RequireFeature throws FeatureUnavailableException, which derives from NotFoundException,
+        // so a flag-off environment answers 404 on both endpoints. RequireFeatureAttribute exposes
+        // no public accessor for the flag key it carries, but the field is still readable by
+        // reflection, and pinning the key here is worth that coupling: without it, nothing on the
+        // server confirms these endpoints are gated on their own flag rather than some other
+        // program's.
+        var method = typeof(OrganizationBillingVNextController).GetMethod(methodName);
+
+        Assert.NotNull(method);
+        var attribute = method.GetCustomAttributes<RequireFeatureAttribute>().SingleOrDefault();
+        Assert.NotNull(attribute);
+
+        var featureFlagKeyField = typeof(RequireFeatureAttribute).GetField(
+            "_featureFlagKey", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(featureFlagKeyField);
+        Assert.Equal(FeatureFlagKeys.PM38333_AnnualBillingSavings, featureFlagKeyField.GetValue(attribute));
     }
 }

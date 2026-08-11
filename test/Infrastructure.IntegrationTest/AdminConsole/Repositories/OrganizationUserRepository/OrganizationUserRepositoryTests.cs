@@ -75,6 +75,63 @@ public class OrganizationUserRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task GetOccupiedPamSeatCountByOrganizationIdAsync_ExcludesRevokedAndStaged(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var confirmedUser = await userRepository.CreateTestUserAsync("confirmed");
+        var invitedUser = await userRepository.CreateTestUserAsync("invited");
+        var revokedUser = await userRepository.CreateTestUserAsync("revoked");
+        var stagedUser = await userRepository.CreateTestUserAsync("staged");
+
+        // Counted: seat-occupying statuses with PAM access
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = confirmedUser.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            AccessPam = true
+        });
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = invitedUser.Id,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.User,
+            AccessPam = true
+        });
+
+        // Excluded: Revoked and Staged do not consume a seat, even with PAM access
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = revokedUser.Id,
+            Status = OrganizationUserStatusType.Revoked,
+            Type = OrganizationUserType.User,
+            AccessPam = true
+        });
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = stagedUser.Id,
+            Status = OrganizationUserStatusType.Staged,
+            Type = OrganizationUserType.User,
+            AccessPam = true
+        });
+
+        // Act
+        var count = await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id);
+
+        // Assert
+        Assert.Equal(2, count); // Confirmed + Invited with PAM access (Revoked and Staged excluded)
+    }
+
+    [Theory, DatabaseData]
     public async Task GetCountByOnlyOwnerAsync_WhenUserIsNotInAnyOrg_ReturnsZero(
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository)
@@ -1735,5 +1792,47 @@ public class OrganizationUserRepositoryTests
         Assert.NotNull(actualGroup2);
         Assert.Equal(expectedRevisionDate, actualGroup1.RevisionDate, TimeSpan.FromMilliseconds(10));
         Assert.Equal(expectedRevisionDate, actualGroup2.RevisionDate, TimeSpan.FromMilliseconds(10));
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateStatusAndKeyById_ConfirmedUser_SetsStatusAndClearsKey(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user);
+        orgUser.Key = "old-org-key";
+        await organizationUserRepository.ReplaceAsync(orgUser);
+
+        var action = organizationUserRepository.UpdateStatusAndKeyById(
+            orgUser.Id, OrganizationUserStatusType.Accepted, null, DateTime.UtcNow);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
+
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, updatedOrgUser.Status);
+        Assert.Null(updatedOrgUser.Key);
+    }
+
+    [Theory, DatabaseData]
+    public async Task DeleteManyByIds_RevokedUser_DeletesUser(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(org, user);
+
+        var action = organizationUserRepository.DeleteManyByIds([orgUser.Id]);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
+
+        Assert.Null(await organizationUserRepository.GetByIdAsync(orgUser.Id));
     }
 }

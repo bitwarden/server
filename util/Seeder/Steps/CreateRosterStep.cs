@@ -51,7 +51,17 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
             var mangledEmail = context.GetMangler().Mangle(email);
             var password = context.GetPassword();
             var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password, kdfIterations, (uint)rosterIndex++);
-            var (user, _) = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys, password: password, kdfIterations: kdfIterations);
+            var (user, _) = UserSeeder.Create(
+                new UserSeed
+                {
+                    Email = mangledEmail,
+                    Name = $"{rosterUser.FirstName} {rosterUser.LastName}",
+                    Keys = userKeys,
+                    Password = password,
+                    KdfIterations = kdfIterations
+                },
+                context.GetPasswordHasher(),
+                context.GetMangler());
             var userOrgKey = RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey);
             var orgUser = org.CreateOrganizationUserWithKey(
                 user, orgUserType, OrganizationUserStatusType.Confirmed, userOrgKey);

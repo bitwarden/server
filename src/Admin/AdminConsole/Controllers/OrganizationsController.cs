@@ -16,6 +16,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -394,7 +395,8 @@ public class OrganizationsController : Controller
 
                 if (model.MaxCollections > freePlan.PasswordManager.MaxCollections)
                 {
-                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} collections cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} collections.";
+                    var collectionTerm = CollectionTerminology.Plural(_featureService);
+                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} {collectionTerm} cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} {collectionTerm}.";
                     return RedirectToAction("Edit", new { id });
                 }
 

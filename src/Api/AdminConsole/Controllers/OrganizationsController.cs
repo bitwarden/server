@@ -2,6 +2,8 @@
 #nullable disable
 
 using System.Text.Json;
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -10,12 +12,14 @@ using Bit.Api.Auth.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Response.Organizations;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
@@ -270,12 +274,12 @@ public class OrganizationsController : Controller
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector && user.UsesKeyConnector)
         {
-            throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
+            throw new BadRequestException(new LeaveOrgSsoBlockedError().Message);
         }
 
         if ((await _userService.GetOrganizationsClaimingUserAsync(user.Id)).Any(x => x.Id == id))
         {
-            throw new BadRequestException("Claimed user account cannot leave claiming organization. Contact your organization administrator for additional details.");
+            throw new BadRequestException(new LeaveOrgClaimedAccountError().Message);
         }
 
         await _removeOrganizationUserCommand.UserLeaveAsync(id, user.Id);
@@ -476,6 +480,20 @@ public class OrganizationsController : Controller
         }
 
         return new OrganizationPublicKeyResponseModel(org);
+    }
+
+    [HttpGet("{orgId}/private-key")]
+    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<OrganizationPrivateKeyResponseModel> GetPrivateKey(Guid orgId)
+    {
+        var org = await _organizationRepository.GetByIdAsync(orgId);
+        if (org == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return new OrganizationPrivateKeyResponseModel(org);
     }
 
     [Obsolete("TDL-136 Renamed to public-key (2023.8), left for backwards compatibility with older clients.")]

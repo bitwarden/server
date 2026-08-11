@@ -21,9 +21,8 @@ public interface IPriceIncreaseScheduler
     /// <summary>
     /// Creates a two-phase subscription schedule that defers a Premium/Families price increase
     /// to the subscription's renewal date. Phase 1 echoes the current subscription state;
-    /// Phase 2 applies the new price (and discount where applicable). Gated behind the
-    /// <c>PM32645_DeferPriceMigrationToRenewal</c> feature flag. No-ops if the flag is off,
-    /// an active schedule already exists, or the subscription does not match a known personal
+    /// Phase 2 applies the new price (and discount where applicable). No-ops if an active
+    /// schedule already exists, or the subscription does not match a known personal
     /// migration path.
     /// </summary>
     /// <param name="subscription">The Stripe subscription to schedule a price increase for.</param>
@@ -79,6 +78,14 @@ public interface IPriceIncreaseScheduler
     /// schedule is released, dropping it from the deferred business migration.
     /// </param>
     Task Release(string customerId, string subscriptionId, Guid? organizationId = null);
+
+    /// <summary>
+    /// Releases an already-resolved schedule, skipping the lookup <see cref="Release(string, string, Guid?)"/>
+    /// performs, so a caller that has classified the schedule does not resolve it twice. Pass null when no
+    /// schedule is attached; the cohort assignment is still dropped when <paramref name="organizationId"/> is
+    /// supplied.
+    /// </summary>
+    Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null);
 }
 
 public class PriceIncreaseScheduler(
@@ -92,11 +99,6 @@ public class PriceIncreaseScheduler(
 {
     public async Task<bool> SchedulePersonalPriceIncrease(Subscription subscription)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-        {
-            return false;
-        }
-
         if (await ActiveScheduleExistsAsync(subscription))
         {
             return false;
@@ -224,14 +226,19 @@ public class PriceIncreaseScheduler(
 
     public async Task Release(string customerId, string subscriptionId, Guid? organizationId = null)
     {
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = customerId });
+
+        var activeSchedule = schedules.Data.FirstOrDefault(s =>
+            s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
+
+        await ReleaseSchedule(activeSchedule, organizationId);
+    }
+
+    public async Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null)
+    {
         try
         {
-            var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-                new SubscriptionScheduleListOptions { Customer = customerId });
-
-            var activeSchedule = schedules.Data.FirstOrDefault(s =>
-                s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
-
             if (activeSchedule != null)
             {
                 await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
@@ -250,16 +257,16 @@ public class PriceIncreaseScheduler(
                 catch (Exception ex)
                 {
                     logger.LogError(ex,
-                        "Released the subscription schedule for subscription {SubscriptionId} but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
-                        subscriptionId, organizationId.Value);
+                        "Released the subscription schedule but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
+                        organizationId.Value);
                 }
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to release subscription schedule for subscription {SubscriptionId}. Manual release required.",
-                subscriptionId);
+                "Failed to release subscription schedule ({ScheduleId}). Manual release required.",
+                activeSchedule?.Id);
             throw;
         }
     }
@@ -351,11 +358,6 @@ public class PriceIncreaseScheduler(
 
     private async Task<SubscriptionSchedulePhaseOptions?> ResolvePersonalPhase2Async(Subscription subscription)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-        {
-            return null;
-        }
-
         // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
         // proceeding would silently drop pre-existing discounts from Phase 2.
         if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))

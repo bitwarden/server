@@ -233,6 +233,16 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.OrganizationIntegrations.Where(oi => oi.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
+            // Detach the collections before removing the rules they point at. Organization cascades to both
+            // Collection and AccessRule while Collection -> AccessRule does not, so leaving this to the database
+            // would make the delete depend on which of those two cascade paths the provider happens to apply
+            // first. Clearing the association explicitly keeps the outcome the same on all four databases.
+            await dbContext.Collections
+                .Where(c => c.OrganizationId == organization.Id && c.AccessRuleId != null)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.AccessRuleId, (Guid?)null));
+            await dbContext.AccessRules.Where(ar => ar.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
             await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.Project.Where(p => p.OrganizationId == organization.Id)
@@ -386,7 +396,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     organization.Seats > 0 &&
                     organization.Status == OrganizationStatusType.Created &&
                     !organization.UseSecretsManager &&
-                    planTypes.Contains(organization.PlanType)
+                    planTypes.Contains(organization.PlanType) &&
+                    !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == organization.Id)
                 select organization;
 
             return await query.ToArrayAsync();

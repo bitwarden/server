@@ -36,16 +36,18 @@ Need to create test data?
 
 **Modern pattern for composable fixture-based and generated seeding.**
 
-**Flow**: Preset JSON or Options → RecipeOrchestrator → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
+**Flow**: Preset JSON or Options → RecipeOrchestrator → RecipeBuilder → IStep/IAsyncStep[] → RecipeExecutor → SeederContext → BulkCommitter → IPostCommitStep[]
 
 **Key actors**:
 
 - **RecipeBuilder**: Fluent API with dependency validation
-- **IStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.)
+- **IStep / IAsyncStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.). Use `IAsyncStep` for steps that do real I/O. A step additionally marked `IPostCommitStep` is deferred until after the bulk commit, so it observes committed rows — but sees cleared entity lists, since only the `EntityRegistry` and the context's scalar properties survive the commit.
 - **SeederContext**: Shared mutable state bag (NOT thread-safe)
-- **RecipeExecutor**: Executes steps sequentially, captures statistics, commits via BulkCommitter
+- **RecipeExecutor**: Awaits steps sequentially, captures statistics, commits via BulkCommitter, then runs any post-commit steps
 - **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
-- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`) into a single record. Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`.
+- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`, `ILicensingService`, `IAttachmentStorageService`) into a single record. Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`.
+
+**Why two step interfaces, not one async contract?** Deliberate — don't unify. Collapsing to one `Task ExecuteAsync(SeederContext)` costs: rewrite 22 step classes (18 in `Steps/`, 4 test doubles); force 20 `.Execute(context)` sites in `test/SeederApi.IntegrationTest/Steps/` to `await`, their test methods to `async`; and `TreatWarningsAsErrors` is on repo-wide (`Directory.Build.props`), so CS1998 makes `async` without `await` a build error — every sync step needs `return Task.CompletedTask`. Permanent trap. The split costs less: two-arm union in `OrderedStep`, `object`-typed `Inner`, one duplicated `RecipeBuilder` registration. Diverges from `IScene`/`IQuery` — single `Task`-returning, no sync twin.
 
 **Fixture/preset separation**: Fixtures (organizations, rosters, ciphers) are independent and never reference each other. The preset is the only layer that composes fixtures and defines cross-cutting relationships (folder assignments, favorites). See `Seeds/docs/architecture.md`.
 
@@ -58,7 +60,7 @@ See `Pipeline/` folder for implementation.
 
 ## Parallelism
 
-Steps execute sequentially (phase order preserved by RecipeExecutor). Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
+Steps execute sequentially (phase order preserved by RecipeExecutor). Async steps are awaited one at a time and MUST NOT be batched with `Task.WhenAll` — `SeederContext` is not thread-safe and each step reads state written by the ones before it. Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
 
 **Thread-safety requirements:**
 
@@ -71,7 +73,7 @@ Steps execute sequentially (phase order preserved by RecipeExecutor). Within a s
 When measuring step-level performance changes, use paired worktrees:
 
 - Create `server-PM-XXXXX/perf-baseline` and `server-PM-XXXXX/perf-optimized` worktrees
-- Both worktrees get `Stopwatch` timing in `RecipeExecutor.Execute()` (the baseline measurement)
+- Both worktrees get `Stopwatch` timing in `RecipeExecutor.ExecuteAsync()` (the baseline measurement)
 - Only the optimized worktree gets actual code changes
 - Run presets with `--mangle` flag to avoid DB collisions between runs
 - Compare per-step timings across 3+ runs each, discard the first run (JIT warmup)
@@ -98,6 +100,10 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 **Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
 
+## Regression Testing
+
+Changes to `Factories/`, `Steps/`, `Scenes/`, or `Recipes/` need more than the unit suite — it covers none of the CLI, the SeederApi, or a real database. `Seeds/docs/regression.md` maps each changed path to the preset that reaches it and the assertion that proves it, and records the known non-regressions worth not chasing. Claude drives the CLI, API, and SQL; the developer smoke-tests the web vault.
+
 ## Data/ File Organization
 
 New files under `Data/` belong in the matching subfolder (`Distributions/`, `Enums/`, `Generators/`, `Static/`) — never loose at the top level. See `Data/README.md` for what each subfolder holds. If a new file's concern doesn't fit an existing subfolder, that's a signal to create one, not to drop it loose.
@@ -109,9 +115,9 @@ New files under `Data/` belong in the matching subfolder (`Distributions/`, `Enu
 Recipes follow strict rules:
 
 1. A Recipe SHALL accept `SeederDependencies` as its single constructor parameter
-2. A Recipe SHALL have exactly one public method named `Seed()`
+2. A Recipe SHALL have exactly one public entry point — `Seed()` when synchronous, `SeedAsync()` when it returns `Task`/`Task<T>`. Pipeline-backed Recipes (`OrganizationRecipe`, `IndividualUserRecipe`) are async; the direct-to-database Recipes (`CollectionsRecipe`, `GroupsRecipe`, `OrganizationDomainRecipe`, `OrganizationWithUsersRecipe`) remain synchronous.
 3. A Recipe MUST produce one cohesive result
-4. A Recipe MAY have overloaded `Seed()` methods with different parameters
+4. A Recipe MAY overload that entry point with different parameters
 5. A Recipe SHALL use private helper methods for internal steps
 6. A Recipe SHALL use BulkCopy for performance when creating multiple entities
 7. A Recipe SHALL compose Factories for individual entity creation

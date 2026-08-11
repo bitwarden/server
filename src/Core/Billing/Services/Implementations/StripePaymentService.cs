@@ -10,15 +10,15 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Billing.Organizations.Schedules;
+using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -37,7 +37,6 @@ public class StripePaymentService : IStripePaymentService
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IGlobalSettings _globalSettings;
     private readonly IPricingClient _pricingClient;
-    private readonly IFeatureService _featureService;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -45,8 +44,7 @@ public class StripePaymentService : IStripePaymentService
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
         IGlobalSettings globalSettings,
-        IPricingClient pricingClient,
-        IFeatureService featureService)
+        IPricingClient pricingClient)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -54,7 +52,6 @@ public class StripePaymentService : IStripePaymentService
         _btGateway = braintreeGateway;
         _globalSettings = globalSettings;
         _pricingClient = pricingClient;
-        _featureService = featureService;
     }
 
     // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand
@@ -129,19 +126,6 @@ public class StripePaymentService : IStripePaymentService
 
         if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            if (!_featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-            {
-                var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address?.Country, sub.Customer.TaxExempt);
-                switch (sub.Customer)
-                {
-                    case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                        when determinedTaxExemptStatus != customerTaxExemptStatus:
-                        await _stripeAdapter.UpdateCustomerAsync(sub.Customer.Id,
-                            new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                        break;
-                }
-            }
-
             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
@@ -511,83 +495,6 @@ public class StripePaymentService : IStripePaymentService
         return paymentIntentClientSecret;
     }
 
-    public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false)
-    {
-        if (subscriber == null)
-        {
-            throw new ArgumentNullException(nameof(subscriber));
-        }
-
-        if (string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
-        {
-            throw new GatewayException("No subscription.");
-        }
-
-        var sub = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
-        if (sub == null)
-        {
-            throw new GatewayException("Subscription was not found.");
-        }
-
-        if (sub.CanceledAt.HasValue || sub.Status == "canceled" || sub.Status == "unpaid" ||
-            sub.Status == "incomplete_expired")
-        {
-            // Already canceled
-            return;
-        }
-
-        try
-        {
-            var canceledSub = endOfPeriod
-                ? await _stripeAdapter.UpdateSubscriptionAsync(sub.Id,
-                    new SubscriptionUpdateOptions { CancelAtPeriodEnd = true })
-                : await _stripeAdapter.CancelSubscriptionAsync(sub.Id, new SubscriptionCancelOptions());
-            if (!canceledSub.CanceledAt.HasValue)
-            {
-                throw new GatewayException("Unable to cancel subscription.");
-            }
-        }
-        catch (StripeException e)
-        {
-            if (e.Message != $"No such subscription: {subscriber.GatewaySubscriptionId}")
-            {
-                throw;
-            }
-        }
-    }
-
-    public async Task ReinstateSubscriptionAsync(ISubscriber subscriber)
-    {
-        if (subscriber == null)
-        {
-            throw new ArgumentNullException(nameof(subscriber));
-        }
-
-        if (string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
-        {
-            throw new GatewayException("No subscription.");
-        }
-
-        var sub = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
-        if (sub == null)
-        {
-            throw new GatewayException("Subscription was not found.");
-        }
-
-        if ((sub.Status != "active" && sub.Status != "trialing" && !sub.Status.StartsWith("incomplete")) ||
-            !sub.CanceledAt.HasValue)
-        {
-            throw new GatewayException("Subscription is not marked for cancellation.");
-        }
-
-        var updatedSub = await _stripeAdapter.UpdateSubscriptionAsync(sub.Id,
-            new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
-        if (updatedSub.CanceledAt.HasValue)
-        {
-            throw new GatewayException("Unable to reinstate subscription.");
-        }
-    }
-
     public async Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount)
     {
         Customer customer = null;
@@ -734,6 +641,14 @@ public class StripePaymentService : IStripePaymentService
                 return;
             }
 
+            // An annual-upgrade phase 2 prices at a different interval, so its amounts don't belong
+            // on a still-monthly line item.
+            if (SubscriptionScheduleOwnershipMapper.MapSchedule(schedule) ==
+                OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
+            {
+                return;
+            }
+
             var phase2 = schedule.Phases[1];
             var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
@@ -815,6 +730,7 @@ public class StripePaymentService : IStripePaymentService
             if (phase2Discount?.Coupon != null)
             {
                 subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
+                subscriptionInfo.CustomerDiscount.IsFromSchedule = true;
             }
         }
         catch (StripeException ex)

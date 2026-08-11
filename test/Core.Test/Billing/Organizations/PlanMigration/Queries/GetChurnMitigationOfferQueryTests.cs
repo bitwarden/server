@@ -27,9 +27,9 @@ public class GetChurnMitigationOfferQueryTests
 
     public GetChurnMitigationOfferQueryTests()
     {
+        var membershipQuery = new GetChurnOfferCohortMembershipQuery(_assignmentRepository, _cohortRepository);
         _query = new GetChurnMitigationOfferQuery(
-            _assignmentRepository,
-            _cohortRepository,
+            membershipQuery,
             _stripeAdapter,
             Substitute.For<ILogger<GetChurnMitigationOfferQuery>>());
     }
@@ -229,8 +229,8 @@ public class GetChurnMitigationOfferQueryTests
     public async Task Run_MigrationCohort_CouponsGetThrows_ReturnsNullAndLogsWarning()
     {
         var logger = Substitute.For<ILogger<GetChurnMitigationOfferQuery>>();
-        var query = new GetChurnMitigationOfferQuery(
-            _assignmentRepository, _cohortRepository, _stripeAdapter, logger);
+        var membershipQuery = new GetChurnOfferCohortMembershipQuery(_assignmentRepository, _cohortRepository);
+        var query = new GetChurnMitigationOfferQuery(membershipQuery, _stripeAdapter, logger);
 
         var organization = CreateOrganization();
         SetupMigrationCohort(organization);
@@ -245,15 +245,20 @@ public class GetChurnMitigationOfferQueryTests
         var result = await query.Run(organization);
 
         Assert.Null(result);
-        logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Warning, default, default!, default, default!);
+        logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
     public async Task Run_MigrationCohort_CouponsGet404_ReturnsNullAndLogsWarning()
     {
         var logger = Substitute.For<ILogger<GetChurnMitigationOfferQuery>>();
-        var query = new GetChurnMitigationOfferQuery(
-            _assignmentRepository, _cohortRepository, _stripeAdapter, logger);
+        var membershipQuery = new GetChurnOfferCohortMembershipQuery(_assignmentRepository, _cohortRepository);
+        var query = new GetChurnMitigationOfferQuery(membershipQuery, _stripeAdapter, logger);
 
         var organization = CreateOrganization();
         SetupMigrationCohort(organization);
@@ -271,7 +276,12 @@ public class GetChurnMitigationOfferQueryTests
         var result = await query.Run(organization);
 
         Assert.Null(result);
-        logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Warning, default, default!, default, default!);
+        logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]

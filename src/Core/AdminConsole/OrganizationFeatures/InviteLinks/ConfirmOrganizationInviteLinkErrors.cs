@@ -17,8 +17,15 @@ public record ConfirmInviteLinkNotAvailable()
     public string Type => "invite_link_not_available";
 }
 
-public record ConfirmEmailDomainNotAllowed()
-    : EmailDomainNotAllowed(), IValidationError
+public record ConfirmInviteLinkConfirmationNotSupported()
+    : InviteLinkConfirmationNotSupported(), IValidationError
+{
+    public string PropertyName => "code";
+    public string Type => "invite_link_confirmation_not_supported";
+}
+
+public record ConfirmEmailDomainNotAllowed(string OrgName)
+    : EmailDomainNotAllowed(OrgName), IValidationError
 {
     public string PropertyName => "code";
     public string Type => "email_domain_not_allowed";
@@ -31,22 +38,22 @@ public record ConfirmProviderUsersCannotAcceptInviteLink()
     public string Type => "provider_users_cannot_join";
 }
 
-public record ConfirmOrganizationAccessRevoked()
-    : OrganizationAccessRevoked(), IValidationError
+public record ConfirmOrganizationAccessRevoked(string OrgName)
+    : OrganizationAccessRevoked(OrgName), IValidationError
 {
     public string PropertyName => "code";
     public string Type => "organization_access_revoked";
 }
 
-public record ConfirmAlreadyOrganizationMember()
-    : AlreadyOrganizationMember(), IValidationError
+public record ConfirmAlreadyOrganizationMember(string OrgName)
+    : AlreadyOrganizationMember(OrgName), IValidationError
 {
     public string PropertyName => "code";
     public string Type => "already_organization_member";
 }
 
-public record ConfirmOrganizationHasNoAvailableSeats()
-    : OrganizationHasNoAvailableSeats(), IValidationError
+public record ConfirmOrganizationHasNoAvailableSeats(string OrgName)
+    : OrganizationHasNoAvailableSeats(OrgName), IValidationError
 {
     public string PropertyName => "code";
     public string Type => "organization_has_no_available_seats";
