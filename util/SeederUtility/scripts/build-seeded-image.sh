@@ -392,7 +392,7 @@ case "${DB_TYPE}" in
     # Copy MDF/LDF files directly — avoids RESTORE issues on Kubernetes PVCs
     docker exec "${CONTAINER_NAME}" \
         /opt/mssql-tools18/bin/sqlcmd \
-            -S localhost -U SA -P "${DB_PASS}" -C \
+            -S localhost -U SA -P "${DB_PASS}" -C -b \
             -Q "ALTER DATABASE [${DB_NAME}] SET OFFLINE WITH ROLLBACK IMMEDIATE"
     docker cp "${CONTAINER_NAME}:/var/opt/mssql/data/${DB_NAME}.mdf" "${WORK_DIR}/${DB_NAME}.mdf"
     docker cp "${CONTAINER_NAME}:/var/opt/mssql/data/${DB_NAME}_log.ldf" "${WORK_DIR}/${DB_NAME}_log.ldf"
