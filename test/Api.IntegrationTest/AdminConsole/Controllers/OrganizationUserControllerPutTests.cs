@@ -312,6 +312,129 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         await AssertDoesNotHaveCollectionAsync(member, defaultCollection.Id);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Put_GrantingPam_PersistsAccessPam(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
+        await SetUsePamAsync(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
+            UpdateRequest(accessPam: true));
+
+        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        await AssertAccessPamAsync(member, true);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Put_GrantingPamWithoutOrganizationPam_ReturnsBadRequest(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
+        await SetUsePamAsync(false);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
+            UpdateRequest(accessPam: true));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(new PamNotEnabled().Message, await response.Content.ReadAsStringAsync());
+        await AssertAccessPamAsync(member, false);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Put_RevokingPamWithoutOrganizationPam_PersistsRevocation(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
+        // Revoking access must stay possible on an organization whose PAM entitlement has lapsed.
+        await SetUsePamAsync(false);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+        await GrantPamAsync(member);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
+            UpdateRequest(accessPam: false));
+
+        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        await AssertAccessPamAsync(member, false);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Put_EditingMemberWhoAlreadyHasPamWithoutOrganizationPam_PreservesAccess(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
+        // Not a grant, so an unrelated edit to a member who already has access is not blocked.
+        await SetUsePamAsync(false);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+        await GrantPamAsync(member);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
+            UpdateRequest(accessPam: true));
+
+        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        await AssertAccessPamAsync(member, true);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Put_OmittingAccessPam_RevokesExistingAccess(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
+        await SetUsePamAsync(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+        await GrantPamAsync(member);
+
+        // A client that predates the field sends no accessPam at all, which binds to the default of false.
+        // Callers must send the member's current value to preserve it.
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
+            new { type = OrganizationUserType.User, permissions = new Permissions(), collections = Array.Empty<object>(), groups = Array.Empty<Guid>() });
+
+        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        await AssertAccessPamAsync(member, false);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Put_AdminGrantingPamToSelf_Succeeds(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
+        await SetUsePamAsync(true);
+
+        // ManageUsers is the only gate on the endpoint, so an admin can grant themselves the access.
+        var (adminEmail, admin) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Admin);
+        await _loginHelper.LoginAsync(adminEmail);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{admin.Id}",
+            UpdateRequest(accessPam: true, type: OrganizationUserType.Admin));
+
+        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        await AssertAccessPamAsync(admin, true);
+    }
+
     [Fact]
     public async Task Put_WhenChangingRoleAndNameForClaimedMember_ReturnsNoContentAndPersistsBoth()
     {
@@ -491,6 +614,25 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         await _factory.GetService<IOrganizationRepository>().ReplaceAsync(_organization);
     }
 
+    private async Task SetUsePamAsync(bool value)
+    {
+        _organization.UsePam = value;
+        await _factory.GetService<IOrganizationRepository>().ReplaceAsync(_organization);
+    }
+
+    private async Task GrantPamAsync(OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = true;
+        await _factory.GetService<IOrganizationUserRepository>().ReplaceAsync(organizationUser);
+    }
+
+    private async Task AssertAccessPamAsync(OrganizationUser organizationUser, bool expected)
+    {
+        var reloaded = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(reloaded);
+        Assert.Equal(expected, reloaded.AccessPam);
+    }
+
     private async Task<Group> CreateGroupAsync() =>
         await _factory.GetService<IGroupRepository>().CreateAsync(new Group
         {
@@ -582,15 +724,17 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         return (member, domain);
     }
 
-    private static OrganizationUserUpdateRequestModel UpdateRequest(string? email = null, string? name = null) =>
+    private static OrganizationUserUpdateRequestModel UpdateRequest(string? email = null, string? name = null,
+        bool accessPam = false, OrganizationUserType type = OrganizationUserType.User) =>
         new()
         {
-            Type = OrganizationUserType.User,
+            Type = type,
             Permissions = new Permissions(),
             Collections = [],
             Groups = [],
             Email = email,
-            Name = name
+            Name = name,
+            AccessPam = accessPam
         };
 
     private static async Task AssertValidationProblemAsync(
