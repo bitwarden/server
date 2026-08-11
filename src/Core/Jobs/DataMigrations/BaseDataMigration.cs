@@ -90,22 +90,26 @@ public abstract class BaseDataMigration<TRow, TUpdate> : IDataMigration
     /// split and how exact the pending gauge reads.</summary>
     protected abstract Task<long> CountRowsAsync(CancellationToken token);
 
-    /// <summary>The cursor value of the row at the zero-based <paramref name="offset"/> of the
-    /// target table, in the same database-side key order <see cref="ReadBatchAsync"/> paginates
-    /// by (OFFSET @offset ROWS FETCH NEXT 1 ROW ONLY / ORDER BY + Skip). Null when the offset
-    /// falls past the end of the table. Required when <see cref="PartitionCount"/> &gt; 1 (unless
-    /// <see cref="GetPartitionsAsync"/> is overridden wholesale).</summary>
-    protected virtual Task<string?> ReadKeyAtOffsetAsync(long offset, CancellationToken token) =>
+    /// <summary>Keys of the rows at the given zero-based <paramref name="offsets"/> (ascending,
+    /// distinct), in the same database-side key order <see cref="ReadBatchAsync"/> paginates by.
+    /// Offsets past the end of the table are simply absent from the result. Implement naively —
+    /// one OFFSET @o ROWS FETCH NEXT 1 ROW ONLY statement per boundary, fine for modest tables —
+    /// or, since each naive statement costs O(offset), as a single ROW_NUMBER() OVER
+    /// (ORDER BY key) − 1 pass filtered against the offsets, or via provider statistics
+    /// (sys.dm_db_stats_histogram) that need no table read at all. Required when
+    /// <see cref="PartitionCount"/> &gt; 1 (unless <see cref="GetPartitionsAsync"/> is
+    /// overridden wholesale).</summary>
+    protected virtual Task<IReadOnlyDictionary<long, string>> ReadKeysAtOffsetsAsync(
+        IReadOnlyList<long> offsets, CancellationToken token) =>
         throw new NotSupportedException(
-            $"{GetType().Name} must override ReadKeyAtOffsetAsync (or GetPartitionsAsync) " +
+            $"{GetType().Name} must override ReadKeysAtOffsetsAsync (or GetPartitionsAsync) " +
             "when PartitionCount > 1.");
 
     /// <summary>The N ranges the keyspace splits into, each with its sampled row count. The
-    /// default divides the C counted rows into near-equal slices by sampling the key at each
-    /// i·C/N offset — the one place OFFSET pagination is acceptable, because it runs once ever,
-    /// at first initialization. Ranges then freeze into DataMigrationState; rows inserted later
-    /// land in whichever range contains their key. Override wholesale for a custom split
-    /// strategy.</summary>
+    /// default divides the C counted rows into near-equal slices by sampling the boundary keys
+    /// at offsets i·C/N — once ever, at first initialization. Ranges then freeze into
+    /// DataMigrationState; rows inserted later land in whichever range contains their key.
+    /// Override wholesale for a custom split strategy.</summary>
     protected virtual async Task<IReadOnlyList<PartitionRange>> GetPartitionsAsync(CancellationToken token)
     {
         var count = await CountRowsAsync(token);
@@ -114,21 +118,30 @@ public abstract class BaseDataMigration<TRow, TUpdate> : IDataMigration
             return [new PartitionRange(0, null, null, count)];
         }
 
-        var ranges = new List<PartitionRange>(PartitionCount);
-        string? start = null;
-        var lastOffset = -1L;
+        // Zero-based last row of each slice, so every (prev, key] range holds ~C/N rows. Tables
+        // smaller than N collapse to fewer, deduplicated offsets.
+        var offsets = new List<long>(PartitionCount - 1);
         for (var i = 1; i < PartitionCount; i++)
         {
-            // Zero-based last row of the i-th slice, so each (prev, key] range holds ~C/N rows.
-            // Tables smaller than N (or shrinking mid-sample) yield repeated or null samples;
-            // skipping them merges adjacent slices, whose row estimates absorb the merge.
             var offset = count * i / PartitionCount - 1;
-            if (offset <= lastOffset)
+            if (offset >= 0 && (offsets.Count == 0 || offset > offsets[^1]))
             {
-                continue;
+                offsets.Add(offset);
             }
-            var key = await ReadKeyAtOffsetAsync(offset, token);
-            if (key == null)
+        }
+
+        var keys = offsets.Count == 0
+            ? new Dictionary<long, string>()
+            : await ReadKeysAtOffsetsAsync(offsets, token);
+
+        var ranges = new List<PartitionRange>(offsets.Count + 1);
+        string? start = null;
+        var lastOffset = -1L;
+        foreach (var offset in offsets)
+        {
+            // Absent key = the offset fell past the table's end (count shrank mid-sample);
+            // skipping it merges adjacent slices, whose row estimate absorbs the merge.
+            if (!keys.TryGetValue(offset, out var key))
             {
                 continue;
             }

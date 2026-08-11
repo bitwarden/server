@@ -24,8 +24,10 @@ public class BaseDataMigrationTests
         public Func<IReadOnlyList<TestUpdate>, int> OnWriteBatch { get; set; } = updates => updates.Count;
         public List<IReadOnlyList<TestUpdate>> WrittenBatches { get; } = [];
         public long RowCount { get; set; }
-        public Func<long, string?>? OnReadKeyAtOffset { get; set; } = offset => $"key-{offset:D3}";
+        public Func<IReadOnlyList<long>, IReadOnlyDictionary<long, string>>? OnReadKeysAtOffsets { get; set; } =
+            offsets => offsets.ToDictionary(o => o, o => $"key-{o:D3}");
         public List<long> SampledOffsets { get; } = [];
+        public int SampleCalls { get; private set; }
 
         public TestDataMigration(IDataMigrationStateRepository stateRepository)
             : base(stateRepository, TimeProvider.System, NullLogger<TestDataMigration>.Instance)
@@ -44,14 +46,16 @@ public class BaseDataMigrationTests
         protected override Task<long> CountRowsAsync(CancellationToken token) =>
             Task.FromResult(RowCount);
 
-        protected override Task<string?> ReadKeyAtOffsetAsync(long offset, CancellationToken token)
+        protected override Task<IReadOnlyDictionary<long, string>> ReadKeysAtOffsetsAsync(
+            IReadOnlyList<long> offsets, CancellationToken token)
         {
-            if (OnReadKeyAtOffset == null)
+            if (OnReadKeysAtOffsets == null)
             {
-                return base.ReadKeyAtOffsetAsync(offset, token);
+                return base.ReadKeysAtOffsetsAsync(offsets, token);
             }
-            SampledOffsets.Add(offset);
-            return Task.FromResult(OnReadKeyAtOffset(offset));
+            SampleCalls++;
+            SampledOffsets.AddRange(offsets);
+            return Task.FromResult(OnReadKeysAtOffsets(offsets));
         }
 
         protected override Task<int> WriteBatchAsync(IReadOnlyList<TestUpdate> updates, CancellationToken token)
@@ -116,8 +120,9 @@ public class BaseDataMigrationTests
 
         await _sut.RunAsync(CancellationToken.None);
 
-        // 100 rows / 4 partitions → the last zero-based row of each 25-row slice.
+        // 100 rows / 4 partitions → the last zero-based row of each 25-row slice, one pass.
         Assert.Equal(new long[] { 24, 49, 74 }, _sut.SampledOffsets);
+        Assert.Equal(1, _sut.SampleCalls);
         await _stateRepository.Received(1).InitializeAsync("test-migration",
             Arg.Is<IReadOnlyList<PartitionRange>>(p =>
                 p.Count == 4 &&
@@ -139,7 +144,7 @@ public class BaseDataMigrationTests
 
         await _sut.RunAsync(CancellationToken.None);
 
-        // Offsets collapse to [-1, 0, 0]; only the first 0 is sampled, merging adjacent slices.
+        // Offsets collapse to [-1, 0, 0]; only the distinct 0 is requested, merging adjacent slices.
         Assert.Equal(new long[] { 0 }, _sut.SampledOffsets);
         await _stateRepository.Received(1).InitializeAsync("test-migration",
             Arg.Is<IReadOnlyList<PartitionRange>>(p =>
@@ -160,7 +165,8 @@ public class BaseDataMigrationTests
 
         await _sut.RunAsync(CancellationToken.None);
 
-        Assert.Empty(_sut.SampledOffsets);
+        // No sampling pass at all on an empty table.
+        Assert.Equal(0, _sut.SampleCalls);
         await _stateRepository.Received(1).InitializeAsync("test-migration",
             Arg.Is<IReadOnlyList<PartitionRange>>(p =>
                 p.Count == 1 && p[0] == new PartitionRange(0, null, null, 0)),
@@ -168,12 +174,36 @@ public class BaseDataMigrationTests
     }
 
     [Fact]
-    public async Task RunAsync_NotInitialized_MultiPartitionWithoutKeyOffsetOverride_Throws()
+    public async Task RunAsync_NotInitialized_MissingBoundarySample_MergesSlices()
+    {
+        _stateRepository.ExistsAsync("test-migration", Arg.Any<CancellationToken>()).Returns(false);
+        _stateRepository.TryClaimAsync("test-migration", Arg.Any<string>(), Arg.Any<TimeSpan>(),
+            Arg.Any<CancellationToken>()).Returns((PartitionClaim?)null);
+        _sut.PartitionCountValue = 4;
+        _sut.RowCount = 100;
+        // The table shrank between COUNT and sampling: the middle boundary no longer exists.
+        _sut.OnReadKeysAtOffsets = offsets =>
+            offsets.Where(o => o != 49).ToDictionary(o => o, o => $"key-{o:D3}");
+
+        await _sut.RunAsync(CancellationToken.None);
+
+        // The two slices around the missing boundary merge; estimates still sum to 100.
+        await _stateRepository.Received(1).InitializeAsync("test-migration",
+            Arg.Is<IReadOnlyList<PartitionRange>>(p =>
+                p.Count == 3 &&
+                p[0] == new PartitionRange(0, null, "key-024", 25) &&
+                p[1] == new PartitionRange(1, "key-024", "key-074", 50) &&
+                p[2] == new PartitionRange(2, "key-074", null, 25)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RunAsync_NotInitialized_MultiPartitionWithoutKeySamplerOverride_Throws()
     {
         _stateRepository.ExistsAsync("test-migration", Arg.Any<CancellationToken>()).Returns(false);
         _sut.PartitionCountValue = 4;
         _sut.RowCount = 100;
-        _sut.OnReadKeyAtOffset = null;
+        _sut.OnReadKeysAtOffsets = null;
 
         await Assert.ThrowsAsync<NotSupportedException>(() => _sut.RunAsync(CancellationToken.None));
 
