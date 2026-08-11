@@ -16,9 +16,9 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
-using static Bit.Api.IntegrationTest.Controllers.TwoFactor.TwoFactorIntegrationTestHelpers;
+using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
 
-namespace Bit.Api.IntegrationTest.Controllers.TwoFactor;
+namespace Bit.Api.IntegrationTest.Auth.Controllers.TwoFactor;
 
 public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
