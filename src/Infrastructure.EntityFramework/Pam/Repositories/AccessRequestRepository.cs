@@ -263,7 +263,11 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         if (rowsAffected > 0)
         {
+            // The verdict belongs to the request being resolved, so its request id is derived from that request
+            // rather than trusted from the caller's copy — matching the stored procedure, which reuses its single
+            // @AccessRequestId for both the guarded UPDATE and the decision insert.
             var decisionEntity = Mapper.Map<EfDecision>(decision);
+            decisionEntity.AccessRequestId = request.Id;
             decisionEntity.DeciderKind = AccessDeciderKind.Human;
             decisionEntity.ConditionKind = null;
             decisionEntity.EvaluationContext = null;
@@ -312,7 +316,10 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         if (rowsAffected > 0)
         {
+            // As in ResolveWithDecisionAsync, the retraction's verdict is bound to the request being retracted
+            // rather than to whatever the caller's decision names.
             var decisionEntity = Mapper.Map<EfDecision>(decision);
+            decisionEntity.AccessRequestId = request.Id;
             decisionEntity.DeciderKind = AccessDeciderKind.Human;
             decisionEntity.ConditionKind = null;
             decisionEntity.EvaluationContext = null;
