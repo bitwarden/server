@@ -42,7 +42,6 @@ jobs:
     outputs:
       has_secrets: ${{ steps.check-secrets.outputs.has_secrets }}
     permissions:
-      security-events: write
       id-token: write
       packages: write
     timeout-minutes: 45
@@ -228,7 +227,6 @@ jobs:
           # Always push to ACR
           ACR_TAG="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
           TAGS="${ACR_TAG}"
-          echo "primary_tag=${ACR_TAG}" >> "$GITHUB_OUTPUT"
 
           # Additionally push rc and hotfix-rc tags to GHCR
           if [[ "${IMAGE_TAG}" == "rc" || "${IMAGE_TAG}" == "hotfix-rc" ]]; then
@@ -265,7 +263,7 @@ jobs:
         with:
           username: bitwarden
           password: ${{ steps.get-kv-secrets.outputs.DOCKERHUB-OAT }}
-      
+
       - name: Build Docker image
         id: build-artifacts
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
@@ -324,21 +322,6 @@ jobs:
           done
           cosign sign --yes ${images[@]}
           echo "images=${images[*]}" >> "$GITHUB_OUTPUT"
-
-      - name: Scan Docker image
-        id: container-scan
-        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
-        with:
-          image: ${{ steps.image-tags.outputs.primary_tag }}
-          fail-build: false
-          output-format: sarif
-
-      - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
-        with:
-          sarif_file: ${{ steps.container-scan.outputs.sarif }}
-          sha: ${{ contains(github.event_name, 'pull_request') && github.event.pull_request.head.sha || github.sha }}
-          ref: ${{ contains(github.event_name, 'pull_request') && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
 
       - name: Log out from Docker Hub and GHCR
         run: |
@@ -648,3 +631,19 @@ jobs:
           azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           task: deploy-server-dev
           description: "Triggered by server build on main"
+
+  trigger-downstream-build:
+    name: Trigger downstream build
+    if: github.event_name == 'push' && contains(fromJSON('["refs/heads/main", "refs/heads/rc", "refs/heads/hotfix-rc"]'), github.ref)
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+    steps:
+      - name: Trigger downstream build
+        uses: bitwarden/gh-actions/trigger-actions@main
+        with:
+          azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          task: build-downstream-artifacts
+          monitor-deployment: false

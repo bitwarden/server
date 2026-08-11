@@ -15,6 +15,7 @@ using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -26,6 +27,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
 using CsvHelper;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
@@ -863,8 +865,10 @@ public class ProviderBillingServiceTests
         BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-        billingAddress.Country = "AD";
-        billingAddress.TaxId = new TaxID("es_nif", "12345678Z");
+        billingAddress.Country = "GB";
+        billingAddress.TaxId = new TaxID(StripeConstants.TaxIdType.EUVAT, "GB123456789");
+
+        sutProvider.GetDependency<ITaxService>().GetStripeTaxCode("GB", "GB123456789").Returns("gb_vat");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.BankAccount, Token = "token" };
@@ -886,7 +890,7 @@ public class ProviderBillingServiceTests
                 o.InvoiceSettings.CustomFields.FirstOrDefault().Name == provider.SubscriberType() &&
                 o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
-                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Type == "gb_vat" &&
                 o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Throws<StripeException>();
 
@@ -904,8 +908,10 @@ public class ProviderBillingServiceTests
         BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-        billingAddress.Country = "AD";
-        billingAddress.TaxId = new TaxID("es_nif", "12345678Z");
+        billingAddress.Country = "GB";
+        billingAddress.TaxId = new TaxID(StripeConstants.TaxIdType.EUVAT, "GB123456789");
+
+        sutProvider.GetDependency<ITaxService>().GetStripeTaxCode("GB", "GB123456789").Returns("gb_vat");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.PayPal, Token = "token" };
@@ -926,7 +932,7 @@ public class ProviderBillingServiceTests
                 o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
                 o.Metadata["btCustomerId"] == "braintree_customer_id" &&
-                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Type == "gb_vat" &&
                 o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Throws<StripeException>();
 
@@ -943,8 +949,10 @@ public class ProviderBillingServiceTests
         BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-        billingAddress.Country = "AD";
-        billingAddress.TaxId = new TaxID("es_nif", "12345678Z");
+        billingAddress.Country = "GB";
+        billingAddress.TaxId = new TaxID(StripeConstants.TaxIdType.EUVAT, "GB123456789");
+
+        sutProvider.GetDependency<ITaxService>().GetStripeTaxCode("GB", "GB123456789").Returns("gb_vat");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
@@ -973,7 +981,7 @@ public class ProviderBillingServiceTests
                 o.InvoiceSettings.CustomFields.FirstOrDefault().Name == provider.SubscriberType() &&
                 o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
-                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Type == "gb_vat" &&
                 o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Returns(expected);
 
@@ -992,8 +1000,10 @@ public class ProviderBillingServiceTests
         BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-        billingAddress.Country = "AD";
-        billingAddress.TaxId = new TaxID("es_nif", "12345678Z");
+        billingAddress.Country = "GB";
+        billingAddress.TaxId = new TaxID(StripeConstants.TaxIdType.EUVAT, "GB123456789");
+
+        sutProvider.GetDependency<ITaxService>().GetStripeTaxCode("GB", "GB123456789").Returns("gb_vat");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
@@ -1021,7 +1031,7 @@ public class ProviderBillingServiceTests
                 o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
                 o.Metadata["btCustomerId"] == "braintree_customer_id" &&
-                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Type == "gb_vat" &&
                 o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Returns(expected);
 
@@ -1037,8 +1047,10 @@ public class ProviderBillingServiceTests
         BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-        billingAddress.Country = "AD";
-        billingAddress.TaxId = new TaxID("es_nif", "12345678Z");
+        billingAddress.Country = "GB";
+        billingAddress.TaxId = new TaxID(StripeConstants.TaxIdType.EUVAT, "GB123456789");
+
+        sutProvider.GetDependency<ITaxService>().GetStripeTaxCode("GB", "GB123456789").Returns("gb_vat");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
@@ -1063,7 +1075,7 @@ public class ProviderBillingServiceTests
                 o.InvoiceSettings.CustomFields.FirstOrDefault().Name == provider.SubscriberType() &&
                 o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
-                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Type == "gb_vat" &&
                 o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Returns(expected);
 
@@ -1119,6 +1131,97 @@ public class ProviderBillingServiceTests
                 options.TaxExempt == null));
 
         Assert.Equivalent(expected, actual);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_NorthernIrelandTaxId_UsesEUVAT(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        BillingAddress billingAddress)
+    {
+        provider.Name = "MSP";
+        billingAddress.Country = "GB";
+        billingAddress.TaxId = new TaxID("gb_vat", "XI123456789");
+
+        sutProvider.GetDependency<ITaxService>().GetStripeTaxCode("GB", "XI123456789")
+            .Returns(StripeConstants.TaxIdType.EUVAT);
+
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.Card, Token = "token" };
+
+        sutProvider.GetDependency<IStripeAdapter>().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
+            .Returns(new Customer { Id = "customer_id" });
+
+        await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateCustomerAsync(
+            Arg.Is<CustomerCreateOptions>(options =>
+                options.TaxIdData.Count == 1 &&
+                options.TaxIdData[0].Type == StripeConstants.TaxIdType.EUVAT &&
+                options.TaxIdData[0].Value == "XI123456789"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_SpanishCIFSentAsEUVAT_AddsBothSpanishNIFAndEUVAT(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        BillingAddress billingAddress)
+    {
+        provider.Name = "MSP";
+        billingAddress.Country = "ES";
+        billingAddress.TaxId = new TaxID(StripeConstants.TaxIdType.EUVAT, "A12345678");
+
+        sutProvider.GetDependency<ITaxService>().GetStripeTaxCode("ES", "A12345678")
+            .Returns(StripeConstants.TaxIdType.SpanishNIF);
+
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.Card, Token = "token" };
+
+        sutProvider.GetDependency<IStripeAdapter>().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
+            .Returns(new Customer { Id = "customer_id" });
+
+        await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateCustomerAsync(
+            Arg.Is<CustomerCreateOptions>(options =>
+                options.TaxIdData.Count == 2 &&
+                options.TaxIdData.Any(taxId =>
+                    taxId.Type == StripeConstants.TaxIdType.SpanishNIF && taxId.Value == "A12345678") &&
+                options.TaxIdData.Any(taxId =>
+                    taxId.Type == StripeConstants.TaxIdType.EUVAT && taxId.Value == "ESA12345678")));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_UnderivableTaxId_FallsBackToClientCodeAndWarns(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        BillingAddress billingAddress)
+    {
+        provider.Name = "MSP";
+        billingAddress.Country = "MK";
+        billingAddress.TaxId = new TaxID(StripeConstants.TaxIdType.EUVAT, "MK1234567890123");
+
+        sutProvider.GetDependency<ITaxService>().GetStripeTaxCode("MK", "MK1234567890123").Returns((string?)null);
+
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.Card, Token = "token" };
+
+        sutProvider.GetDependency<IStripeAdapter>().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
+            .Returns(new Customer { Id = "customer_id" });
+
+        await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateCustomerAsync(
+            Arg.Is<CustomerCreateOptions>(options =>
+                options.TaxIdData.Count == 1 &&
+                options.TaxIdData[0].Type == StripeConstants.TaxIdType.EUVAT &&
+                options.TaxIdData[0].Value == "MK1234567890123"));
+
+        sutProvider.GetDependency<ILogger<ProviderBillingService>>().Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains("MK") &&
+                                    state.ToString()!.Contains(StripeConstants.TaxIdType.EUVAT) &&
+                                    !state.ToString()!.Contains("MK1234567890123")),
+            null,
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     #endregion

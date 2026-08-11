@@ -7,12 +7,13 @@ CREATE PROCEDURE [dbo].[Collection_UpdateWithUsers]
     @RevisionDate DATETIME2(7),
     @Users AS [dbo].[CollectionAccessSelectionType] READONLY,
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
-    @Type TINYINT = 0
+    @Type TINYINT = 0,
+    @AccessRuleId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type
+    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @AccessRuleId
 
     -- Users
     -- Delete users that are no longer in source

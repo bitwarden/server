@@ -25,8 +25,20 @@ public static class DataProtectionServiceCollectionExtensions
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
         {
+            var pending = globalSettings.DataProtection.PendingProtection;
+
             X509Certificate2? dataProtectionCert = null;
-            if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
+            if (pending is { Enabled: true })
+            {
+                dataProtectionCert = DownloadRequiredCertFromBlobStorage(
+                    globalSettings.Storage.ConnectionString,
+                    "certificates",
+                    pending.FileName,
+                    pending.Password,
+                    "pending protect"
+                );
+            }
+            else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
             {
                 dataProtectionCert = CoreHelpers.GetCertificate(
                     globalSettings.DataProtection.CertificateThumbprint);
@@ -56,18 +68,19 @@ public static class DataProtectionServiceCollectionExtensions
                     .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
                     .ProtectKeysWithCertificate(dataProtectionCert);
 
-                if (globalSettings.DataProtection.UnprotectCertificates.Length > 0)
-                {
-                    var unprotectCertificates = globalSettings.DataProtection.UnprotectCertificates
-                        .Index()
-                        .Select(i => DownloadRequiredCertFromBlobStorage(
-                            globalSettings.Storage.ConnectionString,
-                            "certificates",
-                            i.Item.FileName,
-                            i.Item.Password,
-                            $"Unprotect {i.Index}"
-                        )).ToArray();
+                var unprotectCertificates = globalSettings.DataProtection.UnprotectCertificates
+                    .Index()
+                    .Where(i => i.Item.Enabled)
+                    .Select(i => DownloadRequiredCertFromBlobStorage(
+                        globalSettings.Storage.ConnectionString,
+                        "certificates",
+                        i.Item.FileName,
+                        i.Item.Password,
+                        $"Unprotect {i.Index}"
+                    )).ToArray();
 
+                if (unprotectCertificates.Length > 0)
+                {
                     builder.UnprotectKeysWithAnyCertificate(unprotectCertificates);
                 }
             }
@@ -77,8 +90,8 @@ public static class DataProtectionServiceCollectionExtensions
     private static X509Certificate2 DownloadRequiredCertFromBlobStorage(
         string connectionString,
         string container,
-        string file,
-        string password,
+        string? file,
+        string? password,
         string context)
     {
         try
@@ -98,6 +111,10 @@ public static class DataProtectionServiceCollectionExtensions
         catch (CryptographicException ex)
         {
             throw new InvalidOperationException($"Unable to load certificate downloaded from azure blob storage; verify the password is correct and the blob contains valid PKCS#12 data: {context}", ex);
+        }
+        catch (ArgumentNullException ex) when (ex.ParamName == "blobName")
+        {
+            throw new InvalidOperationException($"Unable to download certificate because the FileName given is null: {context}", ex);
         }
     }
 }
