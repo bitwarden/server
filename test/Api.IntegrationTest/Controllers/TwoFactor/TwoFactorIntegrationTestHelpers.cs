@@ -5,6 +5,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
+using Bit.IntegrationTestCommon.Fido2;
 
 namespace Bit.Api.IntegrationTest.Controllers.TwoFactor;
 
@@ -55,12 +56,28 @@ internal static class TwoFactorIntegrationTestHelpers
         // DeleteTwoFactorWebAuthnCredentialCommand refuses per-credential deletion when only one
         // credential remains, so tests that exercise per-credential DELETE against the real
         // command need at least two seeded credentials.
-        var credentials = string.Join(",", Enumerable.Range(0, credentialCount).Select(BuildWebAuthnCredentialJson));
+        var credentials = string.Join(",",
+            Enumerable.Range(0, credentialCount).Select(i => BuildWebAuthnCredentialJson(i)));
         return "{\"7\":{\"Enabled\":true,\"MetaData\":{" + credentials + "}}}";
     }
 
-    private static string BuildWebAuthnCredentialJson(int index) =>
-        $"\"Key{index}\":{{\"Name\":\"TestKey{index}\",\"Descriptor\":{{\"Id\":\"AAAA\",\"Type\":0,\"Transports\":null}},\"PublicKey\":\"AAAA\",\"UserHandle\":\"AAAA\",\"SignatureCounter\":0,\"RegDate\":\"2024-01-01T00:00:00\",\"Migrated\":false,\"AaGuid\":\"00000000-0000-0000-0000-000000000000\"}}";
+    // Mirrors the shape JsonHelpers.LegacySerialize (Newtonsoft) actually persists: Descriptor.Id
+    // is standard Base64 (Convert.ToBase64String), not Fido2NetLib's Base64Url. Lets callers pin a
+    // specific Id, e.g. one containing '+'/'/' to exercise the Base64UrlConverter decode path.
+    public static string BuildWebAuthnProvidersJsonWithDescriptorId(string descriptorId) =>
+        "{\"7\":{\"Enabled\":true,\"MetaData\":{" + BuildWebAuthnCredentialJson(0, descriptorId) + "}}}";
+
+    private static string BuildWebAuthnCredentialJson(int index, string descriptorId = "AAAA")
+    {
+        // PublicKey/UserHandle are never cryptographically validated by the code paths these
+        // fixtures exercise (no assertion/attestation is verified) - only their shape matters. Use
+        // a real COSE_Key CBOR-encoded ECDSA P-256 public key (what Fido2NetLib actually stores)
+        // instead of a placeholder, so the fixture matches production data.
+        using var authenticator = new FakeWebAuthnAuthenticator();
+        var publicKey = Convert.ToBase64String(authenticator.GetCosePublicKey());
+        var userHandle = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        return $"\"Key{index}\":{{\"Name\":\"TestKey{index}\",\"Descriptor\":{{\"Id\":\"{descriptorId}\",\"Type\":0,\"Transports\":null}},\"PublicKey\":\"{publicKey}\",\"UserHandle\":\"{userHandle}\",\"SignatureCounter\":0,\"RegDate\":\"2024-01-01T00:00:00\",\"Migrated\":false,\"AaGuid\":\"00000000-0000-0000-0000-000000000000\"}}";
+    }
 
     public static string BuildOrganizationDuoProvidersJson() =>
         "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"" + new string('s', 40)

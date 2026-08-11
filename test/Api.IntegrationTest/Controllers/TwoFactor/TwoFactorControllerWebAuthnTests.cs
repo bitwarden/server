@@ -92,6 +92,32 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
     }
 
     [Fact]
+    public async Task GetWebAuthn_CredentialIdIsStandardBase64WithPlusAndSlash_Succeeds()
+    {
+        // WebAuthn keys are persisted through JsonHelpers.LegacySerialize (Newtonsoft), which
+        // writes Descriptor.Id as standard Base64, not Fido2NetLib's Base64Url - ~74% of random
+        // 32-byte credential IDs contain '+' or '/' in that form. Reading them back constructs
+        // TwoFactorProviderWebAuthnData via Fido2's Base64UrlConverter (see
+        // TwoFactorWebAuthnDetails), which Fido2 v4 tightened to reject those characters unless
+        // relaxed decoding is enabled. This proves the real GET endpoint still reads such a key.
+        const string standardBase64Id = "RtCGgkCX5KOVz/9GaZxzxKHNEDQTW06jb4SlSt96DqA=";
+        await SetUserTwoFactorProvidersJsonAsync(
+            _userRepository, _userEmail, BuildWebAuthnProvidersJsonWithDescriptorId(standardBase64Id));
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
+            new { MasterPasswordHash = MasterPasswordHash });
+
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var root = await ReadJsonRootAsync(getResponse);
+        var webAuthn = root.GetProperty("webAuthn");
+        Assert.True(webAuthn.GetProperty("enabled").GetBoolean());
+
+        var keys = webAuthn.GetProperty("keys");
+        Assert.Equal(JsonValueKind.Array, keys.ValueKind);
+        Assert.Equal("TestKey0", keys[0].GetProperty("name").GetString());
+    }
+
+    [Fact]
     public async Task GetWebAuthnChallenge_ValidToken_ReturnsOptionsForPut()
     {
         // get-webauthn mints the UV token; get-webauthn-challenge replays it (no new mint)
