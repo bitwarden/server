@@ -1,8 +1,12 @@
-﻿using Bit.Core.Models.Api;
+﻿using Bit.Api.AdminConsole.Authorization.Requirements;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
+using Bit.Services.Pam.Api.Authorization;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
@@ -82,6 +86,79 @@ public class AccessRuleEndpointsTests
 
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status400BadRequest && p.Type == typeof(ErrorResponseModel));
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status404NotFound && p.Type == typeof(ErrorResponseModel));
+    }
+
+    /// <summary>
+    /// Collects the authorization requirements an endpoint carries. They arrive as two shapes of metadata:
+    /// <c>AuthorizeAttribute&lt;T&gt;</c> contributes <see cref="IAuthorizationRequirementData"/>, while a policy
+    /// built inline contributes an <see cref="AuthorizationPolicy"/>. AuthorizationMiddleware combines both, so a
+    /// test asking "what must this endpoint satisfy" has to read both.
+    /// </summary>
+    private static List<IAuthorizationRequirement> RequirementsFor(Endpoint endpoint) =>
+    [
+        .. endpoint.Metadata.GetOrderedMetadata<AuthorizationPolicy>().SelectMany(policy => policy.Requirements),
+        .. endpoint.Metadata.GetOrderedMetadata<IAuthorizationRequirementData>().SelectMany(data => data.GetRequirements())
+    ];
+
+    [Theory]
+    [InlineData("Pam_AccessRules_GetAll", typeof(MemberRequirement))]
+    [InlineData("Pam_AccessRules_Get", typeof(MemberRequirement))]
+    [InlineData("Pam_AccessRules_Post", typeof(ManageAccessRulesRequirement))]
+    [InlineData("Pam_AccessRules_Put", typeof(ManageAccessRulesRequirement))]
+    [InlineData("Pam_AccessRules_Delete", typeof(ManageAccessRulesRequirement))]
+    public void MapPamEndpoints_AuthorizesRouteWithRequirement(string name, Type requirementType)
+    {
+        // Reads require membership; writes require authority over rule authorship. The requirements are carried as
+        // endpoint metadata, which AuthorizationMiddleware combines with the group's Policies.Application.
+        var endpoint = Assert.Single(
+            MaterializeEndpoints(),
+            e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
+
+        Assert.Contains(RequirementsFor(endpoint), r => r.GetType() == requirementType);
+
+        // The per-route requirement adds to the group's policy rather than replacing it.
+        Assert.Contains(endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),
+            data => data.Policy == Policies.Application);
+    }
+
+    [Fact]
+    public void MapPamEndpoints_AccessRuleWritesRequireMembershipBesidesThePermission()
+    {
+        // A write must satisfy the group's MemberRequirement *in addition to* the permission: the endpoint policy
+        // adds to the group policy rather than replacing it, so a write is never reachable on weaker terms than a
+        // read. ManageAccessRulesRequirement independently excludes providers — see
+        // ManageAccessRulesRequirementTests.
+        var writeRoutes = new[] { "Pam_AccessRules_Post", "Pam_AccessRules_Put", "Pam_AccessRules_Delete" };
+
+        var endpoints = MaterializeEndpoints()
+            .Where(e => writeRoutes.Contains(e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName))
+            .ToList();
+
+        Assert.Equal(writeRoutes.Length, endpoints.Count);
+        Assert.All(endpoints, endpoint =>
+        {
+            var requirements = RequirementsFor(endpoint);
+            Assert.Contains(requirements, r => r is MemberRequirement);
+            Assert.Contains(requirements, r => r is ManageAccessRulesRequirement);
+        });
+    }
+
+    [Fact]
+    public void MapPamEndpoints_AccessRulesNeverAuthorizeProvidersByMembership()
+    {
+        // Access rules gate who can lease credentials out of an organization, which is not a provider's to read or
+        // change. MemberOrProviderRequirement would let them in, so no access-rule route may carry it.
+        var endpoints = MaterializeEndpoints()
+            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
+            .ToList();
+
+        Assert.Equal(5, endpoints.Count);
+        Assert.All(endpoints, endpoint =>
+        {
+            var requirements = RequirementsFor(endpoint);
+            Assert.Contains(requirements, r => r is MemberRequirement);
+            Assert.DoesNotContain(requirements, r => r is MemberOrProviderRequirement);
+        });
     }
 
     [Theory]

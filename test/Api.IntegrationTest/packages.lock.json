@@ -1556,7 +1556,8 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.8.0, )",
-          "HttpExtensions": "[2026.8.0, )"
+          "HttpExtensions": "[2026.8.0, )",
+          "OrganizationAuthorization": "[0.0.1, )"
         }
       },
       "pam.domain": {
