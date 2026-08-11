@@ -51,6 +51,7 @@
   </Folder>
   <Folder Name="/test - Bitwarden License/">
     <Project Path="bitwarden_license/test/Commercial.Core.Test/Commercial.Core.Test.csproj" />
+    <Project Path="bitwarden_license/test/Services/Pam.IntegrationTest/Pam.IntegrationTest.csproj" />
     <Project Path="bitwarden_license/test/Services/Pam.Test/Pam.Test.csproj" />
     <Project Path="bitwarden_license/test/Scim.IntegrationTest/Scim.IntegrationTest.csproj" />
     <Project Path="bitwarden_license/test/Scim.Test/Scim.Test.csproj" />
