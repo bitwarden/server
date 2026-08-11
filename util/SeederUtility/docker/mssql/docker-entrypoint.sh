@@ -51,13 +51,27 @@ DATA_PATH=$(sqlcmd -h -1 \
     2>/dev/null | tr -d '\r\n ')
 echo "MSSQL default data path: ${DATA_PATH}"
 
-echo "Copying database files to data directory..."
-cp /seed/vault_dev.mdf "${DATA_PATH}vault.mdf"
-cp /seed/vault_dev_log.ldf "${DATA_PATH}vault_log.ldf"
+database_attached() {
+    local count
+    count=$(sqlcmd -h -1 \
+        -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name = 'vault'" \
+        2>/dev/null | tr -d '[:space:]')
+    [ "${count}" = "1" ]
+}
 
-echo "Attaching seeded database..."
-sqlcmd -Q "CREATE DATABASE [vault] ON (FILENAME = '${DATA_PATH}vault.mdf'), (FILENAME = '${DATA_PATH}vault_log.ldf') FOR ATTACH"
+# The data directory is usually a mounted volume, so vault survives a restart
+if database_attached; then
+    echo "Database 'vault' is already attached. Leaving it as is."
+else
+    echo "Copying database files to data directory..."
+    cp /seed/vault_dev.mdf "${DATA_PATH}vault.mdf"
+    cp /seed/vault_dev_log.ldf "${DATA_PATH}vault_log.ldf"
 
-echo "Attach complete."
+    # -b exits non-zero on a T-SQL error so a failed attach does not log success
+    echo "Attaching seeded database..."
+    sqlcmd -b -Q "CREATE DATABASE [vault] ON (FILENAME = '${DATA_PATH}vault.mdf'), (FILENAME = '${DATA_PATH}vault_log.ldf') FOR ATTACH"
+
+    echo "Attach complete."
+fi
 
 wait "${SQLSERVR_PID}"
