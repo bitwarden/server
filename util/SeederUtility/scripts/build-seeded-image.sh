@@ -279,7 +279,7 @@ case "${DB_TYPE}" in
         -e "SA_PASSWORD=${DB_PASS}" \
         -p "0:${INTERNAL_PORT}" \
         --platform linux/amd64 \
-        mcr.microsoft.com/mssql/server:2022-CU22-ubuntu-22.04 >/dev/null
+        mcr.microsoft.com/mssql/server:2025-CU5-ubuntu-24.04 >/dev/null
     ;;
 esac
 

@@ -25,7 +25,7 @@ dotnet run --project .. -- preset --list --output json
 | `postgres` | `postgres:14` | `pg_dump` → init SQL script |
 | `mysql` | `mysql:8.0` | `mysqldump` → init SQL script |
 | `mariadb` | `mariadb:12` | `mysqldump` → init SQL script |
-| `mssql` | `mcr.microsoft.com/mssql/server:2022-CU22-ubuntu-22.04` | MDF/LDF file copy → `CREATE DATABASE ... FOR ATTACH` |
+| `mssql` | `mcr.microsoft.com/mssql/server:2025-CU5-ubuntu-24.04` | MDF/LDF file copy → `CREATE DATABASE ... FOR ATTACH` |
 | `sqlite` | `busybox:stable` | Direct `.db` file copy |
 
 `mysql` and `mariadb` share the same migrations project and seeded data; they differ only in the engine the dump is produced from and restored into.
