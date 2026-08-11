@@ -188,16 +188,45 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-      - name: Job summary
-        if: always()
+  summary:
+    name: Image summary
+    needs: [setup, build]
+    if: always()
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Render image table
         env:
-          MATRIX_PRESET: ${{ matrix.preset }}
-          MATRIX_DATABASE: ${{ matrix.database }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRESETS: ${{ needs.setup.outputs.presets }}
+          DATABASES: ${{ needs.setup.outputs.databases }}
           GIT_SHA: ${{ github.sha }}
         run: |
-          TAG="${MATRIX_PRESET//./-}"
-          DB="${MATRIX_DATABASE}"
           SHA_SHORT="${GIT_SHA:0:7}"
-          echo "### ${DB} / ${MATRIX_PRESET}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Built (not pushed): \`${_AZ_REGISTRY}/shot/seeded-${DB}:${TAG}-${SHA_SHORT}\`" \
-            >> "$GITHUB_STEP_SUMMARY"
+          results=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" \
+            --paginate --jq '.jobs[] | [.name, .conclusion] | @tsv')
+
+          {
+            echo "### Seeded images for \`${SHA_SHORT}\`"
+            echo ""
+            echo "| Preset | Database | Result | Image |"
+            echo "| --- | --- | --- | --- |"
+            while read -r db; do
+              while read -r preset; do
+                tag="${preset//./-}"
+                conclusion=$(printf '%s\n' "${results}" \
+                  | awk -F'\t' -v name="${db} / ${preset}" '$1 == name { print $2; exit }')
+                case "${conclusion}" in
+                  success) mark="pass" ;;
+                  failure) mark="FAIL" ;;
+                  "")      mark="not run" ;;
+                  *)       mark="${conclusion}" ;;
+                esac
+                echo "| ${preset} | ${db} | ${mark} | \`${_AZ_REGISTRY}/shot/seeded-${db}:${tag}-${SHA_SHORT}\` |"
+              done < <(echo "${PRESETS}" | jq -r '.[]')
+            done < <(echo "${DATABASES}" | jq -r '.[]')
+            echo ""
+            echo "Images are built, not pushed. Download them from this run's artifacts."
+          } >> "$GITHUB_STEP_SUMMARY"
