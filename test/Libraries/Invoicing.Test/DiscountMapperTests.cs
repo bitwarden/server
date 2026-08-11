@@ -209,4 +209,35 @@ public class DiscountMapperTests
         Assert.Contains("di_orphan", error);
         Assert.Contains("ORPHAN10", error);
     }
+
+    [Fact]
+    public void Partition_ItemScopedDiscountOnUnknownReference_LogsAndDrops()
+    {
+        // line carries a non-empty but unknown purchasable_reference; its item-scoped discount must not attach.
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 11982,
+          "total_discount_amounts": [
+            { "amount": 1279, "discount": { "id": "di_unknown", "source": { "coupon": { "id": "cp_u", "name": "MYSTERY10", "percent_off": 10, "applies_to": { "products": ["prod_x"] } } } } }
+          ],
+          "lines": {
+            "data": [
+              {
+                "amount": 12790,
+                "pricing": { "price_details": { "price": { "id": "price_x", "metadata": { "purchasable_reference": "provider-seat" } } } },
+                "discount_amounts": [ { "amount": 1279, "discount": "di_unknown" } ]
+              }
+            ]
+          }
+        }
+        """);
+
+        var logger = new RecordingLogger<DiscountMapperTests>();
+        var result = DiscountMapper.Partition(invoice, logger);
+
+        Assert.Empty(result.ItemLevel);
+        var error = Assert.Single(logger.Errors);
+        Assert.Contains("di_unknown", error);
+    }
 }
