@@ -13,7 +13,6 @@
 # core.ignorecase treats *.user above as matching the Bit.Subscriptions.User library directory
 # on case-insensitive checkouts, so re-include it explicitly.
 !src/Libraries/Subscriptions.User/
-!src/Libraries/Subscriptions.User/**
 
 # Build results
 [Dd]ebug/
