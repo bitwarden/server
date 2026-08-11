@@ -603,7 +603,11 @@ public class LeaseRepositoryTests
         AccessRequest request, AccessDecision decision, AccessLease lease, DateTime mintTime)
     {
         await accessRequestRepository.CreateAutoApprovedAsync(request, decision);
-        await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, mintTime, false);
+
+        // Assert the mint rather than discarding it: several callers seed a row they expect to be *excluded* from a
+        // read, and without this those assertions would pass vacuously if the mint had silently failed.
+        Assert.Equal(AccessLeaseMintOutcome.Minted,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, mintTime, false));
     }
 
     private static AccessLease BuildLeaseFor(AccessRequest request, DateTime now)
