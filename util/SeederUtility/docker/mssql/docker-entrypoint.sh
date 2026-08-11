@@ -5,6 +5,14 @@ set -e
 /opt/mssql/bin/sqlservr &
 SQLSERVR_PID=$!
 
+# PID 1 discards SIGTERM by default, so forward it and let sqlservr shut down cleanly
+term_handler() {
+    kill -TERM "${SQLSERVR_PID}" 2>/dev/null || true
+    wait "${SQLSERVR_PID}" || true
+    exit 143
+}
+trap term_handler TERM INT
+
 sqlcmd() {
     /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "${SA_PASSWORD}" -C "$@"
 }
