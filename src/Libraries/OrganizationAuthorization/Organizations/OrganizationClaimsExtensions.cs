@@ -33,6 +33,7 @@ public static class OrganizationClaimsExtensions
             Id = organizationId,
             Type = role.Value,
             AccessSecretsManager = hasClaim(Claims.SecretsManagerAccess),
+            AccessPam = hasClaim(Claims.PamAccess),
             Permissions = role == OrganizationUserType.Custom
                 ? GetPermissionsFromClaims(hasClaim)
                 : new Permissions()
@@ -113,5 +114,6 @@ public static class OrganizationClaimsExtensions
         ManageUsers = hasClaim(Claims.CustomPermissions.ManageUsers),
         ManageResetPassword = hasClaim(Claims.CustomPermissions.ManageResetPassword),
         ManageScim = hasClaim(Claims.CustomPermissions.ManageScim),
+        ManageAccessRules = hasClaim(Claims.CustomPermissions.ManageAccessRules),
     };
 }
