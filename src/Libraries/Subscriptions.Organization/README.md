@@ -9,16 +9,18 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 ## Public surface
 
 `AddOrganizationSubscriptions()` registers the endpoint group's services and the `Bit.Invoicing`
-library they depend on. `MapOrganizationSubscriptionEndpoints()` maps the
-`/organizations/{organizationId:guid}/billing` route group, gated behind
-`PM36631_PreviewDrivenCart` and requiring the `Application` authorization policy. No endpoints are
-mapped inside the group yet. Only an authenticated caller is required at the group level; each
-handler performs its own organization billing authorization check.
+library they depend on. `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting
+chain — tags, the `Application` authorization policy, exception handling, and the
+`PM36631_PreviewDrivenCart` feature gate — to an empty group; the host owns the route prefix and
+mounts it at `/organizations/{organizationId:guid}/billing/subscription`. No endpoints are mapped
+inside the group yet. Only an authenticated caller is required at the group level; each handler
+performs its own organization billing authorization check.
 
-## Vendor boundary
+## Stripe boundary
 
-This library is vendor-free: it consumes `Bit.Invoicing`'s public contracts for pricing and
-invoice-preview data, and never references Stripe types directly.
+This library never calls Stripe. It makes no Stripe API calls and never touches `IStripeAdapter`;
+all Stripe interaction is delegated to `Bit.Invoicing`'s public surface. Referencing Stripe SDK
+types to pass data across that surface is fine — calling Stripe from here is not.
 
 ## Core debt
 

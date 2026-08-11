@@ -12,9 +12,10 @@ empty shell; the projection types land in a later change.
 
 ## Stripe boundary
 
-This is the only library permitted to reference Stripe types directly, and only to hydrate them via
-`IStripeAdapter`. Every other library and host gets invoice-preview data through this library's
-public surface, never Stripe's SDK.
+Invoicing owns the Stripe interaction behind invoice previews — the `IStripeAdapter` calls that
+hydrate invoice and subscription data — and projects the results into the vendor-neutral models on
+its public surface. Feature libraries above it never call Stripe themselves; they consume preview
+data through this surface, and reference Stripe SDK types only to pass data to and from it.
 
 ## Core debt
 
