@@ -54,6 +54,7 @@ public class UpdateOrganizationUserCommand(
         var organizationUser = request.OrganizationUserToUpdate.UpdateOrganizationUser(request.NewType,
             request.NewPermissions,
             request.NewAccessSecretsManager,
+            request.NewAccessPam,
             timeProvider);
 
         if (request.IsEnablingSecretsManager())

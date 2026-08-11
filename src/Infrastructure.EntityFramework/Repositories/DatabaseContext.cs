@@ -8,11 +8,13 @@ using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Dirt.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
+using Bit.Infrastructure.EntityFramework.Pam.Models;
 using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using DP = Microsoft.AspNetCore.DataProtection;
 
@@ -43,6 +45,7 @@ public class DatabaseContext : DbContext
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
     public DbSet<CollectionGroup> CollectionGroups { get; set; }
     public DbSet<CollectionUser> CollectionUsers { get; set; }
+    public DbSet<AccessRule> AccessRules { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -107,6 +110,7 @@ public class DatabaseContext : DbContext
         var eCollectionCipher = builder.Entity<CollectionCipher>();
         var eCollectionUser = builder.Entity<CollectionUser>();
         var eCollectionGroup = builder.Entity<CollectionGroup>();
+        var eAccessRule = builder.Entity<AccessRule>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
@@ -145,6 +149,27 @@ public class DatabaseContext : DbContext
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
+        eAccessRule.Property(p => p.Id).ValueGeneratedNever();
+        eAccessRule.HasIndex(p => new { p.OrganizationId, p.Name }).IsUnique();
+        eCollection
+            .HasOne<AccessRule>()
+            .WithMany()
+            .HasForeignKey(c => c.AccessRuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Collection.AccessRuleId is excluded from tracked inserts and updates, so an ordinary collection edit cannot
+        // erase or forge a PAM association no matter which repository method saves the entity. This mirrors MSSQL,
+        // where Collection_Create and Collection_Update accept @AccessRuleId and deliberately ignore it.
+        //
+        // Consequence for anything that needs to write this column: it MUST go through ExecuteUpdate (or raw SQL),
+        // which bypasses the change tracker and therefore these behaviours. Assigning the property and calling
+        // SaveChanges silently does nothing. The two writers today are
+        // ICollectionRepository.SetAccessRuleAssociationsAsync and the clear inside AccessRuleRepository.DeleteAsync.
+        eCollection.Property(c => c.AccessRuleId).Metadata
+            .SetBeforeSaveBehavior(PropertySaveBehavior.Ignore);
+        eCollection.Property(c => c.AccessRuleId).Metadata
+            .SetAfterSaveBehavior(PropertySaveBehavior.Ignore);
+
         eOrganizationMemberBaseDetail.HasNoKey();
 
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
@@ -167,6 +192,7 @@ public class DatabaseContext : DbContext
         eCipher.ToTable(nameof(Cipher));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
+        eAccessRule.ToTable(nameof(AccessRule));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));

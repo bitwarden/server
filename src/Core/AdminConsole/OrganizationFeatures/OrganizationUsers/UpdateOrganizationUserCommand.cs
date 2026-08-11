@@ -14,6 +14,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
@@ -131,6 +132,14 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             {
                 throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
             }
+        }
+
+        // Granting PAM access to a member of an organization without PAM would be inert: claim emission ANDs
+        // AccessPam with the organization's UsePam. Reject so the admin gets an actionable error instead.
+        // Only the grant is gated — revoking access stays possible on an organization whose entitlement has lapsed.
+        if (!originalOrganizationUser.AccessPam && organizationUser.AccessPam && !organization.UsePam)
+        {
+            throw new BadRequestException(new V2_UpdateUserCommand.PamNotEnabled().Message);
         }
 
         // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
