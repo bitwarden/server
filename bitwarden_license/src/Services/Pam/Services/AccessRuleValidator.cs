@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Services.Pam.Models.Conditions;
 
 namespace Bit.Services.Pam.Services;
@@ -7,12 +6,6 @@ namespace Bit.Services.Pam.Services;
 public sealed class AccessRuleValidator : IAccessRuleValidator
 {
     private const int MaxConditions = 10;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
 
     public AccessRuleValidationResult Validate(string? conditionsJson)
     {
@@ -29,11 +22,18 @@ public sealed class AccessRuleValidator : IAccessRuleValidator
         List<AccessCondition>? conditions;
         try
         {
-            conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, JsonOptions);
+            conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options);
         }
         catch (JsonException ex)
         {
             return AccessRuleValidationResult.Invalid($"Conditions JSON is malformed: {ex.Message}");
+        }
+        // The polymorphic reader reports a condition it cannot map to a kind as NotSupportedException, which is not a
+        // JsonException and so escapes as an unhandled exception unless caught here — a 500 for a document the client
+        // could fix. Its message names internal types, so state the requirement instead of relaying it.
+        catch (NotSupportedException)
+        {
+            return AccessRuleValidationResult.Invalid("Each condition must specify a valid 'kind'.");
         }
 
         if (conditions is null)
@@ -49,36 +49,15 @@ public sealed class AccessRuleValidator : IAccessRuleValidator
             return AccessRuleValidationResult.Invalid($"Conditions cannot contain more than {MaxConditions} conditions.");
         }
 
+        // Each condition validates itself; the validator only enforces the document-level shape (it is an array,
+        // within the size limit) and guards the one thing a condition cannot check for itself: a null entry.
         return conditions.Select(ValidateCondition).FirstOrDefault(result => !result.IsValid)
             ?? AccessRuleValidationResult.Valid;
     }
 
-    private static AccessRuleValidationResult ValidateCondition(AccessCondition? condition)
-    {
-        return condition switch
-        {
-            HumanApprovalCondition => AccessRuleValidationResult.Valid,
-            IpAllowlistCondition ip => ValidateIpAllowlist(ip),
-            null => AccessRuleValidationResult.Invalid("Conditions cannot contain a null entry."),
-            _ => AccessRuleValidationResult.Invalid($"Unsupported condition kind: {condition.GetType().Name}."),
-        };
-    }
-
-    private static AccessRuleValidationResult ValidateIpAllowlist(IpAllowlistCondition condition)
-    {
-        if (condition.Cidrs.Count == 0)
-        {
-            return AccessRuleValidationResult.Invalid("ip_allowlist requires at least one CIDR.");
-        }
-
-        foreach (var cidr in condition.Cidrs)
-        {
-            if (string.IsNullOrWhiteSpace(cidr) || !IPNetwork.TryParse(cidr, out _))
-            {
-                return AccessRuleValidationResult.Invalid($"Invalid CIDR: '{cidr}'.");
-            }
-        }
-
-        return AccessRuleValidationResult.Valid;
-    }
+    private static AccessRuleValidationResult ValidateCondition(AccessCondition? condition) =>
+        // A JSON null in the array is not a condition and cannot validate itself, so it is rejected here.
+        condition is null
+            ? AccessRuleValidationResult.Invalid("Conditions cannot contain a null entry.")
+            : condition.Validate();
 }
