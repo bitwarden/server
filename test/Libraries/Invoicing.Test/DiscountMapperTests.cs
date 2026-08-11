@@ -240,4 +240,40 @@ public class DiscountMapperTests
         var error = Assert.Single(logger.Errors);
         Assert.Contains("di_unknown", error);
     }
+
+    [Fact]
+    public void Partition_ItemScopedDiscountOnProrationLine_DoesNotAttachToBase()
+    {
+        // the same item-scoped coupon appears on both the base line and a proration line for pm-seat.
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 11982,
+          "total_discount_amounts": [
+            { "amount": 1479, "discount": { "id": "di_seat", "source": { "coupon": { "id": "cp_seat", "name": "SEATS10", "percent_off": 10, "applies_to": { "products": ["prod_pm"] } } } } }
+          ],
+          "lines": {
+            "data": [
+              {
+                "amount": 12790,
+                "pricing": { "price_details": { "price": { "id": "price_pm", "metadata": { "purchasable_reference": "pm-seat" } } } },
+                "discount_amounts": [ { "amount": 1279, "discount": "di_seat" } ]
+              },
+              {
+                "amount": 2000,
+                "pricing": { "price_details": { "price": { "id": "price_pm", "metadata": { "purchasable_reference": "pm-seat" } } } },
+                "parent": { "subscription_item_details": { "proration": true } },
+                "discount_amounts": [ { "amount": 200, "discount": "di_seat" } ]
+              }
+            ]
+          }
+        }
+        """);
+
+        var result = DiscountMapper.Partition(invoice, new RecordingLogger<DiscountMapperTests>());
+
+        // only the base line's 12.79 attaches; the proration line's 2.00 must not appear on the base item.
+        var discount = Assert.Single(result.ItemLevel["pm-seat"]);
+        Assert.Equal(12.79m, discount.Amount);
+    }
 }

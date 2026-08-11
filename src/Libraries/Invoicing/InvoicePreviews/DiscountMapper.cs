@@ -34,6 +34,12 @@ internal static class DiscountMapper
         var attached = new HashSet<string>();
         foreach (var line in invoice.Lines?.Data ?? [])
         {
+            // Prorations are discountable=false: the discount rides in the line amount, not discount_amounts.
+            if (line.Parent?.SubscriptionItemDetails?.Proration == true)
+            {
+                continue;
+            }
+
             var reference = line.Pricing?.PriceDetails?.Price?.Metadata?.GetValueOrDefault(StripeConstants.MetadataKeys.PurchasableReference);
             if (string.IsNullOrEmpty(reference) || !PurchasableReferences.IsKnown(reference))
             {
