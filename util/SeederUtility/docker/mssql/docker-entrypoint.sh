@@ -67,8 +67,13 @@ database_exists() {
     [ "${count}" = "1" ]
 }
 
+# Counts rows, since a zero-row SELECT is not a sqlcmd error
 database_seeded() {
-    sqlcmd -b -d vault -Q "SET NOCOUNT ON; SELECT TOP 1 1 FROM [User]" > /dev/null 2>&1
+    local count
+    count=$(sqlcmd -b -h -1 -d vault \
+        -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM [User]" \
+        2>/dev/null | tr -d '[:space:]')
+    [ -n "${count}" ] && [ "${count}" -gt 0 ] 2>/dev/null
 }
 
 # The data directory is usually a mounted volume, so vault survives a restart
