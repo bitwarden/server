@@ -1436,7 +1436,8 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.8.0, )",
-          "Dapper": "[2.1.66, 2.1.66]"
+          "Dapper": "[2.1.66, 2.1.66]",
+          "Pam.Domain": "[2026.8.0, )"
         }
       },
       "infrastructure.entityframework": {
@@ -1448,6 +1449,7 @@
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.4, 8.0.4]",
+          "Pam.Domain": "[2026.8.0, )",
           "Pomelo.EntityFrameworkCore.MySql": "[8.0.2, 8.0.2]",
           "linq2db": "[5.4.1, 5.4.1]",
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
@@ -1469,6 +1471,12 @@
           "Core": "[2026.8.0, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
+        }
+      },
+      "pam.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Data": "[0.0.1, )"
         }
       },
       "rustsdk": {
