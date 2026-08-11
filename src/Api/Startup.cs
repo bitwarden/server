@@ -34,6 +34,7 @@ using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Enums;
+using Bit.HttpExtensions;
 using Bit.Subscriptions.Organization;
 using Bit.Subscriptions.User;
 
@@ -213,9 +214,13 @@ public class Startup
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
-        // Subscriptions
-        services.AddUserSubscriptions();
-        services.AddOrganizationSubscriptions();
+        // Billing subscriptions minimal API libraries
+        if (!globalSettings.SelfHosted)
+        {
+            services.AddUserSubscriptions();
+            services.AddOrganizationSubscriptions();
+            services.AddOpenApiEndpointDataSource(MapSubscriptionEndpoints);
+        }
 
         // MVC
         services.AddMvc(config =>
@@ -307,9 +312,12 @@ public class Startup
                 {
                     ResponseWriter = HealthCheckServiceExtensions.WriteResponse
                 });
+            }
 
-                endpoints.MapUserSubscriptionEndpoints();
-                endpoints.MapOrganizationSubscriptionEndpoints();
+            // Billing subscriptions minimal API endpoints
+            if (!globalSettings.SelfHosted)
+            {
+                MapSubscriptionEndpoints(endpoints);
             }
         });
 
@@ -403,5 +411,13 @@ public class Startup
 
         // Log startup
         logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
+    }
+
+    private static void MapSubscriptionEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapGroup("/subscriptions")
+            .MapUserSubscriptionEndpoints();
+        endpoints.MapGroup("/organizations/{organizationId:guid}/billing/subscription")
+            .MapOrganizationSubscriptionEndpoints();
     }
 }
