@@ -80,22 +80,15 @@ public class SetInitialPasswordRequestModel : IValidatableObject
                 [nameof(AccountKeys), nameof(Keys)]);
         }
 
-        // If both modern and legacy fields are present for the same value, they must agree —
-        // reject ambiguous input rather than silently letting the modern field win via ?? fallback.
-        if (MasterPasswordAuthentication != null && MasterPasswordHash != null
-            && MasterPasswordAuthentication.MasterPasswordAuthenticationHash != MasterPasswordHash)
-        {
-            yield return new ValidationResult(
-                $"{nameof(MasterPasswordAuthentication.MasterPasswordAuthenticationHash)} and {nameof(MasterPasswordHash)} are both present but differ. Provide only one.",
-                [nameof(MasterPasswordAuthentication), nameof(MasterPasswordHash)]);
-        }
+        // The password/KDF fields must be one shape or the other — modern (MPAD/MPUD) or legacy (hash/key/kdf) — never both.
+        var hasModern = MasterPasswordAuthentication != null || MasterPasswordUnlock != null;
+        var hasLegacy = MasterPasswordHash != null || Key != null || Kdf != null;
 
-        if (MasterPasswordUnlock != null && Key != null
-            && MasterPasswordUnlock.MasterKeyWrappedUserKey != Key)
+        if (hasModern && hasLegacy)
         {
             yield return new ValidationResult(
-                $"{nameof(MasterPasswordUnlock.MasterKeyWrappedUserKey)} and {nameof(Key)} are both present but differ. Provide only one.",
-                [nameof(MasterPasswordUnlock), nameof(Key)]);
+                "Cannot mix modern (MasterPasswordAuthentication/MasterPasswordUnlock) and legacy (MasterPasswordHash/Key/Kdf) fields. Provide one shape or the other.",
+                [nameof(MasterPasswordAuthentication), nameof(MasterPasswordUnlock), nameof(MasterPasswordHash), nameof(Key), nameof(Kdf)]);
         }
 
         if (HasAuthAndUnlockData())
