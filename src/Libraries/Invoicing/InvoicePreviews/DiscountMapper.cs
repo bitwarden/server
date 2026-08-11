@@ -35,7 +35,7 @@ internal static class DiscountMapper
         foreach (var line in invoice.Lines?.Data ?? [])
         {
             var reference = line.Pricing?.PriceDetails?.Price?.Metadata?.GetValueOrDefault(StripeConstants.MetadataKeys.PurchasableReference);
-            if (string.IsNullOrEmpty(reference))
+            if (string.IsNullOrEmpty(reference) || !PurchasableReferences.IsKnown(reference))
             {
                 continue;
             }
