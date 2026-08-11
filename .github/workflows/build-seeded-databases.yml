@@ -34,7 +34,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.preset }}-${{ inputs.database }}
   cancel-in-progress: true
 
 jobs:
