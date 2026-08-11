@@ -15,7 +15,8 @@ BEGIN
         MIN([HidePasswords]) AS [HidePasswords],
         MAX([Manage]) AS [Manage],
         [DefaultUserCollectionEmail],
-        [Type]
+        [Type],
+        [AccessRuleId]
     FROM
         [dbo].[UserCollectionDetails](@UserId)
     GROUP BY
@@ -26,5 +27,6 @@ BEGIN
         RevisionDate,
         ExternalId,
         [DefaultUserCollectionEmail],
-        [Type]
+        [Type],
+        [AccessRuleId]
 END

@@ -1237,6 +1237,12 @@
       "httpextensions": {
         "type": "Project"
       },
+      "pam.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Data": "[0.0.1, )"
+        }
+      },
       "serilogfilelogging": {
         "type": "Project",
         "dependencies": {
