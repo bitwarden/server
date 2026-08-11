@@ -195,13 +195,20 @@ services:
 
 To pull that image, run `az acr login -n bitwardenprod` first. The registry refuses anonymous pulls, and `run.sh` runs `docker compose pull` on every start.
 
-An image loaded from a CI artifact also needs `pull_policy: never`, because the tag names a registry it was never pushed to and the pull fails without it:
+An image loaded from a CI artifact also needs `pull_policy: never`, because the tag names a registry it was never pushed to and the pull fails without it.
+
+Gate `admin` on the database. It migrates at startup, and on a fresh volume it will create an empty `vault` before the seed finishes attaching, leaving a schema with no data. The image reports healthy only once the seed is attached:
 
 ```yaml
 services:
   mssql:
     image: bitwardenprod.azurecr.io/shot/seeded-mssql:qa-dunder-mifflin-enterprise-full-abc1234
     pull_policy: never
+
+  admin:
+    depends_on:
+      mssql:
+        condition: service_healthy
 ```
 
 Unpack the bundle, then start:
@@ -215,7 +222,9 @@ Log in at the URL the installer prints, using the preset's owner account.
 
 ### Match the app version to the image
 
-An image carries the schema from the commit it was built at, including stored procedures. `bitwarden.sh` pins a released core version, so an image built from `main` can be missing procedures that release still calls, and login fails with `Could not find stored procedure`. Build from the release branch the deployment runs, or pin the app images to a tag built from the same commit.
+An image older than the deployment is fine. Admin migrates the seeded database forward on startup, keeping the data.
+
+The other direction breaks. `bitwarden.sh` pins a released core version, so an image built from `main` can be missing procedures that release still calls, and no migration can restore a dropped one. Login fails with `Could not find stored procedure`. Build from the release branch the deployment runs, or pin the app images to a tag built from the same commit.
 
 Rule out the cheaper cause first. SQL Server has no arm64 build, so on Apple Silicon it runs emulated and can hit an assertion failure that leaves it reporting existing procedures as missing. Run `docker restart bitwarden-mssql` and try again before chasing a version mismatch.
 

@@ -51,7 +51,7 @@ DATA_PATH=$(sqlcmd -h -1 \
     2>/dev/null | tr -d '\r\n ')
 echo "MSSQL default data path: ${DATA_PATH}"
 
-database_attached() {
+database_exists() {
     local count
     count=$(sqlcmd -h -1 \
         -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name = 'vault'" \
@@ -59,8 +59,18 @@ database_attached() {
     [ "${count}" = "1" ]
 }
 
+database_seeded() {
+    sqlcmd -b -d vault -Q "SET NOCOUNT ON; SELECT TOP 1 1 FROM [User]" > /dev/null 2>&1
+}
+
 # The data directory is usually a mounted volume, so vault survives a restart
-if database_attached; then
+if database_exists; then
+    if ! database_seeded; then
+        echo "ERROR: a 'vault' database exists but holds no seeded data."
+        echo "Something created it before this image could attach the seed. Start the database"
+        echo "and wait for it to report healthy before starting anything that migrates."
+        exit 1
+    fi
     echo "Database 'vault' is already attached. Leaving it as is."
 else
     echo "Copying database files to data directory..."
