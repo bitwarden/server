@@ -20,6 +20,6 @@ public enum AccessRequestStatus : byte
     /// <summary>Withdrawn by the requester before it was decided.</summary>
     Cancelled = 3,
 
-    /// <summary>The approval window lapsed with no decision recorded.</summary>
-    ExpiredUnanswered = 4,
+    /// <summary>The approval window lapsed with no decision recorded: nobody answered.</summary>
+    Expired = 4,
 }
