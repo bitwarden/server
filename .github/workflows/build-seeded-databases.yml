@@ -1,12 +1,6 @@
 name: Build Seeded Database Images
 
 on:
-  push:
-    branches: [feat/seeder-build-pipeline]
-    paths:
-      - .github/workflows/build-seeded-databases.yml
-      - util/SeederUtility/**
-      - util/Seeder/**
   schedule:
     - cron: "0 2 * * 0"
   workflow_dispatch:
