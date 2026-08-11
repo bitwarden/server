@@ -64,6 +64,7 @@ TAG="${PRESET_NAME//./-}"
 IMAGE_REPO="${REGISTRY}/shot/seeded-${DB_TYPE}"
 IMAGE_STABLE="${IMAGE_REPO}:${TAG}"
 IMAGE_VERSIONED="${IMAGE_REPO}:${TAG}-${GIT_SHA}"
+IMAGE_LATEST="${IMAGE_REPO}:${TAG}-latest"
 
 CONTAINER_NAME="seeder-build-${DB_TYPE}-${TAG}"
 WORK_DIR="${DOCKER_DIR}/build/${TAG}"
@@ -86,6 +87,7 @@ PRESET_CATEGORY="${PRESET_NAME%%.*}"
 echo "==> Building seeded ${DB_TYPE} image for preset: ${PRESET_NAME}"
 echo "    Stable:    ${IMAGE_STABLE}"
 echo "    Versioned: ${IMAGE_VERSIONED}"
+echo "    Latest:    ${IMAGE_LATEST}"
 echo "    Git SHA:   ${GIT_SHA}"
 echo "    Category:  ${PRESET_CATEGORY}"
 echo "    Container: ${CONTAINER_NAME}"
@@ -112,11 +114,13 @@ _docker_build_and_push() {
         --build-arg "BUILD_DATE=${BUILD_DATE}" \
         -t "${IMAGE_STABLE}" \
         -t "${IMAGE_VERSIONED}" \
+        -t "${IMAGE_LATEST}" \
         "${WORK_DIR}" \
         --load
 
     echo "==> Built: ${IMAGE_STABLE}"
     echo "==> Built: ${IMAGE_VERSIONED}"
+    echo "==> Built: ${IMAGE_LATEST}"
 
     if [[ "${PUSH}" == "true" ]]; then
         # Caller is responsible for registry auth (e.g. `az acr login` in CI or
@@ -124,11 +128,13 @@ _docker_build_and_push() {
         echo "==> Pushing images"
         docker push "${IMAGE_STABLE}"
         docker push "${IMAGE_VERSIONED}"
+        docker push "${IMAGE_LATEST}"
         echo "==> Pushed: ${IMAGE_STABLE}"
         echo "==> Pushed: ${IMAGE_VERSIONED}"
+        echo "==> Pushed: ${IMAGE_LATEST}"
 
         # free up disk after push
-        docker rmi "${IMAGE_STABLE}" "${IMAGE_VERSIONED}" >/dev/null 2>&1 || true
+        docker rmi "${IMAGE_STABLE}" "${IMAGE_VERSIONED}" "${IMAGE_LATEST}" >/dev/null 2>&1 || true
     fi
 }
 
