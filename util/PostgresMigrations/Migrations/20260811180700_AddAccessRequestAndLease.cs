@@ -110,6 +110,11 @@ public partial class AddAccessRequestAndLease : Migration
             unique: true);
 
         migrationBuilder.CreateIndex(
+            name: "IX_AccessLease_CipherId_Status",
+            table: "AccessLease",
+            columns: new[] { "CipherId", "Status" });
+
+        migrationBuilder.CreateIndex(
             name: "IX_AccessLease_CollectionId_Status",
             table: "AccessLease",
             columns: new[] { "CollectionId", "Status" });
@@ -128,6 +133,11 @@ public partial class AddAccessRequestAndLease : Migration
             name: "IX_AccessLease_RequesterId_CipherId_Status",
             table: "AccessLease",
             columns: new[] { "RequesterId", "CipherId", "Status" });
+
+        migrationBuilder.CreateIndex(
+            name: "IX_AccessRequest_CollectionId_Status",
+            table: "AccessRequest",
+            columns: new[] { "CollectionId", "Status" });
 
         migrationBuilder.CreateIndex(
             name: "IX_AccessRequest_ExtensionOfLeaseId",

@@ -2458,6 +2458,8 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
+                    b.HasIndex("CipherId", "Status");
+
                     b.HasIndex("CollectionId", "Status");
 
                     b.HasIndex("NotAfter", "Status");
@@ -2513,6 +2515,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("ExtensionOfLeaseId");
 
                     b.HasIndex("RuleId");
+
+                    b.HasIndex("CollectionId", "Status");
 
                     b.HasIndex("OrganizationId", "Status");
 

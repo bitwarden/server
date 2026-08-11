@@ -43,6 +43,34 @@ BEGIN
 END
 GO
 
+-- Supports the approver inbox reads (AccessRequest_ReadInboxPendingByCollectionIds /
+-- AccessRequest_ReadInboxHistoryByCollectionIds), which join the caller's manageable collection ids and filter on
+-- status. Mirrors IX_AccessLease_CollectionId_Status for the same governance-by-collection access pattern.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessRequest_CollectionId_Status' AND object_id = OBJECT_ID('[dbo].[AccessRequest]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_AccessRequest_CollectionId_Status]
+        ON [dbo].[AccessRequest] ([CollectionId] ASC, [Status] ASC);
+END
+GO
+
+-- Supports the extension cap checks (AccessRequest_CreateApprovedExtension's EXISTS, which runs while holding the
+-- parent lease's UPDLOCK, and AccessRequest_CountExtensionsByLeaseId), and indexes FK_AccessRequest_AccessLease.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessRequest_ExtensionOfLeaseId' AND object_id = OBJECT_ID('[dbo].[AccessRequest]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_AccessRequest_ExtensionOfLeaseId]
+        ON [dbo].[AccessRequest] ([ExtensionOfLeaseId] ASC);
+END
+GO
+
+-- Indexes FK_AccessRequest_AccessRule so AccessRule_DeleteById can detach the requests pinning a rule with a seek
+-- rather than a scan.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessRequest_RuleId' AND object_id = OBJECT_ID('[dbo].[AccessRequest]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_AccessRequest_RuleId]
+        ON [dbo].[AccessRequest] ([RuleId] ASC);
+END
+GO
+
 -- AccessLease (AccessRequest already exists, so its FK can be included directly).
 IF OBJECT_ID('[dbo].[AccessLease]') IS NULL
 BEGIN
@@ -86,6 +114,16 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessLease_Collecti
 BEGIN
     CREATE NONCLUSTERED INDEX [IX_AccessLease_CollectionId_Status]
         ON [dbo].[AccessLease] ([CollectionId] ASC, [Status] ASC);
+END
+GO
+
+-- Supports the per-cipher singleton guard in AccessLease_CreateFromApprovedRequest. That guard filters on CipherId
+-- alone under UPDLOCK/HOLDLOCK, so without a CipherId-leading index the range lock it takes covers either the whole
+-- table or every currently-active and future lease, serializing unrelated organizations' activations against it.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessLease_CipherId_Status' AND object_id = OBJECT_ID('[dbo].[AccessLease]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Status]
+        ON [dbo].[AccessLease] ([CipherId] ASC, [Status] ASC);
 END
 GO
 

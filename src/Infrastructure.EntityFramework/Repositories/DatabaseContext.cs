@@ -183,6 +183,9 @@ public class DatabaseContext : DbContext
         eAccessRequest.Property(p => p.Id).ValueGeneratedNever();
         eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Status });
         eAccessRequest.HasIndex(p => new { p.OrganizationId, p.Status });
+        eAccessRequest.HasIndex(p => new { p.CollectionId, p.Status });
+        eAccessRequest.HasIndex(p => p.ExtensionOfLeaseId);
+        eAccessRequest.HasIndex(p => p.RuleId);
         eAccessRequest
             .HasOne<AccessRule>()
             .WithMany()
@@ -198,6 +201,7 @@ public class DatabaseContext : DbContext
         eAccessLease.HasIndex(p => new { p.RequesterId, p.CipherId, p.Status });
         eAccessLease.HasIndex(p => new { p.NotAfter, p.Status });
         eAccessLease.HasIndex(p => new { p.CollectionId, p.Status });
+        eAccessLease.HasIndex(p => new { p.CipherId, p.Status });
         eAccessLease.HasIndex(p => p.AccessRequestId).IsUnique();
         eAccessLease
             .HasOne<AccessRequest>()
