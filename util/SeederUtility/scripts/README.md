@@ -45,13 +45,13 @@ Each build produces two tags:
 - **Latest**: `seeded-{db}:{preset-name}-latest` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full-latest`. Moves with every build.
 - **Versioned**: `seeded-{db}:{preset-name}-{git-sha}` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full-abc1234`. Immutable, so a deployment can pin a known build.
 
-Either tag works with any core bundle, because CI pins one data protection key for every build.
+Either tag works with any copy of the data protection key, because CI pins one key for every build.
 
 Local builds tag for `bitwardenprod.azurecr.io/shot/` and push there only when you pass `PUSH=true`. The GitHub Actions workflow sets `PUSH: "false"` and has no registry login, so nothing it builds reaches the registry. Take those images from the run's artifacts instead.
 
 ## Getting an image from a CI build
 
-Each matrix job uploads two artifacts, named after the database and preset. They are deleted 7 days after the run.
+Each matrix job uploads the image as an artifact named after the database and preset. Artifacts are deleted 7 days after the run.
 
 ```bash
 RUN=31203415095
@@ -59,14 +59,28 @@ PRESET=qa.dunder-mifflin-enterprise-full
 
 gh run download "$RUN" --name "seeded-postgres-$PRESET"
 docker load -i seeded-postgres-*.tar
-
-gh run download "$RUN" --name "seeded-core-postgres-$PRESET"
-tar -xf seeded-core-postgres-*.tar.gz -C ~/bitwarden-seed
 ```
 
-Use `tar -xf` rather than double-clicking the tarball. Browsers may decompress it during download while keeping the `.tar.gz` name, and macOS Archive Utility then reports "unsupported format". Run `file` on it to tell the two apart.
+### Getting the data protection key
 
-Start the database and point the application at the unpacked bundle:
+CI does not publish the key, so fetch it from Key Vault yourself. Every build shares the same key, so you only do this once per environment.
+
+`DP-KEY-XML` exists to encrypt seeded fixtures and nothing else. Do not reuse it in an environment that holds real vault data.
+
+```bash
+mkdir -p ~/bitwarden-seed/core/aspnet-dataprotection
+az keyvault secret show --vault-name gh-org-bitwarden --name DP-KEY-XML --query value -o tsv \
+  > ~/bitwarden-seed/core/aspnet-dataprotection/key-9aa06f19-9afe-414b-8791-189be3b5650f.xml
+```
+
+Attachment blobs go to a separate artifact, `seeded-attachments-{db}-{preset}`, holding `{cipherId}/{attachmentId}` at its root. Presets without attachments upload nothing, so the artifact is absent.
+
+```bash
+gh run download "$RUN" --name "seeded-attachments-postgres-$PRESET" \
+  -D ~/bitwarden-seed/core/attachments
+```
+
+Start the database:
 
 ```bash
 docker run -d -p 5432:5432 \
@@ -97,7 +111,7 @@ The category is derived from the preset name prefix, which matches the fixture f
 
 The application reads two of the seeder's outputs, not the database, so the database image cannot carry them. Data protection keys come first: the seeder encrypts `MasterPassword`, `Key`, and `PrivateKey` with ASP.NET Data Protection, and logins fail without the same key. Attachment blobs are the other, since the database holds only attachment metadata.
 
-In a deployment both live under `/etc/bitwarden/core`, so each build writes them to one tarball next to the image:
+In a deployment both live under `/etc/bitwarden/core`, so each build writes them to one tarball next to the image, which CI does not publish:
 
 ```
 docker/bundles/seeded-core-{db}-{preset}-{git-sha}.tar.gz
@@ -110,11 +124,13 @@ CI pulls the key from the `gh-org-bitwarden` Azure Key Vault as `DP-KEY-XML` and
 
 ### Consuming the bundle
 
-The bundle's `core/` layout matches classic self-host, where the app reads `/etc/bitwarden/core`. Unpack it over that volume:
+A local build leaves the tarball in `docker/bundles/`. Its `core/` layout matches classic self-host, where the app reads `/etc/bitwarden/core`, so unpack it over that volume:
 
 ```bash
 tar -xzf seeded-core-*.tar.gz -C /etc/bitwarden
 ```
+
+Coming from a CI build there is no tarball to unpack — assemble the same `core/` layout by hand, as described in [Getting the data protection key](#getting-the-data-protection-key).
 
 BW Lite reads different paths, so the same command puts the key somewhere lite never reads and login fails. See [Running BW Lite against a seeded image](#running-bw-lite-against-a-seeded-image) for the layout it expects.
 
@@ -139,15 +155,16 @@ Leave `attachment.connectionString` set (azurite wins over `baseDirectory`) and 
 
 ## Running BW Lite against a seeded image
 
-Load the image and unpack the bundle first, as described in [Getting an image from a CI build](#getting-an-image-from-a-ci-build).
+Load the image and fetch the key first, as described in [Getting an image from a CI build](#getting-an-image-from-a-ci-build).
 
 Lite reads `/etc/bitwarden/data-protection`, `/etc/bitwarden/attachments`, and `/etc/bitwarden/licenses`, which do not match the bundle's `core/` layout. Stage a directory in the shape lite expects:
 
 ```bash
 mkdir -p ~/bwlite-etc/{data-protection,attachments,licenses/organization,licenses/user}
 cp ~/bitwarden-seed/core/aspnet-dataprotection/*.xml ~/bwlite-etc/data-protection/
-cp -R ~/bitwarden-seed/core/attachments/. ~/bwlite-etc/attachments/
 ```
+
+For attachment presets, also copy `core/attachments/` into `~/bwlite-etc/attachments/`.
 
 Start the database on a named network:
 
@@ -179,7 +196,7 @@ Notes:
 
 ## Running self-host against a seeded image
 
-Load the image and unpack the bundle as described in [Getting an image from a CI build](#getting-an-image-from-a-ci-build). Self-host reads `/etc/bitwarden/core`, which the bundle's `core/` layout already matches, so it unpacks straight into `bwdata`.
+Load the image and fetch the key as described in [Getting an image from a CI build](#getting-an-image-from-a-ci-build). Self-host reads `/etc/bitwarden/core`, which matches the `core/` layout staged there, so it copies straight into `bwdata`.
 
 Get an installation id from https://bitwarden.com/host. The Setup container validates it against the Bitwarden API, so an invented one fails.
 
@@ -213,12 +230,15 @@ services:
         condition: service_healthy
 ```
 
-Unpack the bundle, then start:
+Copy the key into place, then start:
 
 ```bash
-tar -xzf seeded-core-mssql-*.tar.gz -C ~/bwdata
+mkdir -p ~/bwdata/core/aspnet-dataprotection
+cp ~/bitwarden-seed/core/aspnet-dataprotection/*.xml ~/bwdata/core/aspnet-dataprotection/
 ./bitwarden.sh start ~/bwdata
 ```
+
+For attachment presets, also copy `core/attachments/` into `~/bwdata/core/attachments/`.
 
 Log in at the URL the installer prints, using the preset's owner account.
 
@@ -273,4 +293,4 @@ self-host:
       tag: qa-dunder-mifflin-enterprise-full-latest
 ```
 
-**Note**: Both charts also need the [core bundle](#core-bundle) unpacked at `/etc/bitwarden/core`. Login fails against seeded data without the data protection key.
+**Note**: Both charts also need the [data protection key](#getting-the-data-protection-key) at `/etc/bitwarden/core/aspnet-dataprotection`, plus `core/attachments` for attachment presets. Login fails against seeded data without the key.

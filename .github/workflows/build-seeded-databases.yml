@@ -180,13 +180,20 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-      - name: Upload core bundle
+      - name: Stage attachment blobs
+        run: |
+          mkdir -p bundle-out
+          for f in util/SeederUtility/docker/bundles/seeded-core-*.tar.gz; do
+            tar -xzf "${f}" -C bundle-out
+          done
+
+      - name: Upload attachment blobs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: seeded-core-${{ matrix.database }}-${{ matrix.preset }}
-          path: util/SeederUtility/docker/bundles/seeded-core-*.tar.gz
+          name: seeded-attachments-${{ matrix.database }}-${{ matrix.preset }}
+          path: bundle-out/core/attachments/**
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: ignore
 
   summary:
     name: Image summary
