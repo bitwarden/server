@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260812120724_AddAccessRequestAndLease")]
+    [Migration("20260812123326_AddAccessRequestAndLease")]
     partial class AddAccessRequestAndLease
     {
         /// <inheritdoc />

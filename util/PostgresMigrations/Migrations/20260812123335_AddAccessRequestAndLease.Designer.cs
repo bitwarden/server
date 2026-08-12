@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260812115656_AddAccessRequestAndLease")]
+    [Migration("20260812123335_AddAccessRequestAndLease")]
     partial class AddAccessRequestAndLease
     {
         /// <inheritdoc />

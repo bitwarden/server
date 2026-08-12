@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260812115652_AddAccessRequestAndLease")]
+    [Migration("20260812123330_AddAccessRequestAndLease")]
     partial class AddAccessRequestAndLease
     {
         /// <inheritdoc />
