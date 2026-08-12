@@ -72,4 +72,17 @@ public class ProrationMapperTests
         // no period -> 0
         Assert.Equal(0, ProrationMapper.Summarize([Line(3_582)], invoice)!.Months);
     }
+
+    [Fact]
+    public void Summarize_MultipleTaxesOnOneLine_SumsThem()
+    {
+        var invoice = InvoiceWith(totalCents: 11_982, totalTaxCents: 0, periodEnd: new DateTime(2027, 1, 1));
+        var line = new InvoiceLineItem
+        {
+            Amount = 7_355,
+            Taxes = [new InvoiceLineItemTax { Amount = 500 }, new InvoiceLineItemTax { Amount = 236 }],
+        };
+        var result = ProrationMapper.Summarize([line], invoice)!;
+        Assert.Equal(7.36m, result.Tax);
+    }
 }
