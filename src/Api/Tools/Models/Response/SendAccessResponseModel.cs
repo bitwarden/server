@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
-using Bit.Core.Models.Api;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
+using Bit.HttpExtensions;
 
 namespace Bit.Api.Tools.Models.Response;
 
@@ -94,7 +94,7 @@ public class SendAccessResponseModel : ResponseModel
     /// </summary>
     /// <remarks>
     /// File content is downloaded separately using
-    /// <see cref="Bit.Api.Tools.Controllers.SendsController.GetSendFileDownloadData" />
+    /// <see cref="Controllers.SendsController.GetSendFileDownloadDataUsingAuth" />
     /// </remarks>
     public SendFileModel? File { get; set; }
 

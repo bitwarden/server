@@ -7,6 +7,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -525,7 +526,15 @@ public class AccountsController : Controller
             {
                 throw new BadRequestException("AccountKeys are only supported for V2 encryption.");
             }
-            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData);
+            // A client that predates the key id field sends none. The account then picks one up from
+            // the backfill endpoint on a later sync rather than here.
+            var userKeyId = KeyId.FromHexEncodedString(model.UserKeyId);
+            var updateUserDataTasks = userKeyId == null
+                ? null
+                : new UpdateUserData[] { _userRepository.SetUserKeyId(user.Id, userKeyId) };
+
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData,
+                updateUserDataTasks);
             return new KeysResponseModel(accountKeysData, user.Key);
         }
         else
@@ -577,7 +586,7 @@ public class AccountsController : Controller
             // Check if the user is claimed by any organization.
             if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
             {
-                throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
+                throw new BadRequestException(new CannotDeleteClaimedAccountError().Message);
             }
 
             var result = await _userService.DeleteAsync(user);

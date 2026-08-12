@@ -18,13 +18,17 @@ public class MasterPasswordUnlockDataRequestModel
     [StringLength(256)]
     public required string Salt { get; init; }
 
+    [KeyId]
+    public string? ContainedKeyId { get; init; }
+
     public MasterPasswordUnlockData ToData()
     {
         return new MasterPasswordUnlockData
         {
             Kdf = Kdf.ToData(),
             MasterKeyWrappedUserKey = MasterKeyWrappedUserKey,
-            Salt = Salt
+            Salt = Salt,
+            ContainedKeyId = KeyId.FromHexEncodedString(ContainedKeyId)
         };
     }
 }

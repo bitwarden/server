@@ -326,6 +326,34 @@ public class CoreHelpersTests
     }
 
     [Theory, BitAutoData, UserCustomize]
+    public void BuildIdentityClaims_SecretsManagerAccess_OnlyForOrganizationsWithAccess(User user,
+        CurrentContextOrganization orgWithAccess, CurrentContextOrganization orgWithoutAccess)
+    {
+        orgWithAccess.AccessSecretsManager = true;
+        orgWithoutAccess.AccessSecretsManager = false;
+
+        var actual = CoreHelpers.BuildIdentityClaims(user, [orgWithAccess, orgWithoutAccess],
+            Array.Empty<CurrentContextProvider>(), false);
+
+        Assert.Contains(new KeyValuePair<string, string>("accesssecretsmanager", orgWithAccess.Id.ToString()), actual);
+        Assert.DoesNotContain(new KeyValuePair<string, string>("accesssecretsmanager", orgWithoutAccess.Id.ToString()), actual);
+    }
+
+    [Theory, BitAutoData, UserCustomize]
+    public void BuildIdentityClaims_PamAccess_OnlyForOrganizationsWithAccess(User user,
+        CurrentContextOrganization orgWithAccess, CurrentContextOrganization orgWithoutAccess)
+    {
+        orgWithAccess.AccessPam = true;
+        orgWithoutAccess.AccessPam = false;
+
+        var actual = CoreHelpers.BuildIdentityClaims(user, [orgWithAccess, orgWithoutAccess],
+            Array.Empty<CurrentContextProvider>(), false);
+
+        Assert.Contains(new KeyValuePair<string, string>("accesspam", orgWithAccess.Id.ToString()), actual);
+        Assert.DoesNotContain(new KeyValuePair<string, string>("accesspam", orgWithoutAccess.Id.ToString()), actual);
+    }
+
+    [Theory, BitAutoData, UserCustomize]
     public void BuildIdentityClaims_ProviderClaims_Success(User user)
     {
         var fixture = new Fixture().WithAutoNSubstitutions();
@@ -452,5 +480,30 @@ public class CoreHelpersTests
     public void ReplaceWhiteSpace_Success(string email)
     {
         Assert.Equal("helloworld", CoreHelpers.ReplaceWhiteSpace(email, string.Empty));
+    }
+
+    [Theory]
+    [InlineData("user@example.com", "user[at]example[dot]com")]
+    [InlineData("https://bitwarden.com", "bitwarden[dot]com")]
+    [InlineData("ftp://files.example.org", "files[dot]example[dot]org")]
+    public void SanitizeForEmail_NeutralizesAddressesAndLinks(string value, string expected)
+    {
+        Assert.Equal(expected, CoreHelpers.SanitizeForEmail(value));
+    }
+
+    [Theory]
+    [InlineData("<script>alert('x')</script>")]
+    [InlineData("Org & Co \"quoted\"")]
+    [InlineData("Tom & Jerry <tag>")]
+    public void SanitizeForEmail_DoesNotHtmlEncode(string value)
+    {
+        // Handlebars HTML-encodes interpolated values by default, so this method must not
+        // encode as well; otherwise the output is double-encoded in rendered emails.
+        var result = CoreHelpers.SanitizeForEmail(value);
+
+        Assert.DoesNotContain("&lt;", result);
+        Assert.DoesNotContain("&gt;", result);
+        Assert.DoesNotContain("&amp;", result);
+        Assert.DoesNotContain("&quot;", result);
     }
 }

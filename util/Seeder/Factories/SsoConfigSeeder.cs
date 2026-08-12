@@ -6,7 +6,10 @@ namespace Bit.Seeder.Factories;
 
 internal static class SsoConfigSeeder
 {
-    internal static SsoConfig CreateSaml2(
+    /// <summary>
+    /// Produces a SAML 2.0 SSO configuration wired to the local dev IdP.
+    /// </summary>
+    internal static SsoConfig Create(
         Guid organizationId,
         string idpEntityId,
         string idpSingleSignOnServiceUrl,

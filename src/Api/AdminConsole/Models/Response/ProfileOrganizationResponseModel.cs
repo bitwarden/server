@@ -31,6 +31,7 @@ public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseM
             SponsoredPlans.Get(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organizationDetails);
         AccessSecretsManager = organizationDetails.AccessSecretsManager;
+        AccessPam = organizationDetails.AccessPam;
     }
 
     public Guid OrganizationUserId { get; set; }
