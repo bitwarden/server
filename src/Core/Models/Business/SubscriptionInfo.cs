@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Stripe;
+using static Bit.Core.Billing.Constants.StripeConstants;
 
 #nullable enable
 
@@ -155,6 +156,7 @@ public class SubscriptionInfo
                 ? 14
                 : 30;
             ServiceAccountGrace = sub?.GetMigrationGraceServiceAccounts() ?? 0;
+            ScheduleId = sub?.ScheduleId;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -178,6 +180,13 @@ public class SubscriptionInfo
         /// </summary>
         public int ServiceAccountGrace { get; set; }
 
+        /// <summary>
+        /// The Stripe subscription schedule id, or null when no schedule is attached. Internal only;
+        /// not mapped to the API response. Used to gate billing lookups that are only meaningful for a
+        /// scheduled subscription.
+        /// </summary>
+        public string? ScheduleId { get; set; }
+
         public class BillingSubscriptionItem
         {
             public BillingSubscriptionItem(SubscriptionItem item)
@@ -192,12 +201,41 @@ public class SubscriptionInfo
 
                     if (item.Price?.Metadata != null)
                     {
-                        AddonSubscriptionItem = item.Price.Metadata.TryGetValue("isAddOn", out var value) && bool.Parse(value);
+                        AddonSubscriptionItem = item.Price.Metadata.TryGetValue(MetadataKeys.IsAddOn, out var value) && bool.Parse(value);
                     }
                 }
 
                 Quantity = (int)item.Quantity;
                 SponsoredSubscriptionItem = item.Plan != null && SponsoredPlans.All.Any(p => p.StripePlanId == item.Plan.Id);
+            }
+
+            /// <summary>
+            /// Builds a line item from a subscription schedule phase item. Phase items carry an
+            /// expanded <see cref="Price"/> and no <see cref="Plan"/>, so the fields the
+            /// <see cref="SubscriptionItem"/> constructor reads off the plan are read off the price here.
+            /// </summary>
+            public BillingSubscriptionItem(SubscriptionSchedulePhaseItem item)
+            {
+                var price = item.Price;
+                if (price != null)
+                {
+                    PriceId = price.Id;
+                    ProductId = price.ProductId;
+                    Name = price.Nickname;
+                    Amount = ConvertFromStripeMinorUnits(price.UnitAmount) ?? 0;
+                    Interval = price.Recurring?.Interval;
+
+                    if (price.Metadata != null)
+                    {
+                        AddonSubscriptionItem =
+                            price.Metadata.TryGetValue(MetadataKeys.IsAddOn, out var value) &&
+                            bool.TryParse(value, out var isAddOn) && isAddOn;
+                    }
+
+                    SponsoredSubscriptionItem = SponsoredPlans.All.Any(p => p.StripePlanId == price.Id);
+                }
+
+                Quantity = (int)item.Quantity;
             }
 
             public bool AddonSubscriptionItem { get; set; }

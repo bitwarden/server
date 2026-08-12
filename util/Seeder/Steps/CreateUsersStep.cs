@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.RustSDK;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Steps;
@@ -14,7 +15,7 @@ namespace Bit.Seeder.Steps;
 /// </summary>
 internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false) : IStep
 {
-    private const int RsaPoolSize = 100;
+    private const int _rsaPoolSize = 100;
 
     public void Execute(SeederContext context)
     {
@@ -53,8 +54,17 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
             localInit: () => 0,
             body: (i, _, localTicked) =>
             {
-                var userKeys = RustSdkService.GenerateUserKeys(mangledEmails[i], password, kdfIterations, (uint)(i % RsaPoolSize));
-                var (user, _) = UserSeeder.Create(mangledEmails[i], passwordHasher, mangler, keys: userKeys, password: password, kdfIterations: kdfIterations);
+                var userKeys = RustSdkService.GenerateUserKeys(mangledEmails[i], password, kdfIterations, (uint)(i % _rsaPoolSize));
+                var (user, _) = UserSeeder.Create(
+                    new UserSeed
+                    {
+                        Email = mangledEmails[i],
+                        Keys = userKeys,
+                        Password = password,
+                        KdfIterations = kdfIterations
+                    },
+                    passwordHasher,
+                    mangler);
 
                 var memberOrgKey = StatusRequiresOrgKey(statuses[i])
                     ? RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey)

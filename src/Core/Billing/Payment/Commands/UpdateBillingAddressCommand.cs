@@ -3,6 +3,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -19,8 +20,11 @@ public interface IUpdateBillingAddressCommand
 public class UpdateBillingAddressCommand(
     ILogger<UpdateBillingAddressCommand> logger,
     ISubscriberService subscriberService,
-    IStripeAdapter stripeAdapter) : BaseBillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
+    IStripeAdapter stripeAdapter,
+    ITaxService taxService) : BaseBillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
 {
+    private readonly ILogger<UpdateBillingAddressCommand> _logger = logger;
+
     protected override Conflict DefaultConflict =>
         new("We had a problem updating your billing address. Please contact support for assistance.");
 
@@ -97,10 +101,21 @@ public class UpdateBillingAddressCommand(
             return BillingAddress.From(customer.Address);
         }
 
-        var updatedTaxId = await stripeAdapter.CreateTaxIdAsync(customer.Id,
-            new TaxIdCreateOptions { Type = billingAddress.TaxId.Code, Value = billingAddress.TaxId.Value });
+        var derivedTaxIdCode = taxService.GetStripeTaxCode(billingAddress.Country, billingAddress.TaxId.Value);
 
-        if (billingAddress.TaxId.Code == StripeConstants.TaxIdType.SpanishNIF)
+        if (derivedTaxIdCode == null)
+        {
+            _logger.LogWarning(
+                "Could not derive Stripe tax ID type for country {Country}; falling back to client-supplied type {TaxIdType}",
+                billingAddress.Country, billingAddress.TaxId.Code);
+        }
+
+        var taxIdCode = derivedTaxIdCode ?? billingAddress.TaxId.Code;
+
+        var updatedTaxId = await stripeAdapter.CreateTaxIdAsync(customer.Id,
+            new TaxIdCreateOptions { Type = taxIdCode, Value = billingAddress.TaxId.Value });
+
+        if (taxIdCode == StripeConstants.TaxIdType.SpanishNIF)
         {
             updatedTaxId = await stripeAdapter.CreateTaxIdAsync(customer.Id,
                 new TaxIdCreateOptions
