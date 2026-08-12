@@ -168,6 +168,73 @@ public class UpdateOrganizationUserValidatorTests
 
     [Theory]
     [BitAutoData]
+    public async Task ValidateAsync_WhenGrantingPamAndOrganizationDoesNotUsePam_ReturnsPamNotEnabled(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.AccessPam = false;
+        var organization = CreateOrganization(orgUser.OrganizationId, PlanType.EnterpriseAnnually, usePam: false);
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User, organization: organization,
+            newAccessPam: true);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<PamNotEnabled>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenGrantingPamAndOrganizationUsesPam_ReturnsValid(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.AccessPam = false;
+        var organization = CreateOrganization(orgUser.OrganizationId, PlanType.EnterpriseAnnually, usePam: true);
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User, organization: organization,
+            newAccessPam: true);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenRevokingPamAndOrganizationDoesNotUsePam_ReturnsValid(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // Revoking access must stay possible on an organization whose PAM entitlement has lapsed.
+        orgUser.AccessPam = true;
+        var organization = CreateOrganization(orgUser.OrganizationId, PlanType.EnterpriseAnnually, usePam: false);
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User, organization: organization,
+            newAccessPam: false);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenMemberAlreadyHasPamAndOrganizationDoesNotUsePam_ReturnsValid(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // Not a grant, so an unrelated edit to a member who already has access is not blocked.
+        orgUser.AccessPam = true;
+        var organization = CreateOrganization(orgUser.OrganizationId, PlanType.EnterpriseAnnually, usePam: false);
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User, organization: organization,
+            newAccessPam: true);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task ValidateAsync_WhenRemovingLastConfirmedOwner_ReturnsMustHaveConfirmedOwner(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser)
@@ -580,7 +647,8 @@ public class UpdateOrganizationUserValidatorTests
         Permissions newPermissions = null,
         string newEmail = null,
         string newName = null,
-        User userToUpdate = null)
+        User userToUpdate = null,
+        bool newAccessPam = false)
     {
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
@@ -609,6 +677,7 @@ public class UpdateOrganizationUserValidatorTests
             newType,
             newPermissions,
             false,
+            newAccessPam,
             collectionAccess,
             groups,
             newEmail,
@@ -618,6 +687,7 @@ public class UpdateOrganizationUserValidatorTests
             userToUpdate);
     }
 
-    private static Organization CreateOrganization(Guid id, PlanType planType, bool useCustomPermissions = true) =>
-        new() { Id = id, PlanType = planType, UseCustomPermissions = useCustomPermissions };
+    private static Organization CreateOrganization(Guid id, PlanType planType, bool useCustomPermissions = true,
+        bool usePam = false) =>
+        new() { Id = id, PlanType = planType, UseCustomPermissions = useCustomPermissions, UsePam = usePam };
 }

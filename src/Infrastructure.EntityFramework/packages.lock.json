@@ -1389,11 +1389,17 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.7.2, )"
+          "HttpExtensions": "[2026.8.0, )"
         }
       },
       "httpextensions": {
         "type": "Project"
+      },
+      "pam.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Data": "[0.0.1, )"
+        }
       },
       "serilogfilelogging": {
         "type": "Project",
