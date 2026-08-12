@@ -276,4 +276,38 @@ public class DiscountMapperTests
         var discount = Assert.Single(result.ItemLevel["pm-seat"]);
         Assert.Equal(12.79m, discount.Amount);
     }
+
+    [Fact]
+    public void Partition_ItemScopedCouponMatchingOnlyProrationLine_LogsAndDrops()
+    {
+        // the item-scoped coupon's only pm-seat line is a proration; the line loop skips it, so nothing attaches.
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 11982,
+          "total_discount_amounts": [
+            { "amount": 200, "discount": { "id": "di_seat", "source": { "coupon": { "id": "cp_seat", "name": "SEATS10", "percent_off": 10, "applies_to": { "products": ["prod_pm"] } } } } }
+          ],
+          "lines": {
+            "data": [
+              {
+                "amount": 2000,
+                "pricing": { "price_details": { "price": { "id": "price_pm", "metadata": { "purchasable_reference": "pm-seat" } } } },
+                "parent": { "subscription_item_details": { "proration": true } },
+                "discount_amounts": [ { "amount": 200, "discount": "di_seat" } ]
+              }
+            ]
+          }
+        }
+        """);
+
+        var logger = new RecordingLogger<DiscountMapperTests>();
+        var result = DiscountMapper.Partition(invoice, logger);
+
+        Assert.Empty(result.CartLevel);
+        Assert.Empty(result.ItemLevel);
+        var error = Assert.Single(logger.Errors);
+        Assert.Contains("di_seat", error);
+        Assert.Contains("SEATS10", error);
+    }
 }
