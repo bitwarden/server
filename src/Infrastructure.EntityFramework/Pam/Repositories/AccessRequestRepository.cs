@@ -502,7 +502,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
                 return new AccessRequestDecision
                 {
                     DeciderKind = d.DeciderKind,
-                    Id = d.ApproverId,
+                    ApproverId = d.ApproverId,
                     Name = identity.Name,
                     Email = identity.Email,
                     Comment = d.Comment,

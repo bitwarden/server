@@ -186,7 +186,7 @@ public class AccessRequestRepositoryTests
         var row = Assert.Single(history);
         var recorded = Assert.Single(row.Decisions);
         Assert.Equal(AccessDeciderKind.Human, recorded.DeciderKind);
-        Assert.Equal(approverId, recorded.Id!.Value);
+        Assert.Equal(approverId, recorded.ApproverId!.Value);
         Assert.Equal("approved for audit", recorded.Comment);
         // Verdict and decision timestamp come straight from the AccessDecision row, so the contract exposes what each
         // approver decided and when.
@@ -393,7 +393,7 @@ public class AccessRequestRepositoryTests
         var row = Assert.Single(mine);
         var resolver = Assert.Single(row.Decisions);
         Assert.Equal(AccessDeciderKind.Human, resolver.DeciderKind);
-        Assert.Equal(approver.Id, resolver.Id!.Value);
+        Assert.Equal(approver.Id, resolver.ApproverId!.Value);
         Assert.Equal(approver.Name, resolver.Name);
         Assert.Equal(approver.Email, resolver.Email);
         Assert.Equal("not now", resolver.Comment);
@@ -465,10 +465,10 @@ public class AccessRequestRepositoryTests
         var row = Assert.Single(history);
         Assert.Equal(2, row.Decisions.Count);
         Assert.Equal(AccessDeciderKind.Human, row.Decisions[0].DeciderKind);
-        Assert.Equal(firstApproverId, row.Decisions[0].Id!.Value);
+        Assert.Equal(firstApproverId, row.Decisions[0].ApproverId!.Value);
         Assert.Equal(AccessDecisionVerdict.Approve, row.Decisions[0].Verdict);
         Assert.Equal("approved", row.Decisions[0].Comment);
-        Assert.Equal(secondApproverId, row.Decisions[1].Id!.Value);
+        Assert.Equal(secondApproverId, row.Decisions[1].ApproverId!.Value);
         Assert.Equal(AccessDecisionVerdict.Deny, row.Decisions[1].Verdict);
         Assert.Equal("retracted", row.Decisions[1].Comment);
     }
@@ -596,7 +596,7 @@ public class AccessRequestRepositoryTests
 
         var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
         var recorded = Assert.Single(details!.Decisions);
-        Assert.Equal(winnerId, recorded.Id!.Value);
+        Assert.Equal(winnerId, recorded.ApproverId!.Value);
         Assert.Equal(AccessDecisionVerdict.Approve, recorded.Verdict);
     }
 
@@ -626,7 +626,7 @@ public class AccessRequestRepositoryTests
         var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
         var recorded = Assert.Single(details!.Decisions);
         Assert.Equal(AccessDeciderKind.Human, recorded.DeciderKind);
-        Assert.Equal(approverId, recorded.Id!.Value);
+        Assert.Equal(approverId, recorded.ApproverId!.Value);
         Assert.Equal(AccessDecisionVerdict.Deny, recorded.Verdict);
         Assert.Equal("retracted", recorded.Comment);
     }
@@ -792,7 +792,7 @@ public class AccessRequestRepositoryTests
         // The full decision log projects with the human approver's resolved identity.
         var decision = Assert.Single(details.Decisions);
         Assert.Equal(AccessDeciderKind.Human, decision.DeciderKind);
-        Assert.Equal(approver.Id, decision.Id!.Value);
+        Assert.Equal(approver.Id, decision.ApproverId!.Value);
         Assert.Equal(approver.Email, decision.Email);
         Assert.Equal("approved for audit", decision.Comment);
         Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);

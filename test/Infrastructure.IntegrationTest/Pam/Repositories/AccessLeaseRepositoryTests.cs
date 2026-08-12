@@ -422,7 +422,7 @@ public class LeaseRepositoryTests
         // No verdict was appended for the lease the second call did not end.
         var afterSecond = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
         Assert.Equal(2, afterSecond!.Decisions.Count);
-        Assert.DoesNotContain(afterSecond.Decisions, d => d.Id == secondRevokerId);
+        Assert.DoesNotContain(afterSecond.Decisions, d => d.ApproverId == secondRevokerId);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -461,12 +461,12 @@ public class LeaseRepositoryTests
         // The verdict landed on the lease's real originating request...
         var owning = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
         Assert.Equal(2, owning!.Decisions.Count);
-        Assert.Contains(owning.Decisions, d => d.Id == revokerId);
+        Assert.Contains(owning.Decisions, d => d.ApproverId == revokerId);
 
         // ...and not on the request the caller named.
         var unrelated = await accessRequestRepository.GetDetailsByIdAsync(otherRequest.Id);
         Assert.Single(unrelated!.Decisions);
-        Assert.DoesNotContain(unrelated.Decisions, d => d.Id == revokerId);
+        Assert.DoesNotContain(unrelated.Decisions, d => d.ApproverId == revokerId);
     }
 
     [DatabaseTheory, DatabaseData]

@@ -240,7 +240,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         public AccessRequestDecision ToDecision() => new()
         {
             DeciderKind = DeciderKind,
-            Id = Id,
+            ApproverId = Id,
             Name = Name,
             Email = Email,
             Comment = Comment,
