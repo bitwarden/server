@@ -24,10 +24,21 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
                 continue;
             }
 
-            // Proration status lives on the subscription-item detail; top-level line.Proration is always false here.
+            // Basil removed the flat line-level proration flag; it now lives on parent.subscription_item_details.
             if (line.Parent?.SubscriptionItemDetails?.Proration == true)
             {
-                (PurchasableReferences.ProductOf(reference) == ProductType.PasswordManager ? passwordManagerProrations : secretsManagerProrations).Add(line);
+                switch (PurchasableReferences.ProductOf(reference))
+                {
+                    case ProductType.PasswordManager:
+                        passwordManagerProrations.Add(line);
+                        break;
+                    case ProductType.SecretsManager:
+                        secretsManagerProrations.Add(line);
+                        break;
+                    case null:
+                        logger.LogError("Proration line references {Reference}, which has no product mapping; skipped.", reference);
+                        break;
+                }
                 continue;
             }
 
