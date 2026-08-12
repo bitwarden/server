@@ -981,16 +981,70 @@ public class AccountsControllerTests : IDisposable
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
+        var setUserKeyId = Substitute.For<UpdateUserData>();
+        _userRepository.SetUserKeyId(user.Id, Arg.Any<KeyId>()).Returns(setUserKeyId);
+
         // Act
         var result = await _sut.PostKeys(model);
 
         // Assert
         await _userRepository.Received(1).SetV2AccountCryptographicStateAsync(
             user.Id,
-            Arg.Any<UserAccountKeysData>());
+            Arg.Any<UserAccountKeysData>(),
+            Arg.Is<IEnumerable<UpdateUserData>>(actions =>
+                actions != null && actions.Count() == 1 && actions.First() == setUserKeyId));
+        _userRepository.Received(1).SetUserKeyId(
+            user.Id,
+            Arg.Is<KeyId>(keyId => keyId.ToString() == model.UserKeyId));
         await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(Arg.Any<User>());
         Assert.NotNull(result);
         Assert.Equal("keys", result.Object);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostKeys_WithAccountKeysAndNoUserKeyId_DoesNotSetUserKeyId(
+        User user,
+        KeysRequestModel model)
+    {
+        // Arrange
+        user.PublicKey = null;
+        user.PrivateKey = null;
+        model.AccountKeys = new AccountKeysRequestModel
+        {
+            UserKeyEncryptedAccountPrivateKey = "wrapped-private-key",
+            AccountPublicKey = "public-key",
+            PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairRequestModel
+            {
+                PublicKey = "public-key",
+                WrappedPrivateKey = "wrapped-private-key",
+                SignedPublicKey = "signed-public-key"
+            },
+            SignatureKeyPair = new SignatureKeyPairRequestModel
+            {
+                VerifyingKey = "verifying-key",
+                SignatureAlgorithm = "ed25519",
+                WrappedSigningKey = "wrapped-signing-key"
+            },
+            SecurityState = new SecurityStateModel
+            {
+                SecurityState = "security-state",
+                SecurityVersion = 2
+            }
+        };
+        // A client that predates the key id field sends none.
+        model.UserKeyId = null;
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        // Act
+        await _sut.PostKeys(model);
+
+        // Assert
+        _userRepository.DidNotReceive().SetUserKeyId(Arg.Any<Guid>(), Arg.Any<KeyId>());
+        await _userRepository.Received(1).SetV2AccountCryptographicStateAsync(
+            user.Id,
+            Arg.Any<UserAccountKeysData>(),
+            null);
     }
 
     [Theory, BitAutoData]
