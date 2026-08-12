@@ -1,9 +1,11 @@
-﻿using Bit.Core.Entities;
+using Bit.Core.Entities;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Vault.Commands;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -43,7 +45,7 @@ public class UnarchiveCiphersCommandTest
                 : ids.All(id => cipherList.Contains(cipher))),
             user.Id);
         await sutProvider.GetDependency<IPushNotificationService>().Received(pushNotificationsCalls)
-            .PushSyncCiphersAsync(user.Id, true);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == user.Id));
     }
 
     [Theory]

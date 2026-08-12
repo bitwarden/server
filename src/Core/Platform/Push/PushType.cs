@@ -1,4 +1,4 @@
-﻿using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push;
 
 // TODO: This namespace should change to `Bit.Core.Platform.Push`
 namespace Bit.Core.Enums;
@@ -55,7 +55,7 @@ public enum PushType : byte
     [NotificationInfo("not-specified", typeof(Models.UserPushNotification))]
     SyncSettings = 10,
 
-    [NotificationInfo("not-specified", typeof(Models.LogOutPushNotification))]
+    [NotificationInfo("@bitwarden/team-auth-dev", typeof(Models.LogOutPushNotification))]
     LogOut = 11,
 
     [NotificationInfo("@bitwarden/team-tools-dev", typeof(Models.SyncSendPushNotification))]
@@ -91,7 +91,7 @@ public enum PushType : byte
     [NotificationInfo("@bitwarden/team-vault-dev", typeof(Models.UserPushNotification))]
     RefreshSecurityTasks = 22,
 
-    [NotificationInfo("@bitwarden/team-billing-dev", typeof(Models.ProviderBankAccountVerifiedPushNotification))]
+    [NotificationInfo("@bitwarden/team-billing-dev", typeof(Models.OrganizationBankAccountVerifiedPushNotification))]
     OrganizationBankAccountVerified = 23,
 
     [NotificationInfo("@bitwarden/team-billing-dev", typeof(Models.ProviderBankAccountVerifiedPushNotification))]

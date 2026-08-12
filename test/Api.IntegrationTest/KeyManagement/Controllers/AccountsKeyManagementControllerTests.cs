@@ -20,6 +20,7 @@ using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
@@ -586,7 +587,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
         Assert.Equal(user.SecurityStamp, userNewState.SecurityStamp);
         await _pushNotificationService.Received(1)
-            .PushLogOutAsync(userNewState.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == userNewState.Id && n.Payload.Reason == PushNotificationLogOutReason.KeyRotation));
     }
 
     [Theory]
@@ -618,7 +619,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Standard logout push sent without a reason (full logout, not KeyRotation)
         await _pushNotificationService.Received(1)
-            .PushLogOutAsync(userNewState.Id, false, null);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == userNewState.Id && n.Payload.Reason == null));
     }
 
     [Theory]
@@ -638,7 +639,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.NotNull(userNewState);
         Assert.Null(userNewState.V2UpgradeToken);
         Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
-        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == userNewState.Id && n.Payload.Reason == null));
     }
 
     [Theory]
@@ -677,7 +678,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Verify logout behavior (SecurityStamp should be different)
         Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
-        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == userNewState.Id && n.Payload.Reason == null));
     }
 
     [Theory]
@@ -727,7 +728,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         // Verify NO logout (SecurityStamp should be the same for key rotation with token)
         Assert.Equal(user.SecurityStamp, userNewState.SecurityStamp);
         await _pushNotificationService.Received(1)
-            .PushLogOutAsync(userNewState.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == userNewState.Id && n.Payload.Reason == PushNotificationLogOutReason.KeyRotation));
     }
 
     [Theory]
@@ -766,7 +767,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Verify logout behavior (SecurityStamp should be different)
         Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
-        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == userNewState.Id && n.Payload.Reason == null));
     }
 
     [Fact]
@@ -912,7 +913,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.VerifyingKey,
             signatureKeyPair.VerifyingKey);
 
-        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == userNewState.Id && n.Payload.Reason == null));
     }
 
     [Theory]
@@ -945,7 +946,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.VerifyingKey,
             signatureKeyPair.VerifyingKey);
 
-        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == userNewState.Id && n.Payload.Reason == null));
     }
 
     [Theory]
@@ -981,7 +982,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             signatureKeyPair.VerifyingKey);
 
         await _pushNotificationService.Received(1)
-            .PushLogOutAsync(userNewState.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == userNewState.Id && n.Payload.Reason == PushNotificationLogOutReason.KeyRotation));
     }
 
     private async Task<(string, Organization)> SetupKeyConnectorTestAsync(OrganizationUserStatusType userStatusType,

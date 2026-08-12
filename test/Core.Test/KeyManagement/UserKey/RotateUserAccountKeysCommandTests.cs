@@ -9,6 +9,7 @@ using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Implementations;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -437,7 +438,7 @@ public class RotateUserAccountKeysCommandTests
 
         // Assert - Push notification sent with KeyRotation reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, false, Enums.PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == Enums.PushNotificationLogOutReason.KeyRotation));
     }
 
     [Theory, BitAutoData]
@@ -468,7 +469,7 @@ public class RotateUserAccountKeysCommandTests
 
         // Assert - Push notification sent without reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -508,7 +509,7 @@ public class RotateUserAccountKeysCommandTests
 
         // Assert - Push notification sent without reason (standard logout)
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -558,7 +559,7 @@ public class RotateUserAccountKeysCommandTests
 
         // Assert - Push notification sent with KeyRotation reason (no logout)
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, false, Enums.PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == Enums.PushNotificationLogOutReason.KeyRotation));
     }
 
     [Theory, BitAutoData]
@@ -593,7 +594,7 @@ public class RotateUserAccountKeysCommandTests
 
         // Assert - Standard logout push, not KeyRotation reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -655,7 +656,7 @@ public class RotateUserAccountKeysCommandTests
         await sutProvider.GetDependency<IUserRepository>().DidNotReceive()
             .UpdateUserKeyAndEncryptedDataV2Async(Arg.Any<User>(), Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<PushNotificationLogOutReason?>());
+            .PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -751,7 +752,7 @@ public class RotateUserAccountKeysCommandTests
             .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -778,7 +779,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Contains(_mockEncryptedType2String, user.V2UpgradeToken);
         Assert.Equal(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == PushNotificationLogOutReason.KeyRotation));
     }
 
     [Theory]
@@ -803,7 +804,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Null(user.V2UpgradeToken);
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -848,7 +849,7 @@ public class RotateUserAccountKeysCommandTests
         await sutProvider.GetDependency<IUserRepository>().Received(1)
             .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -869,7 +870,7 @@ public class RotateUserAccountKeysCommandTests
         await sutProvider.GetDependency<IUserRepository>().Received(1)
             .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -896,7 +897,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Contains(_mockEncryptedType2String, user.V2UpgradeToken);
         Assert.Equal(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == PushNotificationLogOutReason.KeyRotation));
     }
 
     [Theory]
@@ -917,7 +918,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Null(user.V2UpgradeToken);
         Assert.Null(user.Key);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -942,7 +943,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Null(user.Key);
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -990,7 +991,7 @@ public class RotateUserAccountKeysCommandTests
         await sutProvider.GetDependency<IUserRepository>().Received(1)
             .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -1011,7 +1012,7 @@ public class RotateUserAccountKeysCommandTests
         await sutProvider.GetDependency<IUserRepository>().Received(1)
             .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -1038,7 +1039,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Contains(_mockEncryptedType2String, user.V2UpgradeToken);
         Assert.Equal(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == PushNotificationLogOutReason.KeyRotation));
     }
 
     [Theory]
@@ -1063,7 +1064,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Equal(model.KeyConnectorKeyWrappedUserKey, user.Key);
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     // Helper functions to set valid test parameters that match each other to the model and user.

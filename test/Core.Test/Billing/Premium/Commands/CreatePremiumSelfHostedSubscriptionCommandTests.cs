@@ -1,10 +1,12 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
+using Bit.Core.Enums;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -194,6 +196,6 @@ public class CreatePremiumSelfHostedSubscriptionCommandTests
         // Verify services were called
         await _licensingService.Received(1).WriteUserLicenseAsync(user, license);
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
     }
 }
