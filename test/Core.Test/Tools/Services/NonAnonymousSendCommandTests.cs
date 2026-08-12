@@ -82,13 +82,13 @@ public class NonAnonymousSendCommandTests
 
         // Configure validation service to throw when DisableSend policy applies
         _sendValidationService.ValidateUserCanSaveAsync(send.UserId.Value, send)
-            .Throws(new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send."));
+            .Throws(new BadRequestException("Due to an Enterprise policy, you are only able to delete an existing Send."));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _nonAnonymousSendCommand.SaveSendAsync(send));
 
-        Assert.Contains("Enterprise Policy", exception.Message);
+        Assert.Contains("Enterprise policy", exception.Message);
 
         // Verify the validation service was called
         await _sendValidationService.Received(1).ValidateUserCanSaveAsync(send.UserId.Value, send);
@@ -161,7 +161,7 @@ public class NonAnonymousSendCommandTests
 
         // Configure validation service to throw when HideEmail policy applies
         _sendValidationService.ValidateUserCanSaveAsync(userId, send)
-            .Throws(new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send."));
+            .Throws(new BadRequestException("Due to an Enterprise policy, you are not allowed to hide your email address from recipients when creating or editing a Send."));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -250,13 +250,13 @@ public class NonAnonymousSendCommandTests
 
         // Configure validation service to throw when DisableSend policy applies in vNext implementation
         _sendValidationService.ValidateUserCanSaveAsync(userId, send)
-            .Returns(Task.FromException(new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.")));
+            .Returns(Task.FromException(new BadRequestException("Due to an Enterprise policy, you are only able to delete an existing Send.")));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _nonAnonymousSendCommand.SaveSendAsync(send));
 
-        Assert.Contains("Enterprise Policy", exception.Message);
+        Assert.Contains("Enterprise policy", exception.Message);
 
         // Verify validation service was called
         await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
@@ -333,7 +333,7 @@ public class NonAnonymousSendCommandTests
 
         // Configure validation service to throw when DisableHideEmail policy applies in vNext implementation
         _sendValidationService.ValidateUserCanSaveAsync(userId, send)
-            .Throws(new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send."));
+            .Throws(new BadRequestException("Due to an Enterprise policy, you are not allowed to hide your email address from recipients when creating or editing a Send."));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
