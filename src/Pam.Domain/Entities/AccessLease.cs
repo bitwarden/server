@@ -40,12 +40,14 @@ public class AccessLease : ITableObject<Guid>
     public DateTime NotAfter { get; set; }
 
     /// <summary>
-    /// Set when an operator revokes the lease (<see cref="AccessLeaseStatus.Revoked"/>). NULL otherwise.
+    /// When the lease was ended early — set for both <see cref="AccessLeaseStatus.Revoked"/> (an operator ended it)
+    /// and <see cref="AccessLeaseStatus.Cancelled"/> (the holder ended their own). NULL otherwise.
     /// </summary>
     public DateTime? RevokedDate { get; set; }
 
     /// <summary>
-    /// The operator who revoked the lease. NULL unless <see cref="Status"/> is <see cref="AccessLeaseStatus.Revoked"/>.
+    /// Who ended the lease early: the operator who revoked it, or the holder who cancelled their own. NULL unless
+    /// <see cref="Status"/> is <see cref="AccessLeaseStatus.Revoked"/> or <see cref="AccessLeaseStatus.Cancelled"/>.
     /// </summary>
     public Guid? RevokedBy { get; set; }
 

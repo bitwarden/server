@@ -5,9 +5,11 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// A single decision on a <see cref="AccessRequest"/>. In v0 there is exactly one decision per request: an automated
+/// A single decision on a <see cref="AccessRequest"/>. A request can accumulate several: the approval itself (an
 /// <see cref="AccessDeciderKind.Automatic"/> verdict for auto-approval, or a <see cref="AccessDeciderKind.Human"/>
-/// verdict once approver endpoints land.
+/// verdict once approver endpoints land), plus the human audit decision recorded when the produced lease is later
+/// revoked or cancelled (<see cref="Repositories.IAccessLeaseRepository.RevokeAsync"/>) or an unactivated request is
+/// retracted (<see cref="Repositories.IAccessRequestRepository.CancelWithDecisionAsync"/>).
 /// </summary>
 public class AccessDecision : ITableObject<Guid>
 {
