@@ -1,6 +1,16 @@
 name: Build Seeded Database Images
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/build-seeded-databases.yml
+      - util/SeederUtility/**
+      - util/Seeder/**
+      - util/Migrator/**
+      - util/MsSqlMigratorUtility/**
+      - util/PostgresMigrations/**
+      - util/MySqlMigrations/**
   schedule:
     - cron: "0 2 * * 0"
   workflow_dispatch:
@@ -34,13 +44,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.preset }}-${{ inputs.database }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ inputs.preset }}-${{ inputs.database }}
   cancel-in-progress: true
 
 jobs:
   setup:
     name: Determine build matrix
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       presets: ${{ steps.matrix.outputs.presets }}
       databases: ${{ steps.matrix.outputs.databases }}
@@ -91,7 +101,7 @@ jobs:
   build:
     name: ${{ matrix.database }} / ${{ matrix.preset }}
     needs: setup
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
@@ -193,7 +203,7 @@ jobs:
     name: Image summary
     needs: [setup, build]
     if: always()
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: read

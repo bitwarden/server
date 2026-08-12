@@ -1,6 +1,6 @@
 # Seeded Database Build Pipeline
 
-Builds pre-seeded database Docker images from seeder presets, ready for ephemeral environment deployments.
+Builds pre-seeded database Docker images from seeder presets, so a deployment can start from seeded data without running the seeder itself.
 
 ## Quick Start
 
@@ -265,24 +265,14 @@ Rule out the cheaper cause first. SQL Server has no arm64 build, so on Apple Sil
 The workflow at `.github/workflows/build-seeded-databases.yml` supports:
 
 - **Manual dispatch**: Build a single preset + database type. Leave `preset` empty for the curated default list, or set it to `all` to build every preset. Leave `database` as `all` to build the full database matrix.
+- **Push to `main`**: Rebuilds the curated default preset list × all database types when a merge touches this workflow, the seeder (`util/Seeder/**`, `util/SeederUtility/**`), or the schema each engine migrates from (`util/Migrator/**`, `util/MsSqlMigratorUtility/**`, `util/PostgresMigrations/**`, `util/MySqlMigrations/**`)
 - **Cron**: Every Sunday at 2am UTC, rebuilds the curated default preset list (`_DEFAULT_PRESETS`) × all database types
 
 The workflow uses a matrix strategy (`preset × database`) with `fail-fast: false`.
 
-## Using Seeded Images in Ephemeral Environments
+## Using seeded images with the self-host Helm chart
 
-### Lite chart
-
-```yaml
-# values.yaml
-database:
-  type: postgres  # or mariadb, sqlserver
-  image:
-    repository: bitwardenprod.azurecr.io/shot/seeded-postgres
-    tag: qa-dunder-mifflin-enterprise-full-latest
-```
-
-### Self-host chart
+Point the chart's database image at a seeded tag in [bitwarden/charts](https://github.com/bitwarden/charts):
 
 ```yaml
 # values.yaml
@@ -293,4 +283,4 @@ self-host:
       tag: qa-dunder-mifflin-enterprise-full-latest
 ```
 
-**Note**: Both charts also need the [data protection key](#getting-the-data-protection-key) at `/etc/bitwarden/core/aspnet-dataprotection`, plus `core/attachments` for attachment presets. Login fails against seeded data without the key.
+**Note**: The chart also needs the [data protection key](#getting-the-data-protection-key) at `/etc/bitwarden/core/aspnet-dataprotection`, plus `core/attachments` for attachment presets. Login fails against seeded data without the key.
