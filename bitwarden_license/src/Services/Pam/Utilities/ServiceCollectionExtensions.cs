@@ -1,6 +1,11 @@
 ﻿using Bit.HttpExtensions;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
+using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.OrganizationFeatures.Commands;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Services.Pam.Utilities;
 
@@ -13,6 +18,20 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
         services.AddScoped<CipherLeaseEndpointsHandler>();
+
+        // Rule evaluation engine. Pure and stateless, so a singleton is safe.
+        services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
+
+        // Resolves the access rule governing a cipher for a caller, then evaluates it via the engine.
+        services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
+
+        // AccessRule write path.
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
+        services.AddScoped<IAccessRuleWriteValidator, AccessRuleWriteValidator>();
+        services.AddScoped<ICreateAccessRuleCommand, CreateAccessRuleCommand>();
+        services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
+        services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
 
         services.AddPamOpenApiEndpointDataSource();
 
