@@ -15,5 +15,6 @@ internal static class PurchasableReferences
 
     internal static bool IsKnown(string reference) => ProductsByReference.ContainsKey(reference);
 
-    internal static ProductType ProductOf(string reference) => ProductsByReference[reference];
+    internal static ProductType? ProductOf(string reference) =>
+        ProductsByReference.TryGetValue(reference, out var product) ? product : null;
 }
