@@ -110,7 +110,7 @@ public class InvoicePreviewBuilderTests
     }
 
     [Fact]
-    public void BuildFromInvoice_FoldsProrations_ByPrefix()
+    public void BuildFromInvoice_FoldsProrations_ByProductReference()
     {
         var invoice = Deserialize("""
         {
