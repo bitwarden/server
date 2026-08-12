@@ -88,10 +88,9 @@ public class SendRequestModel
     public SendTextModel? Text { get; set; }
 
     /// <summary>
-    /// String containing secret Send data
+    /// Contains secret Send data
     /// </summary>
-    [StringLength(500000)]
-    public string? Data { get; set; }
+    public SendDataModel? Data { get; set; }
 
     /// <summary>
     /// Base64-encoded byte array of a password hash that grants access to the send.
@@ -172,7 +171,7 @@ public class SendRequestModel
                 existingSend.Data = JsonSerializer.Serialize(ToSendTextData(), JsonHelpers.IgnoreWritingNull);
                 break;
             case SendType.Item:
-                existingSend.Data = Data ?? throw new ArgumentNullException(nameof(Data), "Data is required for Sends of type Item");
+                existingSend.Data = JsonSerializer.Serialize(ToSendItemData(), JsonHelpers.IgnoreWritingNull);
                 break;
             default:
                 throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
@@ -265,6 +264,10 @@ public class SendRequestModel
         if (AuthType != null)
         {
             existingSend.AuthType = AuthType;
+            if (Type == SendType.Item && AuthType != Core.Tools.Enums.AuthType.Email)
+            {
+                throw new BadRequestException("Item-type Sends require email verification");
+            }
             switch (AuthType)
             {
                 case Core.Tools.Enums.AuthType.Email:
@@ -322,6 +325,13 @@ public class SendRequestModel
     {
         var text = Text ?? throw new ArgumentNullException(nameof(Text), "Text is required for text sends.");
         return new SendTextData(Name ?? string.Empty, Notes, text.Text, text.Hidden);
+    }
+
+     // Only called from the SendType.Item branch of UpdateSend, Data is required by client and not null
+    private SendItemData ToSendItemData()
+    {
+        var data = Data ?? throw new ArgumentNullException(nameof(Data), "Data is required for item sends.");
+        return new SendItemData(Name ?? string.Empty, Notes, data.EncryptionVersion, data.Data);
     }
 }
 
