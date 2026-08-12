@@ -24,6 +24,20 @@ internal sealed record ScimUserRequest(
     string DisplayName);
 
 /// <summary>
+/// The connection details from the last SCIM request, so they only have to be typed once.
+/// </summary>
+/// <remarks>
+/// Deliberately in-memory only, for the lifetime of this app host process. The API key is never
+/// written to disk — a restart asks for it again.
+/// </remarks>
+internal sealed class ScimClientState
+{
+    public string ApiKey { get; set; } = string.Empty;
+
+    public string OrganizationId { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// A minimal SCIM client for the locally running Scim service, so provisioning flows can be exercised
 /// without reaching for curl or a real IdP.
 /// </summary>
@@ -41,11 +55,12 @@ internal static class ScimClient
     public static IResourceBuilder<ProjectResource> WithScimClient(this IResourceBuilder<ProjectResource> scim)
     {
         var endpoint = scim.GetEndpoint("http");
+        var state = new ScimClientState();
 
         return scim.WithCommand(
             name: "scim-client",
             displayName: "SCIM client",
-            executeCommand: context => ExecuteAsync(context, endpoint),
+            executeCommand: context => ExecuteAsync(context, endpoint, state),
             commandOptions: new CommandOptions
             {
                 Description = "Send a SCIM create, update or disable request to this server.",
@@ -58,7 +73,8 @@ internal static class ScimClient
 
     private static async Task<ExecuteCommandResult> ExecuteAsync(
         ExecuteCommandContext context,
-        EndpointReference endpoint)
+        EndpointReference endpoint,
+        ScimClientState state)
     {
         var cancellationToken = context.CancellationToken;
         var interaction = context.ServiceProvider.GetRequiredService<IInteractionService>();
@@ -73,11 +89,15 @@ internal static class ScimClient
             return CommandResults.Failure("The scim service is not running — start it and try again.");
         }
 
-        var request = await PromptAsync(interaction, cancellationToken);
+        var request = await PromptAsync(interaction, state, cancellationToken);
         if (request is null)
         {
             return CommandResults.Canceled();
         }
+
+        // Remembered for the next invocation in this session only.
+        state.ApiKey = request.ApiKey;
+        state.OrganizationId = request.OrganizationId.ToString();
 
         using var http = new HttpClient { BaseAddress = new Uri(endpoint.Url) };
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", request.ApiKey);
@@ -100,6 +120,7 @@ internal static class ScimClient
 
     private static async Task<ScimUserRequest?> PromptAsync(
         IInteractionService interaction,
+        ScimClientState state,
         CancellationToken cancellationToken)
     {
         var result = await interaction.PromptInputsAsync(
@@ -112,7 +133,9 @@ internal static class ScimClient
                     Label = "SCIM API key",
                     InputType = InputType.SecretText,
                     Required = true,
-                    Description = "From the organization's SCIM settings. Sent as a bearer token."
+                    Value = state.ApiKey,
+                    Description = "From the organization's SCIM settings. Sent as a bearer token. "
+                        + "Kept for this session only."
                 },
                 new InteractionInput
                 {
@@ -120,6 +143,7 @@ internal static class ScimClient
                     Label = "Organization ID",
                     InputType = InputType.Text,
                     Required = true,
+                    Value = state.OrganizationId,
                     Placeholder = "00000000-0000-0000-0000-000000000000"
                 },
                 new InteractionInput
