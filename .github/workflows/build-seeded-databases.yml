@@ -1,16 +1,6 @@
 name: Build Seeded Database Images
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/build-seeded-databases.yml
-      - util/SeederUtility/**
-      - util/Seeder/**
-      - util/Migrator/**
-      - util/MsSqlMigratorUtility/**
-      - util/PostgresMigrations/**
-      - util/MySqlMigrations/**
   schedule:
     - cron: "0 2 * * 0"
   workflow_dispatch:

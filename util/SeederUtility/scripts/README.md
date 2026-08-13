@@ -265,7 +265,6 @@ Rule out the cheaper cause first. SQL Server has no arm64 build, so on Apple Sil
 The workflow at `.github/workflows/build-seeded-databases.yml` supports:
 
 - **Manual dispatch**: Build a single preset + database type. Leave `preset` empty for the curated default list, or set it to `all` to build every preset. Leave `database` as `all` to build the full database matrix.
-- **Push to `main`**: Rebuilds the curated default preset list × all database types when a merge touches this workflow, the seeder (`util/Seeder/**`, `util/SeederUtility/**`), or the schema each engine migrates from (`util/Migrator/**`, `util/MsSqlMigratorUtility/**`, `util/PostgresMigrations/**`, `util/MySqlMigrations/**`)
 - **Cron**: Every Sunday at 2am UTC, rebuilds the curated default preset list (`_DEFAULT_PRESETS`) × all database types
 
 The workflow uses a matrix strategy (`preset × database`) with `fail-fast: false`.
