@@ -1,12 +1,12 @@
 ﻿using System.Globalization;
 using Azure.Storage.Queues;
 using Bit.Core.Auth.IdentityServer;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Notifications;
 

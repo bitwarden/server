@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System.Text.Json.Nodes;
 using Azure.Storage.Queues;
 using Bit.Core.Context;

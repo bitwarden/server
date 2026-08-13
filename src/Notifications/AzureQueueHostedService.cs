@@ -1,7 +1,6 @@
-using Azure.Storage.Queues;
+﻿using Azure.Storage.Queues;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Notifications;
 

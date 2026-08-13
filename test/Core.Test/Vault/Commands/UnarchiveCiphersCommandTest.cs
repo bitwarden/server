@@ -1,11 +1,11 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Vault.Commands;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
-using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

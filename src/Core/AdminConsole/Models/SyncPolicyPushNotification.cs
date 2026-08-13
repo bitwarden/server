@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 
 // File lives next to its owning domain (AdminConsole) for discoverability; the namespace stays
 // Bit.Core.Models so that existing callers do not need updating. A future cleanup can align namespace

@@ -1,12 +1,12 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
-using Bit.Core.Enums;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;

@@ -1,4 +1,4 @@
-using Bit.Core.Platform.Push;
+﻿using Bit.Core.Platform.Push;
 
 // TODO: This namespace should change to `Bit.Core.Platform.Push`
 namespace Bit.Core.Enums;

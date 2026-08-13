@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;

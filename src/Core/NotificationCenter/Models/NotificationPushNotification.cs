@@ -1,4 +1,4 @@
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Enums;
 
 // File lives next to its owning domain (NotificationCenter) for discoverability; the namespace stays

@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -12,11 +12,11 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
 using Microsoft.Extensions.Logging;
