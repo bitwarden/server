@@ -1,4 +1,6 @@
-﻿namespace Bit.Services.Pam.Api.Models.Response;
+﻿using Bit.Pam.Enums;
+
+namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
 /// One decision on an access request: who decided (<see cref="DeciderKind"/>), their identity for a human decision,
@@ -12,7 +14,7 @@
 public class AccessRequestDecisionResponseModel
 {
     /// <summary>Whether a human approver or an automatic access-rule decision produced this entry.</summary>
-    public DeciderKind DeciderKind { get; set; }
+    public AccessDeciderKind DeciderKind { get; set; }
 
     /// <summary>The human approver's user id, or null for an automatic decision.</summary>
     public Guid? Id { get; set; }

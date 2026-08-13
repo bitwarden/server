@@ -83,6 +83,53 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         return Task.CompletedTask;
     }
 
+    [Fact]
+    public async Task PostUserKeyIdAsync_NotLoggedIn_Unauthorized()
+    {
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new SetUserKeyIdRequestModel { UserKeyId = _mockKeyId });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostUserKeyIdAsync_MalformedKeyId_BadRequest()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new { UserKeyId = "not-a-key-id" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostUserKeyIdAsync_NoKeyIdRecorded_BackfillsThenRejectsASecondAttempt()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+        Assert.Null(user.GetUserKeyId());
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new SetUserKeyIdRequestModel { UserKeyId = _mockKeyId });
+        response.EnsureSuccessStatusCode();
+
+        var updatedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(_mockKeyId, updatedUser.UserKeyId);
+
+        // Reporting a key id must not be able to rename the key the account is now known to use.
+        var secondResponse = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new SetUserKeyIdRequestModel { UserKeyId = "fedcba9876543210fedcba9876543210" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, secondResponse.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_mockKeyId, unchangedUser.UserKeyId);
+    }
+
     [Theory]
     [BitAutoData]
     public async Task RegenerateKeysAsync_NotLoggedIn_Unauthorized(KeyRegenerationRequestModel request)

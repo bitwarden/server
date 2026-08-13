@@ -54,8 +54,20 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// </summary>
     Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships);
 
+    /// <remarks>
+    /// Ignores <see cref="Collection.AccessRuleId"/>: a new collection is always created ungoverned, whatever the
+    /// caller set on <paramref name="obj"/>. Use <see cref="SetAccessRuleAssociationsAsync"/> to associate it with an
+    /// access rule.
+    /// </remarks>
     Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users);
+
+    /// <remarks>
+    /// Ignores <see cref="Collection.AccessRuleId"/>, whatever the caller set on <paramref name="obj"/>, so an
+    /// ordinary collection edit can neither erase nor forge a PAM association. Use
+    /// <see cref="SetAccessRuleAssociationsAsync"/> to change it.
+    /// </remarks>
     Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users);
+
     Task DeleteUserAsync(Guid collectionId, Guid organizationUserId);
     Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users);
     Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id);
