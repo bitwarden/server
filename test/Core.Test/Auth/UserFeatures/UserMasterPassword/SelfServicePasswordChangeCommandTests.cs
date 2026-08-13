@@ -52,7 +52,7 @@ public class SelfServicePasswordChangeCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.ExcludeCurrentContext == true));
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.ExcludeCurrentContext));
     }
 
     [Theory]

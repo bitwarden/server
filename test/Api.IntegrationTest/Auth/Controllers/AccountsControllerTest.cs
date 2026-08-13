@@ -559,7 +559,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         // Other devices are logged out, current session is preserved
         // (excludeCurrentContextFromPush: true) — self-service-specific behavior.
-        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == updatedUser.Id && n.ExcludeCurrentContext == true));
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == updatedUser.Id && n.ExcludeCurrentContext));
 
         // User_ChangedPassword event was logged.
         var events = await _eventRepository.GetManyByUserAsync(
