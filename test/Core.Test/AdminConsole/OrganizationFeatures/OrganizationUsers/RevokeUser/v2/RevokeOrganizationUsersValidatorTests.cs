@@ -1,9 +1,13 @@
-﻿using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
-using Bit.Core.Context;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -29,7 +33,8 @@ public class RevokeOrganizationUsersValidatorTests
         orgUser1.UserId = Guid.NewGuid();
         orgUser2.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(actingUserId, false, null);
+        UseRealValidationService(sutProvider);
+        var actingUser = CreateActingUser(actingUserId, OrganizationUserType.Owner);
         var request = CreateValidationRequest(
             organizationId,
             [orgUser1, orgUser2],
@@ -59,7 +64,8 @@ public class RevokeOrganizationUsersValidatorTests
         revokedUser.OrganizationId = organizationId;
         revokedUser.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(actingUserId, false, null);
+        UseRealValidationService(sutProvider);
+        var actingUser = CreateActingUser(actingUserId, OrganizationUserType.Owner);
         var request = CreateValidationRequest(
             organizationId,
             [revokedUser],
@@ -90,7 +96,8 @@ public class RevokeOrganizationUsersValidatorTests
         orgUser.OrganizationId = organizationId;
         orgUser.UserId = actingUserId;
 
-        var actingUser = CreateActingUser(actingUserId, false, null);
+        UseRealValidationService(sutProvider);
+        var actingUser = CreateActingUser(actingUserId, OrganizationUserType.Owner);
         var request = CreateValidationRequest(
             organizationId,
             [orgUser],
@@ -121,7 +128,8 @@ public class RevokeOrganizationUsersValidatorTests
         ownerUser.OrganizationId = organizationId;
         ownerUser.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(actingUserId, false, null);
+        UseRealValidationService(sutProvider);
+        var actingUser = CreateActingUser(actingUserId, OrganizationUserType.Admin);
         var request = CreateValidationRequest(
             organizationId,
             [ownerUser],
@@ -137,7 +145,7 @@ public class RevokeOrganizationUsersValidatorTests
         // Assert
         Assert.Single(results);
         Assert.True(results.First().IsError);
-        Assert.IsType<OnlyOwnersCanRevokeOwners>(results.First().AsError);
+        Assert.IsType<OnlyOwnersCanManageOwners>(results.First().AsError);
     }
 
     [Theory]
@@ -152,7 +160,8 @@ public class RevokeOrganizationUsersValidatorTests
         ownerUser.OrganizationId = organizationId;
         ownerUser.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(actingUserId, true, null);
+        UseRealValidationService(sutProvider);
+        var actingUser = CreateActingUser(actingUserId, OrganizationUserType.Owner);
         var request = CreateValidationRequest(
             organizationId,
             [ownerUser],
@@ -184,7 +193,8 @@ public class RevokeOrganizationUsersValidatorTests
         validUser.UserId = Guid.NewGuid();
         revokedUser.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(actingUserId, false, null);
+        UseRealValidationService(sutProvider);
+        var actingUser = CreateActingUser(actingUserId, OrganizationUserType.Owner);
         var request = CreateValidationRequest(
             organizationId,
             [validUser, revokedUser],
@@ -219,7 +229,7 @@ public class RevokeOrganizationUsersValidatorTests
         orgUser.OrganizationId = organizationId;
         orgUser.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(null, false, EventSystemUser.SCIM);
+        var actingUser = CreateActingUser(null, systemUserType: EventSystemUser.SCIM);
         var request = CreateValidationRequest(
             organizationId,
             [orgUser],
@@ -248,7 +258,7 @@ public class RevokeOrganizationUsersValidatorTests
         ownerUser.OrganizationId = organizationId;
         ownerUser.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(null, false, EventSystemUser.SCIM);
+        var actingUser = CreateActingUser(null, systemUserType: EventSystemUser.SCIM);
         var request = CreateValidationRequest(
             organizationId,
             [ownerUser],
@@ -278,7 +288,8 @@ public class RevokeOrganizationUsersValidatorTests
         lastOwner.OrganizationId = organizationId;
         lastOwner.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(actingUserId, true, null); // Is an owner
+        UseRealValidationService(sutProvider);
+        var actingUser = CreateActingUser(actingUserId, OrganizationUserType.Owner); // Is an owner
         var request = CreateValidationRequest(
             organizationId,
             [lastOwner],
@@ -311,7 +322,8 @@ public class RevokeOrganizationUsersValidatorTests
         revokedUser.UserId = Guid.NewGuid();
         ownerUser.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(actingUserId, false, null); // Not an owner
+        UseRealValidationService(sutProvider);
+        var actingUser = CreateActingUser(actingUserId, OrganizationUserType.Admin); // Not an owner
         var request = CreateValidationRequest(
             organizationId,
             [revokedUser, ownerUser],
@@ -329,7 +341,7 @@ public class RevokeOrganizationUsersValidatorTests
         Assert.All(results, r => Assert.True(r.IsError));
 
         Assert.Contains(results, r => r.AsError is UserAlreadyRevoked);
-        Assert.Contains(results, r => r.AsError is OnlyOwnersCanRevokeOwners);
+        Assert.Contains(results, r => r.AsError is OnlyOwnersCanManageOwners);
     }
 
     [Theory]
@@ -344,17 +356,15 @@ public class RevokeOrganizationUsersValidatorTests
         adminUser.OrganizationId = organizationId;
         adminUser.UserId = Guid.NewGuid();
 
+        UseRealValidationService(sutProvider);
         var request = CreateValidationRequest(
             organizationId,
             [adminUser],
-            CreateActingUser(actingUserId, false, null));
+            CreateActingUser(actingUserId, OrganizationUserType.Custom, new Permissions { ManageUsers = true }));
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationAdmin(organizationId)
-            .Returns(false);
 
         // Act
         var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
@@ -362,7 +372,7 @@ public class RevokeOrganizationUsersValidatorTests
         // Assert
         Assert.Single(results);
         Assert.True(results.First().IsError);
-        Assert.IsType<CustomUsersCannotRevokeAdmins>(results.First().AsError);
+        Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(results.First().AsError);
     }
 
     [Theory]
@@ -377,16 +387,14 @@ public class RevokeOrganizationUsersValidatorTests
         adminUser.OrganizationId = organizationId;
         adminUser.UserId = Guid.NewGuid();
 
+        UseRealValidationService(sutProvider);
         var request = CreateValidationRequest(
             organizationId,
             [adminUser],
-            CreateActingUser(actingUserId, false, null));
+            CreateActingUser(actingUserId, OrganizationUserType.Admin));
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
-            .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationAdmin(organizationId)
             .Returns(true);
 
         // Act
@@ -408,7 +416,7 @@ public class RevokeOrganizationUsersValidatorTests
         adminUser.OrganizationId = organizationId;
         adminUser.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(null, false, EventSystemUser.SCIM);
+        var actingUser = CreateActingUser(null, systemUserType: EventSystemUser.SCIM);
         var request = CreateValidationRequest(
             organizationId,
             [adminUser],
@@ -424,18 +432,36 @@ public class RevokeOrganizationUsersValidatorTests
         // Assert
         Assert.Single(results);
         Assert.True(results.First().IsValid);
-        await sutProvider.GetDependency<ICurrentContext>()
-            .DidNotReceiveWithAnyArgs()
-            .OrganizationAdmin(default);
     }
 
-    private static IActingUser CreateActingUser(Guid? userId, bool isOwnerOrProvider, EventSystemUser? systemUserType) =>
+    /// <summary>
+    /// Replaces the auto-mocked <see cref="IOrganizationUserValidationService"/> with a real instance (backed by a
+    /// provider-repository stub reporting no provider memberships), so these tests exercise the real "can manage"
+    /// hierarchy instead of re-implementing it as a mock.
+    /// </summary>
+    private static void UseRealValidationService(SutProvider<RevokeOrganizationUsersValidator> sutProvider)
+    {
+        var providerUserRepository = Substitute.For<IProviderUserRepository>();
+        providerUserRepository
+            .GetManyOrganizationDetailsByUserAsync(Arg.Any<Guid>(), ProviderUserStatusType.Confirmed)
+            .Returns([]);
+
+        var validationService = new OrganizationUserValidationService(
+            providerUserRepository, Substitute.For<IOrganizationUserRepository>());
+
+        // Must match the constructor parameter name: the auto-created mock is already registered under this name,
+        // so overriding under a different (e.g. default empty) name would be shadowed by it.
+        sutProvider.SetDependency<IOrganizationUserValidationService>(validationService, "organizationUserValidationService");
+        sutProvider.Create();
+    }
+
+    private static IActingUser CreateActingUser(Guid? userId, OrganizationUserType? type = null,
+        Permissions? permissions = null, EventSystemUser? systemUserType = null) =>
         (userId, systemUserType) switch
         {
-            ({ } id, _) => new StandardUser(id, isOwnerOrProvider),
-            (null, { } type) => new SystemUser(type)
+            ({ } id, _) => new StandardUser(id, type is OrganizationUserType.Owner, type, permissions),
+            (null, { } sysType) => new SystemUser(sysType)
         };
-
 
     private static RevokeOrganizationUsersValidationRequest CreateValidationRequest(
         Guid organizationId,

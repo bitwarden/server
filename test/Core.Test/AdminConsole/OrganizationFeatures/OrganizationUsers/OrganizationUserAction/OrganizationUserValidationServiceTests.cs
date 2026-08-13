@@ -162,6 +162,79 @@ public class OrganizationUserValidationServiceTests
     }
 
     [Fact]
+    public async Task CanManageAsync_WithCustomPermissionGate_UsesGateInsteadOfManageUsers()
+    {
+        _providerUserRepository
+            .GetManyOrganizationDetailsByUserAsync(_actingUserId, ProviderUserStatusType.Confirmed)
+            .Returns([]);
+
+        // Holds ManageUsers but not ManageResetPassword: denied when gated on ManageResetPassword.
+        var actingUser = ActingUser(OrganizationUserType.Custom);
+        var deniedResult = await _sut.CanManageAsync(_actingUserId, actingUser, TargetUser(OrganizationUserType.User),
+            customPermissionGate: p => p.ManageResetPassword);
+
+        Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(deniedResult);
+
+        // Holds ManageResetPassword: allowed when gated on ManageResetPassword.
+        var actingUserWithResetPassword = new OrganizationUser { Type = OrganizationUserType.Custom };
+        actingUserWithResetPassword.SetPermissions(new Permissions { ManageResetPassword = true });
+
+        var allowedResult = await _sut.CanManageAsync(_actingUserId, actingUserWithResetPassword,
+            TargetUser(OrganizationUserType.User), customPermissionGate: p => p.ManageResetPassword);
+
+        Assert.Null(allowedResult);
+    }
+
+    [Fact]
+    public async Task CanManageAsync_Bulk_ReturnsPerTargetResultsMatchingSingleTargetBehavior()
+    {
+        _providerUserRepository
+            .GetManyOrganizationDetailsByUserAsync(_actingUserId, ProviderUserStatusType.Confirmed)
+            .Returns([]);
+
+        var admin = ActingUser(OrganizationUserType.Admin);
+
+        var ownerTargetId = Guid.NewGuid();
+        var adminTargetId = Guid.NewGuid();
+        var userTargetId = Guid.NewGuid();
+
+        var targetsById = new Dictionary<Guid, IOrganizationUserRole>
+        {
+            [ownerTargetId] = TargetUser(OrganizationUserType.Owner),
+            [adminTargetId] = TargetUser(OrganizationUserType.Admin),
+            [userTargetId] = TargetUser(OrganizationUserType.User),
+        };
+
+        var results = await _sut.CanManageAsync(_actingUserId, admin, _organizationId, targetsById);
+
+        Assert.IsType<OnlyOwnersCanManageOwners>(results[ownerTargetId]);
+        Assert.Null(results[adminTargetId]);
+        Assert.Null(results[userTargetId]);
+
+        // Provider lookup is only resolved once for the whole batch, not once per target.
+        await _providerUserRepository.Received(1)
+            .GetManyOrganizationDetailsByUserAsync(_actingUserId, ProviderUserStatusType.Confirmed);
+    }
+
+    [Fact]
+    public async Task CanManageAsync_Bulk_WhenActingUserIsProvider_ReturnsNullForAllTargets()
+    {
+        _providerUserRepository
+            .GetManyOrganizationDetailsByUserAsync(_actingUserId, ProviderUserStatusType.Confirmed)
+            .Returns([new ProviderUserOrganizationDetails { OrganizationId = _organizationId }]);
+
+        var targetsById = new Dictionary<Guid, IOrganizationUserRole>
+        {
+            [Guid.NewGuid()] = TargetUser(OrganizationUserType.Owner),
+            [Guid.NewGuid()] = TargetUser(OrganizationUserType.Admin),
+        };
+
+        var results = await _sut.CanManageAsync(_actingUserId, actingUser: null, _organizationId, targetsById);
+
+        Assert.All(results.Values, Assert.Null);
+    }
+
+    [Fact]
     public async Task CanManageRoleChangeAsync_WhenActingUserCanManageBothRoles_ReturnsNull()
     {
         // An Admin promoting a User to Custom can manage both the current and new role.

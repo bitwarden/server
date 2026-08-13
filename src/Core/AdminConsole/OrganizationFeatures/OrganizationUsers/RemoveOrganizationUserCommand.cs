@@ -1,8 +1,11 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -25,12 +28,11 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IFeatureService _featureService;
     private readonly TimeProvider _timeProvider;
+    private readonly IOrganizationUserValidationService _organizationUserValidationService;
 
     public const string UserNotFoundErrorMessage = "User not found.";
     public static readonly string UsersInvalidErrorMessage = new UsersInvalid().Message;
     public const string RemoveYourselfErrorMessage = "You cannot remove yourself.";
-    public const string RemoveOwnerByNonOwnerErrorMessage = "Only owners can remove other owners.";
-    public const string RemoveAdminByCustomUserErrorMessage = "Custom users can not remove admins.";
     public const string RemoveLastConfirmedOwnerErrorMessage = "Organization must have at least one confirmed owner.";
     public const string RemoveClaimedAccountErrorMessage = "Cannot remove member accounts claimed by the organization. To offboard a member, revoke or delete the account.";
 
@@ -44,7 +46,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IFeatureService featureService,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IOrganizationUserValidationService organizationUserValidationService)
     {
         _deviceRepository = deviceRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -56,6 +59,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _featureService = featureService;
         _timeProvider = timeProvider;
+        _organizationUserValidationService = organizationUserValidationService;
     }
 
     public async Task RemoveUserAsync(Guid organizationId, Guid userId)
@@ -145,22 +149,24 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             throw new BadRequestException(RemoveYourselfErrorMessage);
         }
 
-        if (orgUser.Type == OrganizationUserType.Owner)
+        if (deletingUserId.HasValue)
         {
-            if (deletingUserId.HasValue && !await _currentContext.OrganizationOwner(orgUser.OrganizationId))
-            {
-                throw new BadRequestException(RemoveOwnerByNonOwnerErrorMessage);
-            }
+            var actingOrganization = _currentContext.GetOrganization(orgUser.OrganizationId);
+            var actingUser = actingOrganization is null
+                ? null
+                : new OrganizationUserRole(actingOrganization.Type, orgUser.OrganizationId, actingOrganization.Permissions);
 
-            if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(orgUser.OrganizationId, new[] { orgUser.Id }, includeProvider: true))
+            var error = await _organizationUserValidationService.CanManageAsync(deletingUserId.Value, actingUser, orgUser);
+            if (error is not null)
             {
-                throw new BadRequestException(RemoveLastConfirmedOwnerErrorMessage);
+                throw new BadRequestException(error.Message);
             }
         }
 
-        if (orgUser.Type == OrganizationUserType.Admin && await _currentContext.OrganizationCustom(orgUser.OrganizationId))
+        if (orgUser.Type == OrganizationUserType.Owner &&
+            !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(orgUser.OrganizationId, new[] { orgUser.Id }, includeProvider: true))
         {
-            throw new BadRequestException(RemoveAdminByCustomUserErrorMessage);
+            throw new BadRequestException(RemoveLastConfirmedOwnerErrorMessage);
         }
 
         if (deletingUserId.HasValue && eventSystemUser == null)
@@ -196,6 +202,34 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         await _pushNotificationService.PushSyncOrgKeysAsync(userId);
     }
 
+    /// <summary>
+    /// Resolves the "can the acting user manage this target's role" decision once for the whole batch via
+    /// <see cref="IOrganizationUserValidationService"/>, instead of precomputing the acting user's org-level status
+    /// and re-checking it per target.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<Guid, Error>> GetManageErrorsAsync(
+        Guid organizationId, Guid? deletingUserId, ICollection<OrganizationUser> targetUsers)
+    {
+        if (!deletingUserId.HasValue || targetUsers.Count == 0)
+        {
+            return new Dictionary<Guid, Error>();
+        }
+
+        var actingOrganization = _currentContext.GetOrganization(organizationId);
+        var actingUser = actingOrganization is null
+            ? null
+            : new OrganizationUserRole(actingOrganization.Type, organizationId, actingOrganization.Permissions);
+
+        var targetsById = targetUsers.ToDictionary(u => u.Id, u => (IOrganizationUserRole)u);
+
+        var results = await _organizationUserValidationService.CanManageAsync(
+            deletingUserId.Value, actingUser, organizationId, targetsById);
+
+        return results
+            .Where(kvp => kvp.Value is not null)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value!);
+    }
+
     private async Task<IEnumerable<(OrganizationUser OrganizationUser, string ErrorMessage)>> RemoveUsersInternalAsync(
         Guid organizationId, IEnumerable<Guid> organizationUsersId, Guid? deletingUserId, EventSystemUser? eventSystemUser)
     {
@@ -212,13 +246,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             throw new BadRequestException(RemoveLastConfirmedOwnerErrorMessage);
         }
 
-        var deletingUserIsOwner = false;
-        var deletingUserIsCustom = false;
-        if (deletingUserId.HasValue)
-        {
-            deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
-            deletingUserIsCustom = await _currentContext.OrganizationCustom(organizationId);
-        }
+        var manageErrorsByOrgUserId = await GetManageErrorsAsync(organizationId, deletingUserId, filteredUsers);
 
         var claimedStatus = deletingUserId.HasValue && eventSystemUser == null
             ? await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, filteredUsers.Select(u => u.Id))
@@ -233,14 +261,9 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
                     throw new BadRequestException(RemoveYourselfErrorMessage);
                 }
 
-                if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue && !deletingUserIsOwner)
+                if (manageErrorsByOrgUserId.TryGetValue(orgUser.Id, out var manageError) && manageError is not null)
                 {
-                    throw new BadRequestException(RemoveOwnerByNonOwnerErrorMessage);
-                }
-
-                if (orgUser.Type == OrganizationUserType.Admin && deletingUserIsCustom)
-                {
-                    throw new BadRequestException(RemoveAdminByCustomUserErrorMessage);
+                    throw new BadRequestException(manageError.Message);
                 }
 
                 if (claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) && isClaimed)

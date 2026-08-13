@@ -1,7 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
@@ -10,7 +11,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUse
 
 public class RevokeOrganizationUsersValidator(
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-    ICurrentContext currentContext)
+    IOrganizationUserValidationService organizationUserValidationService)
     : IRevokeOrganizationUserValidator
 {
     public async Task<ICollection<ValidationResult<OrganizationUser>>> ValidateAsync(
@@ -20,8 +21,7 @@ public class RevokeOrganizationUsersValidator(
             request.OrganizationUsersToRevoke.Select(x => x.Id) // users excluded because they are going to be revoked
             );
 
-        var isCustomUser = request.PerformedBy is not SystemUser
-                           && !await currentContext.OrganizationAdmin(request.OrganizationId);
+        var manageErrorsByTarget = await GetManageErrorsAsync(request);
 
         return request.OrganizationUsersToRevoke.Select(organizationUser =>
         {
@@ -35,14 +35,33 @@ public class RevokeOrganizationUsersValidator(
                     Invalid(organizationUser, new UserAlreadyRevoked()),
                 { Type: OrganizationUserType.Owner } when !hasRemainingOwner =>
                     Invalid(organizationUser, new MustHaveConfirmedOwner()),
-                { Type: OrganizationUserType.Owner } when request.PerformedBy is not SystemUser
-                                                        && !request.PerformedBy.IsOrganizationOwnerOrProvider =>
-                    Invalid(organizationUser, new OnlyOwnersCanRevokeOwners()),
-                { Type: OrganizationUserType.Admin } when isCustomUser =>
-                    Invalid(organizationUser, new CustomUsersCannotRevokeAdmins()),
+                _ when manageErrorsByTarget[organizationUser.Id] is { } manageError =>
+                    Invalid(organizationUser, manageError),
 
                 _ => Valid(organizationUser)
             };
         }).ToList();
+    }
+
+    /// <summary>
+    /// Delegates the "can the acting user manage this target's role" decision to
+    /// <see cref="IOrganizationUserValidationService"/>'s bulk <c>CanManageAsync</c> overload.
+    /// System users (SCIM, Public API) skip the check entirely.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<Guid, Error?>> GetManageErrorsAsync(RevokeOrganizationUsersValidationRequest request)
+    {
+        var targetsById = request.OrganizationUsersToRevoke.ToDictionary(u => u.Id, u => (IOrganizationUserRole)u);
+
+        if (request.PerformedBy is not StandardUser standardUser)
+        {
+            return targetsById.ToDictionary(kvp => kvp.Key, Error? (_) => null);
+        }
+
+        var actingUser = standardUser.OrganizationUserType.HasValue
+            ? new OrganizationUserRole(standardUser.OrganizationUserType.Value, request.OrganizationId, standardUser.Permissions)
+            : null;
+
+        return await organizationUserValidationService.CanManageAsync(
+            standardUser.UserId!.Value, actingUser, request.OrganizationId, targetsById);
     }
 }

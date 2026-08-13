@@ -700,11 +700,14 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
+        var actingOrganization = _currentContext.GetOrganization(orgId);
+
         var results = await _revokeOrganizationUserCommandVNext.RevokeUsersAsync(
             new V2_RevokeOrganizationUserCommand.RevokeOrganizationUsersRequest(
                 orgId,
                 model.Ids.ToArray(),
-                new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId)),
+                new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId),
+                    actingOrganization?.Type, actingOrganization?.Permissions),
                 RevocationReason.Manual));
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results

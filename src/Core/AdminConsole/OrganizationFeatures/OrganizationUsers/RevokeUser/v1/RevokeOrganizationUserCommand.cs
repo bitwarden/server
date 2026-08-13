@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -14,7 +16,8 @@ public class RevokeOrganizationUserCommand(
     IPushNotificationService pushNotificationService,
     IOrganizationUserRepository organizationUserRepository,
     ICurrentContext currentContext,
-    IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+    IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+    IOrganizationUserValidationService organizationUserValidationService)
     : IRevokeOrganizationUserCommand
 {
     public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId, RevocationReason reason)
@@ -24,16 +27,18 @@ public class RevokeOrganizationUserCommand(
             throw new BadRequestException(new CannotRevokeYourself().Message);
         }
 
-        if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue &&
-            !await currentContext.OrganizationOwner(organizationUser.OrganizationId))
+        if (revokingUserId.HasValue)
         {
-            throw new BadRequestException(new OnlyOwnersCanRevokeOwners().Message);
-        }
+            var actingOrganization = currentContext.GetOrganization(organizationUser.OrganizationId);
+            var actingUser = actingOrganization is null
+                ? null
+                : new OrganizationUserRole(actingOrganization.Type, organizationUser.OrganizationId, actingOrganization.Permissions);
 
-        if (organizationUser.Type == OrganizationUserType.Admin && revokingUserId.HasValue &&
-            !await currentContext.OrganizationAdmin(organizationUser.OrganizationId))
-        {
-            throw new BadRequestException(new CustomUsersCannotRevokeAdmins().Message);
+            var error = await organizationUserValidationService.CanManageAsync(revokingUserId.Value, actingUser, organizationUser);
+            if (error is not null)
+            {
+                throw new BadRequestException(error.Message);
+            }
         }
 
         await RepositoryRevokeUserAsync(organizationUser, reason);

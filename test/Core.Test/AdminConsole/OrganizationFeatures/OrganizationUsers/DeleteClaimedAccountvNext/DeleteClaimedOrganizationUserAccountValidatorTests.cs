@@ -1,8 +1,11 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
@@ -260,7 +263,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
         var resultsList = results.ToList();
         Assert.Single(resultsList);
         Assert.True(resultsList[0].IsError);
-        Assert.IsType<CannotDeleteOwnersError>(resultsList[0].AsError);
+        Assert.IsType<OnlyOwnersCanManageOwners>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -391,7 +394,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
         var resultsList = results.ToList();
         Assert.Single(resultsList);
         Assert.True(resultsList[0].IsError);
-        Assert.IsType<CannotDeleteAdminsError>(resultsList[0].AsError);
+        Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -481,23 +484,29 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
         OrganizationUserType currentUserType = OrganizationUserType.Owner)
     {
         sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(currentUserType == OrganizationUserType.Owner);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationAdmin(organizationId)
-            .Returns(currentUserType is OrganizationUserType.Owner or OrganizationUserType.Admin);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationCustom(organizationId)
-            .Returns(currentUserType is OrganizationUserType.Custom);
+            .GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization
+            {
+                Id = organizationId,
+                Type = currentUserType,
+                Permissions = new Permissions { ManageUsers = true }
+            });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetCountByOnlyOwnerAsync(userId)
             .Returns(0);
 
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetCountByOnlyOwnerAsync(userId)
-            .Returns(0);
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetCountByOnlyOwnerAsync(userId).Returns(0);
+        providerUserRepository
+            .GetManyOrganizationDetailsByUserAsync(Arg.Any<Guid>(), ProviderUserStatusType.Confirmed)
+            .Returns([]);
+
+        // Use a real validation service (backed by the same, already-mocked repositories) so these tests exercise
+        // the real "can manage" hierarchy instead of re-implementing it as a mock.
+        var validationService = new OrganizationUserValidationService(
+            providerUserRepository, sutProvider.GetDependency<IOrganizationUserRepository>());
+        sutProvider.SetDependency<IOrganizationUserValidationService>(validationService, "organizationUserValidationService");
+        sutProvider.Create();
     }
 }

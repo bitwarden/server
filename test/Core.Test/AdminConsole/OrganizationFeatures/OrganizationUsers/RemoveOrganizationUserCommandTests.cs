@@ -1,6 +1,8 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+﻿using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.Context;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -33,9 +35,6 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(deletingUser.Id)
             .Returns(deletingUser);
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(deletingUser.OrganizationId)
-            .Returns(true);
 
         // Act
         await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
@@ -124,14 +123,14 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationAdmin(organizationUser.OrganizationId)
-            .Returns(true);
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
+            .CanManageAsync(deletingUser.UserId!.Value, Arg.Any<IOrganizationUserRole?>(), organizationUser)
+            .Returns(new OnlyOwnersCanManageOwners());
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
-        Assert.Contains(RemoveOrganizationUserCommand.RemoveOwnerByNonOwnerErrorMessage, exception.Message);
+        Assert.Contains(new OnlyOwnersCanManageOwners().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -146,14 +145,14 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationCustom(organizationUser.OrganizationId)
-            .Returns(true);
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
+            .CanManageAsync(deletingUser.UserId!.Value, Arg.Any<IOrganizationUserRole?>(), organizationUser)
+            .Returns(new CustomUsersCannotManageAdminsOrOwners());
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
-        Assert.Contains(RemoveOrganizationUserCommand.RemoveAdminByCustomUserErrorMessage, exception.Message);
+        Assert.Contains(new CustomUsersCannotManageAdminsOrOwners().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -174,9 +173,6 @@ public class RemoveOrganizationUserCommandTests
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)),
                 Arg.Any<bool>())
             .Returns(false);
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(deletingUser.OrganizationId)
-            .Returns(true);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -418,9 +414,6 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(deletingUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(deletingUser.OrganizationId)
-            .Returns(true);
         sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .GetUsersOrganizationClaimedStatusAsync(
                 deletingUser.OrganizationId,
@@ -506,12 +499,20 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(deletingUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
+            .CanManageAsync(deletingUser.UserId!.Value, Arg.Any<IOrganizationUserRole?>(), deletingUser.OrganizationId,
+                Arg.Any<IReadOnlyDictionary<Guid, IOrganizationUserRole>>())
+            .Returns(new Dictionary<Guid, Error?>
+            {
+                { orgUser1.Id, new OnlyOwnersCanManageOwners() },
+                { orgUser2.Id, null }
+            });
 
         // Act
         var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
 
         // Assert
-        Assert.Contains(RemoveOrganizationUserCommand.RemoveOwnerByNonOwnerErrorMessage, result.First().ErrorMessage);
+        Assert.Contains(new OnlyOwnersCanManageOwners().Message, result.First().ErrorMessage);
     }
 
     [Theory, BitAutoData]
@@ -531,15 +532,19 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(deletingUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationCustom(deletingUser.OrganizationId)
-            .Returns(true);
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
+            .CanManageAsync(deletingUser.UserId!.Value, Arg.Any<IOrganizationUserRole?>(), deletingUser.OrganizationId,
+                Arg.Any<IReadOnlyDictionary<Guid, IOrganizationUserRole>>())
+            .Returns(new Dictionary<Guid, Error?>
+            {
+                { orgUser.Id, new CustomUsersCannotManageAdminsOrOwners() }
+            });
 
         // Act
         var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
 
         // Assert
-        Assert.Contains(RemoveOrganizationUserCommand.RemoveAdminByCustomUserErrorMessage, result.First().ErrorMessage);
+        Assert.Contains(new CustomUsersCannotManageAdminsOrOwners().Message, result.First().ErrorMessage);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .DeleteManyAsync(default);

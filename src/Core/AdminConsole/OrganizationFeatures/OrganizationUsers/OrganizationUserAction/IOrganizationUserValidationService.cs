@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 
@@ -27,8 +28,29 @@ public interface IOrganizationUserValidationService
     /// <param name="actingUserId">The acting user's id, used to resolve provider authority.</param>
     /// <param name="actingUser">The acting user's role, or <c>null</c> if not a confirmed member.</param>
     /// <param name="targetUser">The member being managed.</param>
+    /// <param name="customPermissionGate">
+    /// The permission that grants a Custom user authority to manage Users and other Custom users. Defaults to
+    /// <see cref="Permissions.ManageUsers"/>; pass a different selector (e.g. <see cref="Permissions.ManageResetPassword"/>)
+    /// for flows gated by a different permission.
+    /// </param>
     /// <returns><c>null</c> when allowed, otherwise the error explaining why.</returns>
-    Task<Error?> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser);
+    Task<Error?> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser,
+        Func<Permissions, bool>? customPermissionGate = null);
+
+    /// <summary>
+    /// Bulk form of <see cref="CanManageAsync(Guid, IOrganizationUserRole?, IOrganizationUserRole, Func{Permissions, bool}?)"/>
+    /// for checking many targets in the same organization at once. Provider authority is resolved once for the whole
+    /// batch instead of once per target.
+    /// </summary>
+    /// <param name="actingUserId">The acting user's id, used to resolve provider authority.</param>
+    /// <param name="actingUser">The acting user's role, or <c>null</c> if not a confirmed member.</param>
+    /// <param name="organizationId">The organization all target users belong to.</param>
+    /// <param name="targetUsersById">The members being managed, keyed by their <c>OrganizationUserId</c>.</param>
+    /// <param name="customPermissionGate">See <see cref="CanManageAsync(Guid, IOrganizationUserRole?, IOrganizationUserRole, Func{Permissions, bool}?)"/>.</param>
+    /// <returns>A per-target result, keyed by <c>OrganizationUserId</c>; <c>null</c> means allowed.</returns>
+    Task<IReadOnlyDictionary<Guid, Error?>> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser,
+        Guid organizationId, IReadOnlyDictionary<Guid, IOrganizationUserRole> targetUsersById,
+        Func<Permissions, bool>? customPermissionGate = null);
 
     /// <summary>
     /// Checks whether the acting user can change the target member's role without escalating privileges. The acting

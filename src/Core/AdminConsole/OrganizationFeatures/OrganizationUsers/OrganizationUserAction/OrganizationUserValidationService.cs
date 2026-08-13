@@ -14,14 +14,29 @@ public class OrganizationUserValidationService(
     IProviderUserRepository providerUserRepository,
     IOrganizationUserRepository organizationUserRepository) : IOrganizationUserValidationService
 {
-    public async Task<Error?> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser)
+    public async Task<Error?> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser,
+        Func<Permissions, bool>? customPermissionGate = null)
     {
-        if (IsAuthorizedByRole(actingUser, targetUser.Type) || await IsProviderAsync(actingUserId, targetUser.OrganizationId))
+        if (IsAuthorizedByRole(actingUser, targetUser.Type, customPermissionGate) ||
+            await IsProviderAsync(actingUserId, targetUser.OrganizationId))
         {
             return null;
         }
 
         return CannotManageError(targetUser.Type);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, Error?>> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser,
+        Guid organizationId, IReadOnlyDictionary<Guid, IOrganizationUserRole> targetUsersById,
+        Func<Permissions, bool>? customPermissionGate = null)
+    {
+        var isProvider = await IsProviderAsync(actingUserId, organizationId);
+
+        return targetUsersById.ToDictionary(
+            kvp => kvp.Key,
+            Error? (kvp) => IsAuthorizedByRole(actingUser, kvp.Value.Type, customPermissionGate) || isProvider
+                ? null
+                : CannotManageError(kvp.Value.Type));
     }
 
     public async Task<Error?> CanManageRoleChangeAsync(Guid actingUserId, IOrganizationUserRole actingUser,
@@ -84,15 +99,20 @@ public class OrganizationUserValidationService(
             ? new OnlyOwnersCanManageOwners()
             : new CustomUsersCannotManageAdminsOrOwners();
 
-    private static bool IsAuthorizedByRole(IOrganizationUserRole? actingUser, OrganizationUserType targetType) =>
-        actingUser switch
+    private static bool IsAuthorizedByRole(IOrganizationUserRole? actingUser, OrganizationUserType targetType,
+        Func<Permissions, bool>? customPermissionGate = null)
+    {
+        var hasCustomPermission = customPermissionGate ?? (p => p.ManageUsers);
+
+        return actingUser switch
         {
             { Type: OrganizationUserType.Owner } => true,
             { Type: OrganizationUserType.Admin } => targetType is not OrganizationUserType.Owner,
-            { Type: OrganizationUserType.Custom } when actingUser.GetPermissions()?.ManageUsers is true =>
+            { Type: OrganizationUserType.Custom } when hasCustomPermission(actingUser.GetPermissions() ?? new Permissions()) =>
                 targetType is OrganizationUserType.User or OrganizationUserType.Custom,
             _ => false
         };
+    }
 
     // Provider users aren't org members but hold Owner-level authority.
     private async Task<bool> IsProviderAsync(Guid actingUserId, Guid organizationId) =>

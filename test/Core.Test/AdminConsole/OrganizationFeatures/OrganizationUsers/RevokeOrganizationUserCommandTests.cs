@@ -1,5 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -51,13 +53,16 @@ public class RevokeOrganizationUserCommandTests
     {
         // Arrange
         RestoreRevokeUser_Setup(organization, customUser, organizationUser, sutProvider);
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
+            .CanManageAsync(customUser.Id, Arg.Any<IOrganizationUserRole?>(), organizationUser)
+            .Returns(new CustomUsersCannotManageAdminsOrOwners());
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RevokeUserAsync(organizationUser, customUser.Id, RevocationReason.Manual));
 
         // Assert
-        Assert.Contains("custom users can not revoke admins", exception.Message.ToLowerInvariant());
+        Assert.Contains("custom users can not manage admins or owners", exception.Message.ToLowerInvariant());
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .RevokeAsync(Arg.Any<Guid>(), Arg.Any<RevocationReason>());

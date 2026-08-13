@@ -5,7 +5,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -108,7 +108,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         Assert.Contains(content.Data, r => r.Id == validOrgUser.Id && r.Error == string.Empty);
         Assert.Contains(content.Data, r =>
             r.Id == invalidOrgUser.Id &&
-            string.Equals(r.Error, new CannotDeleteOwnersError().Message, StringComparison.Ordinal));
+            string.Equals(r.Error, new OnlyOwnersCanManageOwners().Message, StringComparison.Ordinal));
 
         var actualUsers =
             await userRepository.GetManyAsync([validOrgUser.UserId.Value, invalidOrgUser.UserId.Value]);
