@@ -20,6 +20,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public class SendOrganizationInvitesCommand(
     IUserRepository userRepository,
+    IOrganizationUserRepository organizationUserRepository,
     ISsoConfigRepository ssoConfigurationRepository,
     IPolicyQuery policyQuery,
     IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
@@ -29,7 +30,7 @@ public class SendOrganizationInvitesCommand(
 {
     public async Task SendInvitesAsync(SendInvitesRequest request)
     {
-        var (orgUsers, orgUserEmails) = ExcludeUsersWithoutEmail(request.Users);
+        var (orgUsers, orgUserEmails) = await RepairAndFilterUsersWithoutEmailAsync(request.Users);
         if (orgUsers.Count == 0)
         {
             return;
@@ -42,34 +43,59 @@ public class SendOrganizationInvitesCommand(
     }
 
     /// <summary>
-    /// Removes Organizations Users that do not have an Email address.
+    /// Self-heals invited org users missing their email, then returns the users and emails that can be invited.
     /// </summary>
     /// <remarks>
-    /// An invited org user is expected to have an email address, but SSO JIT provisioning can leave it
-    /// null. We attempt to get the existing users, a NULL value throws an error when mapping to the Emails parameter.
-    ///
-    /// Attempting to use the existing User record by populated UserId would also result in a failure because when
-    /// validating the token, we would fail to look up the organization user with the Email from the User record.
-    /// Instead, we are opting to dropping the users from the invites to be sent, and we'll log the invalid state for
-    /// a more complete bug fix.
+    /// SSO JIT provisioning can leave a corrupt invited row (Email null, UserId populated). The email must be
+    /// persisted, not just patched in memory, because the invite token is re-validated against the stored email at
+    /// accept time. When the row has a UserId we recover the email from that user, null the UserId to restore the
+    /// canonical invited shape, and persist the repair. Rows that cannot be repaired are logged and dropped.
     /// </remarks>
-    private (List<OrganizationUser> OrgUsers, List<string> Emails) ExcludeUsersWithoutEmail(
+    private async Task<(List<OrganizationUser> OrgUsers, List<string> Emails)> RepairAndFilterUsersWithoutEmailAsync(
         OrganizationUser[] requestedOrgUsers)
     {
-        var (orgUsers, emails) = requestedOrgUsers.Aggregate(
-            (OrgUsers: new List<OrganizationUser>(), Emails: new List<string>()),
-            (aggregate, orgUser) =>
-            {
-                if (string.IsNullOrWhiteSpace(orgUser.Email))
-                {
-                    logger.LogUserInviteStateDiagnostics(orgUser);
-                    return aggregate;
-                }
+        var missingEmail = requestedOrgUsers.Where(ou => string.IsNullOrWhiteSpace(ou.Email)).ToList();
 
-                aggregate.OrgUsers.Add(orgUser);
-                aggregate.Emails.Add(orgUser.Email);
-                return aggregate;
-            });
+        if (missingEmail.Count == 0)
+        {
+            return (requestedOrgUsers.ToList(), requestedOrgUsers.Select(ou => ou.Email).ToList());
+        }
+
+        var linkedUsersById = (await userRepository.GetManyAsync(
+                missingEmail.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId.Value)))
+            .ToDictionary(user => user.Id);
+
+        var repaired = new List<OrganizationUser>();
+        var orgUsers = new List<OrganizationUser>();
+        var emails = new List<string>();
+
+        foreach (var orgUser in requestedOrgUsers)
+        {
+            if (!string.IsNullOrWhiteSpace(orgUser.Email))
+            {
+                orgUsers.Add(orgUser);
+                emails.Add(orgUser.Email);
+                continue;
+            }
+
+            if (orgUser.UserId.HasValue &&
+                linkedUsersById.TryGetValue(orgUser.UserId.Value, out var linkedUser) &&
+                !string.IsNullOrWhiteSpace(linkedUser.Email))
+            {
+                orgUser.Email = linkedUser.Email;
+                repaired.Add(orgUser);
+                orgUsers.Add(orgUser);
+                emails.Add(orgUser.Email);
+                continue;
+            }
+
+            logger.LogUserInviteStateDiagnostics(orgUser);
+        }
+
+        if (repaired.Count != 0)
+        {
+            await organizationUserRepository.ReplaceManyAsync(repaired);
+        }
 
         return (orgUsers, emails);
     }
