@@ -344,6 +344,154 @@ public class HandlebarsMailServiceTests
             m.Category == "Welcome"));
     }
 
+    [Fact]
+    public async Task SendOrganizationMaxSeatLimitReachedEmailAsync_RendersOrganizationName()
+    {
+        // Arrange
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme Corp" };
+
+        // Act
+        await _sut.SendOrganizationMaxSeatLimitReachedEmailAsync(organization, 5, new[] { "owner@example.com" });
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.Subject == "Acme Corp seat limit reached" &&
+            m.HtmlContent.Contains("Acme Corp has reached the seat limit of 5") &&
+            m.TextContent.Contains("Acme Corp has reached the seat limit of 5") &&
+            !m.HtmlContent.Contains("Your organization has reached") &&
+            m.Category == "OrganizationSeatsMaxReached"));
+    }
+
+    [Fact]
+    public async Task SendSecretsManagerMaxSeatLimitReachedEmailAsync_RendersOrganizationName()
+    {
+        // Arrange
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme Corp" };
+
+        // Act
+        await _sut.SendSecretsManagerMaxSeatLimitReachedEmailAsync(organization, 5, new[] { "owner@example.com" });
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.Subject == "Acme Corp Secrets Manager seat limit reached" &&
+            m.HtmlContent.Contains("Acme Corp has reached the Secrets Manager seat limit of 5") &&
+            m.TextContent.Contains("Acme Corp has reached the Secrets Manager seat limit of 5") &&
+            !m.HtmlContent.Contains("Your organization has reached") &&
+            m.Category == "OrganizationSmSeatsMaxReached"));
+    }
+
+    [Fact]
+    public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync_RendersOrganizationName()
+    {
+        // Arrange
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme Corp" };
+
+        // Act
+        await _sut.SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(organization, 5, new[] { "owner@example.com" });
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.Subject == "Acme Corp Secrets Manager machine accounts limit reached" &&
+            m.HtmlContent.Contains("Acme Corp has reached the Secrets Manager machine accounts limit of 5") &&
+            m.TextContent.Contains("Acme Corp has reached the Secrets Manager machine accounts limit of 5") &&
+            !m.HtmlContent.Contains("Your organization has reached") &&
+            m.Category == "OrganizationSmServiceAccountsMaxReached"));
+    }
+
+    [Fact]
+    public async Task SendLicenseExpiredAsync_UsesUpdatedSubject()
+    {
+        // Act
+        await _sut.SendLicenseExpiredAsync(new[] { "user@example.com" });
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.Subject == "License expired" &&
+            m.Category == "LicenseExpired"));
+    }
+
+    [Fact]
+    public async Task SendProviderUpdatePaymentMethod_RendersUpdatedCopy()
+    {
+        // Act
+        await _sut.SendProviderUpdatePaymentMethod(Guid.NewGuid(), "Acme Corp", "Best MSP", new[] { "owner@example.com" });
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.HtmlContent.Contains("Your Bitwarden organization, Acme Corp, is no longer managed by Best MSP.") &&
+            m.HtmlContent.Contains("going to Admin Console in the web app, then selecting your organization, Billing, and") &&
+            m.HtmlContent.Contains(">Payment Details</a>") &&
+            m.TextContent.Contains("Your Bitwarden organization, Acme Corp, is no longer managed by Best MSP.") &&
+            m.TextContent.Contains("Or click the following link:") &&
+            m.Category == "ProviderUpdatePaymentMethod"));
+    }
+
+    [Theory]
+    [InlineData(true, "click the link below")]
+    [InlineData(false, "you will need to create an account with this email")]
+    public async Task SendFamiliesForEnterpriseOfferEmailAsync_RendersUpdatedSubjectAndCopy(bool existingAccount, string expectedCopy)
+    {
+        // Arrange
+        _mailEnqueuingService
+            .EnqueueManyAsync(Arg.Any<IEnumerable<IMailQueueMessage>>(), Arg.Any<Func<IMailQueueMessage, Task>>())
+            .Returns(callInfo => Task.WhenAll(
+                callInfo.Arg<IEnumerable<IMailQueueMessage>>().Select(callInfo.Arg<Func<IMailQueueMessage, Task>>())));
+
+        // Act
+        await _sut.SendFamiliesForEnterpriseOfferEmailAsync("Acme Corp", "user@example.com", existingAccount, "token");
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.Subject == "Accept your Sponsored Families Plan" &&
+            m.HtmlContent.Contains("Acme Corp has sponsored a Bitwarden Family plan for you!") &&
+            m.HtmlContent.Contains(expectedCopy) &&
+            m.HtmlContent.Contains("If you do not recognize this account, please ignore this message.") &&
+            m.HtmlContent.Contains("/accept-families-for-enterprise?token=token") &&
+            m.TextContent.Contains("Acme Corp has sponsored a Bitwarden Family plan for you!") &&
+            m.TextContent.Contains(expectedCopy) &&
+            m.TextContent.Contains("If you do not recognize this account, please ignore this message.") &&
+            m.TextContent.Contains("/accept-families-for-enterprise?token=token") &&
+            m.Category == "FamiliesForEnterpriseOffer"));
+    }
+
+    [Fact]
+    public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync_RendersUpdatedCopyWithFormattedDate()
+    {
+        // Arrange
+        var expirationDate = new DateTime(2026, 9, 30);
+        var formattedDate = expirationDate.ToString("MMMM dd, yyyy");
+
+        // Act
+        await _sut.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync("user@example.com", expirationDate);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.Subject == "Your Sponsored Families Plan will be ending" &&
+            m.HtmlContent.Contains($"Your Sponsored Families Plan will continue until {formattedDate}") &&
+            m.TextContent.Contains($"Your Sponsored Families Plan will continue until {formattedDate}")));
+    }
+
+    [Fact]
+    public async Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync_RendersUpdatedCopyWithSubscriptionLink()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid().ToString();
+
+        // Act
+        await _sut.SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync("user@example.com", organizationId, "Acme Corp");
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.Subject == "Your Sponsored Families Plan has been removed" &&
+            m.HtmlContent.Contains("Acme Corp has removed the Sponsored Families Plan. You can no longer redeem this benefit or access an existing family vault.") &&
+            m.HtmlContent.Contains("Contact your organization admin for more information.") &&
+            m.HtmlContent.Contains($"/organizations/{organizationId}/billing/subscription\" target=\"_blank\" clicktracking=off>") &&
+            m.TextContent.Contains("Acme Corp has removed the Sponsored Families Plan. You can no longer redeem this benefit or access an existing family vault.") &&
+            m.TextContent.Contains($"Or click the following link:") &&
+            m.TextContent.Contains($"/organizations/{organizationId}/billing/subscription") &&
+            m.Category == "FamiliesForEnterpriseRemovedFromFamilyUser"));
+    }
+
     [Theory]
     [InlineData("test@example.com")]
     [InlineData("user+tag@domain.co.uk")]

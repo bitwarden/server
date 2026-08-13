@@ -7,4 +7,5 @@ public class OrganizationServiceAccountsMaxReachedViewModel
 {
     public int MaxServiceAccountsCount { get; set; }
     public string VaultSubscriptionUrl { get; set; }
+    public string OrganizationName { get; set; }
 }
