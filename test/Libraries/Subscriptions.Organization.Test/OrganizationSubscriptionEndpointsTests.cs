@@ -36,5 +36,12 @@ public class OrganizationSubscriptionEndpointsTests
         var tags = endpoint.Metadata.GetMetadata<ITagsMetadata>();
         Assert.NotNull(tags);
         Assert.Contains("OrganizationSubscriptions", tags!.Tags);
+
+        // Group name "internal" keeps these endpoints out of the published Public API spec
+        // (api.public.json); MVC controllers get this from ApiExplorerGroupConvention, but
+        // Minimal API groups must set it explicitly.
+        var groupName = endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>();
+        Assert.NotNull(groupName);
+        Assert.Equal("internal", groupName!.EndpointGroupName);
     }
 }

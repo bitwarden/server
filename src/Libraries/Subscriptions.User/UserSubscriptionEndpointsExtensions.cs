@@ -15,6 +15,7 @@ public static class UserSubscriptionEndpointsExtensions
     {
         var group = endpoints.MapGroup("");
         group.WithTags("UserSubscriptions");
+        group.WithGroupName("internal");
         group.RequireAuthorization(Policies.Application);
         group.WithBasicExceptionHandling();
         group.RequireFeature(FeatureFlagKeys.PM36631_PreviewDrivenCart);
