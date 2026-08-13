@@ -22,7 +22,7 @@ internal static class DiscountMapper
 {
     internal static PartitionedDiscounts Partition(Invoice invoice, ILogger logger)
     {
-        var resolved = ResolveCoupons(invoice, logger);
+        var resolved = ResolveInvoiceDiscounts(invoice, logger);
 
         var cartLevel = resolved.Values
             .Where(discount => !discount.IsItemScoped)
@@ -74,7 +74,7 @@ internal static class DiscountMapper
             itemLevel.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray()));
     }
 
-    private static Dictionary<string, ResolvedDiscount> ResolveCoupons(Invoice invoice, ILogger logger)
+    private static Dictionary<string, ResolvedDiscount> ResolveInvoiceDiscounts(Invoice invoice, ILogger logger)
     {
         var resolved = new Dictionary<string, ResolvedDiscount>();
         foreach (var total in invoice.TotalDiscountAmounts ?? [])
