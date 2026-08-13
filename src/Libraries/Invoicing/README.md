@@ -19,7 +19,7 @@ data through this surface, and reference Stripe SDK types only to pass data to a
 
 ## Core debt
 
-This library depends on `Core` as a TL-approved interim deviation, pending extraction into
+This library depends on `Core` as a documented deviation from the rule restricting Libraries from referencing Core, per ADR-0032, pending extraction into
 `Bit.Integrations.Billing`:
 
 | From Core | Used for |
