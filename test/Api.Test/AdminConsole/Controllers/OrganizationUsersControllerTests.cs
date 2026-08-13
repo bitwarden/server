@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.OrganizationUsers;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
@@ -1065,6 +1066,130 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
             .Returns(AuthorizationResult.Success());
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>().IsEnabled(Bit.Core.FeatureFlagKeys.ChangeMemberEmailNoMp)
+            .Returns(featureEnabled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_OrganizationUserNotFound_ThrowsNotFound(Organization organization, Guid id,
+        OrganizationUserUpdateRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdWithCollectionsAsync(id)
+            .Returns(new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(null, new List<CollectionAccessSelection>()));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchWithNewAuthorization(organization, id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_OrgIdMismatch_ThrowsNotFound(Organization organization, OrganizationUser organizationUser,
+        OrganizationUserUpdateRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(organizationUser, new List<CollectionAccessSelection>()));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchWithNewAuthorization(organization, organizationUser.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_CannotAddSelfToCollection_ThrowsBadRequest(Organization organization,
+        OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PatchSetup(sutProvider, organization, organizationUser, userId, featureEnabled: false);
+        sutProvider.GetDependency<IOrganizationUserAuthorizationService>()
+            .AuthorizeUpdateAsync(organization.Id, organizationUser.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(new OrganizationUserAuthorizationResult(false, true, new HashSet<Guid>(), new HashSet<Guid>()));
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PatchWithNewAuthorization(organization, organizationUser.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_UnauthorizedPostedCollection_ThrowsNotFound(Organization organization,
+        OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PatchSetup(sutProvider, organization, organizationUser, userId, featureEnabled: false);
+        sutProvider.GetDependency<IOrganizationUserAuthorizationService>()
+            .AuthorizeUpdateAsync(organization.Id, organizationUser.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(new OrganizationUserAuthorizationResult(true, true, new HashSet<Guid> { Guid.NewGuid() }, new HashSet<Guid>()));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchWithNewAuthorization(organization, organizationUser.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_WhenFeatureFlagDisabled_RoutesToV1(Organization organization,
+        OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PatchSetup(sutProvider, organization, organizationUser, userId, featureEnabled: false);
+
+        var result = await sutProvider.Sut.PatchWithNewAuthorization(organization, organizationUser.Id, model);
+
+        Assert.IsType<Ok>(result);
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>()
+            .Received(1)
+            .UpdateUserAsync(Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUserType>(), userId,
+                Arg.Any<List<CollectionAccessSelection>>(), Arg.Any<IEnumerable<Guid>>(), model.DefaultUserCollectionName);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_WhenFeatureFlagEnabled_RoutesToV2(Organization organization,
+        OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PatchSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
+            .Returns(new CommandResult(new None()));
+
+        var result = await sutProvider.Sut.PatchWithNewAuthorization(organization, organizationUser.Id, model);
+
+        Assert.IsType<NoContent>(result);
+        await sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .Received(1)
+            .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_CanEditOwnGroupsFalse_GroupsSetToNull(Organization organization,
+        OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PatchSetup(sutProvider, organization, organizationUser, userId, featureEnabled: false);
+        sutProvider.GetDependency<IOrganizationUserAuthorizationService>()
+            .AuthorizeUpdateAsync(organization.Id, organizationUser.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(new OrganizationUserAuthorizationResult(true, false, new HashSet<Guid>(), new HashSet<Guid>()));
+
+        await sutProvider.Sut.PatchWithNewAuthorization(organization, organizationUser.Id, model);
+
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>()
+            .Received(1)
+            .UpdateUserAsync(Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUserType>(), userId,
+                Arg.Any<List<CollectionAccessSelection>>(), null, model.DefaultUserCollectionName);
+    }
+
+    private static void PatchSetup(SutProvider<OrganizationUsersController> sutProvider, Organization organization,
+        OrganizationUser organizationUser, Guid userId, bool featureEnabled)
+    {
+        organizationUser.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(
+                organizationUser, new List<CollectionAccessSelection>()));
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IOrganizationUserAuthorizationService>()
+            .AuthorizeUpdateAsync(organization.Id, organizationUser.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(new OrganizationUserAuthorizationResult(true, true, new HashSet<Guid>(), new HashSet<Guid>()));
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>());
         sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>().IsEnabled(Bit.Core.FeatureFlagKeys.ChangeMemberEmailNoMp)
             .Returns(featureEnabled);
     }
