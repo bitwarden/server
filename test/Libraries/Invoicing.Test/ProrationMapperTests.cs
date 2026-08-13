@@ -63,14 +63,22 @@ public class ProrationMapperTests
     }
 
     [Fact]
-    public void Summarize_Months_FromLinePeriodEndToInvoicePeriodEnd_FlooredAtZero()
+    public void Summarize_Months_RoundsProratedDaysToNearestMonth_MinimumOne()
     {
-        var invoice = InvoiceWith(3_582, 0, periodEnd: new DateTime(2027, 1, 1));
-        Assert.Equal(11, ProrationMapper.Summarize([Line(3_582, periodEnd: new DateTime(2026, 2, 1))], invoice)!.Months);
-        // line end after invoice end -> floored to 0
-        Assert.Equal(0, ProrationMapper.Summarize([Line(3_582, periodEnd: new DateTime(2027, 6, 1))], invoice)!.Months);
-        // no period -> 0
-        Assert.Equal(0, ProrationMapper.Summarize([Line(3_582)], invoice)!.Months);
+        // Real proration shape: line end is LATER than invoice end. ~365 days -> 12 months.
+        var yearOut = InvoiceWith(3_582, 0, periodEnd: new DateTime(2026, 8, 13));
+        Assert.Equal(12, ProrationMapper.Summarize([Line(3_582, periodEnd: new DateTime(2027, 8, 13))], yearOut)!.Months);
+
+        // 59-day gap rounds to 2 (day-based, not calendar months, which would give 1).
+        var partial = InvoiceWith(3_582, 0, periodEnd: new DateTime(2026, 8, 2));
+        Assert.Equal(2, ProrationMapper.Summarize([Line(3_582, periodEnd: new DateTime(2026, 9, 30))], partial)!.Months);
+
+        // Sub-month gap floors to 1, never 0.
+        var tiny = InvoiceWith(3_582, 0, periodEnd: new DateTime(2026, 8, 13));
+        Assert.Equal(1, ProrationMapper.Summarize([Line(3_582, periodEnd: new DateTime(2026, 8, 20))], tiny)!.Months);
+
+        // No line period -> 0.
+        Assert.Equal(0, ProrationMapper.Summarize([Line(3_582)], tiny)!.Months);
     }
 
     [Fact]
