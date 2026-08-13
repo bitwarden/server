@@ -135,7 +135,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         Dictionary<string, InvoicePreviewItem> positions, PurchasableProration? proration)
     {
         var seats = positions.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerSeat)
-            ?? throw new InvoicePreviewException("The preview resolved no Password Manager seats line.");
+            ?? throw new InvalidOperationException("The preview resolved no Password Manager seats line.");
         return new PasswordManagerInvoiceItems
         {
             Seats = seats,

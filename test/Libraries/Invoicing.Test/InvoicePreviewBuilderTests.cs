@@ -245,7 +245,7 @@ public class InvoicePreviewBuilderTests
 
         var builder = Builder(out _);
 
-        Assert.Throws<InvoicePreviewException>(() => builder.Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually));
+        Assert.Throws<InvalidOperationException>(() => builder.Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually));
     }
 
     [Fact]
@@ -318,6 +318,6 @@ public class InvoicePreviewBuilderTests
 
         var builder = Builder(out _);
 
-        Assert.Throws<InvoicePreviewException>(() => builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly));
+        Assert.Throws<InvalidOperationException>(() => builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly));
     }
 }
