@@ -3,7 +3,7 @@ using Stripe;
 
 namespace Bit.Invoicing.InvoicePreviews;
 
-/// <summary>Reduces one product's proration lines into a single renderable credit row. Pure.</summary>
+/// <summary>Reduces one product's proration lines into a single renderable credit row.</summary>
 internal static class ProrationMapper
 {
     internal static PurchasableProration? Summarize(IReadOnlyList<InvoiceLineItem> lines, Invoice invoice)
@@ -15,13 +15,12 @@ internal static class ProrationMapper
 
         var chargeCents = lines.Where(line => line.Amount > 0).Sum(line => line.Amount);
         var creditCents = Math.Abs(lines.Where(line => line.Amount < 0).Sum(line => line.Amount));
-        var netCents = chargeCents - creditCents;
 
         return new PurchasableProration
         {
             Charge = chargeCents / 100m,
             Credit = creditCents / 100m,
-            Total = netCents / 100m,
+            Total = (chargeCents - creditCents) / 100m,
             Tax = lines.SelectMany(line => line.Taxes ?? []).Sum(tax => tax.Amount) / 100m,
             Months = MonthsRemaining(lines, invoice),
         };
@@ -35,7 +34,8 @@ internal static class ProrationMapper
             return 0;
         }
 
-        var months = ((invoice.PeriodEnd.Year - lineEnd.Value.Year) * 12) + invoice.PeriodEnd.Month - lineEnd.Value.Month;
-        return Math.Max(0, months);
+        // 30-day months, minimum one, matching the legacy proration display.
+        var days = (lineEnd.Value - invoice.PeriodEnd).TotalDays;
+        return Math.Max(1, (int)Math.Round(days / 30, MidpointRounding.AwayFromZero));
     }
 }
