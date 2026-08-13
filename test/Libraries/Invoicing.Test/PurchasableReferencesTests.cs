@@ -17,9 +17,10 @@ public class PurchasableReferencesTests
 
     [Theory]
     [InlineData("")]
+    [InlineData(null)]
     [InlineData("provider-seat")]
     [InlineData("PM-SEAT")]
-    public void IsKnown_FalseForUnknownReference(string reference)
+    public void IsKnown_FalseForUnknownReference(string? reference)
         => Assert.False(PurchasableReferences.IsKnown(reference));
 
     [Theory]
