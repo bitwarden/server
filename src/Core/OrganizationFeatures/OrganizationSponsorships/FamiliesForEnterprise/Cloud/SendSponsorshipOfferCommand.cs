@@ -18,18 +18,23 @@ public class SendSponsorshipOfferCommand : ISendSponsorshipOfferCommand
     private readonly IUserRepository _userRepository;
     private readonly IMailService _mailService;
     private readonly IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> _tokenFactory;
+    private readonly IFeatureService _featureService;
 
     public SendSponsorshipOfferCommand(IUserRepository userRepository,
         IMailService mailService,
-        IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> tokenFactory)
+        IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> tokenFactory,
+        IFeatureService featureService)
     {
         _userRepository = userRepository;
         _mailService = mailService;
         _tokenFactory = tokenFactory;
+        _featureService = featureService;
     }
 
     public async Task BulkSendSponsorshipOfferAsync(string sponsoringOrgName, IEnumerable<OrganizationSponsorship> sponsorships)
     {
+        var vfo1FoundationEnabled = _featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation);
+
         var invites = new List<(string, bool, string)>();
         foreach (var sponsorship in sponsorships)
         {
@@ -38,16 +43,17 @@ public class SendSponsorshipOfferCommand : ISendSponsorshipOfferCommand
             invites.Add((sponsorship.OfferedToEmail, user != null, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship))));
         }
 
-        await _mailService.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, invites);
+        await _mailService.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, invites, vfo1FoundationEnabled);
     }
 
     public async Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, string sponsoringOrgName)
     {
         var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
         var isExistingAccount = user != null;
+        var vfo1FoundationEnabled = _featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation);
 
         await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail,
-            isExistingAccount, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship)));
+            isExistingAccount, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship)), vfo1FoundationEnabled);
     }
 
     public async Task SendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
