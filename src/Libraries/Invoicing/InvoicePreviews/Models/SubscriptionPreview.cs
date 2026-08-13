@@ -2,7 +2,7 @@
 
 namespace Bit.Invoicing.InvoicePreviews.Models;
 
-/// <summary>The subscription-level envelope around a preview. Consumers gate on Status, not on a null preview; the server always builds a complete one.</summary>
+/// <summary>The subscription-level envelope around a preview.</summary>
 public record SubscriptionPreview
 {
     /// <summary>A Stripe subscription status string. The client narrows it to a union.</summary>
@@ -18,6 +18,6 @@ public record SubscriptionPreview
     public DateTime? Suspension { get; init; }
     public int? GracePeriod { get; init; }
 
-    /// <summary>A scheduled future-phase change (e.g. an annual switch at renewal), when one is pending. Populated downstream, never by the projection.</summary>
+    /// <summary>A pending scheduled future-phase change (e.g. an annual switch at renewal). Set downstream, never by the projection.</summary>
     public PendingSubscriptionChange? PendingChange { get; init; }
 }

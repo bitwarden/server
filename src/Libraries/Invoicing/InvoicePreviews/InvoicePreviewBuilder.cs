@@ -6,12 +6,13 @@ using Stripe;
 
 namespace Bit.Invoicing.InvoicePreviews;
 
-/// <summary>Projects a Stripe invoice or subscription into an <see cref="InvoicePreview"/>. Stripe amounts are cents; every projected amount is dollars.</summary>
+/// <summary>Projects a Stripe invoice or subscription into an <see cref="InvoicePreview"/>. Every projected amount is dollars.</summary>
 internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logger)
 {
+    /// <summary>Projects a preview invoice, including prorations, discounts, and tax, into an <see cref="InvoicePreview"/>.</summary>
     internal InvoicePreview Build(Invoice invoice, PlanTierType planTier, PlanCadenceType cadence)
     {
-        var positions = new Dictionary<string, InvoicePreviewItem>();
+        var lineItemsByReference = new Dictionary<string, InvoicePreviewItem>();
         var passwordManagerProrations = new List<InvoiceLineItem>();
         var secretsManagerProrations = new List<InvoiceLineItem>();
         var discounts = DiscountMapper.Partition(invoice, logger);
@@ -24,7 +25,6 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
                 continue;
             }
 
-            // Basil removed the flat line-level proration flag; it now lives on parent.subscription_item_details.
             if (line.Parent?.SubscriptionItemDetails?.Proration == true)
             {
                 switch (PurchasableReferences.ProductOf(reference))
@@ -49,7 +49,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
                 Cost = line.Amount / 100m,
                 Discounts = discounts.ItemLevel.GetValueOrDefault(reference),
             };
-            if (!positions.TryAdd(reference, item))
+            if (!lineItemsByReference.TryAdd(reference, item))
             {
                 logger.LogError("Duplicate purchasable reference {Reference} on invoice; kept the first line.", reference);
             }
@@ -59,8 +59,8 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         {
             PlanTier = planTier,
             Cadence = cadence,
-            PasswordManager = BuildPasswordManagerItems(positions, ProrationMapper.Summarize(passwordManagerProrations, invoice)),
-            SecretsManager = BuildSecretsManagerItems(positions, ProrationMapper.Summarize(secretsManagerProrations, invoice)),
+            PasswordManager = BuildPasswordManagerItems(lineItemsByReference, ProrationMapper.Summarize(passwordManagerProrations, invoice)),
+            SecretsManager = BuildSecretsManagerItems(lineItemsByReference, ProrationMapper.Summarize(secretsManagerProrations, invoice)),
             Discounts = discounts.CartLevel.Length > 0 ? discounts.CartLevel : null,
             EstimatedTax = (invoice.TotalTaxes?.Sum(tax => tax.Amount) ?? 0) / 100m,
             Total = invoice.Total / 100m,
@@ -70,9 +70,10 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         };
     }
 
+    /// <summary>Projects a subscription's current items into an <see cref="InvoicePreview"/>, without prorations, discounts, or tax.</summary>
     internal InvoicePreview Build(Subscription subscription, PlanTierType planTier, PlanCadenceType cadence)
     {
-        var positions = new Dictionary<string, InvoicePreviewItem>();
+        var lineItemsByReference = new Dictionary<string, InvoicePreviewItem>();
         var total = 0m;
 
         foreach (var subscriptionItem in subscription.Items?.Data ?? [])
@@ -93,7 +94,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
                 Quantity = subscriptionItem.Quantity,
                 Cost = cost,
             };
-            if (!positions.TryAdd(reference, item))
+            if (!lineItemsByReference.TryAdd(reference, item))
             {
                 logger.LogError("Duplicate purchasable reference {Reference} on subscription; kept the first item.", reference);
             }
@@ -103,8 +104,8 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         {
             PlanTier = planTier,
             Cadence = cadence,
-            PasswordManager = BuildPasswordManagerItems(positions, null),
-            SecretsManager = BuildSecretsManagerItems(positions, null),
+            PasswordManager = BuildPasswordManagerItems(lineItemsByReference, null),
+            SecretsManager = BuildSecretsManagerItems(lineItemsByReference, null),
             Discounts = null,
             EstimatedTax = 0m,
             Total = total,
@@ -132,22 +133,22 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
     }
 
     private static PasswordManagerInvoiceItems BuildPasswordManagerItems(
-        Dictionary<string, InvoicePreviewItem> positions, PurchasableProration? proration)
+        Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration? proration)
     {
-        var seats = positions.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerSeat)
+        var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerSeat)
             ?? throw new InvalidOperationException("The preview resolved no Password Manager seats line.");
         return new PasswordManagerInvoiceItems
         {
             Seats = seats,
-            AdditionalStorage = positions.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerStorage),
+            AdditionalStorage = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerStorage),
             Prorations = proration is { } p ? [p] : null,
         };
     }
 
     private static SecretsManagerInvoiceItems? BuildSecretsManagerItems(
-        Dictionary<string, InvoicePreviewItem> positions, PurchasableProration? proration)
+        Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration? proration)
     {
-        var seats = positions.GetValueOrDefault(StripeConstants.PurchasableReferences.SecretsManagerSeat);
+        var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.SecretsManagerSeat);
         if (seats is null)
         {
             return null;
@@ -155,7 +156,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         return new SecretsManagerInvoiceItems
         {
             Seats = seats,
-            AdditionalServiceAccounts = positions.GetValueOrDefault(StripeConstants.PurchasableReferences.SecretsManagerServiceAccount),
+            AdditionalServiceAccounts = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.SecretsManagerServiceAccount),
             Prorations = proration is { } p ? [p] : null,
         };
     }

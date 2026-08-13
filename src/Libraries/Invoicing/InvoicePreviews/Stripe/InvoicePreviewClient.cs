@@ -7,7 +7,6 @@ internal sealed class InvoicePreviewClient(IStripeAdapter stripeAdapter) : IInvo
 {
     public Task<Invoice> GetInvoiceForPreviewAsync(InvoiceCreatePreviewOptions options)
     {
-        // The line-level coupon path is six segments; resolving coupons only at the top level keeps the expand within reach.
         options.Expand =
         [
             "lines.data.pricing.price_details.price",

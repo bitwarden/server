@@ -1,6 +1,6 @@
 ﻿namespace Bit.Invoicing.InvoicePreviews.Models;
 
-/// <summary>Secrets Manager positions. Present only when the subscription carries Secrets Manager.</summary>
+/// <summary>Secrets Manager line items. Present only when the subscription carries Secrets Manager.</summary>
 public record SecretsManagerInvoiceItems
 {
     public required InvoicePreviewItem Seats { get; init; }

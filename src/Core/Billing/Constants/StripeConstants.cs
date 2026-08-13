@@ -121,7 +121,6 @@ public static class StripeConstants
 
     /// <summary>
     /// The stable, plan-agnostic values carried in <see cref="MetadataKeys.PurchasableReference"/>.
-    /// Identifies what a price represents, not which plan variant, so pm-seat covers every tier and cadence.
     /// </summary>
     public static class PurchasableReferences
     {
