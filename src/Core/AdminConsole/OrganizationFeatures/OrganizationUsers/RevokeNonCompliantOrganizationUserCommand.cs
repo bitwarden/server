@@ -1,7 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.Utilities.Commands;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -12,10 +14,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserRepository organizationUserRepository,
     IEventService eventService,
     IHasConfirmedOwnersExceptQuery confirmedOwnersExceptQuery,
+    IOrganizationUserValidationService organizationUserValidationService,
     TimeProvider timeProvider) : IRevokeNonCompliantOrganizationUserCommand
 {
     public const string ErrorCannotRevokeSelf = "You cannot revoke yourself.";
-    public const string ErrorOnlyOwnersCanRevokeOtherOwners = "Only owners can revoke other owners.";
     public const string ErrorUserAlreadyRevoked = "User is already revoked.";
     public const string ErrorOrgMustHaveAtLeastOneOwner = "Organization must have at least one confirmed owner.";
     public const string ErrorInvalidUsers = "Invalid users.";
@@ -92,6 +94,8 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
             return new CommandResult(ErrorOrgMustHaveAtLeastOneOwner);
         }
 
+        var manageErrorsByTarget = await GetManageErrorsAsync(request);
+
         return request.OrganizationUsers.Aggregate(new CommandResult(), (result, userToRevoke) =>
         {
             if (IsAlreadyRevoked(userToRevoke))
@@ -100,9 +104,9 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
                 return result;
             }
 
-            if (NonOwnersCannotRevokeOwners(userToRevoke, request.ActionPerformedBy))
+            if (manageErrorsByTarget[userToRevoke.Id] is { } manageError)
             {
-                result.ErrorMessages.Add($"{ErrorOnlyOwnersCanRevokeOtherOwners}");
+                result.ErrorMessages.Add(manageError.Message);
                 return result;
             }
 
@@ -110,12 +114,31 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
         });
     }
 
+    /// <summary>
+    /// Delegates the "can the acting user manage this target's role" decision to
+    /// <see cref="IOrganizationUserValidationService"/>'s bulk CanManageAsync overload.
+    /// System users (SCIM, Public API) skip the check entirely.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<Guid, Error?>> GetManageErrorsAsync(RevokeOrganizationUsersRequest request)
+    {
+        var targetsById = request.OrganizationUsers.ToDictionary(u => u.Id, u => (IOrganizationUserRole)u);
+
+        if (request.ActionPerformedBy is not StandardUser standardUser)
+        {
+            return targetsById.ToDictionary(kvp => kvp.Key, Error? (_) => null);
+        }
+
+        var actingUser = standardUser.OrganizationUserType.HasValue
+            ? new OrganizationUserRole(standardUser.OrganizationUserType.Value, request.OrganizationId, standardUser.Permissions)
+            : null;
+
+        return await organizationUserValidationService.CanManageAsync(
+            standardUser.UserId!.Value, actingUser, request.OrganizationId, targetsById)
+            ?? new Dictionary<Guid, Error?>();
+    }
+
     private static bool PerformedByIsAnExpectedType(IActingUser entity) => entity is SystemUser or StandardUser;
 
     private static bool IsAlreadyRevoked(OrganizationUserUserDetails organizationUser) =>
         organizationUser is { Status: OrganizationUserStatusType.Revoked };
-
-    private static bool NonOwnersCannotRevokeOwners(OrganizationUserUserDetails organizationUser,
-        IActingUser actingUser) =>
-        actingUser is StandardUser { IsOrganizationOwnerOrProvider: false } && organizationUser.Type == OrganizationUserType.Owner;
 }

@@ -80,7 +80,9 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
         {
             var currentUser = _currentContext.UserId ?? Guid.Empty;
             var isOwnerOrProvider = await _currentContext.OrganizationOwner(policyUpdate.OrganizationId);
-            await RevokeNonCompliantUsersAsync(policyUpdate.OrganizationId, policyUpdate.PerformedBy ?? new StandardUser(currentUser, isOwnerOrProvider));
+            var actingOrganization = _currentContext.GetOrganization(policyUpdate.OrganizationId);
+            await RevokeNonCompliantUsersAsync(policyUpdate.OrganizationId, policyUpdate.PerformedBy ??
+                new StandardUser(currentUser, isOwnerOrProvider, actingOrganization?.Type, actingOrganization?.Permissions));
         }
     }
 

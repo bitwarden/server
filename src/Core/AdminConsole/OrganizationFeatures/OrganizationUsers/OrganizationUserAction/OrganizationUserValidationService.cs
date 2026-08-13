@@ -39,7 +39,7 @@ public class OrganizationUserValidationService(
                 : CannotManageError(kvp.Value.Type));
     }
 
-    public async Task<Error?> CanManageRoleChangeAsync(Guid actingUserId, IOrganizationUserRole actingUser,
+    public async Task<Error?> CanManageRoleChangeAsync(Guid actingUserId, IOrganizationUserRole? actingUser,
         IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
     {
         // Must be able to manage both the current and requested role.
@@ -73,13 +73,15 @@ public class OrganizationUserValidationService(
     }
 
     private static CustomUsersCanOnlyGrantOwnPermissions? ValidateCustomPermissionsGrant(
-        IOrganizationUserRole actingUser, IOrganizationUserRole newTargetUser)
+        IOrganizationUserRole? actingUser, IOrganizationUserRole newTargetUser)
     {
         var newTargetPermissions = newTargetUser.GetPermissions();
 
-        // Owners and Admins can grant any custom permission; the check only applies to a Custom grantor.
+        // Owners, Admins, and provider users (no confirmed org role) can grant any custom permission; the check
+        // only applies to a Custom grantor.
         if (newTargetUser.Type != OrganizationUserType.Custom
             || newTargetPermissions is null
+            || actingUser is null
             || actingUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin)
         {
             return null;

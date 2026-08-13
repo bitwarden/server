@@ -4,9 +4,11 @@
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -57,6 +59,7 @@ public class OrganizationService : IOrganizationService
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
     private readonly TimeProvider _timeProvider;
+    private readonly IOrganizationUserValidationService _organizationUserValidationService;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -80,7 +83,8 @@ public class OrganizationService : IOrganizationService
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
         IStripeAdapter stripeAdapter,
         IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IOrganizationUserValidationService organizationUserValidationService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -104,6 +108,7 @@ public class OrganizationService : IOrganizationService
         _stripeAdapter = stripeAdapter;
         _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
         _timeProvider = timeProvider;
+        _organizationUserValidationService = organizationUserValidationService;
     }
 
     public async Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
@@ -931,35 +936,21 @@ public class OrganizationService : IOrganizationService
     public async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
         OrganizationUserType? oldType, Permissions permissions)
     {
-        if (await _currentContext.OrganizationOwner(organizationId))
-        {
-            return;
-        }
+        var actingOrganization = _currentContext.GetOrganization(organizationId);
+        var actingUser = actingOrganization is null
+            ? null
+            : new OrganizationUserRole(actingOrganization.Type, organizationId, actingOrganization.Permissions);
 
-        if (oldType == OrganizationUserType.Owner || newType == OrganizationUserType.Owner)
-        {
-            throw new BadRequestException("Only an Owner can configure another Owner's account.");
-        }
+        // No prior role for a brand-new invite; only the requested role needs to be manageable.
+        var targetUser = new OrganizationUserRole(oldType ?? newType, organizationId);
+        var newTargetUser = new OrganizationUserRole(newType, organizationId, permissions);
 
-        if (await _currentContext.OrganizationAdmin(organizationId))
-        {
-            return;
-        }
+        var error = await _organizationUserValidationService.CanManageRoleChangeAsync(
+            _currentContext.UserId ?? Guid.Empty, actingUser, targetUser, newTargetUser);
 
-        if (!await _currentContext.ManageUsers(organizationId))
+        if (error is not null)
         {
-            throw new BadRequestException("Your account does not have permission to manage users.");
-        }
-
-        if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
-        {
-            throw new BadRequestException("Custom users can not manage Admins or Owners.");
-        }
-
-        if (newType == OrganizationUserType.Custom &&
-            !await ValidateCustomPermissionsGrant(organizationId, permissions))
-        {
-            throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
+            throw new BadRequestException(error.Message);
         }
     }
 
@@ -984,84 +975,4 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task<bool> ValidateCustomPermissionsGrant(Guid organizationId, Permissions permissions)
-    {
-        if (permissions == null || await _currentContext.OrganizationAdmin(organizationId))
-        {
-            return true;
-        }
-
-        if (permissions.ManageUsers && !await _currentContext.ManageUsers(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.AccessReports && !await _currentContext.AccessReports(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.ManageGroups && !await _currentContext.ManageGroups(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.ManagePolicies && !await _currentContext.ManagePolicies(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.ManageScim && !await _currentContext.ManageScim(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.ManageSso && !await _currentContext.ManageSso(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.AccessEventLogs && !await _currentContext.AccessEventLogs(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.AccessImportExport && !await _currentContext.AccessImportExport(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.EditAnyCollection && !await _currentContext.EditAnyCollection(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.ManageResetPassword && !await _currentContext.ManageResetPassword(organizationId))
-        {
-            return false;
-        }
-
-        var org = _currentContext.GetOrganization(organizationId);
-        if (org == null)
-        {
-            return false;
-        }
-
-        if (permissions.CreateNewCollections && !org.Permissions.CreateNewCollections)
-        {
-            return false;
-        }
-
-        if (permissions.DeleteAnyCollection && !org.Permissions.DeleteAnyCollection)
-        {
-            return false;
-        }
-
-        if (permissions.ManageAccessRules && !org.Permissions.ManageAccessRules)
-        {
-            return false;
-        }
-
-        return true;
-    }
 }

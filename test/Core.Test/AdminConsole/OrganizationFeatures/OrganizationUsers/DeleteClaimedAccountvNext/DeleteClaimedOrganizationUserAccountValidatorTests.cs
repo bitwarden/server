@@ -477,6 +477,72 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
         Assert.IsType<InvalidUserStatusError>(invalidResult.AsError);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WithMixedRoleBatch_ReturnsPerTargetManageResults(
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
+        User ownerTargetUser,
+        User adminTargetUser,
+        User userTargetUser,
+        Guid organizationId,
+        Guid deletingUserId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser ownerOrgUser,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Admin)] OrganizationUser adminOrgUser,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser userOrgUser)
+    {
+        // A batch mixing an Owner, an Admin, and a plain User target, deleted by an Admin: the Owner target should
+        // be denied while the Admin and User targets succeed, matching the single-target "can manage" hierarchy.
+        ownerOrgUser.UserId = ownerTargetUser.Id;
+        adminOrgUser.UserId = adminTargetUser.Id;
+        userOrgUser.UserId = userTargetUser.Id;
+
+        var ownerRequest = new DeleteUserValidationRequest
+        {
+            OrganizationId = organizationId,
+            OrganizationUserId = ownerOrgUser.Id,
+            OrganizationUser = ownerOrgUser,
+            User = ownerTargetUser,
+            DeletingUserId = deletingUserId,
+            IsClaimed = true
+        };
+
+        var adminRequest = new DeleteUserValidationRequest
+        {
+            OrganizationId = organizationId,
+            OrganizationUserId = adminOrgUser.Id,
+            OrganizationUser = adminOrgUser,
+            User = adminTargetUser,
+            DeletingUserId = deletingUserId,
+            IsClaimed = true
+        };
+
+        var userRequest = new DeleteUserValidationRequest
+        {
+            OrganizationId = organizationId,
+            OrganizationUserId = userOrgUser.Id,
+            OrganizationUser = userOrgUser,
+            User = userTargetUser,
+            DeletingUserId = deletingUserId,
+            IsClaimed = true
+        };
+
+        SetupMocks(sutProvider, organizationId, deletingUserId, OrganizationUserType.Admin);
+
+        var results = await sutProvider.Sut.ValidateAsync([ownerRequest, adminRequest, userRequest]);
+
+        var resultsList = results.ToList();
+        Assert.Equal(3, resultsList.Count);
+
+        var ownerResult = resultsList.Single(r => r.Request == ownerRequest);
+        var adminResult = resultsList.Single(r => r.Request == adminRequest);
+        var userResult = resultsList.Single(r => r.Request == userRequest);
+
+        Assert.True(ownerResult.IsError);
+        Assert.IsType<OnlyOwnersCanManageOwners>(ownerResult.AsError);
+        Assert.True(adminResult.IsValid);
+        Assert.True(userResult.IsValid);
+    }
+
     private static void SetupMocks(
         SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         Guid organizationId,

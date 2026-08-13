@@ -1,11 +1,15 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -22,16 +26,19 @@ public class RecoverAccountAuthorizationHandlerTests
     public async Task HandleRequirementAsync_CurrentUserIsProvider_TargetUserNotProvider_Authorized(
         SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
         [OrganizationUser] OrganizationUser targetOrganizationUser,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal,
+        Guid actingUserId)
     {
         // Arrange
+        UseRealValidationService(sutProvider);
+
         var context = new AuthorizationHandlerContext(
             [new RecoverAccountAuthorizationRequirement()],
             claimsPrincipal,
             targetOrganizationUser);
 
         MockOrganizationClaims(sutProvider, claimsPrincipal, targetOrganizationUser, null);
-        MockCurrentUserIsProvider(sutProvider, claimsPrincipal, targetOrganizationUser);
+        MockActingUserIsProvider(sutProvider, actingUserId, targetOrganizationUser);
 
         // Act
         await sutProvider.Sut.HandleAsync(context);
@@ -47,6 +54,8 @@ public class RecoverAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         // Arrange
+        UseRealValidationService(sutProvider);
+
         var context = new AuthorizationHandlerContext(
             [new RecoverAccountAuthorizationRequirement()],
             claimsPrincipal,
@@ -85,6 +94,7 @@ public class RecoverAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         // Arrange
+        UseRealValidationService(sutProvider);
         targetOrganizationUser.Type = targetOrganizationUserType;
         currentContextOrganization.Id = targetOrganizationUser.OrganizationId;
 
@@ -131,6 +141,7 @@ public class RecoverAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         // Arrange
+        UseRealValidationService(sutProvider);
         targetOrganizationUser.Type = targetOrganizationUserType;
         currentContextOrganization.Id = targetOrganizationUser.OrganizationId;
 
@@ -155,6 +166,7 @@ public class RecoverAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         // Arrange
+        UseRealValidationService(sutProvider);
         targetOrganizationUser.UserId = null;
         MockCurrentUserIsOwner(sutProvider, claimsPrincipal, targetOrganizationUser);
 
@@ -178,10 +190,13 @@ public class RecoverAccountAuthorizationHandlerTests
         SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
         [OrganizationUser] OrganizationUser targetOrganizationUser,
         ClaimsPrincipal claimsPrincipal,
+        Guid actingUserId,
         Guid providerId1,
         Guid providerId2)
     {
         // Arrange
+        UseRealValidationService(sutProvider);
+
         var targetUserProviders = new List<ProviderUser>
         {
             new() { ProviderId = providerId1, UserId = targetOrganizationUser.UserId },
@@ -193,7 +208,7 @@ public class RecoverAccountAuthorizationHandlerTests
             claimsPrincipal,
             targetOrganizationUser);
 
-        MockCurrentUserIsProvider(sutProvider, claimsPrincipal, targetOrganizationUser);
+        MockActingUserIsProvider(sutProvider, actingUserId, targetOrganizationUser);
 
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetManyByUserAsync(targetOrganizationUser.UserId!.Value)
@@ -223,6 +238,8 @@ public class RecoverAccountAuthorizationHandlerTests
         Guid providerId2)
     {
         // Arrange
+        UseRealValidationService(sutProvider);
+
         var targetUserProviders = new List<ProviderUser>
         {
             new() { ProviderId = providerId1, UserId = targetOrganizationUser.UserId },
@@ -256,6 +273,25 @@ public class RecoverAccountAuthorizationHandlerTests
         AssertFailed(context, RecoverAccountAuthorizationHandler.ProviderFailureReason);
     }
 
+    /// <summary>
+    /// Swaps the auto-mocked <see cref="IOrganizationUserValidationService"/> for a real instance backed by
+    /// mocked repositories, so the handler's role-hierarchy logic (Owner/Admin/Custom/User + provider override)
+    /// actually runs instead of just returning a NSubstitute default.
+    /// </summary>
+    private static void UseRealValidationService(SutProvider<RecoverAccountAuthorizationHandler> sutProvider)
+    {
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository
+            .GetManyOrganizationDetailsByUserAsync(Arg.Any<Guid>(), ProviderUserStatusType.Confirmed)
+            .Returns([]);
+
+        var validationService = new OrganizationUserValidationService(
+            providerUserRepository, Substitute.For<IOrganizationUserRepository>());
+
+        sutProvider.SetDependency<IOrganizationUserValidationService>(validationService, "organizationUserValidationService");
+        sutProvider.Create();
+    }
+
     private static void MockOrganizationClaims(SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
         ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser,
         CurrentContextOrganization? currentContextOrganization)
@@ -265,12 +301,14 @@ public class RecoverAccountAuthorizationHandlerTests
             .Returns(currentContextOrganization);
     }
 
-    private static void MockCurrentUserIsProvider(SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
-        ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser)
+    private static void MockActingUserIsProvider(SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+        Guid actingUserId, OrganizationUser targetOrganizationUser)
     {
-        sutProvider.GetDependency<IOrganizationContext>()
-            .IsProviderUserForOrganization(currentUser, targetOrganizationUser.OrganizationId)
-            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyOrganizationDetailsByUserAsync(actingUserId, ProviderUserStatusType.Confirmed)
+            .Returns([new ProviderUserOrganizationDetails { OrganizationId = targetOrganizationUser.OrganizationId }]);
     }
 
     private static void MockCurrentUserIsOwner(SutProvider<RecoverAccountAuthorizationHandler> sutProvider,

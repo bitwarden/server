@@ -1,8 +1,8 @@
-﻿using System.Security.Claims;
+﻿using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.AdminConsole.Authorization;
@@ -26,7 +26,8 @@ public class RecoverAccountAuthorizationRequirement : IAuthorizationRequirement;
 public class RecoverAccountAuthorizationHandler(
     IOrganizationContext organizationContext,
     ICurrentContext currentContext,
-    IProviderUserRepository providerUserRepository)
+    IProviderUserRepository providerUserRepository,
+    IOrganizationUserValidationService organizationUserValidationService)
     : AuthorizationHandler<RecoverAccountAuthorizationRequirement, OrganizationUser>
 {
     public const string FailureReason = "You are not permitted to recover this user's account.";
@@ -36,13 +37,19 @@ public class RecoverAccountAuthorizationHandler(
         RecoverAccountAuthorizationRequirement requirement,
         OrganizationUser targetOrganizationUser)
     {
-        // Step 1: check that the User has permissions with respect to the organization.
-        // This may come from their role in the organization or their provider relationship.
-        var canRecoverOrganizationMember =
-            AuthorizeMember(context.User, targetOrganizationUser) ||
-            await AuthorizeProviderAsync(context.User, targetOrganizationUser);
+        // Step 1: check that the User has permissions with respect to the organization, using the same
+        // Owner > Admin > Custom > User hierarchy (plus provider override) as every other "can manage this user"
+        // check, but gated on ManageResetPassword instead of the default ManageUsers.
+        var actingOrganization = organizationContext.GetOrganizationClaims(context.User, targetOrganizationUser.OrganizationId);
+        var actingUser = actingOrganization is null
+            ? null
+            : new OrganizationUserRole(actingOrganization.Type, targetOrganizationUser.OrganizationId, actingOrganization.Permissions);
 
-        if (!canRecoverOrganizationMember)
+        var manageError = await organizationUserValidationService.CanManageAsync(
+            currentContext.UserId ?? Guid.Empty, actingUser, targetOrganizationUser,
+            customPermissionGate: p => p.ManageResetPassword);
+
+        if (manageError is not null)
         {
             context.Fail(new AuthorizationFailureReason(this, FailureReason));
             return;
@@ -58,32 +65,6 @@ public class RecoverAccountAuthorizationHandler(
         }
 
         context.Succeed(requirement);
-    }
-
-    private async Task<bool> AuthorizeProviderAsync(ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser)
-    {
-        return await organizationContext.IsProviderUserForOrganization(currentUser, targetOrganizationUser.OrganizationId);
-    }
-
-    private bool AuthorizeMember(ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser)
-    {
-        var currentContextOrganization = organizationContext.GetOrganizationClaims(currentUser, targetOrganizationUser.OrganizationId);
-        if (currentContextOrganization == null)
-        {
-            return false;
-        }
-
-        // Current user must have equal or greater permissions than the user account being recovered
-        var authorized = targetOrganizationUser.Type switch
-        {
-            OrganizationUserType.Owner => currentContextOrganization.Type is OrganizationUserType.Owner,
-            OrganizationUserType.Admin => currentContextOrganization.Type is OrganizationUserType.Owner or OrganizationUserType.Admin,
-            _ => currentContextOrganization is
-            { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
-                or { Type: OrganizationUserType.Custom, Permissions.ManageResetPassword: true }
-        };
-
-        return authorized;
     }
 
     private async Task<bool> CanRecoverProviderAsync(OrganizationUser targetOrganizationUser)

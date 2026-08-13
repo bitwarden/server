@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
@@ -9,7 +10,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
-public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, IOrganizationUser
+public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, IOrganizationUser, IOrganizationUserRole
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 

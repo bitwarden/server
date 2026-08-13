@@ -69,7 +69,13 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     /// </summary>
     /// <param name="organizationUser">The modified organization user to save.</param>
     /// <param name="existingUserType">The current type (member role) of the user.</param>
-    /// <param name="savingUserId">The userId of the currently logged in user who is making the change.</param>
+    /// <param name="savingUserId">
+    /// The userId of the currently logged in user who is making the change, or <see langword="null"/> when the
+    /// request is authenticated via an organization API key (Public API) or SCIM, which are intentionally granted
+    /// full authority over the organization and therefore skip the per-target authorization check below (cf. the
+    /// equivalent "SCIM and Public API have superuser permissions here" behavior in
+    /// <see cref="Bit.Core.Services.OrganizationService.InviteUsersAsync"/>).
+    /// </param>
     /// <param name="collectionAccess">The user's updated collection access. If set to null, this removes all collection access.</param>
     /// <param name="groupAccess">The user's updated group access. If set to null, groups are not updated.</param>
     /// <exception cref="BadRequestException"></exception>
@@ -111,6 +117,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             await ValidateGroupAccessAsync(originalOrganizationUser, groupAccess.ToList());
         }
 
+        // savingUserId is null for Public API/SCIM callers, which are intentionally granted full authority over the
+        // organization; see the parameter doc above.
         if (savingUserId.HasValue)
         {
             await _organizationService.ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, originalOrganizationUser.Type, organizationUser.GetPermissions());

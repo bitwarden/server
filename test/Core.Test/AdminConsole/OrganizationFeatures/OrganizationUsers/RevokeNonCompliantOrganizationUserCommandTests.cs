@@ -1,7 +1,10 @@
-﻿using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -35,7 +38,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
             SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
     {
         var command = new RevokeOrganizationUsersRequest(organizationId, revokingUser,
-            new StandardUser(revokingUser?.UserId ?? Guid.NewGuid(), true), RevocationReason.TwoFactorPolicyNonCompliance);
+            CreateActingUser(revokingUser?.UserId ?? Guid.NewGuid(), OrganizationUserType.Owner), RevocationReason.TwoFactorPolicyNonCompliance);
 
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
@@ -51,7 +54,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userFromAnotherOrg.OrganizationId = Guid.NewGuid();
 
         var command = new RevokeOrganizationUsersRequest(organizationId, userFromAnotherOrg,
-            new StandardUser(Guid.NewGuid(), true), RevocationReason.TwoFactorPolicyNonCompliance);
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.Owner), RevocationReason.TwoFactorPolicyNonCompliance);
 
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
@@ -67,7 +70,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.OrganizationId = organizationId;
 
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
-            new StandardUser(Guid.NewGuid(), true), RevocationReason.TwoFactorPolicyNonCompliance);
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.Owner), RevocationReason.TwoFactorPolicyNonCompliance);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -87,8 +90,9 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.OrganizationId = organizationId;
         userToRevoke.Type = OrganizationUserType.Owner;
 
+        UseRealValidationService(sutProvider);
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
-            new StandardUser(Guid.NewGuid(), false), RevocationReason.TwoFactorPolicyNonCompliance);
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.Admin), RevocationReason.TwoFactorPolicyNonCompliance);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -97,7 +101,30 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorOnlyOwnersCanRevokeOtherOwners, result.ErrorMessages);
+        Assert.Contains("only an owner can manage another owner's account.", result.ErrorMessages.Select(m => m.ToLowerInvariant()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RevokeNonCompliantOrganizationUsersAsync_GivenPopulatedRequest_WhenCustomUserAttemptsToRevokeAdmin_ThenErrorShouldBeReturned(
+        Guid organizationId, OrganizationUserUserDetails userToRevoke,
+        SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+    {
+        userToRevoke.OrganizationId = organizationId;
+        userToRevoke.Type = OrganizationUserType.Admin;
+
+        UseRealValidationService(sutProvider);
+        var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.Custom, new Permissions { ManageUsers = true }),
+            RevocationReason.TwoFactorPolicyNonCompliance);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+
+        Assert.True(result.HasErrors);
+        Assert.Contains("custom users can not manage admins or owners.", result.ErrorMessages.Select(m => m.ToLowerInvariant()));
     }
 
     [Theory, BitAutoData]
@@ -108,8 +135,9 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.OrganizationId = organizationId;
         userToRevoke.Status = OrganizationUserStatusType.Revoked;
 
+        UseRealValidationService(sutProvider);
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
-            new StandardUser(Guid.NewGuid(), true), RevocationReason.TwoFactorPolicyNonCompliance);
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.Owner), RevocationReason.TwoFactorPolicyNonCompliance);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -131,8 +159,9 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         revocableUsers[0].Type = OrganizationUserType.Owner;
         revocableUsers[1].Status = OrganizationUserStatusType.Revoked;
 
+        UseRealValidationService(sutProvider);
         var command = new RevokeOrganizationUsersRequest(organizationId, revocableUsers,
-            new StandardUser(Guid.NewGuid(), false), RevocationReason.TwoFactorPolicyNonCompliance);
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.User), RevocationReason.TwoFactorPolicyNonCompliance);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -152,8 +181,9 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.OrganizationId = organizationId;
         userToRevoke.Type = OrganizationUserType.Admin;
 
+        UseRealValidationService(sutProvider);
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
-            new StandardUser(Guid.NewGuid(), false), RevocationReason.TwoFactorPolicyNonCompliance);
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.Admin), RevocationReason.TwoFactorPolicyNonCompliance);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -176,6 +206,48 @@ public class RevokeNonCompliantOrganizationUserCommandTests
                         y.organizationUser.Id == userToRevoke.Id && y.eventType == EventType.OrganizationUser_Revoked_TwoFactorNonCompliance)
                 ));
     }
+
+    [Theory, BitAutoData]
+    public async Task RevokeNonCompliantOrganizationUsersAsync_GivenSystemUser_WhenRevokingAnOwner_ThenUserShouldBeRevoked(
+        Guid organizationId, OrganizationUserUserDetails userToRevoke,
+        SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+    {
+        userToRevoke.OrganizationId = organizationId;
+        userToRevoke.Type = OrganizationUserType.Owner;
+
+        var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
+            new SystemUser(EventSystemUser.SCIM), RevocationReason.TwoFactorPolicyNonCompliance);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+
+        Assert.True(result.Success);
+    }
+
+    /// <summary>
+    /// Replaces the auto-mocked <see cref="IOrganizationUserValidationService"/> with a real instance (backed by a
+    /// provider-repository stub reporting no provider memberships), so these tests exercise the real "can manage"
+    /// hierarchy instead of re-implementing it as a mock.
+    /// </summary>
+    private static void UseRealValidationService(SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+    {
+        var providerUserRepository = Substitute.For<IProviderUserRepository>();
+        providerUserRepository
+            .GetManyOrganizationDetailsByUserAsync(Arg.Any<Guid>(), ProviderUserStatusType.Confirmed)
+            .Returns([]);
+
+        var validationService = new OrganizationUserValidationService(
+            providerUserRepository, Substitute.For<IOrganizationUserRepository>());
+
+        sutProvider.SetDependency<IOrganizationUserValidationService>(validationService, "organizationUserValidationService");
+        sutProvider.Create();
+    }
+
+    private static IActingUser CreateActingUser(Guid userId, OrganizationUserType type, Permissions? permissions = null) =>
+        new StandardUser(userId, type == OrganizationUserType.Owner, type, permissions);
 
     public class InvalidUser : IActingUser
     {

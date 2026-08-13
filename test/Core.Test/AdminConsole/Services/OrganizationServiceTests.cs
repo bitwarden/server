@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Commands;
@@ -129,8 +130,11 @@ public class OrganizationServiceTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
+        UseRealValidationService(sutProvider);
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         currentContext.OrganizationAdmin(organization.Id).Returns(true);
+        currentContext.GetOrganization(organization.Id)
+            .Returns(new CurrentContextOrganization { Id = organization.Id, Type = OrganizationUserType.Admin });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) }));
@@ -150,12 +154,15 @@ public class OrganizationServiceTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
+        UseRealValidationService(sutProvider);
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         currentContext.OrganizationUser(organization.Id).Returns(true);
+        currentContext.GetOrganization(organization.Id)
+            .Returns(new CurrentContextOrganization { Id = organization.Id, Type = OrganizationUserType.User });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) }));
-        Assert.Contains("your account does not have permission to manage users", exception.Message.ToLowerInvariant());
+        Assert.Contains("custom users can not manage admins or owners", exception.Message.ToLowerInvariant());
     }
 
     [Theory]
@@ -275,15 +282,23 @@ public class OrganizationServiceTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
+        UseRealValidationService(sutProvider);
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
         currentContext.OrganizationCustom(organization.Id).Returns(true);
         currentContext.ManageUsers(organization.Id).Returns(false);
+        currentContext.GetOrganization(organization.Id)
+            .Returns(new CurrentContextOrganization
+            {
+                Id = organization.Id,
+                Type = OrganizationUserType.Custom,
+                Permissions = new Permissions { ManageUsers = false }
+            });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) }));
-        Assert.Contains("account does not have permission", exception.Message.ToLowerInvariant());
+        Assert.Contains("custom users can not manage admins or owners", exception.Message.ToLowerInvariant());
     }
 
     [Theory]
@@ -308,9 +323,17 @@ public class OrganizationServiceTests
                 Sponsored = 0,
                 Users = 1
             });
+        UseRealValidationService(sutProvider);
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         currentContext.OrganizationCustom(organization.Id).Returns(true);
         currentContext.ManageUsers(organization.Id).Returns(true);
+        currentContext.GetOrganization(organization.Id)
+            .Returns(new CurrentContextOrganization
+            {
+                Id = organization.Id,
+                Type = OrganizationUserType.Custom,
+                Permissions = new Permissions { ManageUsers = true }
+            });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) }));
@@ -475,6 +498,27 @@ public class OrganizationServiceTests
                 info.Users.Length == 0));
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events => !events.Any()));
+    }
+
+    /// <summary>
+    /// Swaps the auto-mocked <see cref="IOrganizationUserValidationService"/> for a real instance so that
+    /// <c>ValidateOrganizationUserUpdatePermissions</c> (and anything that calls it, like <c>InviteUsersAsync</c>)
+    /// exercises the actual authorization ladder instead of the auto-mock's default "always allowed" behavior.
+    /// </summary>
+    private static void UseRealValidationService(SutProvider<OrganizationService> sutProvider)
+    {
+        var providerUserRepository = Substitute.For<IProviderUserRepository>();
+        providerUserRepository
+            .GetManyOrganizationDetailsByUserAsync(Arg.Any<Guid>(), ProviderUserStatusType.Confirmed)
+            .Returns([]);
+
+        var validationService = new OrganizationUserValidationService(
+            providerUserRepository, Substitute.For<IOrganizationUserRepository>());
+
+        // Must match the constructor parameter name: the auto-created mock is already registered under this name,
+        // so overriding under a different (e.g. default empty) name would be shadowed by it.
+        sutProvider.SetDependency<IOrganizationUserValidationService>(validationService, "organizationUserValidationService");
+        sutProvider.Create();
     }
 
     private void InviteUser_ArrangeCurrentContextPermissions(Organization organization, SutProvider<OrganizationService> sutProvider)
@@ -978,10 +1022,11 @@ public class OrganizationServiceTests
         OrganizationUserInvite organizationUserInvite,
         SutProvider<OrganizationService> sutProvider)
     {
+        UseRealValidationService(sutProvider);
         var invitePermissions = new Permissions { AccessReports = true };
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions { ManageUsers = true, AccessReports = true };
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().AccessReports(organization.Id).Returns(true);
 
         await sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organization.Id, organizationUserInvite.Type.Value, null, invitePermissions);
     }
@@ -996,10 +1041,14 @@ public class OrganizationServiceTests
         OrganizationUserInvite organizationUserInvite,
         SutProvider<OrganizationService> sutProvider)
     {
+        UseRealValidationService(sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.Admin });
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, organizationUserInvite.Permissions));
 
-        Assert.Contains("only an owner can configure another owner's account.", exception.Message.ToLowerInvariant());
+        Assert.Contains("only an owner can manage another owner's account.", exception.Message.ToLowerInvariant());
     }
 
     [Theory]
@@ -1012,10 +1061,12 @@ public class OrganizationServiceTests
         OrganizationUserInvite organizationUserInvite,
         SutProvider<OrganizationService> sutProvider)
     {
+        UseRealValidationService(sutProvider);
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, organizationUserInvite.Permissions));
 
-        Assert.Contains("your account does not have permission to manage users.", exception.Message.ToLowerInvariant());
+        Assert.Contains("custom users can not manage admins or owners.", exception.Message.ToLowerInvariant());
     }
 
     [Theory]
@@ -1028,7 +1079,14 @@ public class OrganizationServiceTests
         OrganizationUserInvite organizationUserInvite,
         SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationId).Returns(true);
+        UseRealValidationService(sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization
+            {
+                Id = organizationId,
+                Type = OrganizationUserType.Custom,
+                Permissions = new Permissions { ManageUsers = true }
+            });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, organizationUserInvite.Permissions));
@@ -1041,10 +1099,11 @@ public class OrganizationServiceTests
         CurrentContextOrganization organization,
         SutProvider<OrganizationService> sutProvider)
     {
-        organization.Permissions = new Permissions { ManageAccessRules = true };
+        UseRealValidationService(sutProvider);
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions { ManageAccessRules = true, ManageUsers = true };
         var invitePermissions = new Permissions { ManageAccessRules = true };
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
 
         await sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organization.Id, OrganizationUserType.Custom, null, invitePermissions);
     }
@@ -1054,10 +1113,11 @@ public class OrganizationServiceTests
         CurrentContextOrganization organization,
         SutProvider<OrganizationService> sutProvider)
     {
-        organization.Permissions = new Permissions { ManageAccessRules = false };
+        UseRealValidationService(sutProvider);
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions { ManageAccessRules = false, ManageUsers = true };
         var invitePermissions = new Permissions { ManageAccessRules = true };
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organization.Id, OrganizationUserType.Custom, null, invitePermissions));
@@ -1075,9 +1135,15 @@ public class OrganizationServiceTests
         OrganizationUserInvite organizationUserInvite,
         SutProvider<OrganizationService> sutProvider)
     {
+        UseRealValidationService(sutProvider);
         var invitePermissions = new Permissions { AccessReports = true };
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationId).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().AccessReports(organizationId).Returns(false);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization
+            {
+                Id = organizationId,
+                Type = OrganizationUserType.Custom,
+                Permissions = new Permissions { ManageUsers = true, AccessReports = false }
+            });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, invitePermissions));

@@ -201,6 +201,8 @@ public class MembersController : Controller
         var existingUserType = existingUser.Type;
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
+        // savingUserId: null - organization API keys are intentionally granted full authority over the
+        // organization, so the per-target authorization check is skipped for this Public API caller by design.
         await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, existingUserType, null, associations, model.Groups);
         MemberResponseModel response;
         if (existingUser.UserId.HasValue)

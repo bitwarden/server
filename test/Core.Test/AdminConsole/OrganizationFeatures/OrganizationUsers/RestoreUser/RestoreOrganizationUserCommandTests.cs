@@ -1,12 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -110,11 +113,14 @@ public class RestoreOrganizationUserCommandTests
     {
         restoringUser.Type = restoringUserType;
         RestoreUser_Setup(organization, restoringUser, organizationUser, sutProvider);
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
+            .CanManageAsync(restoringUser.Id, Arg.Any<IOrganizationUserRole?>(), organizationUser)
+            .Returns(new OnlyOwnersCanManageOwners());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, restoringUser.Id, null));
 
-        Assert.Contains("only owners can restore other owners", exception.Message.ToLowerInvariant());
+        Assert.Contains("only an owner can manage another owner's account", exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -136,13 +142,16 @@ public class RestoreOrganizationUserCommandTests
     {
         // Arrange
         RestoreUser_Setup(organization, customUser, organizationUser, sutProvider);
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
+            .CanManageAsync(customUser.Id, Arg.Any<IOrganizationUserRole?>(), organizationUser)
+            .Returns(new CustomUsersCannotManageAdminsOrOwners());
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, customUser.Id, null));
 
         // Assert
-        Assert.Contains("custom users can not restore admins", exception.Message.ToLowerInvariant());
+        Assert.Contains("custom users can not manage admins or owners", exception.Message.ToLowerInvariant());
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
@@ -842,6 +851,14 @@ public class RestoreOrganizationUserCommandTests
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(adminUser.Id) && ids.Contains(regularUser.Id)))
             .Returns([adminUser, regularUser]);
+        sutProvider.GetDependency<IOrganizationUserValidationService>()
+            .CanManageAsync(customUser.Id, Arg.Any<IOrganizationUserRole?>(), organization.Id,
+                Arg.Any<IReadOnlyDictionary<Guid, IOrganizationUserRole>>())
+            .Returns(new Dictionary<Guid, Error?>
+            {
+                { adminUser.Id, new CustomUsersCannotManageAdminsOrOwners() },
+                { regularUser.Id, null }
+            });
 
         // Act
         var result = await sutProvider.Sut.RestoreUsersAsync(organization.Id, [adminUser.Id, regularUser.Id], customUser.Id, userService, null);
@@ -850,7 +867,7 @@ public class RestoreOrganizationUserCommandTests
         Assert.Equal(2, result.Count);
         var adminResult = result.Single(r => r.Item1.Id == adminUser.Id);
         var regularResult = result.Single(r => r.Item1.Id == regularUser.Id);
-        Assert.Contains("custom users can not restore admins", adminResult.Item2.ToLowerInvariant());
+        Assert.Contains("custom users can not manage admins or owners", adminResult.Item2.ToLowerInvariant());
         Assert.Empty(regularResult.Item2);
 
         await organizationUserRepository
