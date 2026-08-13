@@ -8,7 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
@@ -29,9 +28,7 @@ public class OrganizationUserResponseModel : ResponseModel
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         AccessPam = organizationUser.AccessPam;
-        Permissions = string.IsNullOrWhiteSpace(organizationUser.Permissions)
-            ? null
-            : CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
+        Permissions = organizationUser.GetPermissions();
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
     }
 
@@ -51,9 +48,7 @@ public class OrganizationUserResponseModel : ResponseModel
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         AccessPam = organizationUser.AccessPam;
-        Permissions = string.IsNullOrWhiteSpace(organizationUser.Permissions)
-            ? null
-            : CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
+        Permissions = organizationUser.GetPermissions();
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
         HasMasterPassword = organizationUser.HasMasterPassword;
