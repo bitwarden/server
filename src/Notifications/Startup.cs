@@ -1,5 +1,7 @@
 ﻿using System.Globalization;
+using Azure.Storage.Queues;
 using Bit.Core.Auth.IdentityServer;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -65,16 +67,18 @@ public class Startup
         // Mvc
         services.AddMvc();
 
+        services.TryAddSingleton(TimeProvider.System);
         services.AddHostedService<HeartbeatHostedService>();
+        services.TryAddKeyedSingleton<QueueClient>("notifications", (sp, _) =>
+            new QueueClient(
+                sp.GetRequiredService<GlobalSettings>().Notifications.ConnectionString,
+                "notifications"));
+        services.AddHostedService<AzureQueueHostedService>();
         if (!globalSettings.SelfHosted)
         {
             // Hosted Services
             Jobs.JobsHostedService.AddJobsServices(services);
             services.AddHostedService<Jobs.JobsHostedService>();
-            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
-            {
-                services.AddHostedService<AzureQueueHostedService>();
-            }
         }
     }
 
