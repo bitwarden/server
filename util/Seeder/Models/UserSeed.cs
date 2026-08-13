@@ -110,4 +110,11 @@ internal record UserSeed
     /// WebAuthn credentials) is the caller's to supply.
     /// </summary>
     public Dictionary<TwoFactorProviderType, TwoFactorProvider>? TwoFactorProviders { get; init; }
+
+    /// <summary>
+    /// Age of the account in days, used to backdate <see cref="User.CreationDate"/>. Null (default)
+    /// randomizes an aged date beyond 90 days in the past; 0 seeds today's date; N seeds exactly N
+    /// days ago. <see cref="User.RevisionDate"/> and <see cref="User.AccountRevisionDate"/> are unaffected.
+    /// </summary>
+    public int? AccountAgeDays { get; init; }
 }

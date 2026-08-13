@@ -50,9 +50,14 @@ dotnet run -- individual --subscription premium --vault
 
 # Self-hosted instance — writes a license file so premium status is recognized
 dotnet run -- individual --subscription premium --first-name Jane --last-name Smith --self-hosted
+
+# Fresh account created today (suppresses age-gated behavior like the premium upsell)
+dotnet run -- individual --subscription free --account-age-days 0
 ```
 
 Add `--self-hosted` when targeting a self-hosted instance — without it, premium status won't be recognized.
+
+Seeded accounts are **aged by default**: `CreationDate` is randomized beyond 90 days in the past. Pass `--account-age-days 0` for today's date, or `--account-age-days N` for exactly N days ago.
 
 ### `preset` - Fixture-Based Seeding
 

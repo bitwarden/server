@@ -150,7 +150,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var recipeName = "individual-from-options";
         var builder = services.AddRecipe(recipeName);
 
-        builder.CreateIndividualUser(email, premium, maxStorageGb, options.SelfHosted);
+        builder.CreateIndividualUser(email, premium, maxStorageGb, options.SelfHosted, options.AccountAgeDays);
         builder.WithGenerator("individual.example");
 
         if (options.GenerateVault)

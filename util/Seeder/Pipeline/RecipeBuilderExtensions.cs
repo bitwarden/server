@@ -163,13 +163,14 @@ public static class RecipeBuilderExtensions
     /// <param name="premium">Whether the account has premium status</param>
     /// <param name="maxStorageGb">Optional max storage override in GB</param>
     /// <param name="selfHosted">When true, writes a license file after user creation (required for self-hosted premium validation)</param>
+    /// <param name="accountAgeDays">Backdates CreationDate: null randomizes an aged date, 0 seeds today, N seeds N days ago</param>
     /// <returns>The builder for fluent chaining</returns>
     public static RecipeBuilder CreateIndividualUser(
-        this RecipeBuilder builder, string email, bool premium, short maxStorageGb, bool selfHosted = false)
+        this RecipeBuilder builder, string email, bool premium, short maxStorageGb, bool selfHosted = false, int? accountAgeDays = null)
     {
         builder.HasIndividualUser = true;
         builder.HasOwner = true;
-        builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb, true));
+        builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb, true, accountAgeDays));
         if (selfHosted)
         {
             builder.AddAsyncStep(sp => new GenerateSelfHostUserLicenseStep(sp.GetRequiredService<ILicensingService>()));

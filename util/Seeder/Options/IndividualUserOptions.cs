@@ -48,4 +48,10 @@ public record IndividualUserOptions
     /// Required for self-hosted instances that validate premium status by reading the license file.
     /// </summary>
     public bool SelfHosted { get; init; }
+
+    /// <summary>
+    /// Age of the account in days. Null (default) randomizes an aged date beyond 90 days in the past;
+    /// 0 seeds today's date; N seeds exactly N days ago.
+    /// </summary>
+    public int? AccountAgeDays { get; init; }
 }

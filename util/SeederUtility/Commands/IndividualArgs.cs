@@ -36,6 +36,9 @@ public class IndividualArgs : IArgumentModel
     [Option("mangle", Description = "Enable ID mangling for test isolation")]
     public bool Mangle { get; set; }
 
+    [Option("account-age-days", Description = "Backdate the account: 0 = today; omit for a randomized aged (>90 day) account")]
+    public int? AccountAgeDays { get; set; }
+
     public void Validate()
     {
         var sub = Subscription?.ToLowerInvariant();
@@ -47,6 +50,11 @@ public class IndividualArgs : IArgumentModel
         if (KdfIterations < 5_000)
         {
             throw new ArgumentException("KDF iterations must be at least 5,000.");
+        }
+
+        if (AccountAgeDays is < 0)
+        {
+            throw new ArgumentException("Account age days must be zero or greater.");
         }
 
         var hasFirst = !string.IsNullOrWhiteSpace(FirstName);
@@ -73,6 +81,7 @@ public class IndividualArgs : IArgumentModel
         GenerateVault = Vault,
         Password = Password,
         KdfIterations = KdfIterations,
-        SelfHosted = SelfHosted
+        SelfHosted = SelfHosted,
+        AccountAgeDays = AccountAgeDays
     };
 }

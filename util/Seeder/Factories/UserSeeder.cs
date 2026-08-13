@@ -61,6 +61,9 @@ internal static class UserSeeder
             user.SetTwoFactorProviders(seed.TwoFactorProviders);
         }
 
+        var ageDays = seed.AccountAgeDays ?? Random.Shared.Next(91, 1096);
+        user.CreationDate = DateTime.UtcNow.AddDays(-ageDays);
+
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
 
         return (user, keys);

@@ -77,6 +77,48 @@ public class UserSeederTests
     }
 
     [Fact]
+    public void Create_ByDefault_SeedsAgedCreationDate()
+    {
+        var (user, _) = UserSeeder.Create(new UserSeed { Email = _email }, _passwordHasher, new NoOpManglerService());
+
+        Assert.True(user.CreationDate < DateTime.UtcNow.AddDays(-90));
+    }
+
+    [Fact]
+    public void Create_WhenAccountAgeDaysZero_SeedsToday()
+    {
+        var before = DateTime.UtcNow;
+
+        var (user, _) = UserSeeder.Create(
+            new UserSeed { Email = _email, AccountAgeDays = 0 }, _passwordHasher, new NoOpManglerService());
+
+        Assert.InRange(user.CreationDate, before, DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void Create_WhenAccountAgeDaysSet_BackdatesExactly()
+    {
+        var before = DateTime.UtcNow;
+
+        var (user, _) = UserSeeder.Create(
+            new UserSeed { Email = _email, AccountAgeDays = 200 }, _passwordHasher, new NoOpManglerService());
+
+        Assert.InRange(user.CreationDate, before.AddDays(-200), DateTime.UtcNow.AddDays(-200));
+    }
+
+    [Fact]
+    public void Create_LeavesRevisionDatesAtNow()
+    {
+        var before = DateTime.UtcNow;
+
+        var (user, _) = UserSeeder.Create(
+            new UserSeed { Email = _email, AccountAgeDays = 200 }, _passwordHasher, new NoOpManglerService());
+
+        Assert.InRange(user.RevisionDate, before, DateTime.UtcNow);
+        Assert.InRange(user.AccountRevisionDate, before, DateTime.UtcNow);
+    }
+
+    [Fact]
     public void Create_WhenNotPremium_LeavesExpirationNull()
     {
         var (user, _) = UserSeeder.Create(new UserSeed { Email = _email }, _passwordHasher, new NoOpManglerService());

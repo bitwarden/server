@@ -44,6 +44,7 @@ public class SingleUserScene(
         public GatewayType? Gateway { get; set; }
         public string? GatewayCustomerId { get; set; }
         public string? GatewaySubscriptionId { get; set; }
+        public int? AccountAgeDays { get; set; }
     }
 
     public async Task<SceneResult<SingleUserSceneResult>> SeedAsync(Request request)
@@ -58,7 +59,8 @@ public class SingleUserScene(
                 Password = request.Password,
                 Gateway = request.Gateway,
                 GatewayCustomerId = request.GatewayCustomerId,
-                GatewaySubscriptionId = request.GatewaySubscriptionId
+                GatewaySubscriptionId = request.GatewaySubscriptionId,
+                AccountAgeDays = request.AccountAgeDays
             },
             passwordHasher,
             manglerService);
