@@ -8,10 +8,9 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 ## Public surface
 
 `AddInvoicing()` registers the projection service and the feature flag keys the library owns
-(`InvoicingFeatureFlags`) as known flags. The public surface is `IInvoicePreviewService`, the
-`InvoicePreview` record family under `InvoicePreviews/Models/` (including `PlanTierType`), and
-`InvoicePreviewException`. The service, builder, mappers, reference table, and Stripe client are
-internal.
+(`InvoicingFeatureFlags`) as known flags. The public surface is `IInvoicePreviewService` and the
+`InvoicePreview` record family under `InvoicePreviews/Models/` (including `PlanTierType`). The
+service, builder, mappers, reference table, and Stripe client are internal.
 
 ## Stripe boundary
 
