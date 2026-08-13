@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.Entities;
@@ -98,5 +99,43 @@ public class OrganizationUserTests
         };
 
         Assert.Equal(OrganizationUserStatusType.Confirmed, orgUser.GetPriorActiveOrganizationUserStatusType());
+    }
+
+    /// <summary>
+    /// The two entitlement flags are adjacent bool parameters, so a swapped call site would compile and
+    /// silently grant the wrong one. Every combination is asserted to land in its own field.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void UpdateOrganizationUser_MapsEntitlementFlagsIndependently(bool accessSecretsManager, bool accessPam)
+    {
+        var orgUser = new OrganizationUser
+        {
+            Type = OrganizationUserType.User,
+            AccessSecretsManager = !accessSecretsManager,
+            AccessPam = !accessPam
+        };
+
+        orgUser.UpdateOrganizationUser(OrganizationUserType.Admin, null, accessSecretsManager, accessPam,
+            TimeProvider.System);
+
+        Assert.Equal(accessSecretsManager, orgUser.AccessSecretsManager);
+        Assert.Equal(accessPam, orgUser.AccessPam);
+        Assert.Equal(OrganizationUserType.Admin, orgUser.Type);
+    }
+
+    [Fact]
+    public void UpdateOrganizationUser_SetsRevisionDateFromTimeProvider()
+    {
+        var now = new DateTimeOffset(2026, 8, 10, 12, 0, 0, TimeSpan.Zero);
+        var timeProvider = new FakeTimeProvider(now);
+        var orgUser = new OrganizationUser { Type = OrganizationUserType.User };
+
+        orgUser.UpdateOrganizationUser(OrganizationUserType.User, null, false, false, timeProvider);
+
+        Assert.Equal(now.UtcDateTime, orgUser.RevisionDate);
     }
 }

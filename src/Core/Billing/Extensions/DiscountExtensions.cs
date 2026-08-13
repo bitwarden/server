@@ -1,4 +1,5 @@
 ﻿using Stripe;
+using static Bit.Core.Billing.Constants.StripeConstants;
 
 namespace Bit.Core.Billing.Extensions;
 
@@ -12,6 +13,10 @@ public static class DiscountExtensions
 
     public static bool IsValid(this Discount? discount)
         => discount?.Coupon?.Valid ?? false;
+
+    public static bool IsForever(this Coupon? coupon) =>
+        coupon is not null &&
+        string.Equals(coupon.Duration, CouponDurations.Forever, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Merges customer-level, existing subscription/phase, and newly applied coupon IDs into one

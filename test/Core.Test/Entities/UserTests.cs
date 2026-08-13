@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
@@ -140,5 +141,38 @@ public class UserTests
         Assert.NotNull(email.MetaData);
         var emailMetaDataEmail = Assert.Contains("Email", (IDictionary<string, object>)email.MetaData);
         Assert.Equal("test@email.com", emailMetaDataEmail);
+    }
+
+    [Fact]
+    public void SetUserKeyId_RoundTripsThroughTheColumn()
+    {
+        var keyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef");
+        var user = new User();
+
+        user.SetUserKeyId(keyId);
+
+        Assert.Equal("0123456789abcdef0123456789abcdef", user.UserKeyId);
+        Assert.Equal(keyId, user.GetUserKeyId());
+    }
+
+    [Fact]
+    public void SetUserKeyId_Null_ClearsTheColumn()
+    {
+        var user = new User { UserKeyId = "0123456789abcdef0123456789abcdef" };
+
+        user.SetUserKeyId(null);
+
+        Assert.Null(user.UserKeyId);
+        Assert.Null(user.GetUserKeyId());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void GetUserKeyId_UnsetColumn_ReturnsNull(string? storedValue)
+    {
+        var user = new User { UserKeyId = storedValue };
+
+        Assert.Null(user.GetUserKeyId());
     }
 }

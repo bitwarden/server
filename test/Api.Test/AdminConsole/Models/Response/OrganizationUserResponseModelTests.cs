@@ -1,4 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -8,6 +9,32 @@ namespace Bit.Api.Test.AdminConsole.Models.Response;
 
 public class OrganizationUserResponseModelTests
 {
+    [Theory, BitAutoData]
+    public void Constructor_OrganizationUser_PopulatesAccessFlags(OrganizationUser orgUser)
+    {
+        orgUser.Permissions = null;
+        orgUser.AccessSecretsManager = true;
+        orgUser.AccessPam = true;
+
+        var result = new OrganizationUserResponseModel(orgUser);
+
+        Assert.True(result.AccessSecretsManager);
+        Assert.True(result.AccessPam);
+    }
+
+    [Theory, BitAutoData]
+    public void Constructor_OrganizationUserUserDetails_PopulatesAccessFlags(OrganizationUserUserDetails orgUser)
+    {
+        orgUser.Permissions = null;
+        orgUser.AccessSecretsManager = true;
+        orgUser.AccessPam = true;
+
+        var result = new OrganizationUserResponseModel(orgUser);
+
+        Assert.True(result.AccessSecretsManager);
+        Assert.True(result.AccessPam);
+    }
+
     [Theory, BitAutoData]
     public void OrganizationUserDetailsResponseModel_Constructor_PopulatesCreationDate(
         OrganizationUserUserDetails orgUser)

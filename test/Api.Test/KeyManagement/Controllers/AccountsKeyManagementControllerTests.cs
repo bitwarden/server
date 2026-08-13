@@ -48,6 +48,33 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task PostUserKeyIdAsync_UserNull_Throws(SutProvider<AccountsKeyManagementController> sutProvider,
+        SetUserKeyIdRequestModel data)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostUserKeyIdAsync(data));
+
+        await sutProvider.GetDependency<ISetUserKeyIdCommand>().ReceivedWithAnyArgs(0)
+            .SetUserKeyIdAsync(Arg.Any<User>(), Arg.Any<KeyId>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostUserKeyIdAsync_Success_CallsCommandWithParsedKeyId(
+        SutProvider<AccountsKeyManagementController> sutProvider, User user)
+    {
+        var data = new SetUserKeyIdRequestModel { UserKeyId = _mockKeyId };
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        await sutProvider.Sut.PostUserKeyIdAsync(data);
+
+        await sutProvider.GetDependency<ISetUserKeyIdCommand>().Received(1)
+            .SetUserKeyIdAsync(user, KeyId.FromHexEncodedString(_mockKeyId)!);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task RegenerateKeysAsync_UserNull_Throws(SutProvider<AccountsKeyManagementController> sutProvider,
         KeyRegenerationRequestModel data)
     {
