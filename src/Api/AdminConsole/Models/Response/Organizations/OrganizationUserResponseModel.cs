@@ -93,12 +93,6 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
         CreationDate = organizationUser.CreationDate;
     }
 
-    [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
-    public bool ManagedByOrganization
-    {
-        get => ClaimedByOrganization;
-        set => ClaimedByOrganization = value;
-    }
     public bool ClaimedByOrganization { get; set; }
     public string SsoExternalId { get; set; }
 
@@ -188,12 +182,6 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
-    [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
-    public bool ManagedByOrganization
-    {
-        get => ClaimedByOrganization;
-        set => ClaimedByOrganization = value;
-    }
     /// <summary>
     /// Indicates if the organization claimed the user. If a user is "claimed" by an organization,
     /// the organization has greater control over their account, and some user actions are restricted.
