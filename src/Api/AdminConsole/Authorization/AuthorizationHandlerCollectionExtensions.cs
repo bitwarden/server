@@ -1,4 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.Groups;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -23,5 +24,6 @@ public static class AuthorizationHandlerCollectionExtensions
         // Fine-grained, relationship-dependent authorization for collection access is handled by plain injected
         // services rather than IAuthorizationHandler - see ICollectionAuthorizationService.
         services.TryAddScoped<ICollectionAuthorizationService, CollectionAuthorizationService>();
+        services.TryAddScoped<IGroupsAuthorizationService, GroupsAuthorizationService>();
     }
 }

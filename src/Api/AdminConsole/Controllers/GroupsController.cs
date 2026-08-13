@@ -3,10 +3,12 @@
 
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.Groups;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -34,6 +36,7 @@ public class GroupsController : Controller
     private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly IGroupsAuthorizationService _groupsAuthorizationService;
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -46,7 +49,8 @@ public class GroupsController : Controller
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        IGroupsAuthorizationService groupsAuthorizationService)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
@@ -59,6 +63,7 @@ public class GroupsController : Controller
         _userService = userService;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
+        _groupsAuthorizationService = groupsAuthorizationService;
     }
 
     [HttpGet("{id}")]
@@ -219,6 +224,44 @@ public class GroupsController : Controller
     public async Task<GroupResponseModel> PostPut(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
         return await Put(orgId, id, model);
+    }
+
+    /// <summary>
+    /// Behaves exactly like <see cref="Put"/>, but authorizes via <see cref="IGroupsAuthorizationService"/>
+    /// instead of the ASP.NET IAuthorizationHandler pipeline.
+    /// </summary>
+    [HttpPatch("{id}")]
+    [Authorize<ManageGroupsRequirement>]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.GroupsAuthorizationServiceEndpoint)]
+    public async Task<GroupResponseModel> PatchWithNewAuthorization(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
+    {
+        var (group, currentAccess) = await _groupRepository.GetByIdWithCollectionsAsync(id);
+        if (group == null || group.OrganizationId != orgId)
+        {
+            throw new NotFoundException();
+        }
+
+        var postedCollectionIds = model.Collections.Select(c => c.Id).ToList();
+        var authorizationResult = await _groupsAuthorizationService.AuthorizeUpdateAsync(orgId, id, postedCollectionIds, model.Users.ToList());
+
+        if (!authorizationResult.CanAddSelfToGroup)
+        {
+            throw new BadRequestException("You cannot add yourself to groups.");
+        }
+
+        if (authorizationResult.UnauthorizedPostedCollectionIds.Count > 0)
+        {
+            throw new NotFoundException();
+        }
+
+        var editedCollectionAccess = model.Collections.Select(c => c.ToSelectionReadOnly());
+        var readonlyCollectionAccess = currentAccess.Where(ca => authorizationResult.ReadonlyCurrentCollectionIds.Contains(ca.Id));
+        var collectionsToSave = editedCollectionAccess.Concat(readonlyCollectionAccess).ToList();
+
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+
+        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, collectionsToSave, model.Users);
+        return new GroupResponseModel(group);
     }
 
     [HttpDelete("{id}")]
