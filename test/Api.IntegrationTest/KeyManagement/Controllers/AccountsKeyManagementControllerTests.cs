@@ -83,6 +83,53 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         return Task.CompletedTask;
     }
 
+    [Fact]
+    public async Task PostUserKeyIdAsync_NotLoggedIn_Unauthorized()
+    {
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new SetUserKeyIdRequestModel { UserKeyId = _mockKeyId });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostUserKeyIdAsync_MalformedKeyId_BadRequest()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new { UserKeyId = "not-a-key-id" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostUserKeyIdAsync_NoKeyIdRecorded_BackfillsThenRejectsASecondAttempt()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+        Assert.Null(user.GetUserKeyId());
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new SetUserKeyIdRequestModel { UserKeyId = _mockKeyId });
+        response.EnsureSuccessStatusCode();
+
+        var updatedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(_mockKeyId, updatedUser.UserKeyId);
+
+        // Reporting a key id must not be able to rename the key the account is now known to use.
+        var secondResponse = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
+            new SetUserKeyIdRequestModel { UserKeyId = "fedcba9876543210fedcba9876543210" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, secondResponse.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_mockKeyId, unchangedUser.UserKeyId);
+    }
+
     [Theory]
     [BitAutoData]
     public async Task RegenerateKeysAsync_NotLoggedIn_Unauthorized(KeyRegenerationRequestModel request)
@@ -95,38 +142,96 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     }
 
     [Theory]
-    [BitAutoData(OrganizationUserStatusType.Confirmed, EmergencyAccessStatusType.Confirmed)]
-    [BitAutoData(OrganizationUserStatusType.Confirmed, EmergencyAccessStatusType.RecoveryApproved)]
-    [BitAutoData(OrganizationUserStatusType.Confirmed, EmergencyAccessStatusType.RecoveryInitiated)]
-    [BitAutoData(OrganizationUserStatusType.Revoked, EmergencyAccessStatusType.Confirmed)]
-    [BitAutoData(OrganizationUserStatusType.Revoked, EmergencyAccessStatusType.RecoveryApproved)]
-    [BitAutoData(OrganizationUserStatusType.Revoked, EmergencyAccessStatusType.RecoveryInitiated)]
-    [BitAutoData(OrganizationUserStatusType.Confirmed, null)]
-    [BitAutoData(OrganizationUserStatusType.Revoked, null)]
-    [BitAutoData(OrganizationUserStatusType.Invited, EmergencyAccessStatusType.Confirmed)]
-    [BitAutoData(OrganizationUserStatusType.Invited, EmergencyAccessStatusType.RecoveryApproved)]
-    [BitAutoData(OrganizationUserStatusType.Invited, EmergencyAccessStatusType.RecoveryInitiated)]
-    public async Task RegenerateKeysAsync_UserInOrgOrHasDesignatedEmergencyAccess_ThrowsBadRequest(
-        OrganizationUserStatusType organizationUserStatus,
-        EmergencyAccessStatusType? emergencyAccessStatus,
+    [BitAutoData]
+    public async Task RegenerateKeysAsync_WithConfirmedOrgUser_TransitionsToAccepted(
         KeyRegenerationRequestModel request)
     {
-        if (organizationUserStatus is OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked)
-        {
-            await CreateOrganizationUserAsync(organizationUserStatus);
-        }
-
-        if (emergencyAccessStatus != null)
-        {
-            await CreateDesignatedEmergencyAccessAsync(emergencyAccessStatus.Value);
-        }
-
+        var orgUser = await CreateOrganizationUserAsync(OrganizationUserStatusType.Confirmed);
         await _loginHelper.LoginAsync(_ownerEmail);
         request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
+        response.EnsureSuccessStatusCode();
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var updatedOrgUser = await _organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, updatedOrgUser.Status);
+        Assert.Null(updatedOrgUser.Key);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegenerateKeysAsync_WithRevokedOrgUser_DeletesOrgUser(
+        KeyRegenerationRequestModel request)
+    {
+        var orgUser = await CreateOrganizationUserAsync(OrganizationUserStatusType.Revoked);
+        await _loginHelper.LoginAsync(_ownerEmail);
+        request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var deletedOrgUser = await _organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.Null(deletedOrgUser);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    public async Task RegenerateKeysAsync_WithInvitedOrAcceptedOrgUser_NoChange(
+        OrganizationUserStatusType orgUserStatus,
+        KeyRegenerationRequestModel request)
+    {
+        var orgUser = await CreateOrganizationUserAsync(orgUserStatus);
+        await _loginHelper.LoginAsync(_ownerEmail);
+        request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var updatedOrgUser = await _organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(orgUserStatus, updatedOrgUser.Status);
+    }
+
+    [Theory]
+    [BitAutoData(EmergencyAccessStatusType.Confirmed)]
+    [BitAutoData(EmergencyAccessStatusType.RecoveryInitiated)]
+    [BitAutoData(EmergencyAccessStatusType.RecoveryApproved)]
+    public async Task RegenerateKeysAsync_WithDesignatedEmergencyAccess_TransitionsToAccepted(
+        EmergencyAccessStatusType emergencyAccessStatus,
+        KeyRegenerationRequestModel request)
+    {
+        var ea = await CreateDesignatedEmergencyAccessAsync(emergencyAccessStatus);
+        await _loginHelper.LoginAsync(_ownerEmail);
+        request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var updatedEa = await _emergencyAccessRepository.GetByIdAsync(ea.Id);
+        Assert.NotNull(updatedEa);
+        Assert.Equal(EmergencyAccessStatusType.Accepted, updatedEa.Status);
+        Assert.Null(updatedEa.KeyEncrypted);
+    }
+
+    [Theory]
+    [BitAutoData(EmergencyAccessStatusType.Invited)]
+    [BitAutoData(EmergencyAccessStatusType.Accepted)]
+    public async Task RegenerateKeysAsync_WithInvitedOrAcceptedEmergencyAccess_NoChange(
+        EmergencyAccessStatusType emergencyAccessStatus,
+        KeyRegenerationRequestModel request)
+    {
+        var ea = await CreateDesignatedEmergencyAccessAsync(emergencyAccessStatus);
+        await _loginHelper.LoginAsync(_ownerEmail);
+        request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var updatedEa = await _emergencyAccessRepository.GetByIdAsync(ea.Id);
+        Assert.NotNull(updatedEa);
+        Assert.Equal(emergencyAccessStatus, updatedEa.Status);
     }
 
     [Theory]
@@ -145,16 +250,17 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Equal(request.UserKeyEncryptedUserPrivateKey, user.PrivateKey);
     }
 
-    private async Task CreateOrganizationUserAsync(OrganizationUserStatusType organizationUserStatus)
+    private async Task<OrganizationUser> CreateOrganizationUserAsync(OrganizationUserStatusType organizationUserStatus)
     {
         var (_, organizationUser) = await OrganizationTestHelpers.SignUpAsync(_factory,
             PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
             paymentMethod: PaymentMethodType.Card);
         organizationUser.Status = organizationUserStatus;
         await _organizationUserRepository.ReplaceAsync(organizationUser);
+        return organizationUser;
     }
 
-    private async Task CreateDesignatedEmergencyAccessAsync(EmergencyAccessStatusType emergencyAccessStatus)
+    private async Task<EmergencyAccess> CreateDesignatedEmergencyAccessAsync(EmergencyAccessStatusType emergencyAccessStatus)
     {
         var tempEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(tempEmail);
@@ -173,6 +279,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             RevisionDate = DateTime.UtcNow
         };
         await _emergencyAccessRepository.CreateAsync(emergencyAccess);
+        return emergencyAccess;
     }
 
     [Theory]

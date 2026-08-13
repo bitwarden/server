@@ -1190,6 +1190,97 @@ public class RotateUserAccountKeysCommandTests
             .PushLogOutAsync(user.Id);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_RecordsTheNewUserKeyId(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        user.SetUserKeyId(KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210"));
+
+        await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
+
+        Assert.Equal(model.BaseData.NewUserKeyId, user.GetUserKeyId());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task TdeRotateUserAccountKeysAsync_RecordsTheNewUserKeyId(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, TdeRotateUserAccountKeysData model)
+    {
+        SetupTdeUser(user);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        user.SetUserKeyId(KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210"));
+
+        await sutProvider.Sut.TdeRotateUserAccountKeysAsync(user, model);
+
+        Assert.Equal(model.BaseData.NewUserKeyId, user.GetUserKeyId());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task KeyConnectorRotateUserAccountKeysAsync_RecordsTheNewUserKeyId(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, KeyConnectorRotateUserAccountKeysData model)
+    {
+        SetupKeyConnectorUser(user);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        user.SetUserKeyId(KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210"));
+
+        await sutProvider.Sut.KeyConnectorRotateUserAccountKeysAsync(user, model);
+
+        Assert.Equal(model.BaseData.NewUserKeyId, user.GetUserKeyId());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_RecordsTheNewUserKeyId(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        PasswordChangeAndRotateUserAccountKeysData model)
+    {
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        user.SetUserKeyId(KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210"));
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .PrepareUpdateExistingMasterPasswordAsync(user, Arg.Any<UpdateExistingPasswordData>())
+            .Returns(OneOf<User, IdentityError[]>.FromT0(user));
+
+        await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model);
+
+        Assert.Equal(model.BaseData.NewUserKeyId, user.GetUserKeyId());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task TdeRotateUserAccountKeysAsync_NoKeyIdSupplied_ClearsTheStoredKeyId(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, TdeRotateUserAccountKeysData model)
+    {
+        SetupTdeUser(user);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        // A client that predates the key id field sends none. The rotation still replaces the user
+        // key, so the stored key id names a key that no longer exists and must not survive.
+        model.BaseData.NewUserKeyId = null;
+        user.SetUserKeyId(KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210"));
+
+        await sutProvider.Sut.TdeRotateUserAccountKeysAsync(user, model);
+
+        Assert.Null(user.UserKeyId);
+        Assert.Null(user.GetUserKeyId());
+    }
+
     // Helper functions to set valid test parameters that match each other to the model and user.
     private static void SetTestKdfAndSaltForUserAndModel(User user, PasswordChangeAndRotateUserAccountKeysData model)
     {

@@ -131,6 +131,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public string? KeyConnectorUrl { get; set; }
     public MemberDecryptionType? SsoMemberDecryptionType { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool AccessPam { get; set; }
     public Guid? UserId { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }

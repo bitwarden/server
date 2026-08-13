@@ -326,6 +326,34 @@ public class CoreHelpersTests
     }
 
     [Theory, BitAutoData, UserCustomize]
+    public void BuildIdentityClaims_SecretsManagerAccess_OnlyForOrganizationsWithAccess(User user,
+        CurrentContextOrganization orgWithAccess, CurrentContextOrganization orgWithoutAccess)
+    {
+        orgWithAccess.AccessSecretsManager = true;
+        orgWithoutAccess.AccessSecretsManager = false;
+
+        var actual = CoreHelpers.BuildIdentityClaims(user, [orgWithAccess, orgWithoutAccess],
+            Array.Empty<CurrentContextProvider>(), false);
+
+        Assert.Contains(new KeyValuePair<string, string>("accesssecretsmanager", orgWithAccess.Id.ToString()), actual);
+        Assert.DoesNotContain(new KeyValuePair<string, string>("accesssecretsmanager", orgWithoutAccess.Id.ToString()), actual);
+    }
+
+    [Theory, BitAutoData, UserCustomize]
+    public void BuildIdentityClaims_PamAccess_OnlyForOrganizationsWithAccess(User user,
+        CurrentContextOrganization orgWithAccess, CurrentContextOrganization orgWithoutAccess)
+    {
+        orgWithAccess.AccessPam = true;
+        orgWithoutAccess.AccessPam = false;
+
+        var actual = CoreHelpers.BuildIdentityClaims(user, [orgWithAccess, orgWithoutAccess],
+            Array.Empty<CurrentContextProvider>(), false);
+
+        Assert.Contains(new KeyValuePair<string, string>("accesspam", orgWithAccess.Id.ToString()), actual);
+        Assert.DoesNotContain(new KeyValuePair<string, string>("accesspam", orgWithoutAccess.Id.ToString()), actual);
+    }
+
+    [Theory, BitAutoData, UserCustomize]
     public void BuildIdentityClaims_ProviderClaims_Success(User user)
     {
         var fixture = new Fixture().WithAutoNSubstitutions();

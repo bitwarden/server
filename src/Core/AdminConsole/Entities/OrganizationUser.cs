@@ -166,6 +166,7 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     public OrganizationUser UpdateOrganizationUser(OrganizationUserType organizationUserType,
         Permissions? permissions,
         bool accessSecretsManager,
+        bool accessPam,
         TimeProvider timeProvider)
     {
         if (permissions is not null)
@@ -174,6 +175,7 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
         }
         Type = organizationUserType;
         AccessSecretsManager = accessSecretsManager;
+        AccessPam = accessPam;
         RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
         return this;
     }

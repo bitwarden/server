@@ -18,9 +18,9 @@ public class OrganizationUserResetPasswordRequestModel : IValidatableObject
     [Obsolete("To be removed in PM-33141")]
     public string? Key { get; set; }
 
-    // Should be made required in PM-33141
+    // TODO: Keep optional, but update validation in PM-33141 when legacy properties are removed
     public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
-    // Should be made required in PM-33141
+    // TODO: Keep optional, but update validation in PM-33141 when legacy properties are removed
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
 
     public bool RequestHasNewDataTypes()
@@ -35,6 +35,13 @@ public class OrganizationUserResetPasswordRequestModel : IValidatableObject
         {
             yield break;
         }
+
+        // TODO: In PM-33141, the legacy properties (NewMasterPasswordHash and Key) get removed, but
+        // we cannot make AuthenticationData and UnlockData required because Account Recovery
+        // allows for resetting two-factor alone without resetting master password (i.e. resetting
+        // two-factor alone means the client doesn't send AuthenticationData and UnlockData).
+        // Therefore in PM-33141 we must update the validation such that when `ResetMasterPassword`
+        // is `true`, we require that AuthenticationData and UnlockData are present.
 
         // Require at least one payload form (new or legacy) when a password reset is requested.
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;

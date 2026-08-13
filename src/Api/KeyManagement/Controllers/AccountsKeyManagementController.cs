@@ -51,6 +51,7 @@ public class AccountsKeyManagementController : Controller
     private readonly IKeyRotationDataQuery _keyRotationDataQuery;
     private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
     private readonly IConvertUserToKeyConnectorCommand _convertUserToKeyConnectorCommand;
+    private readonly ISetUserKeyIdCommand _setUserKeyIdCommand;
 
     public AccountsKeyManagementController(IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
@@ -70,7 +71,8 @@ public class AccountsKeyManagementController : Controller
             webAuthnKeyValidator,
         IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> deviceValidator,
         ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand,
-        IConvertUserToKeyConnectorCommand convertUserToKeyConnectorCommand)
+        IConvertUserToKeyConnectorCommand convertUserToKeyConnectorCommand,
+        ISetUserKeyIdCommand setUserKeyIdCommand)
     {
         _userService = userService;
         _regenerateUserAsymmetricKeysCommand = regenerateUserAsymmetricKeysCommand;
@@ -88,6 +90,21 @@ public class AccountsKeyManagementController : Controller
         _keyRotationDataQuery = keyRotationDataQuery;
         _setKeyConnectorKeyCommand = setKeyConnectorKeyCommand;
         _convertUserToKeyConnectorCommand = convertUserToKeyConnectorCommand;
+        _setUserKeyIdCommand = setUserKeyIdCommand;
+    }
+
+    /// <summary>
+    /// Reports the key id of the caller's current user key to the server.
+    /// </summary>
+    /// <remarks>
+    /// This is meant for backfilling the user-key id for existing users for whom
+    /// the key id is not yet recorded.
+    /// </remarks>
+    [HttpPost("key-management/user-key-id")]
+    public async Task PostUserKeyIdAsync([FromBody] SetUserKeyIdRequestModel request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        await _setUserKeyIdCommand.SetUserKeyIdAsync(user, request.ToKeyId());
     }
 
     [HttpPost("key-management/regenerate-keys")]
@@ -282,7 +299,7 @@ public class AccountsKeyManagementController : Controller
             Ciphers = await _cipherValidator.ValidateAsync(user, request.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, request.AccountData.Folders),
             Sends = await _sendValidator.ValidateAsync(user, request.AccountData.Sends),
-            NewUserKeyId = request.NewUserKeyId != null ? KeyId.FromHexEncodedString(request.NewUserKeyId) : null
+            NewUserKeyId = KeyId.FromHexEncodedString(request.NewUserKeyId)
         };
     }
 }

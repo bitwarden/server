@@ -122,6 +122,7 @@ public class Startup
                 options.TransportMaxBufferSize = 4096;
             });
             endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
         });
     }
 }

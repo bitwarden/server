@@ -81,6 +81,13 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new CustomPermissionsNotEnabled());
         }
 
+        // Granting PAM access to a member of an organization without PAM would be inert: claim emission ANDs
+        // AccessPam with the organization's UsePam. Reject so the admin gets an actionable error instead.
+        if (request.IsEnablingPam() && !request.Organization.UsePam)
+        {
+            return Invalid(request, new PamNotEnabled());
+        }
+
         if (request.NewType != OrganizationUserType.Owner &&
             !await hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId,
                 [organizationUser.Id]))

@@ -323,6 +323,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         var now = DateTime.UtcNow;
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastKeyRotationDate = now;
+        user.SetUserKeyId(baseModel.NewUserKeyId);
 
         // V2UpgradeToken is only valid for V1 users transitioning to V2.
         // For V2 users the token is semantically invalid — discard it and perform a full logout.
