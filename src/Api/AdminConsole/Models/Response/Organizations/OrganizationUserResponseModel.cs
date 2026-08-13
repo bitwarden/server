@@ -28,8 +28,9 @@ public class OrganizationUserResponseModel : ResponseModel
         Status = organizationUser.Status;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
+        AccessPam = organizationUser.AccessPam;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
-        ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
+        ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
     }
 
     public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser,
@@ -47,8 +48,9 @@ public class OrganizationUserResponseModel : ResponseModel
         Status = organizationUser.Status;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
+        AccessPam = organizationUser.AccessPam;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
-        ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
+        ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
         HasMasterPassword = organizationUser.HasMasterPassword;
     }
@@ -59,6 +61,7 @@ public class OrganizationUserResponseModel : ResponseModel
     public OrganizationUserStatusType Status { get; set; }
     public string ExternalId { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool AccessPam { get; set; }
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public bool UsesKeyConnector { get; set; }
@@ -87,6 +90,7 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
         ClaimedByOrganization = claimedByOrganization;
         SsoExternalId = organizationUser.SsoExternalId;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
+        CreationDate = organizationUser.CreationDate;
     }
 
     [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
@@ -102,6 +106,11 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IEnumerable<Guid> Groups { get; set; }
+
+    /// <summary>
+    /// The date the organization user was created, i.e. when the user was first invited to the organization.
+    /// </summary>
+    public DateTime CreationDate { get; set; }
 }
 
 #nullable enable
@@ -147,6 +156,8 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !data.OrgUser.UsesKeyConnector;
         ClaimedByOrganization = data.ClaimedByOrganization;
+        RevocationReason = data.OrgUser.RevocationReason;
+        CreationDate = data.OrgUser.CreationDate;
     }
 
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
@@ -168,6 +179,8 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
         ClaimedByOrganization = claimedByOrganization;
+        RevocationReason = organizationUser.RevocationReason;
+        CreationDate = organizationUser.CreationDate;
     }
 
     public string Name { get; set; }
@@ -188,6 +201,15 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public bool ClaimedByOrganization { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
+    /// <summary>
+    /// The reason the user is revoked. Null if the user is not revoked, or was revoked before
+    /// revocation reasons were tracked.
+    /// </summary>
+    public RevocationReason? RevocationReason { get; set; }
+    /// <summary>
+    /// The date the organization user was created, i.e. when the user was first invited to the organization.
+    /// </summary>
+    public DateTime CreationDate { get; set; }
 }
 
 public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
@@ -205,6 +227,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
         KdfIterations = orgUser.KdfIterations;
         KdfMemory = orgUser.KdfMemory;
         KdfParallelism = orgUser.KdfParallelism;
+        MasterPasswordSalt = orgUser.MasterPasswordSalt;
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = orgUser.EncryptedPrivateKey;
     }
@@ -214,6 +237,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
     public int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
+    public string MasterPasswordSalt { get; set; }
     public string ResetPasswordKey { get; set; }
     public string EncryptedPrivateKey { get; set; }
 }
@@ -245,3 +269,4 @@ public class OrganizationUserBulkResponseModel : ResponseModel
     public Guid Id { get; set; }
     public string Error { get; set; }
 }
+

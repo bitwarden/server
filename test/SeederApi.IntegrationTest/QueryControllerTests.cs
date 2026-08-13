@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Bit.SeederApi.Models.Request;
+using Duende.IdentityModel.Client;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
@@ -8,11 +9,15 @@ public class QueryControllerTests : IClassFixture<SeederApiApplicationFactory>, 
 {
     private readonly HttpClient _client;
     private readonly SeederApiApplicationFactory _factory;
+    private readonly string Username = "username";
+    private readonly string Password = "pass";
 
     public QueryControllerTests(SeederApiApplicationFactory factory)
     {
         _factory = factory;
+        factory.ConfigureAuth(Username, Password);
         _client = _factory.CreateClient();
+        _client.SetBasicAuthentication(Username, Password);
     }
 
     public Task InitializeAsync()
@@ -42,10 +47,11 @@ public class QueryControllerTests : IClassFixture<SeederApiApplicationFactory>, 
 
         Assert.NotNull(result);
 
-        var urls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(result);
-        Assert.NotNull(urls);
-        // For a non-existent email, we expect an empty list
-        Assert.Empty(urls);
+        var response2 = System.Text.Json.JsonSerializer.Deserialize<EmergencyAccessInviteResponse>(result,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        Assert.NotNull(response2);
+        Assert.NotNull(response2.Urls);
+        Assert.Empty(response2.Urls);
     }
 
     [Fact]
@@ -72,4 +78,6 @@ public class QueryControllerTests : IClassFixture<SeederApiApplicationFactory>, 
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    private sealed record EmergencyAccessInviteResponse(List<string> Urls);
 }

@@ -50,15 +50,54 @@ public class OrganizationConnectionsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task CreateConnection_CloudBillingSync_RequiresOwnerPermissions(SutProvider<OrganizationConnectionsController> sutProvider)
+    public async Task CreateConnection_CloudBillingSync_RequiresOwnerPermissions(Guid organizationId,
+        SutProvider<OrganizationConnectionsController> sutProvider)
     {
         var model = new OrganizationConnectionRequestModel
         {
             Type = OrganizationConnectionType.CloudBillingSync,
+            OrganizationId = organizationId,
         };
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateConnection(model));
 
         Assert.Contains($"You do not have permission to create a connection of type", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateConnection_Scim_RequiresManageScimPermission(Guid organizationId,
+        SutProvider<OrganizationConnectionsController> sutProvider)
+    {
+        var model = new OrganizationConnectionRequestModel
+        {
+            Type = OrganizationConnectionType.Scim,
+            OrganizationId = organizationId,
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organizationId).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateConnection(model));
+
+        Assert.Contains($"You do not have permission to create a connection of type", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateConnection_Scim_Success(OrganizationConnectionRequestModel model, ScimConfig config,
+        SutProvider<OrganizationConnectionsController> sutProvider)
+    {
+        model.Type = OrganizationConnectionType.Scim;
+        model.Config = JsonDocumentFromObject(config);
+        var typedModel = new OrganizationConnectionRequestModel<ScimConfig>(model);
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(model.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().CreateAsync<ScimConfig>(default)
+            .ReturnsForAnyArgs(typedModel.ToData(Guid.NewGuid()).ToEntity());
+
+        await sutProvider.Sut.CreateConnection(model);
+
+        await sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().Received(1)
+            .CreateAsync(Arg.Is(AssertHelper.AssertPropertyEqual(typedModel.ToData())));
     }
 
     [Theory]
@@ -73,6 +112,7 @@ public class OrganizationConnectionsControllerTests
         var existing = typedModel.ToData(existingEntityId).ToEntity();
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(model.OrganizationId).Returns(true);
 
         sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(model.OrganizationId, type).Returns(new[] { existing });
 
@@ -366,6 +406,88 @@ public class OrganizationConnectionsControllerTests
         await sutProvider.Sut.DeleteConnection(connection.Id);
 
         await sutProvider.GetDependency<IDeleteOrganizationConnectionCommand>().DeleteAsync(connection);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateConnection_PermissionCheckUsesPersistedType_NotRequestType(
+        Guid connectionId, Guid organizationId, BillingSyncConfig config,
+        SutProvider<OrganizationConnectionsController> sutProvider)
+    {
+        var existing = new OrganizationConnection
+        {
+            Id = connectionId,
+            Type = OrganizationConnectionType.CloudBillingSync,
+            OrganizationId = organizationId,
+            Config = JsonSerializer.Serialize(config),
+        };
+
+        var request = new OrganizationConnectionRequestModel
+        {
+            Type = OrganizationConnectionType.Scim,
+            OrganizationId = organizationId,
+            Enabled = true,
+            Config = JsonDocumentFromObject(new ScimConfig()),
+        };
+
+        sutProvider.GetDependency<IOrganizationConnectionRepository>()
+            .GetByIdOrganizationIdAsync(connectionId, organizationId)
+            .Returns(existing);
+
+        // The user can update a Scim connection but not a Cloud Billing Sync connection
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organizationId).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateConnection(connectionId, request));
+
+        Assert.Contains("You do not have permission to update this connection.", exception.Message);
+        await sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateAsync<BillingSyncConfig>(default);
+        await sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateAsync<ScimConfig>(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateConnection_TypeCannotBeChanged(
+        Guid connectionId, Guid organizationId, BillingSyncConfig config,
+        SutProvider<OrganizationConnectionsController> sutProvider)
+    {
+        var existing = new OrganizationConnection
+        {
+            Id = connectionId,
+            Type = OrganizationConnectionType.CloudBillingSync,
+            OrganizationId = organizationId,
+            Config = JsonSerializer.Serialize(config),
+        };
+
+        var request = new OrganizationConnectionRequestModel
+        {
+            Type = OrganizationConnectionType.Scim,
+            OrganizationId = organizationId,
+            Enabled = true,
+            Config = JsonDocumentFromObject(new ScimConfig()),
+        };
+
+        sutProvider.GetDependency<IOrganizationConnectionRepository>()
+            .GetByIdOrganizationIdAsync(connectionId, organizationId)
+            .Returns(existing);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organizationId).Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateConnection(connectionId, request));
+
+        Assert.Contains("The connection type cannot be changed.", exception.Message);
+        await sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateAsync<BillingSyncConfig>(default);
+        await sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateAsync<ScimConfig>(default);
     }
 
     private static OrganizationConnectionRequestModel<T> RequestModelFromEntity<T>(OrganizationConnection entity)

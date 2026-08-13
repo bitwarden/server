@@ -21,6 +21,9 @@ public class UserEntityTypeConfiguration : IEntityTypeConfiguration<User>
             .HasIndex(u => new { u.Premium, u.PremiumExpirationDate, u.RenewalReminderDate })
             .IsClustered(false);
 
+        builder.HasIndex(u => u.GatewayCustomerId);
+        builder.HasIndex(u => u.GatewaySubscriptionId);
+
         builder.ToTable(nameof(User));
     }
 }

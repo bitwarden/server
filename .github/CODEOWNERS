@@ -4,22 +4,11 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-## Docker-related files
-**/Dockerfile @bitwarden/team-appsec @bitwarden/dept-bre
-**/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-bre
-**/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-bre
-**/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-bre
-**/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-bre
-
-# Scanning tools
-.checkmarx/ @bitwarden/team-appsec
-
-## BRE team owns these workflows ##
-.github/workflows/publish.yml @bitwarden/dept-bre
+# CODEOWNERS owners
+.github/CODEOWNERS @bitwarden/tech-leads
 
 ## These are shared workflows ##
 .github/workflows/_move_edd_db_scripts.yml
-.github/workflows/release.yml
 
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
@@ -35,7 +24,8 @@ util/SqlServerEFScaffold/** @bitwarden/dept-dbops
 util/SqliteMigrations/** @bitwarden/dept-dbops
 
 # Shared util projects
-util/Setup/** @bitwarden/dept-bre @bitwarden/team-platform-dev
+util/MsSqlMigratorUtility/** @bitwarden/team-platform-dev
+util/Setup/** @bitwarden/dept-shot @bitwarden/team-platform-dev
 
 # UIF
 src/Core/MailTemplates/Mjml @bitwarden/team-ui-foundation # Teams are expected to own sub-directories of this project
@@ -44,9 +34,16 @@ src/Core/MailTemplates/Mjml/.mjmlconfig # This change allows teams to add compon
 # Auth team
 **/Auth @bitwarden/team-auth-dev
 bitwarden_license/src/Sso @bitwarden/team-auth-dev
+bitwarden_license/test/Sso.IntegrationTest @bitwarden/team-auth-dev
 src/Identity @bitwarden/team-auth-dev
 src/Core/Identity @bitwarden/team-auth-dev
 src/Core/IdentityServer @bitwarden/team-auth-dev
+test/Identity.IntegrationTest @bitwarden/team-auth-dev
+test/Identity.Test @bitwarden/team-auth-dev
+
+# Autofill team
+src/Core/Utilities/StaticStore.cs @bitwarden/team-autofill-dev
+src/Core/Enums/GlobalEquivalentDomainsType.cs @bitwarden/team-autofill-dev
 
 # Key Management team
 **/KeyManagement @bitwarden/team-key-management-dev
@@ -68,6 +65,8 @@ test/EventsProcessor.Test @bitwarden/team-data-insights-and-reporting-dev
 
 # Admin Console team
 **/AdminConsole @bitwarden/team-admin-console-dev
+src/Libraries/OrganizationAuthorization @bitwarden/team-admin-console-dev
+test/Libraries/OrganizationAuthorization.Test @bitwarden/team-admin-console-dev
 bitwarden_license/src/Scim @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.IntegrationTest @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
@@ -85,6 +84,8 @@ bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 **/*invoice* @bitwarden/team-billing-dev
 **/*OrganizationLicense* @bitwarden/team-billing-dev
 **/Billing @bitwarden/team-billing-dev
+test/Billing.IntegrationTest @bitwarden/team-billing-dev
+**/AppHost @bitwarden/team-billing-dev @bitwarden/dept-architecture # joint ownership
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
 
@@ -101,12 +102,26 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 # The PushType enum is expected to be editted by anyone without need for Platform review
 src/Core/Platform/Push/PushType.cs
 
+# PAM
+**/Pam* @bitwarden/team-pam-dev
+# PAM DB schema stays with DBOps, consistent with src/Sql/** above
+src/Sql/dbo/Pam @bitwarden/dept-dbops
+
 # SDK
-util/RustSdk @bitwarden/team-sdk-sme
+util/RustSdk @bitwarden/team-sdk-sme @bitwarden/dept-architecture # joint ownership
+
+## Docker-related files
+**/Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
+**/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
+**/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-shot
+**/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-shot
+**/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-shot
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
 Directory.Build.props
+.devcontainer/**
+dev/docker-compose.yml
 
 # Claude related files
 .claude/ @bitwarden/team-ai-sme

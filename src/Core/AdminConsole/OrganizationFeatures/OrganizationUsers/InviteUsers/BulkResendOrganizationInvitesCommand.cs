@@ -59,7 +59,7 @@ public class BulkResendOrganizationInvitesCommand : IBulkResendOrganizationInvit
         if (validUsers.Any())
         {
             await _sendOrganizationInvitesCommand.SendInvitesAsync(
-                new SendInvitesRequest(validUsers, org));
+                new SendInvitesRequest(validUsers, org, invitingUserId: invitingUserId));
 
             result.AddRange(validUsers.Select(u => Tuple.Create(u, "")));
         }

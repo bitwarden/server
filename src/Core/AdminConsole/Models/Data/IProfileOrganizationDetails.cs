@@ -56,4 +56,7 @@ public interface IProfileOrganizationDetails
     bool UseDisableSMAdsForUsers { get; set; }
 
     bool UsePhishingBlocker { get; set; }
+    bool UseMyItems { get; set; }
+    bool UseInviteLinks { get; set; }
+    bool UsePam { get; set; }
 }

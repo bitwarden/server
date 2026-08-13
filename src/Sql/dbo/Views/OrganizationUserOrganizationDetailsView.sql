@@ -57,7 +57,12 @@ SELECT
     OS.[IsAdminInitiated],
     O.[UseAutomaticUserConfirmation],
     O.[UsePhishingBlocker],
-    O.[UseDisableSmAdsForUsers]
+    O.[UseDisableSmAdsForUsers],
+    O.[UseMyItems],
+    O.[UseInviteLinks],
+    O.[UsePam],
+    OU.[RevocationReason],
+    OU.[AccessPam]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -17,11 +18,146 @@ using static Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Api.IntegrationTest.Platform.Controllers;
 
-public class PushControllerTests
+public class PushControllerFixture : IAsyncLifetime
+{
+    private ApiApplicationFactory _factory;
+    private HttpClient _authedClient;
+    private Installation _installation;
+    private QueueClient _mockedQueue;
+    private INotificationHubProxy _mockedHub;
+
+    public async Task InitializeAsync()
+    {
+        // Arrange
+        var apiFactory = new ApiApplicationFactory();
+
+        var queueClient = Substitute.For<QueueClient>();
+
+        // Substitute the underlying queue messages will go to.
+        apiFactory.ConfigureServices(services =>
+        {
+            var queueClientService = services.FirstOrDefault(
+                sd => sd.ServiceKey == (object)"notifications"
+                    && sd.ServiceType == typeof(QueueClient)
+            ) ?? throw new InvalidOperationException("Expected service was not found.");
+
+            services.Remove(queueClientService);
+
+            services.AddKeyedSingleton("notifications", queueClient);
+        });
+
+        var notificationHubProxy = Substitute.For<INotificationHubProxy>();
+
+        apiFactory.SubstituteService<INotificationHubPool>(s =>
+        {
+            s.AllClients
+                .Returns(notificationHubProxy);
+        });
+
+        apiFactory.SubstituteService<IInstallationDeviceRepository>(s => { });
+
+        // Setup as cloud with NotificationHub setup and Azure Queue
+        apiFactory.UpdateConfiguration("GlobalSettings:Notifications:ConnectionString", "any_value");
+
+        // Configure hubs
+        var index = 0;
+        void AddHub(NotificationHubSettings notificationHubSettings)
+        {
+            apiFactory.UpdateConfiguration(
+                $"GlobalSettings:NotificationHubPool:NotificationHubs:{index}:ConnectionString",
+                notificationHubSettings.ConnectionString
+            );
+            apiFactory.UpdateConfiguration(
+                $"GlobalSettings:NotificationHubPool:NotificationHubs:{index}:HubName",
+                notificationHubSettings.HubName
+            );
+            apiFactory.UpdateConfiguration(
+                $"GlobalSettings:NotificationHubPool:NotificationHubs:{index}:RegistrationStartDate",
+                notificationHubSettings.RegistrationStartDate?.ToString(CultureInfo.InvariantCulture)
+            );
+            apiFactory.UpdateConfiguration(
+                $"GlobalSettings:NotificationHubPool:NotificationHubs:{index}:RegistrationEndDate",
+                notificationHubSettings.RegistrationEndDate?.ToString(CultureInfo.InvariantCulture)
+            );
+            index++;
+        }
+
+        AddHub(new NotificationHubSettings
+        {
+            ConnectionString = "some_value",
+            RegistrationStartDate = DateTime.UtcNow.AddDays(-2),
+        });
+
+        var httpClient = apiFactory.CreateClient();
+
+        // Add installation into database
+        var installationRepository = apiFactory.GetService<IInstallationRepository>();
+        var installation = await installationRepository.CreateAsync(new Installation
+        {
+            Key = "my_test_key",
+            Email = "test@example.com",
+            Enabled = true,
+        });
+
+        var identityClient = apiFactory.Identity.CreateDefaultClient();
+
+        var connectTokenResponse = await identityClient.PostAsync("connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "client_credentials" },
+            { "scope", "api.push" },
+            { "client_id", $"installation.{installation.Id}" },
+            { "client_secret", installation.Key },
+        }));
+
+        connectTokenResponse.EnsureSuccessStatusCode();
+
+        var connectTokenResponseModel = await connectTokenResponse.Content.ReadFromJsonAsync<JsonNode>();
+
+        // Setup authentication
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            connectTokenResponseModel["token_type"].GetValue<string>(),
+            connectTokenResponseModel["access_token"].GetValue<string>()
+        );
+
+        _factory = apiFactory;
+        _authedClient = httpClient;
+        _installation = installation;
+        _mockedQueue = queueClient;
+        _mockedHub = notificationHubProxy;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _factory.DisposeAsync();
+        _authedClient.Dispose();
+    }
+
+    public void Deconstruct(
+        out ApiApplicationFactory apiApplicationFactory,
+        out HttpClient authedClient,
+        out Installation installation,
+        out QueueClient mockedQueue,
+        out INotificationHubProxy mockedHub)
+    {
+        apiApplicationFactory = _factory;
+        authedClient = _authedClient;
+        installation = _installation;
+        mockedQueue = _mockedQueue;
+        mockedHub = _mockedHub;
+    }
+}
+
+public class PushControllerTests : IClassFixture<PushControllerFixture>
 {
     private static readonly Guid _userId = Guid.NewGuid();
     private static readonly Guid _organizationId = Guid.NewGuid();
     private static readonly Guid _deviceId = Guid.NewGuid();
+    private readonly PushControllerFixture _fixture;
+
+    public PushControllerTests(PushControllerFixture fixture)
+    {
+        _fixture = fixture;
+    }
 
     public static IEnumerable<object[]> SendData()
     {
@@ -58,7 +194,7 @@ public class PushControllerTests
             },
         }, $"(template:payload_userId:%installation%_{_userId})");
 
-        // Organization cipher, an org cipher would not naturally be synced from our 
+        // Organization cipher, an org cipher would not naturally be synced from our
         // code but it is technically possible to be submitted to the endpoint.
         yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
@@ -84,7 +220,7 @@ public class PushControllerTests
             },
         }, $"(template:payload_userId:%installation%_{_userId})");
 
-        // Organization cipher, an org cipher would not naturally be synced from our 
+        // Organization cipher, an org cipher would not naturally be synced from our
         // code but it is technically possible to be submitted to the endpoint.
         yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
@@ -110,7 +246,7 @@ public class PushControllerTests
             },
         }, $"(template:payload_userId:%installation%_{_userId})");
 
-        // Organization cipher, an org cipher would not naturally be synced from our 
+        // Organization cipher, an org cipher would not naturally be synced from our
         // code but it is technically possible to be submitted to the endpoint.
         yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
@@ -246,12 +382,12 @@ public class PushControllerTests
     [MemberData(nameof(SendData))]
     public async Task Send_Works<T>(PushSendRequestModel<T> pushSendRequestModel, string expectedHubTagExpression, bool expectHubCall)
     {
-        var (apiFactory, httpClient, installation, queueClient, notificationHubProxy) = await SetupTest();
+        var (apiFactory, httpClient, installation, queueClient, notificationHubProxy) = _fixture;
 
         // Act
         var pushSendResponse = await httpClient.PostAsJsonAsync("push/send", pushSendRequestModel);
 
-        // Assert 
+        // Assert
         pushSendResponse.EnsureSuccessStatusCode();
 
         // Relayed notifications, the ones coming to this endpoint should
@@ -261,20 +397,23 @@ public class PushControllerTests
             .Received(0)
             .SendMessageAsync(Arg.Any<string>());
 
-        // Check that this notification was sent through hubs the expected number of times
-        await notificationHubProxy
-            .Received(expectHubCall ? 1 : 0)
-            .SendTemplateNotificationAsync(
-                Arg.Any<Dictionary<string, string>>(),
-                Arg.Is(expectedHubTagExpression.Replace("%installation%", installation.Id.ToString()))
-            );
-
-        // TODO: Expect on the dictionary more?
+        if (expectHubCall)
+        {
+            // Check that this notification was sent through hubs the expected number of times
+            await notificationHubProxy
+                .Received()
+                .SendTemplateNotificationAsync(
+                    Arg.Is<Dictionary<string, string>>(props =>
+                        props["type"] == ((byte)pushSendRequestModel.Type).ToString(CultureInfo.InvariantCulture) && props.ContainsKey("payload")
+                    ),
+                    Arg.Is(expectedHubTagExpression.Replace("%installation%", installation.Id.ToString()))
+                );
+        }
 
         // Notifications being relayed from SH should have the device id
         // tracked so that we can later send the notification to that device.
         await apiFactory.GetService<IInstallationDeviceRepository>()
-            .Received(1)
+            .Received()
             .UpsertAsync(Arg.Is<InstallationDeviceEntity>(
                 ide => ide.PartitionKey == installation.Id.ToString() && ide.RowKey == pushSendRequestModel.DeviceId.ToString()
             ));
@@ -283,7 +422,7 @@ public class PushControllerTests
     [Fact]
     public async Task Send_InstallationNotification_NotAuthenticatedInstallation_Fails()
     {
-        var (_, httpClient, _, _, _) = await SetupTest();
+        var (_, httpClient, _, _, _) = _fixture;
 
         var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
         {
@@ -303,7 +442,7 @@ public class PushControllerTests
     [Fact]
     public async Task Send_InstallationNotification_Works()
     {
-        var (apiFactory, httpClient, installation, _, notificationHubProxy) = await SetupTest();
+        var (apiFactory, httpClient, installation, _, notificationHubProxy) = _fixture;
 
         var deviceId = Guid.NewGuid();
 
@@ -321,7 +460,9 @@ public class PushControllerTests
         await notificationHubProxy
             .Received(1)
             .SendTemplateNotificationAsync(
-                Arg.Any<Dictionary<string, string>>(),
+                Arg.Is<Dictionary<string, string>>(
+                    props => props["type"] == ((byte)PushType.NotificationStatus).ToString(CultureInfo.InvariantCulture) && props.ContainsKey("payload")
+                ),
                 Arg.Is($"(template:payload && installationId:{installation.Id} && clientType:Web)")
             );
 
@@ -335,7 +476,7 @@ public class PushControllerTests
     [Fact]
     public async Task Send_NoOrganizationNoInstallationNoUser_FailsModelValidation()
     {
-        var (_, client, _, _, _) = await SetupTest();
+        var (_, client, _, _, _) = _fixture;
 
         var response = await client.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
         {
@@ -349,101 +490,5 @@ public class PushControllerTests
         Assert.True(body.AsObject().TryGetPropertyValue("message", out var message));
         Assert.Equal(JsonValueKind.String, message.GetValueKind());
         Assert.Equal("The model state is invalid.", message.GetValue<string>());
-    }
-
-    private static async Task<(ApiApplicationFactory Factory, HttpClient AuthedClient, Installation Installation, QueueClient MockedQueue, INotificationHubProxy MockedHub)> SetupTest()
-    {
-        // Arrange
-        var apiFactory = new ApiApplicationFactory();
-
-        var queueClient = Substitute.For<QueueClient>();
-
-        // Substitute the underlying queue messages will go to.
-        apiFactory.ConfigureServices(services =>
-        {
-            var queueClientService = services.FirstOrDefault(
-                sd => sd.ServiceKey == (object)"notifications"
-                    && sd.ServiceType == typeof(QueueClient)
-            ) ?? throw new InvalidOperationException("Expected service was not found.");
-
-            services.Remove(queueClientService);
-
-            services.AddKeyedSingleton("notifications", queueClient);
-        });
-
-        var notificationHubProxy = Substitute.For<INotificationHubProxy>();
-
-        apiFactory.SubstituteService<INotificationHubPool>(s =>
-        {
-            s.AllClients
-                .Returns(notificationHubProxy);
-        });
-
-        apiFactory.SubstituteService<IInstallationDeviceRepository>(s => { });
-
-        // Setup as cloud with NotificationHub setup and Azure Queue
-        apiFactory.UpdateConfiguration("GlobalSettings:Notifications:ConnectionString", "any_value");
-
-        // Configure hubs
-        var index = 0;
-        void AddHub(NotificationHubSettings notificationHubSettings)
-        {
-            apiFactory.UpdateConfiguration(
-                $"GlobalSettings:NotificationHubPool:NotificationHubs:{index}:ConnectionString",
-                notificationHubSettings.ConnectionString
-            );
-            apiFactory.UpdateConfiguration(
-                $"GlobalSettings:NotificationHubPool:NotificationHubs:{index}:HubName",
-                notificationHubSettings.HubName
-            );
-            apiFactory.UpdateConfiguration(
-                $"GlobalSettings:NotificationHubPool:NotificationHubs:{index}:RegistrationStartDate",
-                notificationHubSettings.RegistrationStartDate?.ToString()
-            );
-            apiFactory.UpdateConfiguration(
-                $"GlobalSettings:NotificationHubPool:NotificationHubs:{index}:RegistrationEndDate",
-                notificationHubSettings.RegistrationEndDate?.ToString()
-            );
-            index++;
-        }
-
-        AddHub(new NotificationHubSettings
-        {
-            ConnectionString = "some_value",
-            RegistrationStartDate = DateTime.UtcNow.AddDays(-2),
-        });
-
-        var httpClient = apiFactory.CreateClient();
-
-        // Add installation into database
-        var installationRepository = apiFactory.GetService<IInstallationRepository>();
-        var installation = await installationRepository.CreateAsync(new Installation
-        {
-            Key = "my_test_key",
-            Email = "test@example.com",
-            Enabled = true,
-        });
-
-        var identityClient = apiFactory.Identity.CreateDefaultClient();
-
-        var connectTokenResponse = await identityClient.PostAsync("connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "grant_type", "client_credentials" },
-            { "scope", "api.push" },
-            { "client_id", $"installation.{installation.Id}" },
-            { "client_secret", installation.Key },
-        }));
-
-        connectTokenResponse.EnsureSuccessStatusCode();
-
-        var connectTokenResponseModel = await connectTokenResponse.Content.ReadFromJsonAsync<JsonNode>();
-
-        // Setup authentication
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            connectTokenResponseModel["token_type"].GetValue<string>(),
-            connectTokenResponseModel["access_token"].GetValue<string>()
-        );
-
-        return (apiFactory, httpClient, installation, queueClient, notificationHubProxy);
     }
 }

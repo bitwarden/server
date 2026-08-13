@@ -9,8 +9,8 @@ using Stripe.Tax;
 
 namespace Bit.Commercial.Core.Billing.Providers.Queries;
 
-using static Bit.Core.Constants;
 using static StripeConstants;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using SuspensionWarning = ProviderWarnings.SuspensionWarning;
 using TaxIdWarning = ProviderWarnings.TaxIdWarning;
 
@@ -61,6 +61,11 @@ public class GetProviderWarningsQuery(
         Provider provider,
         Customer customer)
     {
+        if (customer.TaxExempt != TaxExempt.None)
+        {
+            return null;
+        }
+
         if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
         {
             return null;

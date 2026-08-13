@@ -26,9 +26,6 @@
         "DuoUniversal",
         "Fido2.AspNet",
         "Duende.IdentityServer",
-        "Microsoft.AspNetCore.Authentication.JwtBearer",
-        "Microsoft.Extensions.Caching.Cosmos",
-        "Microsoft.Extensions.Identity.Stores",
         "Otp.NET",
         "Sustainsys.Saml2.AspNetCore2",
         "YubicoDotNetClient",
@@ -52,8 +49,6 @@
         "NSubstitute",
         "Serilog.Extensions.Logging.File",
         "Stripe.net",
-        "Swashbuckle.AspNetCore",
-        "Swashbuckle.AspNetCore.SwaggerGen",
         "xunit",
         "xunit.runner.visualstudio",
       ],
@@ -98,6 +93,7 @@
         "Azure.Storage.Blobs",
         "Azure.Storage.Queues",
         "LaunchDarkly.ServerSdk",
+        "MessagePack",
         "Microsoft.AspNetCore.Http",
         "Microsoft.AspNetCore.SignalR.Protocols.MessagePack",
         "Microsoft.AspNetCore.SignalR.StackExchangeRedis",
@@ -106,11 +102,13 @@
         "Microsoft.Extensions.Configuration",
         "Microsoft.Extensions.DependencyInjection.Abstractions",
         "Microsoft.Extensions.DependencyInjection",
-        "Microsoft.Extensions.Logging",
-        "Microsoft.Extensions.Logging.Console",
         "Microsoft.Extensions.Caching.SqlServer",
         "Microsoft.Extensions.Caching.StackExchangeRedis",
+        "Microsoft.Extensions.Logging",
+        "Microsoft.Extensions.Logging.Console",
         "Quartz",
+        "Swashbuckle.AspNetCore",
+        "Swashbuckle.AspNetCore.SwaggerGen",
       ],
       description: "Platform owned dependencies",
       commitMessagePrefix: "[deps] Platform:",
@@ -124,9 +122,11 @@
     },
     {
       matchPackageNames: [
+        "AutoMapper",
         "AutoMapper.Extensions.Microsoft.DependencyInjection",
         "AWSSDK.SimpleEmail",
         "AWSSDK.SQS",
+        "Azure.Storage.Blobs.Batch",
         "Handlebars.Net",
         "MailKit",
         "Microsoft.Azure.NotificationHubs",
@@ -178,7 +178,7 @@
     },
     {
       groupName: "Admin and SSO npm dependencies",
-      matchFileNames: ["src/Admin/package.json", "src/Sso/package.json"],
+      matchFileNames: ["src/Admin/package.json", "bitwarden_license/src/Sso/package.json"],
       matchUpdateTypes: ["minor", "patch"],
       description: "Admin & SSO npm packages",
       commitMessagePrefix: "[deps] Auth:",
@@ -188,6 +188,18 @@
       matchPackageNames: ["/^Microsoft\\.EntityFrameworkCore\\./", "/^dotnet-ef/"],
       groupName: "EntityFrameworkCore",
       description: "Group EntityFrameworkCore to exclude them from the dotnet monorepo preset",
+    },
+    {
+      matchPackageNames: [
+        "Microsoft.AspNetCore.Authentication.JwtBearer",
+        "Microsoft.Extensions.Caching.Cosmos",
+        "Microsoft.Extensions.Identity.Stores",
+      ],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "Auth dotnet dependencies",
+      description: "Auth-owned dotnet packages: split from dotnet monorepo for minor/patch, grouped under Platform for major",
+      commitMessagePrefix: "[deps] Auth:",
+      reviewers: ["team:team-auth-dev"],
     },
     {
       matchPackageNames: ["https://github.com/bitwarden/sdk-internal.git"],
@@ -225,6 +237,15 @@
       ],
       matchUpdateTypes: ["minor"],
       dependencyDashboardApproval: true,
+    },
+
+    // ==================== Version Constraint Rules ====================
+    {
+      // AutoMapper 15+ changed to a commercial license, so we stay on the
+      // last MIT-licensed major version (14.x).
+      matchPackageNames: ["AutoMapper","AutoMapper.Extensions.Microsoft.DependencyInjection"],
+      allowedVersions: "<15",
+      description: "Pin AutoMapper below 15",
     },
   ],
   ignoreDeps: ["dotnet-sdk"],

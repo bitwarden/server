@@ -1,6 +1,5 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
+﻿using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using MailKit.Net.Smtp;
@@ -13,7 +12,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 {
     private readonly GlobalSettings _globalSettings;
     private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
-    private readonly string _replyDomain;
+    private readonly string? _replyDomain;
     private readonly string _replyEmail;
 
     public MailKitSmtpMailDeliveryService(
@@ -32,7 +31,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 
         _replyEmail = CoreHelpers.PunyEncode(globalSettings.Mail.ReplyToEmail);
 
-        if (_replyEmail.Contains("@"))
+        if (_replyEmail.Contains('@'))
         {
             _replyDomain = _replyEmail.Split('@')[1];
         }
@@ -79,10 +78,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 
         using (var client = new SmtpClient())
         {
-            if (_globalSettings.Mail.Smtp.TrustServer)
-            {
-                client.ServerCertificateValidationCallback = (s, c, h, e) => true;
-            }
+            client.ServerCertificateValidationCallback = ValidateServerCertificate;
 
             if (!_globalSettings.Mail.Smtp.StartTls && !_globalSettings.Mail.Smtp.Ssl &&
                 _globalSettings.Mail.Smtp.Port == 25)
@@ -119,5 +115,34 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
             await client.SendAsync(mimeMessage, cancellationToken);
             await client.DisconnectAsync(true, cancellationToken);
         }
+    }
+
+    internal bool ValidateServerCertificate(
+        object sender,
+        X509Certificate? certificate,
+        X509Chain? chain,
+        SslPolicyErrors sslPolicyErrors)
+    {
+        if (_globalSettings.Mail.Smtp.TrustServer)
+        {
+            return true;
+        }
+
+        if (sslPolicyErrors == SslPolicyErrors.None)
+        {
+            return true;
+        }
+
+        // Allow CRL checks to fail open if unable to retrieve status.
+        var hasOnlyCrlErrors = chain?.ChainStatus.All(status =>
+            status.Status == X509ChainStatusFlags.RevocationStatusUnknown ||
+            status.Status == X509ChainStatusFlags.OfflineRevocation) ?? false;
+        if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors && hasOnlyCrlErrors)
+        {
+            _logger.LogWarning("Certificate revocation status unavailable");
+            return true;
+        }
+
+        return false;
     }
 }

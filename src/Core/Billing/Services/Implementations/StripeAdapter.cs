@@ -6,6 +6,9 @@ using Bit.Core.Models.BitStripe;
 using Stripe;
 using Stripe.Tax;
 using Stripe.TestHelpers;
+using static Bit.Core.Billing.Constants.StripeConstants;
+using BillingPortalSessionService = Stripe.BillingPortal.SessionService;
+using CheckoutSessionService = Stripe.Checkout.SessionService;
 using CustomerService = Stripe.CustomerService;
 using RefundService = Stripe.RefundService;
 
@@ -27,6 +30,11 @@ public class StripeAdapter : IStripeAdapter
     private readonly TestClockService _testClockService;
     private readonly CustomerBalanceTransactionService _customerBalanceTransactionService;
     private readonly RegistrationService _taxRegistrationService;
+    private readonly CouponService _couponService;
+    private readonly ProductService _productService;
+    private readonly BillingPortalSessionService _billingPortalSessionService;
+    private readonly SubscriptionScheduleService _subscriptionScheduleService;
+    private readonly CheckoutSessionService _checkoutSessionsService;
 
     public StripeAdapter()
     {
@@ -44,6 +52,11 @@ public class StripeAdapter : IStripeAdapter
         _testClockService = new TestClockService();
         _customerBalanceTransactionService = new CustomerBalanceTransactionService();
         _taxRegistrationService = new RegistrationService();
+        _couponService = new CouponService();
+        _productService = new ProductService();
+        _billingPortalSessionService = new BillingPortalSessionService();
+        _subscriptionScheduleService = new SubscriptionScheduleService();
+        _checkoutSessionsService = new CheckoutSessionService();
     }
 
     /**************
@@ -91,10 +104,16 @@ public class StripeAdapter : IStripeAdapter
     public Task<Subscription> CancelSubscriptionAsync(string id, SubscriptionCancelOptions options = null) =>
         _subscriptionService.CancelAsync(id, options);
 
+    public Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null) =>
+        _subscriptionService.ListAsync(options);
+
+    public Task DeleteSubscriptionDiscountAsync(string subscriptionId) =>
+        _subscriptionService.DeleteDiscountAsync(subscriptionId);
+
     /*************
      ** INVOICE **
      *************/
-    public Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options) =>
+    public Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options = null) =>
         _invoiceService.GetAsync(id, options);
 
     public async Task<List<Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options)
@@ -128,10 +147,10 @@ public class StripeAdapter : IStripeAdapter
     public Task<Invoice> UpdateInvoiceAsync(string id, InvoiceUpdateOptions options) =>
         _invoiceService.UpdateAsync(id, options);
 
-    public Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options) =>
+    public Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options = null) =>
         _invoiceService.FinalizeInvoiceAsync(id, options);
 
-    public Task<Invoice> SendInvoiceAsync(string id, InvoiceSendOptions options) =>
+    public Task<Invoice> SendInvoiceAsync(string id, InvoiceSendOptions options = null) =>
         _invoiceService.SendInvoiceAsync(id, options);
 
     public Task<Invoice> PayInvoiceAsync(string id, InvoicePayOptions options = null) =>
@@ -195,6 +214,9 @@ public class StripeAdapter : IStripeAdapter
     public Task<SetupIntent> GetSetupIntentAsync(string id, SetupIntentGetOptions options = null) =>
         _setupIntentService.GetAsync(id, options);
 
+    public Task<SetupIntent> UpdateSetupIntentAsync(string id, SetupIntentUpdateOptions options = null) =>
+        _setupIntentService.UpdateAsync(id, options);
+
     /*******************
      ** MISCELLANEOUS **
      *******************/
@@ -209,4 +231,73 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<Card> DeleteCardAsync(string customerId, string cardId, CardDeleteOptions options = null) =>
         _cardService.DeleteAsync(customerId, cardId, options);
+
+    /************
+     ** COUPON **
+     ************/
+    public Task<Coupon> GetCouponAsync(string couponId, CouponGetOptions options = null) =>
+        _couponService.GetAsync(couponId, options);
+
+    /*************
+     ** PRODUCT **
+     *************/
+    public async Task<List<Product>> ListProductsAsync(ProductListOptions options = null) =>
+        (await _productService.ListAsync(options)).Data;
+
+    /**********************
+     ** BILLING PORTAL **
+     **********************/
+    public Task<Stripe.BillingPortal.Session> CreateBillingPortalSessionAsync(Stripe.BillingPortal.SessionCreateOptions options) =>
+        _billingPortalSessionService.CreateAsync(options);
+
+    /***********************
+     ** CHECKOUT SESSION **
+     ***********************/
+    public Task<Stripe.Checkout.Session> CreateCheckoutSessionAsync(Stripe.Checkout.SessionCreateOptions options) =>
+        _checkoutSessionsService.CreateAsync(options);
+
+    public Task<Stripe.Checkout.Session> GetCheckoutSessionAsync(string id, Stripe.Checkout.SessionGetOptions options = null) =>
+        _checkoutSessionsService.GetAsync(id, options);
+
+    /***************************
+     ** SUBSCRIPTION SCHEDULE **
+     ***************************/
+    public Task<SubscriptionSchedule> CreateSubscriptionScheduleAsync(SubscriptionScheduleCreateOptions options) =>
+        _subscriptionScheduleService.CreateAsync(options);
+
+    public Task<SubscriptionSchedule> GetSubscriptionScheduleAsync(string id, SubscriptionScheduleGetOptions options = null) =>
+        _subscriptionScheduleService.GetAsync(id, options);
+
+    public Task<StripeList<SubscriptionSchedule>> ListSubscriptionSchedulesAsync(SubscriptionScheduleListOptions options) =>
+        _subscriptionScheduleService.ListAsync(options);
+
+    public Task<SubscriptionSchedule> UpdateSubscriptionScheduleAsync(string id, SubscriptionScheduleUpdateOptions options) =>
+        _subscriptionScheduleService.UpdateAsync(id, options);
+
+    public Task<SubscriptionSchedule> ReleaseSubscriptionScheduleAsync(string id, SubscriptionScheduleReleaseOptions options = null) =>
+        _subscriptionScheduleService.ReleaseAsync(id, options);
+
+    /******************
+     ** TEST CLOCK **
+     ******************/
+    public Task<TestClock> GetTestClockAsync(string testClockId, TestClockGetOptions options = null) =>
+        _testClockService.GetAsync(testClockId, options);
+
+    public async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
+    {
+        if (testClock == null)
+        {
+            return;
+        }
+
+        while (testClock.Status != TestClockStatus.Ready)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            testClock = await _testClockService.GetAsync(testClock.Id);
+            if (testClock.Status == TestClockStatus.InternalFailure)
+            {
+                throw new Exception("Stripe Test Clock encountered an internal failure");
+            }
+        }
+    }
 }

@@ -1,13 +1,21 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
+
 namespace Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 public interface IInitPendingOrganizationCommand
 {
     /// <summary>
-    /// Update an Organization entry by setting the public/private keys, set it as 'Enabled' and move the Status from 'Pending' to 'Created'.
+    /// Initializes a pending organization created via the Bitwarden Portal on behalf of a Reseller.
+    /// See <see cref="ResellerClientOrganizationSignUpCommand"/>.
+    /// It also confirms the first owner.
     /// </summary>
     /// <remarks>
-    /// This method must target a disabled Organization that has null keys and status as 'Pending'.
+    /// The user initializing the organization is the first user to access it - there is no existing 
+    /// owner or provider who can change its settings. Therefore, validation in this command assumes 
+    /// a default state. For example, it does not enforce policies for this organization because none 
+    /// will be enabled yet.
     /// </remarks>
-    Task InitPendingOrganizationAsync(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken);
+    /// <returns>A CommandResult indicating success or specific validation errors.</returns>
+    Task<CommandResult> InitPendingOrganizationAsync(InitPendingOrganizationRequest request);
 }

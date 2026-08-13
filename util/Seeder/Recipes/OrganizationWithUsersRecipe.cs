@@ -4,6 +4,8 @@ using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
+using Bit.Seeder.Services;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
@@ -12,7 +14,20 @@ using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
 namespace Bit.Seeder.Recipes;
 
-public class OrganizationWithUsersRecipe(DatabaseContext db, IMapper mapper, IPasswordHasher<User> passwordHasher)
+/// <summary>
+/// Lower-level recipe that seeds an organization and a flat list of member users directly.
+/// </summary>
+/// <remarks>
+/// This recipe bypasses the Pipeline architecture and is used exclusively by performance tests
+/// in <c>Api.IntegrationTest</c> to set up large, fast baseline datasets.
+/// It is not called by any CLI command — use <see cref="OrganizationRecipe"/> for preset-driven
+/// or options-driven organization seeding from the CLI.
+/// </remarks>
+public class OrganizationWithUsersRecipe(
+    DatabaseContext db,
+    IMapper mapper,
+    IPasswordHasher<User> passwordHasher,
+    IManglerService manglerService)
 {
     public Guid Seed(string name, string domain, int users, OrganizationUserStatusType usersStatus = OrganizationUserStatusType.Confirmed)
     {
@@ -20,11 +35,20 @@ public class OrganizationWithUsersRecipe(DatabaseContext db, IMapper mapper, IPa
 
         // Generate organization keys
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
-        var organization = OrganizationSeeder.CreateEnterprise(
-            name, domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey);
+        var organization = OrganizationSeeder.Create(
+            new OrganizationSeed
+            {
+                Name = name,
+                Domain = domain,
+                Seats = seats,
+                PublicKey = orgKeys.PublicKey,
+                PrivateKey = orgKeys.PrivateKey
+            },
+            manglerService);
 
         // Create owner with SDK-generated keys
-        var ownerUser = UserSeeder.CreateUserWithSdkKeys($"owner@{domain}", passwordHasher);
+        var (ownerUser, _) = UserSeeder.Create(
+            new UserSeed { Email = $"owner@{domain}" }, passwordHasher, manglerService);
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
@@ -33,7 +57,8 @@ public class OrganizationWithUsersRecipe(DatabaseContext db, IMapper mapper, IPa
         var additionalOrgUsers = new List<OrganizationUser>();
         for (var i = 0; i < users; i++)
         {
-            var additionalUser = UserSeeder.CreateUserWithSdkKeys($"user{i}@{domain}", passwordHasher);
+            var (additionalUser, _) = UserSeeder.Create(
+                new UserSeed { Email = $"user{i}@{domain}" }, passwordHasher, manglerService);
             additionalUsers.Add(additionalUser);
 
             // Generate org key for confirmed/revoked users
@@ -53,8 +78,8 @@ public class OrganizationWithUsersRecipe(DatabaseContext db, IMapper mapper, IPa
         db.Add(mapper.Map<EfOrganizationUser>(ownerOrgUser));
 
         // Map and BulkCopy additional users
-        var efAdditionalUsers = additionalUsers.Select(u => mapper.Map<EfUser>(u)).ToList();
-        var efAdditionalOrgUsers = additionalOrgUsers.Select(ou => mapper.Map<EfOrganizationUser>(ou)).ToList();
+        var efAdditionalUsers = additionalUsers.Select(mapper.Map<EfUser>).ToList();
+        var efAdditionalOrgUsers = additionalOrgUsers.Select(mapper.Map<EfOrganizationUser>).ToList();
 
         db.BulkCopy(efAdditionalUsers);
         db.BulkCopy(efAdditionalOrgUsers);

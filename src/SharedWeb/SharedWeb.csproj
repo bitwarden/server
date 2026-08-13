@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="Bitwarden.Server.Sdk" />
 
   <PropertyGroup>
     <!-- These opt outs should be removed when all warnings are addressed -->
@@ -12,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="4.23.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="[4.23.0]" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="[10.1.7]" />
   </ItemGroup>
 
 </Project>

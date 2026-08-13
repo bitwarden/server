@@ -98,15 +98,28 @@ public class OrganizationUserUpdateRequestModel
     [EnumDataType(typeof(OrganizationUserType))]
     public OrganizationUserType? Type { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool AccessPam { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
+
+#nullable enable
+    [StrictEmailAddressNullable]
+    [StringLength(256)]
+    public string? Email { get; set; }
+
+    [StringLength(50)]
+    public string? Name { get; set; }
+
+    public string? DefaultUserCollectionName { get; set; }
+#nullable disable
 
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
         existingUser.Type = Type.Value;
         existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
         existingUser.AccessSecretsManager = AccessSecretsManager;
+        existingUser.AccessPam = AccessPam;
         return existingUser;
     }
 }

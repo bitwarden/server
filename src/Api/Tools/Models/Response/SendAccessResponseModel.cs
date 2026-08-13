@@ -1,12 +1,9 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json;
-using Bit.Core.Models.Api;
+﻿using System.Text.Json;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
+using Bit.HttpExtensions;
 
 namespace Bit.Api.Tools.Models.Response;
 
@@ -37,24 +34,34 @@ public class SendAccessResponseModel : ResponseModel
         Type = send.Type;
         AuthType = send.AuthType;
 
-        SendData sendData;
         switch (send.Type)
         {
             case SendType.File:
-                var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
-                sendData = fileData;
+                var fileData =
+                    JsonSerializer.Deserialize<SendFileData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send file data.");
+                Name = fileData.Name;
                 File = new SendFileModel(fileData);
                 break;
             case SendType.Text:
-                var textData = JsonSerializer.Deserialize<SendTextData>(send.Data);
-                sendData = textData;
+                var textData =
+                    JsonSerializer.Deserialize<SendTextData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send text data.");
+                Name = textData.Name;
                 Text = new SendTextModel(textData);
+                break;
+            case SendType.Item:
+                Name = string.Empty;
+                Data = send.Data ?? throw new NullReferenceException("Send Data is required");
                 break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
 
-        Name = sendData.Name;
         ExpirationDate = send.ExpirationDate;
     }
 
@@ -87,14 +94,19 @@ public class SendAccessResponseModel : ResponseModel
     /// </summary>
     /// <remarks>
     /// File content is downloaded separately using
-    /// <see cref="Bit.Api.Tools.Controllers.SendsController.GetSendFileDownloadData" />
+    /// <see cref="Controllers.SendsController.GetSendFileDownloadDataUsingAuth" />
     /// </remarks>
-    public SendFileModel File { get; set; }
+    public SendFileModel? File { get; set; }
 
     /// <summary>
     /// Contains text data uploaded with the send.
     /// </summary>
-    public SendTextModel Text { get; set; }
+    public SendTextModel? Text { get; set; }
+
+    /// <summary>
+    /// Encrypted string containing secret Send data
+    /// </summary>
+    public string? Data { get; set; }
 
     /// <summary>
     /// The date after which a send cannot be accessed. When this value is
@@ -105,5 +117,5 @@ public class SendAccessResponseModel : ResponseModel
     /// <summary>
     /// Indicates the person that created the send to the accessor.
     /// </summary>
-    public string CreatorIdentifier { get; set; }
+    public string? CreatorIdentifier { get; set; }
 }

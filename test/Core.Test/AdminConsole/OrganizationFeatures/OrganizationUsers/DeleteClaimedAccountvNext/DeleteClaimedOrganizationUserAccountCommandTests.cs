@@ -2,6 +2,9 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
+using Bit.Core.Billing;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -11,7 +14,6 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -244,7 +246,49 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_HandlesGatewayExceptionAndLogsWarning(
+    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_CallsSubscriberService(
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
+        User user,
+        Guid organizationId,
+        Guid deletingUserId,
+        [OrganizationUser] OrganizationUser orgUser)
+    {
+        orgUser.UserId = user.Id;
+        orgUser.OrganizationId = organizationId;
+
+        var request = new DeleteUserValidationRequest
+        {
+            OrganizationId = organizationId,
+            OrganizationUserId = orgUser.Id,
+            OrganizationUser = orgUser,
+            User = user,
+            DeletingUserId = deletingUserId,
+            IsClaimed = true
+        };
+
+        SetupRepositoryMocks(sutProvider,
+            new List<OrganizationUser> { orgUser },
+            [user],
+            organizationId,
+            new Dictionary<Guid, bool> { { orgUser.Id, true } });
+
+        SetupValidatorMock(sutProvider, [CreateSuccessfulValidationResult(request)]);
+
+        var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, [orgUser.Id], deletingUserId);
+
+        Assert.True(results.Single().Result.IsSuccess);
+
+        await sutProvider.GetDependency<ISubscriberService>()
+            .Received(1)
+            .CancelSubscription(
+                user,
+                cancelImmediately: false,
+                Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_HandlesGatewayException(
         SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user,
         Guid organizationId,
@@ -274,8 +318,8 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
         SetupValidatorMock(sutProvider, [validationResult]);
 
         var gatewayException = new GatewayException("Payment gateway error");
-        sutProvider.GetDependency<IUserService>()
-            .CancelPremiumAsync(user)
+        sutProvider.GetDependency<ISubscriberService>()
+            .CancelSubscription(user, cancelImmediately: false, Arg.Any<OffboardingSurveyResponse>())
             .ThrowsAsync(gatewayException);
 
         var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, [orgUser.Id], deletingUserId);
@@ -284,19 +328,65 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
         Assert.Single(resultsList);
         Assert.True(resultsList.First().Result.IsSuccess);
 
-        await sutProvider.GetDependency<IUserService>().Received(1).CancelPremiumAsync(user);
-        await AssertSuccessfulUserOperations(sutProvider, [user], [orgUser]);
-
-        sutProvider.GetDependency<ILogger<DeleteClaimedOrganizationUserAccountCommand>>()
+        await sutProvider.GetDependency<ISubscriberService>()
             .Received(1)
-            .Log(
-                LogLevel.Warning,
-                Arg.Any<EventId>(),
-                Arg.Is<object>(o => o.ToString()!.Contains($"Failed to cancel premium subscription for {user.Id}")),
-                gatewayException,
-                Arg.Any<Func<object, Exception?, string>>());
+            .CancelSubscription(
+                user,
+                cancelImmediately: false,
+                Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id));
+        await AssertSuccessfulUserOperations(sutProvider, [user], [orgUser]);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteManyUsersAsync_CancelPremiumsAsync_HandlesBillingException(
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
+        User user,
+        Guid organizationId,
+        Guid deletingUserId,
+        [OrganizationUser] OrganizationUser orgUser)
+    {
+        orgUser.UserId = user.Id;
+        orgUser.OrganizationId = organizationId;
+
+        var request = new DeleteUserValidationRequest
+        {
+            OrganizationId = organizationId,
+            OrganizationUserId = orgUser.Id,
+            OrganizationUser = orgUser,
+            User = user,
+            DeletingUserId = deletingUserId,
+            IsClaimed = true
+        };
+        var validationResult = CreateSuccessfulValidationResult(request);
+
+        SetupRepositoryMocks(sutProvider,
+            new List<OrganizationUser> { orgUser },
+            [user],
+            organizationId,
+            new Dictionary<Guid, bool> { { orgUser.Id, true } });
+
+        SetupValidatorMock(sutProvider, [validationResult]);
+
+        var billingException = new BillingException();
+        sutProvider.GetDependency<ISubscriberService>()
+            .CancelSubscription(user, cancelImmediately: false, Arg.Any<OffboardingSurveyResponse>())
+            .ThrowsAsync(billingException);
+
+        var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, [orgUser.Id], deletingUserId);
+
+        var resultsList = results.ToList();
+        Assert.Single(resultsList);
+        Assert.True(resultsList.First().Result.IsSuccess);
+
+        await sutProvider.GetDependency<ISubscriberService>()
+            .Received(1)
+            .CancelSubscription(
+                user,
+                cancelImmediately: false,
+                Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id));
+        await AssertSuccessfulUserOperations(sutProvider, [user], [orgUser]);
+    }
 
     [Theory]
     [BitAutoData]

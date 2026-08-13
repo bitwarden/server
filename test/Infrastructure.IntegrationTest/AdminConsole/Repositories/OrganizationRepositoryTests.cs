@@ -1,7 +1,13 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
@@ -34,10 +40,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(2, result.Count);
         Assert.Contains(result, org => org.Id == organization1.Id);
         Assert.Contains(result, org => org.Id == organization2.Id);
-
-        // Clean up
-        await organizationRepository.DeleteAsync(organization1);
-        await organizationRepository.DeleteAsync(organization2);
     }
 
     [Theory, DatabaseData]
@@ -54,6 +56,7 @@ public class OrganizationRepositoryTests
         var user1 = await userRepository.CreateTestUserAsync("test1");
         var user2 = await userRepository.CreateTestUserAsync("test2");
         var user3 = await userRepository.CreateTestUserAsync("test3");
+        var user4 = await userRepository.CreateTestUserAsync("test4");
 
         // Create organization users in different states
         await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user1); // Confirmed state
@@ -66,6 +69,9 @@ public class OrganizationRepositoryTests
             UserId = user3.Id,
             Status = OrganizationUserStatusType.Revoked,
         });
+
+        // Staged users do not consume a seat and must be excluded from the count
+        await organizationUserRepository.CreateStagedTestOrganizationUserAsync(organization, user4);
 
         // Create sponsorships in different states
         await organizationSponsorshipRepository.CreateAsync(new OrganizationSponsorship
@@ -104,9 +110,32 @@ public class OrganizationRepositoryTests
         var result = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
 
         // Assert
-        Assert.Equal(2, result.Users); // Confirmed + Invited users
+        Assert.Equal(2, result.Users); // Confirmed + Invited users (Revoked and Staged excluded)
         Assert.Equal(2, result.Sponsored); // Two valid sponsorships
         Assert.Equal(4, result.Total); // Total occupied seats
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithOnlyStagedUsers_ReturnsZero(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var user = await userRepository.CreateTestUserAsync("test1");
+
+        // Staged users are provisioned but do not consume a seat
+        await organizationUserRepository.CreateStagedTestOrganizationUserAsync(organization, user);
+
+        // Act
+        var result = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
+        // Assert
+        Assert.Equal(0, result.Users);
+        Assert.Equal(0, result.Sponsored);
+        Assert.Equal(0, result.Total);
     }
 
     [Theory, DatabaseData]
@@ -210,9 +239,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -235,9 +261,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -258,9 +281,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -279,8 +299,313 @@ public class OrganizationRepositoryTests
         // Assert
         var result = (await sutRepository.GetOrganizationsForSubscriptionSyncAsync()).ToArray();
         Assert.Null(result.FirstOrDefault(x => x.Id == organization.Id));
+    }
 
-        // Annul
-        await sutRepository.DeleteAsync(organization);
+    [DatabaseTheory, DatabaseData]
+    public async Task InitializeOrganizationAsync_UpdatesOrgAndOrgUserAtomically(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository);
+
+        var publicKey = "public-key";
+        var privateKey = "private-key";
+        var userKey = "user-key";
+
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = publicKey;
+        organization.PrivateKey = privateKey;
+        organization.RevisionDate = DateTime.UtcNow;
+
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
+        organizationUser.UserId = user.Id;
+        organizationUser.Key = userKey;
+        organizationUser.Email = null;
+
+        var confirmOwnerAction = organizationUserRepository.BuildConfirmOwnerAction(organizationUser);
+        await organizationRepository.InitializeOrganizationAsync(organization, confirmOwnerAction);
+
+        var updatedOrg = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(updatedOrg);
+        Assert.True(updatedOrg.Enabled);
+        Assert.Equal(OrganizationStatusType.Created, updatedOrg.Status);
+        Assert.Equal(publicKey, updatedOrg.PublicKey);
+        Assert.Equal(privateKey, updatedOrg.PrivateKey);
+
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Confirmed, updatedOrgUser.Status);
+        Assert.Equal(user.Id, updatedOrgUser.UserId);
+        Assert.Equal(userKey, updatedOrgUser.Key);
+        Assert.Null(updatedOrgUser.Email);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task InitializeOrganizationAsync_WhenOrgUserActionFails_RollsBackAllChanges(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository);
+
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = "public-key";
+        organization.PrivateKey = "private-key";
+        organization.RevisionDate = DateTime.UtcNow;
+
+        Func<DbConnection, DbTransaction, Task> failingAction =
+            (DbConnection _, DbTransaction __) =>
+            {
+                throw new Exception("Simulated failure to test rollback");
+            };
+
+        await Assert.ThrowsAsync<Exception>(async () =>
+            await organizationRepository.InitializeOrganizationAsync(organization, failingAction));
+
+        var orgAfter = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(orgAfter);
+        Assert.False(orgAfter.Enabled);
+        Assert.Equal(OrganizationStatusType.Pending, orgAfter.Status);
+        Assert.Null(orgAfter.PublicKey);
+        Assert.Null(orgAfter.PrivateKey);
+
+        var orgUserAfter = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(orgUserAfter);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUserAfter.Status);
+        Assert.Null(orgUserAfter.UserId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAbilityAsync_WithExistingOrganization_ReturnsCorrectAbility(
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        // Act
+        var result = await organizationRepository.GetAbilityAsync(organization.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organization.Id, result.Id);
+        Assert.Equal(organization.UseEvents, result.UseEvents);
+        Assert.Equal(organization.Use2fa, result.Use2fa);
+        Assert.Equal(organization.Use2fa && organization.TwoFactorProviders != null && organization.TwoFactorProviders != "{}", result.Using2fa);
+        Assert.Equal(organization.UsersGetPremium, result.UsersGetPremium);
+        Assert.Equal(organization.Enabled, result.Enabled);
+        Assert.Equal(organization.UseSso, result.UseSso);
+        Assert.Equal(organization.UseKeyConnector, result.UseKeyConnector);
+        Assert.Equal(organization.UseScim, result.UseScim);
+        Assert.Equal(organization.UseResetPassword, result.UseResetPassword);
+        Assert.Equal(organization.UseCustomPermissions, result.UseCustomPermissions);
+        Assert.Equal(organization.UsePolicies, result.UsePolicies);
+        Assert.Equal(organization.LimitCollectionCreation, result.LimitCollectionCreation);
+        Assert.Equal(organization.LimitCollectionDeletion, result.LimitCollectionDeletion);
+        Assert.Equal(organization.LimitItemDeletion, result.LimitItemDeletion);
+        Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
+        Assert.Equal(organization.UseRiskInsights, result.UseRiskInsights);
+        Assert.Equal(organization.UseOrganizationDomains, result.UseOrganizationDomains);
+        Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
+        Assert.Equal(organization.UseAutomaticUserConfirmation, result.UseAutomaticUserConfirmation);
+        Assert.Equal(organization.UseDisableSmAdsForUsers, result.UseDisableSmAdsForUsers);
+        Assert.Equal(organization.UsePhishingBlocker, result.UsePhishingBlocker);
+        Assert.Equal(organization.UseMyItems, result.UseMyItems);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAbilityAsync_WithNonExistentOrganization_ReturnsNull(
+        IOrganizationRepository organizationRepository)
+    {
+        // Act
+        var result = await organizationRepository.GetAbilityAsync(Guid.NewGuid());
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    private static async Task<(User user, Organization organization, OrganizationUser organizationUser)>
+        CreatePendingOrganizationWithUserAsync(
+            IUserRepository userRepository,
+            IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Pending Org {CoreHelpers.GenerateComb()}",
+            BillingEmail = user.Email,
+            Plan = "Teams",
+            Status = OrganizationStatusType.Pending,
+            Enabled = false,
+            PublicKey = null,
+            PrivateKey = null
+        });
+
+        var organizationUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            Email = user.Email,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.Owner
+        });
+
+        return (user, organization, organizationUser);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAddableToProviderByUserIdAsync_StandaloneOrg_Included(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange — an org meeting all addable criteria with no ProviderOrganization link.
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await CreateAddableOrganizationAsync(organizationRepository);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        // Act
+        var result = await organizationRepository.GetAddableToProviderByUserIdAsync(user.Id, ProviderType.Msp);
+
+        // Assert
+        Assert.Contains(result, o => o.Id == organization.Id);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAddableToProviderByUserIdAsync_ResellerLinkedOrg_Excluded(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IProviderRepository providerRepository,
+        IProviderOrganizationRepository providerOrganizationRepository)
+    {
+        // Arrange — the regression PM-39894 addresses: a reseller-linked org keeps
+        // Status = Created, so it looks addable, but it already has a ProviderOrganization row.
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await CreateAddableOrganizationAsync(organizationRepository);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = $"Reseller {CombGuid.Generate()}",
+            Type = ProviderType.Reseller,
+            Status = ProviderStatusType.Created,
+            Enabled = true,
+            BillingEmail = "reseller@example.com"
+        });
+        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organization.Id
+        });
+
+        // Act
+        var result = await organizationRepository.GetAddableToProviderByUserIdAsync(user.Id, ProviderType.Msp);
+
+        // Assert
+        Assert.DoesNotContain(result, o => o.Id == organization.Id);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAddableToProviderByUserIdAsync_MspLinkedOrg_Excluded(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IProviderRepository providerRepository,
+        IProviderOrganizationRepository providerOrganizationRepository)
+    {
+        // Arrange — an org already linked to an MSP provider must not be addable again.
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await CreateAddableOrganizationAsync(organizationRepository);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = $"MSP {CombGuid.Generate()}",
+            Type = ProviderType.Msp,
+            Status = ProviderStatusType.Created,
+            Enabled = true,
+            BillingEmail = "msp@example.com"
+        });
+        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organization.Id
+        });
+
+        // Act
+        var result = await organizationRepository.GetAddableToProviderByUserIdAsync(user.Id, ProviderType.Msp);
+
+        // Assert
+        Assert.DoesNotContain(result, o => o.Id == organization.Id);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAddableToProviderByUserIdAsync_LinkedOrg_ExcludedForBusinessUnit(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IProviderRepository providerRepository,
+        IProviderOrganizationRepository providerOrganizationRepository)
+    {
+        // Arrange — the provider-link exclusion must apply to the BusinessUnit branch of the
+        // query too, not just MSP; this pins the predicate's placement outside the OR'd
+        // plan-type group.
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await CreateAddableOrganizationAsync(organizationRepository);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = $"Reseller {CombGuid.Generate()}",
+            Type = ProviderType.Reseller,
+            Status = ProviderStatusType.Created,
+            Enabled = true,
+            BillingEmail = "reseller@example.com"
+        });
+        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organization.Id
+        });
+
+        // Act
+        var result = await organizationRepository.GetAddableToProviderByUserIdAsync(
+            user.Id, ProviderType.BusinessUnit);
+
+        // Assert
+        Assert.DoesNotContain(result, o => o.Id == organization.Id);
+    }
+
+    /// <summary>
+    /// Builds an Organization inline that satisfies every predicate of the addable-to-provider query.
+    /// The shared <c>CreateTestOrganizationAsync</c> helper defaults to Status = Managed and
+    /// UseSecretsManager = true, both of which the query excludes, so we construct the org directly.
+    /// </summary>
+    private static Task<Organization> CreateAddableOrganizationAsync(
+        IOrganizationRepository organizationRepository)
+    {
+        var id = CombGuid.Generate();
+        return organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"addable-{id}",
+            BillingEmail = $"billing-{id}@example.com",
+            Plan = "Enterprise (Annually)",
+            PlanType = PlanType.EnterpriseAnnually,
+            Status = OrganizationStatusType.Created,
+            Enabled = true,
+            UseSecretsManager = false,
+            Seats = 5,
+            Gateway = GatewayType.Stripe,
+            GatewayCustomerId = $"cus_{id}",
+            GatewaySubscriptionId = $"sub_{id}",
+            PublicKey = "test-public-key",
+            PrivateKey = "test-private-key"
+        });
     }
 }

@@ -32,6 +32,10 @@ public record MaskedPayPalAccount
 public class MaskedPaymentMethod(OneOf<MaskedBankAccount, MaskedCard, MaskedPayPalAccount> input)
     : OneOfBase<MaskedBankAccount, MaskedCard, MaskedPayPalAccount>(input)
 {
+    public bool IsBankAccount => IsT0;
+    public bool IsCard => IsT1;
+    public bool IsPayPal => IsT2;
+
     public static implicit operator MaskedPaymentMethod(MaskedBankAccount bankAccount) => new(bankAccount);
     public static implicit operator MaskedPaymentMethod(MaskedCard card) => new(card);
     public static implicit operator MaskedPaymentMethod(MaskedPayPalAccount payPal) => new(payPal);

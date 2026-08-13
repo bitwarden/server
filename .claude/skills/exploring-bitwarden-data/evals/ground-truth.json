@@ -1,0 +1,87 @@
+{
+  "captured": "2026-07-07",
+  "fixture": {
+    "preset": "scale.md-balanced-sterling-cooper"
+  },
+  "slugs": {
+    "ORG_NAME": "8f387838-Sterling Cooper",
+    "ORG_ID": "ade4fafe-0067-46fb-9216-b480009536b9",
+    "PROBE_USER_EMAIL": "8f387838+user5@sterlingcooper.example",
+    "PERM_PROBE_USER_EMAIL": "8f387838+user90@sterlingcooper.example"
+  },
+  "values": {
+    "members_by_status": {
+      "revoked_-1": 12,
+      "invited_0": 13,
+      "accepted_1": 12,
+      "confirmed_2": 214,
+      "total": 251
+    },
+    "active_member_count": 214,
+    "org_ciphers_total": 5000,
+    "org_ciphers_deleted": 25,
+    "org_ciphers_active": 4975,
+    "org_ciphers_archived": 50,
+    "personal_ciphers_of_members": {
+      "total_including_trashed": 2910,
+      "active_only": 2885,
+      "grading_note": "Prompt says 'own in total' \u2014 ambiguous. Either value passes when the run states its interpretation. Ambiguity found during iteration-1; rubric applied identically to both configs."
+    },
+    "org_plan": {
+      "plan_type": 20,
+      "enabled": 1,
+      "use_groups": 1,
+      "use_sso": 1,
+      "use_api": 1,
+      "use_events": 1
+    },
+    "top_direct_collection_access": [
+      {
+        "email": "8f387838+owner@sterlingcooper.example",
+        "collections": 10
+      },
+      {
+        "email": "8f387838+user0@sterlingcooper.example",
+        "collections": 5
+      },
+      {
+        "email": "8f387838+user1@sterlingcooper.example",
+        "collections": 3
+      },
+      {
+        "email": "8f387838+user2@sterlingcooper.example",
+        "collections": 3
+      },
+      {
+        "email": "8f387838+user3@sterlingcooper.example",
+        "collections": 2
+      }
+    ],
+    "probe_user": {
+      "email": "8f387838+user5@sterlingcooper.example",
+      "id": "40B4D9AF-7033-4EE7-9D1F-B48000953717",
+      "visible_ciphers_via_UserCipherDetails": 138
+    },
+    "sends_total_db": 0,
+    "auth_requests_total_db": 0,
+    "members_by_status_names": {
+      "-1": "Revoked",
+      "0": "Invited",
+      "1": "Accepted",
+      "2": "Confirmed"
+    },
+    "permission_probe_user90": {
+      "email": "8f387838+user90@sterlingcooper.example",
+      "id": "41B8B063-6841-4347-BE14-B48000953719",
+      "total_accessible_collections": 13,
+      "editable_correct_direct_precedence": 7,
+      "editable_if_most_restrictive_wins": 6,
+      "conflict": {
+        "collection": "96DC0C08-3EEE-45CD-8B69-B4800095382E",
+        "direct_ReadOnly": 0,
+        "group_ReadOnly": 1
+      },
+      "note": "Most-permissive-wins coincides with correct here; grader must inspect SQL for direct-precedence (COALESCE(CU.x, CG.x, 0)) to award full marks. capture-ground-truth.sh does not yet capture this block \u2014 regenerate manually if re-seeded while eval-13 exists."
+    }
+  }
+}

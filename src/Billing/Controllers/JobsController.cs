@@ -4,6 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Billing.Controllers;
 
+/// <summary>
+/// Lower-environment-only endpoint that lets QA fire scheduled billing jobs on demand instead of
+/// waiting for their cron cadence. Returns 404 outside Development/QA via
+/// <see cref="RequireLowerEnvironmentAttribute"/>.
+/// </summary>
 [Route("jobs")]
 [SelfHosted(NotSelfHostedOnly = true)]
 [RequireLowerEnvironment]
@@ -13,22 +18,10 @@ public class JobsController(
     [HttpPost("run/{jobName}")]
     public async Task<IActionResult> RunJobAsync(string jobName)
     {
-        if (jobName == nameof(ReconcileAdditionalStorageJob))
+        if (jobName == nameof(SendInvoicePriceMigrationJob))
         {
-            await jobsHostedService.RunJobAdHocAsync<ReconcileAdditionalStorageJob>();
-            return Ok(new { message = $"Job {jobName} scheduled successfully" });
-        }
-
-        return BadRequest(new { error = $"Unknown job name: {jobName}" });
-    }
-
-    [HttpPost("stop/{jobName}")]
-    public async Task<IActionResult> StopJobAsync(string jobName)
-    {
-        if (jobName == nameof(ReconcileAdditionalStorageJob))
-        {
-            await jobsHostedService.InterruptAdHocJobAsync<ReconcileAdditionalStorageJob>();
-            return Ok(new { message = $"Job {jobName} queued for cancellation" });
+            await jobsHostedService.TriggerJobNowAsync<SendInvoicePriceMigrationJob>();
+            return Ok(new { message = $"Job {jobName} triggered successfully" });
         }
 
         return BadRequest(new { error = $"Unknown job name: {jobName}" });

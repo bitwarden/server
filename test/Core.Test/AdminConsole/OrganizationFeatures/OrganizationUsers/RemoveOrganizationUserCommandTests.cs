@@ -515,6 +515,37 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task RemoveUsers_WithDeletingUserId_CustomUserRemovesAdmin_ReturnsError(
+        [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser orgUser,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser deletingUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        orgUser.OrganizationId = deletingUser.OrganizationId;
+        var organizationUsers = new[] { orgUser };
+        var organizationUserIds = organizationUsers.Select(u => u.Id);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(default)
+            .ReturnsForAnyArgs(organizationUsers);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(deletingUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationCustom(deletingUser.OrganizationId)
+            .Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+
+        // Assert
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveAdminByCustomUserErrorMessage, result.First().ErrorMessage);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteManyAsync(default);
+    }
+
+    [Theory, BitAutoData]
     public async Task RemoveUsers_WithDeletingUserId_RemovingClaimedUser_ThrowsException(
         [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
         OrganizationUser deletingUser,

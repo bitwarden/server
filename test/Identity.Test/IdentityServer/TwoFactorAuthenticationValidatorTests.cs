@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -28,7 +29,7 @@ public class TwoFactorAuthenticationValidatorTests
     private readonly IUserService _userService;
     private readonly UserManagerTestWrapper<User> _userManager;
     private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokenable;
@@ -41,7 +42,7 @@ public class TwoFactorAuthenticationValidatorTests
         _userService = Substitute.For<IUserService>();
         _userManager = SubstituteUserManager();
         _organizationDuoUniversalTokenProvider = Substitute.For<IOrganizationDuoUniversalTokenProvider>();
-        _applicationCacheService = Substitute.For<IApplicationCacheService>();
+        _organizationAbilityCacheService = Substitute.For<IOrganizationAbilityCacheService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _ssoEmail2faSessionTokenable = Substitute.For<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>();
@@ -52,7 +53,7 @@ public class TwoFactorAuthenticationValidatorTests
                     _userService,
                     _userManager,
                     _organizationDuoUniversalTokenProvider,
-                    _applicationCacheService,
+                    _organizationAbilityCacheService,
                     _organizationUserRepository,
                     _organizationRepository,
                     _ssoEmail2faSessionTokenable,
@@ -135,7 +136,7 @@ public class TwoFactorAuthenticationValidatorTests
         _currentContext.OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), Arg.Any<Guid>())
             .Returns(Task.FromResult(organizationCollection));
 
-        _applicationCacheService.GetOrganizationAbilitiesAsync()
+        _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>()
             {
                 { orgUser.OrganizationId, new OrganizationAbility(organization)}
@@ -150,6 +151,58 @@ public class TwoFactorAuthenticationValidatorTests
         Assert.True(result.Item1);
         Assert.NotNull(result.Item2);
         Assert.IsType<Organization>(result.Item2);
+    }
+
+    [Theory]
+    [BitAutoData("password")]
+    [BitAutoData("authorization_code")]
+    public async void RequiresTwoFactorAsync_OrganizationRequired_OnlyFetchesAbilitiesForUserOrgs(
+        string grantType,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
+        User user,
+        OrganizationUserOrganizationDetails orgUser,
+        Organization organization,
+        OrganizationUserOrganizationDetails orgUserNotInCache,
+        Organization organizationNotInCache,
+        ICollection<CurrentContextOrganization> organizationCollection)
+    {
+        // Arrange
+        request.GrantType = grantType;
+        orgUser.UserId = user.Id;
+        organization.Id = orgUser.OrganizationId;
+        organization.Use2fa = true;
+        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
+        organization.Enabled = true;
+
+        orgUserNotInCache.UserId = user.Id;
+        organizationNotInCache.Id = orgUserNotInCache.OrganizationId;
+        orgUserNotInCache.Permissions = "{}";
+
+        organizationCollection.Clear();
+        orgUser.Permissions = "{}";
+        organizationCollection.Add(new CurrentContextOrganization(orgUser));
+        organizationCollection.Add(new CurrentContextOrganization(orgUserNotInCache));
+
+        _currentContext.OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), Arg.Any<Guid>())
+            .Returns(Task.FromResult(organizationCollection));
+
+        _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>()
+            {
+                { orgUser.OrganizationId, new OrganizationAbility(organization) }
+            });
+
+        _organizationRepository.GetManyByUserIdAsync(Arg.Any<Guid>()).Returns([organization]);
+
+        // Act
+        await _sut.RequiresTwoFactorAsync(user, request);
+
+        // Assert - verify both org IDs were requested, not just one
+        await _organizationAbilityCacheService.Received(1).GetOrganizationAbilitiesAsync(
+            Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Contains(orgUser.OrganizationId) &&
+                ids.Contains(orgUserNotInCache.OrganizationId) &&
+                ids.Count() == 2));
     }
 
     [Theory]

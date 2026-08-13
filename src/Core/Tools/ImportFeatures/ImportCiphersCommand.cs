@@ -1,10 +1,7 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.Utilities;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
@@ -22,11 +19,11 @@ public class ImportCiphersCommand : IImportCiphersCommand
     private readonly ICipherRepository _cipherRepository;
     private readonly IFolderRepository _folderRepository;
     private readonly IPushNotificationService _pushService;
-    private readonly IPolicyService _policyService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
 
     public ImportCiphersCommand(
@@ -36,8 +33,8 @@ public class ImportCiphersCommand : IImportCiphersCommand
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IPushNotificationService pushService,
-        IPolicyService policyService,
         IPolicyRequirementQuery policyRequirementQuery,
+        ICurrentContext currentContext,
         IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
@@ -46,8 +43,8 @@ public class ImportCiphersCommand : IImportCiphersCommand
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
         _pushService = pushService;
-        _policyService = policyService;
         _policyRequirementQuery = policyRequirementQuery;
+        _currentContext = currentContext;
         _featureService = featureService;
     }
 
@@ -58,11 +55,10 @@ public class ImportCiphersCommand : IImportCiphersCommand
         Guid importingUserId)
     {
         // Make sure the user can save new ciphers to their personal vault
-        var organizationDataOwnershipEnabled = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)).State == OrganizationDataOwnershipState.Enabled
-            : await _policyService.AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.OrganizationDataOwnership);
+        var organizationDataOwnershipPolicyRequirement =
+            await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId);
 
-        if (organizationDataOwnershipEnabled)
+        if (organizationDataOwnershipPolicyRequirement.State == OrganizationDataOwnershipState.Enabled)
         {
             throw new BadRequestException("You cannot import items into your personal vault because you are " +
                 "a member of an organization which forbids it.");
@@ -74,7 +70,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
 
             if (cipher.UserId.HasValue && cipher.Favorite)
             {
-                cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":true}}";
+                cipher.Favorites = $"{{\"{cipher.UserId.ToString()!.ToUpperInvariant()}\":true}}";
             }
 
             if (cipher.UserId.HasValue && cipher.ArchivedDate.HasValue)
@@ -84,34 +80,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
             }
         }
 
-        var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(importingUserId)).Select(f => f.Id).ToList();
-
-        //Assign id to the ones that don't exist in DB
-        //Need to keep the list order to create the relationships
-        List<Folder> newFolders = new List<Folder>();
-        foreach (var folder in folders)
-        {
-            if (!userfoldersIds.Contains(folder.Id))
-            {
-                folder.SetNewId();
-                newFolders.Add(folder);
-            }
-        }
-
-        // Create the folder associations based on the newly created folder ids
-        foreach (var relationship in folderRelationships)
-        {
-            var cipher = ciphers.ElementAtOrDefault(relationship.Key);
-            var folder = folders.ElementAtOrDefault(relationship.Value);
-
-            if (cipher == null || folder == null)
-            {
-                continue;
-            }
-
-            cipher.Folders = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":" +
-                $"\"{folder.Id.ToString().ToUpperInvariant()}\"}}";
-        }
+        var newFolders = await ProcessFolders(importingUserId, folders, folderRelationships, ciphers);
 
         // Create it all
         await _cipherRepository.CreateAsync(importingUserId, ciphers, newFolders);
@@ -124,20 +93,42 @@ public class ImportCiphersCommand : IImportCiphersCommand
         List<Collection> collections,
         List<CipherDetails> ciphers,
         IEnumerable<KeyValuePair<int, int>> collectionRelationships,
-        Guid importingUserId)
+        Guid importingUserId,
+        List<Folder> folders,
+        IEnumerable<KeyValuePair<int, int>> folderRelationships)
     {
-        var org = collections.Count > 0 ?
-            await _organizationRepository.GetByIdAsync(collections[0].OrganizationId) :
-            await _organizationRepository.GetByIdAsync(ciphers.FirstOrDefault(c => c.OrganizationId.HasValue).OrganizationId.Value);
-        var importingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, importingUserId);
+        var orgId = collections.Count > 0
+            ? collections[0].OrganizationId
+            : ciphers.FirstOrDefault(c => c.OrganizationId.HasValue)?.OrganizationId;
 
-        if (collections.Count > 0 && org != null && org.MaxCollections.HasValue)
+        if (orgId is null)
+        {
+            throw new BadRequestException("No organization ID found in the import data.");
+        }
+
+        var org = await _organizationRepository.GetByIdAsync(orgId.Value);
+        if (org is null)
+        {
+            throw new NotFoundException("Organization not found.");
+        }
+
+        var importingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, importingUserId);
+        // A managed service provider is expected to be able to perform imports on behalf of a managed org
+        // In this situation importingOrgUser will be null, cross-check MSP status
+        if (importingOrgUser is null && !await _currentContext.ProviderUserForOrgAsync(org.Id))
+        {
+            throw new UnauthorizedAccessException(
+                "An organization import can only be performed by organization members or authorized providers");
+        }
+
+        if (collections.Count > 0 && org.MaxCollections.HasValue)
         {
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
             if (org.MaxCollections.Value < (collectionCount + collections.Count))
             {
+                var collectionTerm = CollectionTerminology.Plural(_featureService);
                 throw new BadRequestException("This organization can only have a maximum of " +
-                    $"{org.MaxCollections.Value} collections.");
+                    $"{org.MaxCollections.Value} {collectionTerm}.");
             }
         }
 
@@ -153,7 +144,11 @@ public class ImportCiphersCommand : IImportCiphersCommand
             }
         }
 
-        var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();
+        var newFolders = await ProcessFolders(importingUserId, folders, folderRelationships, ciphers);
+
+        var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id))
+            .Select(c => c.Id)
+            .ToHashSet();
 
         //Assign id to the ones that don't exist in DB
         //Need to keep the list order to create the relationships
@@ -212,9 +207,46 @@ public class ImportCiphersCommand : IImportCiphersCommand
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers, newCollectionUsers);
+        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers, newCollectionUsers, newFolders);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);
+    }
+
+    private async Task<List<Folder>> ProcessFolders(Guid importingUserId, List<Folder> folders, IEnumerable<KeyValuePair<int, int>> folderRelationships, List<CipherDetails> ciphers)
+    {
+        if (folders.Count == 0)
+        {
+            return folders;
+        }
+        var userFoldersIds = (await _folderRepository.GetManyByUserIdAsync(importingUserId)).Select(f => f.Id).ToList();
+        // Assign id to the ones that don't exist in DB
+        // Need to keep the list order to create the relationships
+        var newFolders = new List<Folder>();
+        foreach (var folder in folders)
+        {
+            if (!userFoldersIds.Contains(folder.Id))
+            {
+                folder.SetNewId();
+                newFolders.Add(folder);
+            }
+        }
+
+        // Create the folder associations based on the newly created folder ids
+        foreach (var relationship in folderRelationships)
+        {
+            var cipher = ciphers.ElementAtOrDefault(relationship.Key);
+            var folder = folders.ElementAtOrDefault(relationship.Value);
+
+            if (cipher == null || folder == null)
+            {
+                continue;
+            }
+
+            cipher.Folders = $"{{\"{importingUserId.ToString().ToUpperInvariant()}\":" +
+                $"\"{folder.Id.ToString().ToUpperInvariant()}\"}}";
+        }
+
+        return newFolders;
     }
 }

@@ -82,6 +82,8 @@ public class RestartSubscriptionCommand(
             organization.Plan = newPlan.Name;
             organization.SelfHost = newPlan.HasSelfHost;
             organization.UsePolicies = newPlan.HasPolicies;
+            organization.UseMyItems = newPlan.HasMyItems;
+            organization.UseInviteLinks = newPlan.HasInviteLinks;
             organization.UseGroups = newPlan.HasGroups;
             organization.UseDirectory = newPlan.HasDirectory;
             organization.UseEvents = newPlan.HasEvents;
@@ -95,6 +97,7 @@ public class RestartSubscriptionCommand(
             organization.UseResetPassword = newPlan.HasResetPassword;
             organization.UsersGetPremium = newPlan.UsersGetPremium;
             organization.UseCustomPermissions = newPlan.HasCustomPermissions;
+            organization.UseRiskInsights = newPlan.HasRiskInsights;
         }
 
         var items = new List<SubscriptionItemOptions>();

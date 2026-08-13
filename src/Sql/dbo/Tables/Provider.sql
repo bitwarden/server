@@ -21,3 +21,13 @@
     [DiscountId]            VARCHAR (50)     NULL,
     CONSTRAINT [PK_Provider] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Provider_GatewayCustomerId]
+    ON [dbo].[Provider]([GatewayCustomerId])
+    WHERE [GatewayCustomerId] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Provider_GatewaySubscriptionId]
+    ON [dbo].[Provider]([GatewaySubscriptionId])
+    WHERE [GatewaySubscriptionId] IS NOT NULL;

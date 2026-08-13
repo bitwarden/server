@@ -7,6 +7,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
+using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.Core.Test.Services;
 
@@ -126,6 +127,71 @@ public class PlayItemServiceTests
             });
 
         await sutProvider.Sut.Record(organization);
+
+        await sutProvider.GetDependency<IPlayItemRepository>()
+            .DidNotReceive()
+            .CreateAsync(Arg.Any<PlayItem>());
+
+        sutProvider.GetDependency<ILogger<PlayItemService>>()
+            .DidNotReceive()
+            .Log(
+                LogLevel.Information,
+                Arg.Any<EventId>(),
+                Arg.Any<object>(),
+                Arg.Any<Exception>(),
+                Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Record_Provider_WhenInPlay_RecordsPlayItem(
+        string playId,
+        Provider provider,
+        SutProvider<PlayItemService> sutProvider)
+    {
+        sutProvider.GetDependency<IPlayIdService>()
+            .InPlay(out Arg.Any<string>())
+            .Returns(x =>
+            {
+                x[0] = playId;
+                return true;
+            });
+
+        await sutProvider.Sut.Record(provider);
+
+        await sutProvider.GetDependency<IPlayItemRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<PlayItem>(pd =>
+                pd.PlayId == playId &&
+                pd.ProviderId == provider.Id &&
+                pd.UserId == null &&
+                pd.OrganizationId == null));
+
+        sutProvider.GetDependency<ILogger<PlayItemService>>()
+            .Received(1)
+            .Log(
+                LogLevel.Information,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(o => o.ToString().Contains(provider.Id.ToString()) && o.ToString().Contains(playId)),
+                null,
+                Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Record_Provider_WhenNotInPlay_DoesNotRecordPlayItem(
+        Provider provider,
+        SutProvider<PlayItemService> sutProvider)
+    {
+        sutProvider.GetDependency<IPlayIdService>()
+            .InPlay(out Arg.Any<string>())
+            .Returns(x =>
+            {
+                x[0] = null;
+                return false;
+            });
+
+        await sutProvider.Sut.Record(provider);
 
         await sutProvider.GetDependency<IPlayItemRepository>()
             .DidNotReceive()

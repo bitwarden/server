@@ -1,8 +1,10 @@
 ﻿using System.Globalization;
+using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Seeder;
-using Bit.Seeder.Factories;
 using Bit.SeederApi.Extensions;
+using Bit.SeederApi.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -29,23 +31,38 @@ public class Startup
 
         services.AddCustomDataProtectionServices(Environment, globalSettings);
 
+        services.AddDistributedCache(globalSettings);
+
         services.AddTokenizers();
         services.AddDatabaseRepositories(globalSettings);
         services.AddTestPlayIdTracking(globalSettings);
+        services.AddManglerService(globalSettings);
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services.AddScoped<IPasswordHasher<Core.Entities.User>, PasswordHasher<Core.Entities.User>>();
 
-        services.AddScoped<UserSeeder>();
+        services.AddLicenseServices();
+        services.TryAddSingleton<IMailService, NoopMailService>();
+        services.AddPush(globalSettings);
+        services.TryAddSingleton<ILicensingService, LicensingService>();
 
         services.AddSeederApiServices();
-
-        services.AddScoped<MangleId>(_ => new MangleId());
         services.AddScenes();
         services.AddQueries();
 
+        services.Configure<SeederSettings>(Configuration.GetSection("seederSettings"));
+
+        services.AddAuthentication(BasicAuthenticationOptions.DefaultScheme)
+            .AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>(
+                BasicAuthenticationOptions.DefaultScheme, null);
+
+        services.AddAuthorization();
+
         services.AddControllers();
+
+        Jobs.JobsHostedService.AddJobsServices(services);
+        services.AddHostedService<Jobs.JobsHostedService>();
     }
 
     public void Configure(
@@ -71,9 +88,12 @@ public class Startup
         }
 
         app.UseRouting();
+        app.UseAuthentication();
+        app.UseAuthorization();
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllerRoute(name: "default", pattern: "{controller=Seed}/{action=Index}/{id?}");
+            endpoints.MapVersionEndpoint();
         });
     }
 }

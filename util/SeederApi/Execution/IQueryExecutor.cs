@@ -18,5 +18,5 @@ public interface IQueryExecutor
     /// <returns>The result of the query execution</returns>
     /// <exception cref="Services.QueryNotFoundException">Thrown when the query is not found</exception>
     /// <exception cref="Services.QueryExecutionException">Thrown when there's an error executing the query</exception>
-    object Execute(string queryName, JsonElement? arguments);
+    Task<object> Execute(string queryName, JsonElement? arguments);
 }

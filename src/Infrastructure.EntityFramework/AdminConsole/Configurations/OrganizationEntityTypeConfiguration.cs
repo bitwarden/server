@@ -20,6 +20,9 @@ public class OrganizationEntityTypeConfiguration : IEntityTypeConfiguration<Orga
             builder.HasIndex(o => new { o.Id, o.Enabled }),
             o => new { o.UseTotp, o.UsersGetPremium });
 
+        builder.HasIndex(o => o.GatewayCustomerId);
+        builder.HasIndex(o => o.GatewaySubscriptionId);
+
         builder.ToTable(nameof(Organization));
     }
 }

@@ -2,6 +2,7 @@
 using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
 using Bit.Core.Exceptions;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.Helpers;
@@ -17,6 +18,7 @@ public class SendRequestModelTests
         var deletionDate = DateTime.UtcNow.AddDays(5);
         var sendRequest = new SendRequestModel
         {
+            AuthType = AuthType.Password,
             DeletionDate = deletionDate,
             Disabled = false,
             ExpirationDate = null,
@@ -58,10 +60,73 @@ public class SendRequestModelTests
     }
 
     [Fact]
+    public void ToSend_Item_Success()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            ExpirationDate = null,
+            HideEmail = false,
+            Key = "encrypted_key",
+            MaxAccessCount = null,
+            Name = "encrypted_name",
+            Notes = null,
+            Password = "Password",
+            Data = "encrypted_data",
+            Type = SendType.Item,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        sendAuthorizationService.HashPassword(Arg.Any<string>())
+            .Returns((info) => $"hashed_{(string)info[0]}");
+
+        var send = sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService);
+
+        Assert.Equal(deletionDate, send.DeletionDate);
+        Assert.False(send.Disabled);
+        Assert.Null(send.ExpirationDate);
+        Assert.False(send.HideEmail);
+        Assert.Equal("encrypted_key", send.Key);
+        Assert.Equal("hashed_Password", send.Password);
+        Assert.Equal("encrypted_data", send.Data);
+    }
+
+    [Fact]
+    public void ToSend_Item_NullData()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            ExpirationDate = null,
+            HideEmail = false,
+            Key = "encrypted_key",
+            MaxAccessCount = null,
+            Name = "encrypted_name",
+            Notes = null,
+            Password = "Password",
+            Data = null,
+            Type = SendType.Item,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        sendAuthorizationService.HashPassword(Arg.Any<string>())
+            .Returns((info) => $"hashed_{(string)info[0]}");
+
+        Assert.Throws<ArgumentNullException>(() => sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService));
+    }
+
+    [Fact]
     public void ValidateEdit_DeletionDateInPast_ThrowsBadRequestException()
     {
         var send = new SendRequestModel
         {
+            Key = "test_key",
             DeletionDate = DateTime.UtcNow.AddMinutes(-5)
         };
 
@@ -73,6 +138,7 @@ public class SendRequestModelTests
     {
         var send = new SendRequestModel
         {
+            Key = "test_key",
             DeletionDate = DateTime.UtcNow.AddDays(32)
         };
 
@@ -84,6 +150,7 @@ public class SendRequestModelTests
     {
         var send = new SendRequestModel
         {
+            Key = "test_key",
             ExpirationDate = DateTime.UtcNow.AddMinutes(-5)
         };
 
@@ -95,6 +162,7 @@ public class SendRequestModelTests
     {
         var send = new SendRequestModel
         {
+            Key = "test_key",
             DeletionDate = DateTime.UtcNow.AddDays(1),
             ExpirationDate = DateTime.UtcNow.AddDays(2)
         };
@@ -107,6 +175,7 @@ public class SendRequestModelTests
     {
         var send = new SendRequestModel
         {
+            Key = "test_key",
             DeletionDate = DateTime.UtcNow.AddDays(10),
             ExpirationDate = DateTime.UtcNow.AddDays(5)
         };
@@ -114,5 +183,69 @@ public class SendRequestModelTests
         Exception ex = Record.Exception(() => send.ValidateEdit());
 
         Assert.Null(ex);
+    }
+
+    [Fact]
+    public void UpdateSend_WithExistingAndRequestPasswordAuth_PreservesExistingPasswordHash()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            Key = "encrypted_key",
+            Name = "encrypted_name",
+            Text = new SendTextModel { Hidden = false, Text = "encrypted_text" },
+            Type = SendType.Text,
+        };
+
+        var existingSend = new Send
+        {
+            Type = SendType.Text,
+            Password = "existing_hashed_password",
+            AuthType = AuthType.Password,
+            Emails = null,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+
+        var updatedSend = sendRequest.UpdateSend(existingSend, sendAuthorizationService);
+
+        Assert.Equal(AuthType.Password, updatedSend.AuthType);
+        Assert.Equal("existing_hashed_password", updatedSend.Password);
+        Assert.Null(updatedSend.Emails);
+    }
+
+    [Fact]
+    public void UpdateSend_ChangingFromEmailToNone_ClearsEmailsAndSetsAuthTypeNone()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.None,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            Key = "encrypted_key",
+            Name = "encrypted_name",
+            Text = new SendTextModel { Hidden = false, Text = "encrypted_text" },
+            Type = SendType.Text,
+        };
+
+        var existingSend = new Send
+        {
+            Type = SendType.Text,
+            Emails = "old@example.com",
+            AuthType = AuthType.Email,
+            Password = null,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+
+        var updatedSend = sendRequest.UpdateSend(existingSend, sendAuthorizationService);
+
+        Assert.Equal(AuthType.None, updatedSend.AuthType);
+        Assert.Null(updatedSend.Emails);
+        Assert.Null(updatedSend.Password);
     }
 }

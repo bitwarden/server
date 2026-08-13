@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -20,9 +21,26 @@ namespace Bit.Core.Test.Auth.UserFeatures.WebAuthnLogin;
 public class AssertWebAuthnLoginCredentialCommandTests
 {
     [Theory, BitAutoData]
+    internal async Task ChallengeNotCacheable_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, AssertionOptions options, AuthenticatorAssertionRawResponse response)
+    {
+        // Arrange
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .TryMarkChallengeAsUsedAsync(options.Challenge)
+            .Returns(false);
+
+        // Act
+        var result = async () => await sutProvider.Sut.AssertWebAuthnLoginCredential(options, response);
+
+        // Assert
+        await Assert.ThrowsAsync<BadRequestException>(result);
+    }
+
+    [Theory, BitAutoData]
     internal async Task InvalidUserHandle_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, AssertionOptions options, AuthenticatorAssertionRawResponse response)
     {
         // Arrange
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .TryMarkChallengeAsUsedAsync(options.Challenge).Returns(true);
         response.Response.UserHandle = Encoding.UTF8.GetBytes("invalid-user-handle");
 
         // Act
@@ -36,6 +54,8 @@ public class AssertWebAuthnLoginCredentialCommandTests
     internal async Task UserNotFound_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
     {
         // Arrange
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .TryMarkChallengeAsUsedAsync(options.Challenge).Returns(true);
         response.Response.UserHandle = user.Id.ToByteArray();
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).ReturnsNull();
 
@@ -50,6 +70,8 @@ public class AssertWebAuthnLoginCredentialCommandTests
     internal async Task NoMatchingCredentialExists_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
     {
         // Arrange
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .TryMarkChallengeAsUsedAsync(options.Challenge).Returns(true);
         response.Response.UserHandle = user.Id.ToByteArray();
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
         sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new WebAuthnCredential[] { });
@@ -65,6 +87,8 @@ public class AssertWebAuthnLoginCredentialCommandTests
     internal async Task AssertionFails_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
     {
         // Arrange
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .TryMarkChallengeAsUsedAsync(options.Challenge).Returns(true);
         var credentialId = Guid.NewGuid().ToByteArray();
         credential.CredentialId = CoreHelpers.Base64UrlEncode(credentialId);
         response.Id = credentialId;
@@ -86,6 +110,8 @@ public class AssertWebAuthnLoginCredentialCommandTests
     internal async Task AssertionSucceeds_ReturnsUserAndCredential(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
     {
         // Arrange
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .TryMarkChallengeAsUsedAsync(options.Challenge).Returns(true);
         var credentialId = Guid.NewGuid().ToByteArray();
         credential.CredentialId = CoreHelpers.Base64UrlEncode(credentialId);
         response.Id = credentialId;

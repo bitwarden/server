@@ -5,37 +5,34 @@ using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Premium.Queries;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
-using Fido2NetLib;
-using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -59,24 +56,20 @@ public class UserService : UserManager<User>, IUserService
     private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators;
     private readonly ILicensingService _licenseService;
     private readonly IEventService _eventService;
-    private readonly IApplicationCacheService _applicationCacheService;
     private readonly IStripePaymentService _paymentService;
     private readonly IPolicyQuery _policyQuery;
-    private readonly IPolicyService _policyService;
-    private readonly IFido2 _fido2;
     private readonly ICurrentContext _currentContext;
     private readonly IGlobalSettings _globalSettings;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IFeatureService _featureService;
-    private readonly IPremiumUserBillingService _premiumUserBillingService;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IPricingClient _pricingClient;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
+    private readonly ISubscriberService _subscriberService;
+    private readonly ISendFileStorageService _sendFileStorageService;
 
     public UserService(
         IUserRepository userRepository,
@@ -96,24 +89,20 @@ public class UserService : UserManager<User>, IUserService
         ILogger<UserManager<User>> logger,
         ILicensingService licenseService,
         IEventService eventService,
-        IApplicationCacheService applicationCacheService,
         IStripePaymentService paymentService,
         IPolicyQuery policyQuery,
-        IPolicyService policyService,
-        IFido2 fido2,
         ICurrentContext currentContext,
         IGlobalSettings globalSettings,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IFeatureService featureService,
-        IPremiumUserBillingService premiumUserBillingService,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
         IPolicyRequirementQuery policyRequirementQuery,
-        IPricingClient pricingClient,
-        IHasPremiumAccessQuery hasPremiumAccessQuery)
+        IHasPremiumAccessQuery hasPremiumAccessQuery,
+        ISubscriberService subscriberService,
+        ISendFileStorageService sendFileStorageService)
         : base(
               store,
               optionsAccessor,
@@ -137,24 +126,20 @@ public class UserService : UserManager<User>, IUserService
         _passwordValidators = passwordValidators;
         _licenseService = licenseService;
         _eventService = eventService;
-        _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _policyQuery = policyQuery;
-        _policyService = policyService;
-        _fido2 = fido2;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
-        _featureService = featureService;
-        _premiumUserBillingService = premiumUserBillingService;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
         _policyRequirementQuery = policyRequirementQuery;
-        _pricingClient = pricingClient;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
+        _subscriberService = subscriberService;
+        _sendFileStorageService = sendFileStorageService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -251,6 +236,7 @@ public class UserService : UserManager<User>, IUserService
                     var orgCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
                     if (orgCount <= 1)
                     {
+                        await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
                         await _organizationRepository.DeleteAsync(org);
                         deletedOrg = true;
                     }
@@ -261,7 +247,7 @@ public class UserService : UserManager<User>, IUserService
             {
                 return IdentityResult.Failed(new IdentityError
                 {
-                    Description = "Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.",
+                    Description = new SoleOwnerError().Message,
                 });
             }
         }
@@ -279,11 +265,16 @@ public class UserService : UserManager<User>, IUserService
         {
             try
             {
-                await CancelPremiumAsync(user);
+                await _subscriberService.CancelSubscription(
+                    user,
+                    cancelImmediately: false,
+                    offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
             }
             catch (GatewayException) { }
+            catch (BillingException) { }
         }
 
+        await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
         await _userRepository.DeleteAsync(user);
         await _pushService.PushLogOutAsync(user.Id);
         return IdentityResult.Success;
@@ -323,9 +314,30 @@ public class UserService : UserManager<User>, IUserService
         return await CreateAsync(user);
     }
 
-    public async Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash)
+    public async Task<IdentityResult> CreateUserAsync(User user, RegisterFinishData registerFinishData)
     {
-        return await CreateAsync(user, masterPasswordHash);
+        // TODO remove logic below after a compatibility period - once V2 accounts are fully supported
+        // https://bitwarden.atlassian.net/browse/PM-27326
+        if (!registerFinishData.IsV2Encryption())
+        {
+            return await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationHash);
+        }
+
+        var result = await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationHash);
+        if (result.Succeeded)
+        {
+            var updateUserDataActions = new List<UpdateUserData>
+            {
+                _userRepository.UpdateMasterPasswordUnlockData(user.Id, registerFinishData)
+            };
+            if (registerFinishData.UserKeyId is not null)
+            {
+                updateUserDataActions.Add(_userRepository.SetUserKeyId(user.Id, registerFinishData.UserKeyId));
+            }
+
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, registerFinishData.UserAccountKeysData, updateUserDataActions);
+        }
+        return result;
     }
 
     public async Task SendMasterPasswordHintAsync(string email)
@@ -344,148 +356,6 @@ public class UserService : UserManager<User>, IUserService
         }
 
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
-    }
-
-    /// <summary>
-    /// Initiates WebAuthn 2FA credential registration and generates a challenge for adding a new security key.
-    /// </summary>
-    /// <param name="user">The current user.</param>
-    /// <returns></returns>
-    /// <exception cref="BadRequestException">Maximum allowed number of credentials already registered.</exception>
-    public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
-    {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null)
-        {
-            providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
-        }
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (provider == null)
-        {
-            provider = new TwoFactorProvider
-            {
-                Enabled = false
-            };
-        }
-        if (provider.MetaData == null)
-        {
-            provider.MetaData = new Dictionary<string, object>();
-        }
-
-        // Boundary validation to provide a better UX. There is also second-level enforcement at persistence time.
-        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
-            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
-            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
-        // Count only saved credentials ("Key{id}") toward the limit.
-        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
-            maximumAllowedCredentialCount)
-        {
-            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
-        }
-
-        var fidoUser = new Fido2User
-        {
-            DisplayName = user.Name,
-            Name = user.Email,
-            Id = user.Id.ToByteArray(),
-        };
-
-        var excludeCredentials = provider.MetaData
-            .Where(k => k.Key.StartsWith("Key"))
-            .Select(k => new TwoFactorProvider.WebAuthnData((dynamic)k.Value).Descriptor)
-            .ToList();
-
-        var authenticatorSelection = new AuthenticatorSelection
-        {
-            AuthenticatorAttachment = null,
-            RequireResidentKey = false,
-            UserVerification = UserVerificationRequirement.Discouraged
-        };
-        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection, AttestationConveyancePreference.None);
-
-        provider.MetaData["pending"] = options.ToJson();
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, false);
-
-        return options;
-    }
-
-    public async Task<bool> CompleteWebAuthRegistrationAsync(User user, int id, string name, AuthenticatorAttestationRawResponse attestationResponse)
-    {
-        var keyId = $"Key{id}";
-
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (provider?.MetaData is null || !provider.MetaData.TryGetValue("pending", out var pendingValue))
-        {
-            return false;
-        }
-
-        // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
-        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
-            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
-            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
-        // Count only saved credentials ("Key{id}") toward the limit.
-        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
-            maximumAllowedCredentialCount)
-        {
-            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
-        }
-
-        var options = CredentialCreateOptions.FromJson((string)pendingValue);
-
-        // Callback to ensure credential ID is unique. Always return true since we don't care if another
-        // account uses the same 2FA key.
-        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
-
-        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
-
-        provider.MetaData.Remove("pending");
-        provider.MetaData[keyId] = new TwoFactorProvider.WebAuthnData
-        {
-            Name = name,
-            Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId),
-            PublicKey = success.Result.PublicKey,
-            UserHandle = success.Result.User.Id,
-            SignatureCounter = success.Result.Counter,
-            CredType = success.Result.CredType,
-            RegDate = DateTime.Now,
-            AaGuid = success.Result.Aaguid
-        };
-
-        var providers = user.GetTwoFactorProviders();
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
-
-        return true;
-    }
-
-    public async Task<bool> DeleteWebAuthnKeyAsync(User user, int id)
-    {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null)
-        {
-            return false;
-        }
-
-        var keyName = $"Key{id}";
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (!provider?.MetaData?.ContainsKey(keyName) ?? true)
-        {
-            return false;
-        }
-
-        if (provider.MetaData.Count < 2)
-        {
-            return false;
-        }
-
-        provider.MetaData.Remove(keyName);
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
-        return true;
     }
 
     public async Task SendEmailVerificationAsync(User user)
@@ -560,6 +430,10 @@ public class UserService : UserManager<User>, IUserService
         user.Email = newEmail;
         user.EmailVerified = true;
         user.RevisionDate = user.AccountRevisionDate = now;
+
+        // We need this to backfill the salt for now to keep the email and salt always in sync.
+        user.MasterPasswordSalt = newEmail;
+
         user.LastEmailChangeDate = now;
         await _userRepository.ReplaceAsync(user);
 
@@ -576,6 +450,10 @@ public class UserService : UserManager<User>, IUserService
                 //if sync to strip fails, update email and securityStamp to previous
                 user.Key = previousState.Key;
                 user.Email = previousState.Email;
+
+                // We need this to backfill the salt for now to keep the email and salt always in sync.
+                user.MasterPasswordSalt = previousState.Email;
+
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                 user.MasterPassword = previousState.MasterPassword;
                 user.SecurityStamp = previousState.SecurityStamp;
@@ -618,6 +496,7 @@ public class UserService : UserManager<User>, IUserService
         });
     }
 
+    [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {
@@ -672,24 +551,6 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user)
-    {
-        var identityResult = CheckCanUseKeyConnector(user);
-        if (identityResult != null)
-        {
-            return identityResult;
-        }
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.MasterPassword = null;
-        user.UsesKeyConnector = true;
-
-        await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
-
-        return IdentityResult.Success;
-    }
-
     private IdentityResult CheckCanUseKeyConnector(User user)
     {
         if (user == null)
@@ -731,7 +592,8 @@ public class UserService : UserManager<User>, IUserService
         // Org User must be confirmed and have a ResetPasswordKey
         var orgUser = await _organizationUserRepository.GetByIdAsync(id);
         if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
-            orgUser.OrganizationId != orgId || string.IsNullOrEmpty(orgUser.ResetPasswordKey) ||
+            orgUser.OrganizationId != orgId ||
+            !orgUser.IsEnrolledInAccountRecovery() ||
             !orgUser.UserId.HasValue)
         {
             throw new BadRequestException("Organization User not valid");
@@ -781,13 +643,14 @@ public class UserService : UserManager<User>, IUserService
         user.Key = key;
 
         await _userRepository.ReplaceAsync(user);
-        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
+        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName(), resetMasterPassword: true, resetTwoFactor: false);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
         await _pushService.PushLogOutAsync(user.Id);
 
         return IdentityResult.Success;
     }
 
+    [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
     {
         if (!user.ForcePasswordReset)
@@ -886,78 +749,6 @@ public class UserService : UserManager<User>, IUserService
         return true;
     }
 
-    public async Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
-        PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
-        TaxInfo taxInfo)
-    {
-        if (user.Premium)
-        {
-            throw new BadRequestException("Already a premium user.");
-        }
-
-        if (additionalStorageGb < 0)
-        {
-            throw new BadRequestException("You can't subtract storage!");
-        }
-
-        string paymentIntentClientSecret = null;
-        IStripePaymentService paymentService = null;
-        if (_globalSettings.SelfHosted)
-        {
-            if (license == null || !_licenseService.VerifyLicense(license))
-            {
-                throw new BadRequestException("Invalid license.");
-            }
-
-            var claimsPrincipal = _licenseService.GetClaimsPrincipalFromLicense(license);
-
-            if (!license.CanUse(user, claimsPrincipal, out var exceptionMessage))
-            {
-                throw new BadRequestException(exceptionMessage);
-            }
-
-            var dir = $"{_globalSettings.LicenseDirectory}/user";
-            Directory.CreateDirectory(dir);
-            using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
-            await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
-        }
-        else
-        {
-            var sale = PremiumUserSale.From(user, paymentMethodType, paymentToken, taxInfo, additionalStorageGb);
-            await _premiumUserBillingService.Finalize(sale);
-        }
-
-        user.Premium = true;
-        user.RevisionDate = DateTime.UtcNow;
-
-        if (_globalSettings.SelfHosted)
-        {
-            user.MaxStorageGb = Constants.SelfHostedMaxStorageGb;
-            user.LicenseKey = license.LicenseKey;
-            user.PremiumExpirationDate = license.Expires;
-        }
-        else
-        {
-            user.LicenseKey = CoreHelpers.SecureRandomString(20);
-        }
-
-        try
-        {
-            await SaveUserAsync(user);
-            await _pushService.PushSyncVaultAsync(user.Id);
-        }
-        catch when (!_globalSettings.SelfHosted)
-        {
-            await paymentService.CancelAndRecoverChargesAsync(user);
-            throw;
-        }
-
-
-
-        return new Tuple<bool, string>(string.IsNullOrWhiteSpace(paymentIntentClientSecret),
-            paymentIntentClientSecret);
-    }
-
     public async Task UpdateLicenseAsync(User user, UserLicense license)
     {
         if (!_globalSettings.SelfHosted)
@@ -1006,58 +797,6 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
     }
 
-    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
-    public async Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb)
-    {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (!user.Premium)
-        {
-            throw new BadRequestException("Not a premium user.");
-        }
-
-        var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
-
-        var baseStorageGb = (short)premiumPlan.Storage.Provided;
-        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, premiumPlan.Storage.StripePriceId, baseStorageGb);
-        await SaveUserAsync(user);
-        return secret;
-    }
-
-    public async Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType, TaxInfo taxInfo)
-    {
-        if (paymentToken.StartsWith("btok_"))
-        {
-            throw new BadRequestException("Invalid token.");
-        }
-
-        var tokenizedPaymentSource = new TokenizedPaymentSource(paymentMethodType, paymentToken);
-        var taxInformation = TaxInformation.From(taxInfo);
-
-        await _premiumUserBillingService.UpdatePaymentMethod(user, tokenizedPaymentSource, taxInformation);
-        await SaveUserAsync(user);
-    }
-
-    public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
-    {
-        var eop = endOfPeriod.GetValueOrDefault(true);
-        if (!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
-            user.PremiumExpirationDate.Value < DateTime.UtcNow)
-        {
-            eop = false;
-        }
-        await _paymentService.CancelSubscriptionAsync(user, eop);
-    }
-
-    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
-    public async Task ReinstatePremiumAsync(User user)
-    {
-        await _paymentService.ReinstateSubscriptionAsync(user);
-    }
-
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
     {
         var user = await _userRepository.GetByIdAsync(userId);
@@ -1070,7 +809,9 @@ public class UserService : UserManager<User>, IUserService
         {
             user.Premium = true;
             user.PremiumExpirationDate = expirationDate;
-            user.RevisionDate = DateTime.UtcNow;
+            // Bump AccountRevisionDate so clients' revision-gated syncs pick up the
+            // premium change even when the one-time push notification is missed.
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
     }
@@ -1087,7 +828,9 @@ public class UserService : UserManager<User>, IUserService
         {
             user.Premium = false;
             user.PremiumExpirationDate = expirationDate;
-            user.RevisionDate = DateTime.UtcNow;
+            // Bump AccountRevisionDate so clients' revision-gated syncs pick up the
+            // premium change even when the one-time push notification is missed.
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
     }
@@ -1158,12 +901,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
-        {
-            return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
-        }
-
-        return user.Premium || await HasPremiumFromOrganization(user);
+        return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
     }
 
     public async Task<bool> HasPremiumFromOrganization(User user)
@@ -1174,25 +912,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
-        {
-            return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
-        }
-
-        // orgUsers in the Invited status are not associated with a userId yet, so this will get
-        // orgUsers in Accepted and Confirmed states only
-        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId.Value);
-
-        if (!orgUsers.Any())
-        {
-            return false;
-        }
-
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        return orgUsers.Any(ou =>
-            orgAbilities.TryGetValue(ou.OrganizationId, out var orgAbility) &&
-            orgAbility.UsersGetPremium &&
-            orgAbility.Enabled);
+        return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
     }
 
     public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
@@ -1260,6 +980,7 @@ public class UserService : UserManager<User>, IUserService
         return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
     }
 
+    [Obsolete("Use MasterPasswordService.PrepareSetInitialMasterPasswordAsync or PrepareUpdateExistingMasterPasswordAsync instead. To be removed in PM-33141.")]
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();
@@ -1304,53 +1025,43 @@ public class UserService : UserManager<User>, IUserService
 
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        if (!requirement.OrganizationsRequiringTwoFactor.Any())
         {
-            var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-            if (!requirement.OrganizationsRequiringTwoFactor.Any())
-            {
-                Logger.LogInformation("No organizations requiring two factor for user {userId}.", user.Id);
-                return;
-            }
-
-            var organizationIds = requirement.OrganizationsRequiringTwoFactor.Select(o => o.OrganizationId).ToList();
-            var organizations = await _organizationRepository.GetManyByIdsAsync(organizationIds);
-            var organizationLookup = organizations.ToDictionary(org => org.Id);
-
-            var revokeOrgUserTasks = requirement.OrganizationsRequiringTwoFactor
-                .Where(o => organizationLookup.ContainsKey(o.OrganizationId))
-                .Select(async o =>
-                {
-                    var organization = organizationLookup[o.OrganizationId];
-                    await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                        new RevokeOrganizationUsersRequest(
-                            o.OrganizationId,
-                            [new OrganizationUserUserDetails { Id = o.OrganizationUserId, OrganizationId = o.OrganizationId }],
-                            new SystemUser(EventSystemUser.TwoFactorDisabled)));
-                    await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
-                }).ToArray();
-
-            await Task.WhenAll(revokeOrgUserTasks);
-
+            Logger.LogInformation("No organizations requiring two factor for user {userId}.", user.Id);
             return;
         }
 
-        var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
+        var organizationIds = requirement.OrganizationsRequiringTwoFactor.Select(o => o.OrganizationId).ToList();
+        var organizations = await _organizationRepository.GetManyByIdsAsync(organizationIds);
+        var organizationLookup = organizations.ToDictionary(org => org.Id);
 
-        var legacyRevokeOrgUserTasks = twoFactorPolicies.Select(async p =>
-        {
-            var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-            await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                new RevokeOrganizationUsersRequest(
-                    p.OrganizationId,
-                    [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
-                    new SystemUser(EventSystemUser.TwoFactorDisabled)));
-            await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
-        }).ToArray();
+        var revokeOrgUserTasks = requirement.OrganizationsRequiringTwoFactor
+            .Where(o => organizationLookup.ContainsKey(o.OrganizationId))
+            .Select(async o =>
+            {
+                var organization = organizationLookup[o.OrganizationId];
+                await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                    new RevokeOrganizationUsersRequest(
+                        o.OrganizationId,
+                        [
+                            new OrganizationUserUserDetails
+                            {
+                                Id = o.OrganizationUserId,
+                                OrganizationId = o.OrganizationId
+                            }
+                        ],
+                        new SystemUser(EventSystemUser.TwoFactorDisabled),
+                        RevocationReason.TwoFactorPolicyNonCompliance));
+                await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(),
+                    user.Email);
+            }).ToArray();
 
-        await Task.WhenAll(legacyRevokeOrgUserTasks);
+        await Task.WhenAll(revokeOrgUserTasks);
     }
 
+    // TODO: Remove this method when the PM37165_RotateUserApiKeyCommand feature flag is cleaned up.
+    [Obsolete("Use IRotateUserApiKeyCommand instead. This method will be removed once the PM37165_RotateUserApiKeyCommand feature flag is removed.")]
     public async Task RotateApiKeyAsync(User user)
     {
         user.ApiKey = CoreHelpers.SecureRandomString(30);
@@ -1376,31 +1087,19 @@ public class UserService : UserManager<User>, IUserService
             "otp:" + user.Email, token);
     }
 
-    public async Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false)
+    public async Task<bool> VerifySecretAsync(User user, string secret)
     {
-        bool isVerified;
         if (user.HasMasterPassword())
         {
             // If the user has a master password the secret is most likely going to be a hash
             // of their password, but in certain scenarios, like when the user has logged into their
             // device without a password (trusted device encryption) but the account
             // does still have a password we will allow the use of OTP.
-            isVerified = await CheckPasswordAsync(user, secret) ||
-                await VerifyOTPAsync(user, secret);
-        }
-        else if (isSettingMFA)
-        {
-            // this is temporary to allow users to view their MFA settings without invalidating email TOTP
-            // Will be removed with PM-9925
-            isVerified = true;
-        }
-        else
-        {
-            // If they don't have a password at all they can only do OTP
-            isVerified = await VerifyOTPAsync(user, secret);
+            return await CheckPasswordAsync(user, secret) || await VerifyOTPAsync(user, secret);
         }
 
-        return isVerified;
+        // If they don't have a password at all they can only do OTP
+        return await VerifyOTPAsync(user, secret);
     }
 
     public async Task<bool> ActiveNewDeviceVerificationException(Guid userId)

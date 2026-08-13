@@ -95,6 +95,28 @@ public class SyncControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncL
         Assert.Equal(kdfMemory, syncResponseModel.UserDecryption.MasterPasswordUnlock.Kdf.Memory);
         Assert.Equal(kdfParallelism, syncResponseModel.UserDecryption.MasterPasswordUnlock.Kdf.Parallelism);
         Assert.Equal(user.Key, syncResponseModel.UserDecryption.MasterPasswordUnlock.MasterKeyEncryptedUserKey);
-        Assert.Equal(user.Email.ToLower(), syncResponseModel.UserDecryption.MasterPasswordUnlock.Salt);
+        Assert.Equal(user.GetMasterPasswordSalt(), syncResponseModel.UserDecryption.MasterPasswordUnlock.Salt);
+    }
+
+    [Fact]
+    public async Task Get_HaveExplicitMasterPasswordSalt_SaltReturnedInSync()
+    {
+        var tempEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(tempEmail);
+        await _loginHelper.LoginAsync(tempEmail);
+
+        var user = await _userRepository.GetByEmailAsync(tempEmail);
+        Assert.NotNull(user);
+        user.MasterPasswordSalt = "explicit-salt-value";
+        await _userRepository.UpsertAsync(user);
+
+        var response = await _client.GetAsync("/sync");
+        response.EnsureSuccessStatusCode();
+
+        var syncResponseModel = await response.Content.ReadFromJsonAsync<SyncResponseModel>();
+
+        Assert.NotNull(syncResponseModel);
+        Assert.NotNull(syncResponseModel.UserDecryption?.MasterPasswordUnlock);
+        Assert.Equal("explicit-salt-value", syncResponseModel.UserDecryption.MasterPasswordUnlock.Salt);
     }
 }

@@ -64,9 +64,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
                 ["Id"] = cipher.Id,
                 ["UserId"] = cipher.UserId,
                 ["OrganizationId"] = null,
-                // Currently CollectionIds are not passed along from the method signature
-                // to the request body.
-                ["CollectionIds"] = null,
+                ["CollectionIds"] = new JsonArray(collectionIds),
                 ["RevisionDate"] = cipher.RevisionDate,
             },
             ["ClientType"] = null,
@@ -88,9 +86,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
                 ["Id"] = cipher.Id,
                 ["UserId"] = cipher.UserId,
                 ["OrganizationId"] = null,
-                // Currently CollectionIds are not passed along from the method signature
-                // to the request body.
-                ["CollectionIds"] = null,
+                ["CollectionIds"] = new JsonArray(collectionIds),
                 ["RevisionDate"] = cipher.RevisionDate,
             },
             ["ClientType"] = null,

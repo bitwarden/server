@@ -8,6 +8,8 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Microsoft.Extensions.Logging;
 using OneOf;
@@ -15,12 +17,12 @@ using Stripe;
 
 namespace Bit.Core.Billing.Organizations.Commands;
 
-using static Core.Constants;
 using static StripeConstants;
 
 public interface IPreviewOrganizationTaxCommand
 {
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
+        User user,
         OrganizationSubscriptionPurchase purchase,
         BillingAddress billingAddress);
 
@@ -37,10 +39,15 @@ public interface IPreviewOrganizationTaxCommand
 public class PreviewOrganizationTaxCommand(
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
-    IStripeAdapter stripeAdapter)
+    IStripeAdapter stripeAdapter,
+    ISubscriptionDiscountService subscriptionDiscountService,
+    ITaxService taxService)
     : BaseBillingCommand<PreviewOrganizationTaxCommand>(logger), IPreviewOrganizationTaxCommand
 {
+    private readonly ILogger<PreviewOrganizationTaxCommand> _logger = logger;
+
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
+        User user,
         OrganizationSubscriptionPurchase purchase,
         BillingAddress billingAddress)
         => HandleAsync<(decimal, decimal)>(async () =>
@@ -75,6 +82,8 @@ public class PreviewOrganizationTaxCommand(
                             Quantity = purchase.SecretsManager.Seats
                         }
                     ]);
+                    // System coupon takes precedence for standalone Secrets Manager purchases.
+                    // Any user-provided coupons are ignored in this scenario.
                     options.Discounts =
                     [
                         new InvoiceDiscountOptions
@@ -117,6 +126,29 @@ public class PreviewOrganizationTaxCommand(
                                 Price = plan.SecretsManager.StripeServiceAccountPlanId,
                                 Quantity = purchase.SecretsManager.AdditionalServiceAccounts
                             });
+                        }
+                    }
+
+                    // Validate all coupons at once. If all are eligible, apply them; otherwise skip gracefully.
+                    // Only Families plans support user-provided coupons.
+                    if (purchase is { Coupons.Length: > 0, Tier: ProductTierType.Families })
+                    {
+                        var trimmedCoupons = purchase.Coupons
+                            .Where(c => !string.IsNullOrWhiteSpace(c))
+                            .Select(c => c.Trim())
+                            .ToArray();
+
+                        if (trimmedCoupons.Length > 0)
+                        {
+                            var allValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+                                user, trimmedCoupons, DiscountTierType.Families);
+
+                            if (allValid)
+                            {
+                                options.Discounts = trimmedCoupons
+                                    .Select(c => new InvoiceDiscountOptions { Coupon = c })
+                                    .ToList();
+                            }
                         }
                     }
 
@@ -182,13 +214,20 @@ public class PreviewOrganizationTaxCommand(
                 var options = GetBaseOptions(billingAddress, planChange.Tier != ProductTierType.Families);
 
                 var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                    new SubscriptionGetOptions { Expand = ["customer"] });
+                    new SubscriptionGetOptions
+                    {
+                        Expand = ["customer", "discounts.coupon.applies_to"]
+                    });
 
-                if (subscription.Customer.Discount != null)
+                // Genuine org coupons (complimentary PM, SM-standalone) attach at the subscription level, not the
+                // customer. The migration coupon lives on the schedule, not the live subscription, so it's excluded.
+                var discount = subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault();
+
+                if (discount != null)
                 {
                     options.Discounts =
                     [
-                        new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                        new InvoiceDiscountOptions { Coupon = discount.Coupon.Id }
                     ];
                 }
 
@@ -200,15 +239,35 @@ public class PreviewOrganizationTaxCommand(
 
                 var items = new List<InvoiceSubscriptionDetailsItemOptions>();
 
-                var passwordManagerSeats = subscriptionItemsByPriceId[
-                    currentPlan.HasNonSeatBasedPasswordManagerPlan()
-                        ? currentPlan.PasswordManager.StripePlanId
-                        : currentPlan.PasswordManager.StripeSeatPlanId];
+                long quantity;
 
-                var quantity = currentPlan.HasNonSeatBasedPasswordManagerPlan() &&
-                               !newPlan.HasNonSeatBasedPasswordManagerPlan()
-                    ? (long)organization.Seats!
-                    : passwordManagerSeats.Quantity;
+                if (!string.IsNullOrEmpty(currentPlan.PasswordManager.StripePlanId) && !newPlan.HasNonSeatBasedPasswordManagerPlan())
+                {
+                    // Bill the new seat-based plan at the org's occupied seats rather than reading a
+                    // quantity off the subscription: the current plan either has no per-seat item (flat
+                    // plans like Teams Starter) or a packaged overage line that holds only the seats past
+                    // the base (Teams 2019), so the subscription quantity would be missing or an undercount.
+                    quantity = (long)organization.Seats!;
+                }
+                else
+                {
+                    var passwordManagerPriceId = currentPlan.HasNonSeatBasedPasswordManagerPlan()
+                        ? currentPlan.PasswordManager.StripePlanId
+                        : currentPlan.PasswordManager.StripeSeatPlanId;
+
+                    if (!subscriptionItemsByPriceId.TryGetValue(passwordManagerPriceId, out var passwordManagerSeats))
+                    {
+                        _logger.LogError(
+                            "Organization {OrganizationId}'s subscription {SubscriptionId} does not contain a " +
+                            "Password Manager line item matching its current plan's price {PriceId}",
+                            organization.Id, organization.GatewaySubscriptionId, passwordManagerPriceId);
+
+                        return new BadRequest(
+                            "Your organization's subscription does not match its current plan. Please contact support for assistance.");
+                    }
+
+                    quantity = passwordManagerSeats.Quantity;
+                }
 
                 items.Add(new InvoiceSubscriptionDetailsItemOptions
                 {
@@ -218,42 +277,54 @@ public class PreviewOrganizationTaxCommand(
                     Quantity = quantity
                 });
 
-                var hasStorage =
-                    subscriptionItemsByPriceId.TryGetValue(newPlan.PasswordManager.StripeStoragePlanId,
-                        out var storage);
-
-                if (hasStorage && storage != null)
+                // Match existing storage by the CURRENT plan's id (as PM seats/SM do), then re-price at the
+                // new plan — storage ids can differ across the change (e.g. Families' personal-storage vs an
+                // org plan's shared storage). Guard: some plans have no storage add-on, so the id can be null.
+                if (!string.IsNullOrEmpty(currentPlan.PasswordManager.StripeStoragePlanId) &&
+                    !string.IsNullOrEmpty(newPlan.PasswordManager.StripeStoragePlanId))
                 {
-                    items.Add(new InvoiceSubscriptionDetailsItemOptions
-                    {
-                        Price = newPlan.PasswordManager.StripeStoragePlanId,
-                        Quantity = storage.Quantity
-                    });
-                }
+                    var hasStorage =
+                        subscriptionItemsByPriceId.TryGetValue(currentPlan.PasswordManager.StripeStoragePlanId,
+                            out var storage);
 
-                var hasSecretsManagerSeats = subscriptionItemsByPriceId.TryGetValue(
-                    newPlan.SecretsManager.StripeSeatPlanId,
-                    out var secretsManagerSeats);
-
-                if (hasSecretsManagerSeats && secretsManagerSeats != null)
-                {
-                    items.Add(new InvoiceSubscriptionDetailsItemOptions
-                    {
-                        Price = newPlan.SecretsManager.StripeSeatPlanId,
-                        Quantity = secretsManagerSeats.Quantity
-                    });
-
-                    var hasServiceAccounts =
-                        subscriptionItemsByPriceId.TryGetValue(newPlan.SecretsManager.StripeServiceAccountPlanId,
-                            out var serviceAccounts);
-
-                    if (hasServiceAccounts && serviceAccounts != null)
+                    if (hasStorage && storage != null)
                     {
                         items.Add(new InvoiceSubscriptionDetailsItemOptions
                         {
-                            Price = newPlan.SecretsManager.StripeServiceAccountPlanId,
-                            Quantity = serviceAccounts.Quantity
+                            Price = newPlan.PasswordManager.StripeStoragePlanId,
+                            Quantity = storage.Quantity
                         });
+                    }
+                }
+
+                // Match existing SM items by the CURRENT plan's ids (as PM seats/storage do above), then re-price
+                // at the new plan. Guard: SecretsManager is null for Families/Free (PlanAdapter maps it to null).
+                if (currentPlan.SecretsManager != null && newPlan.SecretsManager != null)
+                {
+                    var hasSecretsManagerSeats = subscriptionItemsByPriceId.TryGetValue(
+                        currentPlan.SecretsManager.StripeSeatPlanId,
+                        out var secretsManagerSeats);
+
+                    if (hasSecretsManagerSeats && secretsManagerSeats != null)
+                    {
+                        items.Add(new InvoiceSubscriptionDetailsItemOptions
+                        {
+                            Price = newPlan.SecretsManager.StripeSeatPlanId,
+                            Quantity = secretsManagerSeats.Quantity
+                        });
+
+                        var hasServiceAccounts =
+                            subscriptionItemsByPriceId.TryGetValue(currentPlan.SecretsManager.StripeServiceAccountPlanId,
+                                out var serviceAccounts);
+
+                        if (hasServiceAccounts && serviceAccounts != null)
+                        {
+                            items.Add(new InvoiceSubscriptionDetailsItemOptions
+                            {
+                                Price = newPlan.SecretsManager.StripeServiceAccountPlanId,
+                                Quantity = serviceAccounts.Quantity
+                            });
+                        }
                     }
                 }
 
@@ -279,16 +350,22 @@ public class PreviewOrganizationTaxCommand(
             }
 
             var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions { Expand = ["customer.tax_ids"] });
+                new SubscriptionGetOptions
+                {
+                    Expand = ["customer.tax_ids", "discounts.coupon.applies_to"]
+                });
 
             var options = GetBaseOptions(subscription.Customer,
                 organization.GetProductUsageType() == ProductUsageType.Business);
 
-            if (subscription.Customer.Discount != null)
+            // Prefer a customer discount, else the first subscription-level one (see plan-change overload).
+            var discount = subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault();
+
+            if (discount != null)
             {
                 options.Discounts =
                 [
-                    new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                    new InvoiceDiscountOptions { Coupon = discount.Coupon.Id }
                 ];
             }
 
@@ -344,7 +421,7 @@ public class PreviewOrganizationTaxCommand(
         Convert.ToDecimal(invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount)) / 100,
         Convert.ToDecimal(invoice.Total) / 100);
 
-    private static InvoiceCreatePreviewOptions GetBaseOptions(
+    private InvoiceCreatePreviewOptions GetBaseOptions(
         OneOf<Customer, BillingAddress> addressChoice,
         bool businessUse)
     {
@@ -364,9 +441,6 @@ public class PreviewOrganizationTaxCommand(
             CustomerDetails = new InvoiceCustomerDetailsOptions
             {
                 Address = new AddressOptions { Country = country, PostalCode = postalCode },
-                TaxExempt = businessUse && country != CountryAbbreviations.UnitedStates
-                    ? TaxExempt.Reverse
-                    : TaxExempt.None
             }
         };
 
@@ -383,12 +457,23 @@ public class PreviewOrganizationTaxCommand(
             return options;
         }
 
+        var derivedTaxIdCode = taxService.GetStripeTaxCode(country, taxId.Value);
+
+        if (derivedTaxIdCode == null)
+        {
+            _logger.LogWarning(
+                "Could not derive Stripe tax ID type for country {Country}; falling back to client-supplied type {TaxIdType}",
+                country, taxId.Code);
+        }
+
+        var taxIdCode = derivedTaxIdCode ?? taxId.Code;
+
         options.CustomerDetails.TaxIds =
         [
-            new InvoiceCustomerDetailsTaxIdOptions { Type = taxId.Code, Value = taxId.Value }
+            new InvoiceCustomerDetailsTaxIdOptions { Type = taxIdCode, Value = taxId.Value }
         ];
 
-        if (taxId.Code == TaxIdType.SpanishNIF)
+        if (taxIdCode == TaxIdType.SpanishNIF)
         {
             options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
             {

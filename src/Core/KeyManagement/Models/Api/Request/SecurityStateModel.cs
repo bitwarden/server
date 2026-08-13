@@ -6,7 +6,7 @@ namespace Bit.Core.KeyManagement.Models.Api.Request;
 
 public class SecurityStateModel
 {
-    [StringLength(1000)]
+    [StringLength(10000)]
     [JsonPropertyName("securityState")]
     public required string SecurityState { get; set; }
     [JsonPropertyName("securityVersion")]

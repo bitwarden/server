@@ -1,7 +1,7 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
+﻿
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data.Organizations;
@@ -11,6 +11,8 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models.Response;
+// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
 
 public class CipherMiniResponseModel : ResponseModel
 {
@@ -25,6 +27,19 @@ public class CipherMiniResponseModel : ResponseModel
         Id = cipher.Id;
         Type = cipher.Type;
         Data = cipher.Data;
+        RevisionDate = cipher.RevisionDate;
+        OrganizationId = cipher.OrganizationId;
+        Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
+        OrganizationUseTotp = orgUseTotp;
+        CreationDate = cipher.CreationDate;
+        DeletedDate = cipher.DeletedDate;
+        Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
+        Key = cipher.Key;
+
+        if (cipher.IsDataBlobEncrypted())
+        {
+            return;
+        }
 
         CipherData cipherData;
         switch (cipher.Type)
@@ -54,6 +69,21 @@ public class CipherMiniResponseModel : ResponseModel
                 cipherData = sshKeyData;
                 SSHKey = new CipherSSHKeyModel(sshKeyData);
                 break;
+            case CipherType.BankAccount:
+                var bankAccountData = JsonSerializer.Deserialize<CipherBankAccountData>(cipher.Data);
+                cipherData = bankAccountData;
+                BankAccount = new CipherBankAccountModel(bankAccountData);
+                break;
+            case CipherType.DriversLicense:
+                var driversLicenseData = JsonSerializer.Deserialize<CipherDriversLicenseData>(cipher.Data);
+                cipherData = driversLicenseData;
+                DriversLicense = new CipherDriversLicenseModel(driversLicenseData);
+                break;
+            case CipherType.Passport:
+                var passportData = JsonSerializer.Deserialize<CipherPassportData>(cipher.Data);
+                cipherData = passportData;
+                Passport = new CipherPassportModel(passportData);
+                break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
@@ -62,20 +92,25 @@ public class CipherMiniResponseModel : ResponseModel
         Notes = cipherData.Notes;
         Fields = cipherData.Fields?.Select(f => new CipherFieldModel(f));
         PasswordHistory = cipherData.PasswordHistory?.Select(ph => new CipherPasswordHistoryModel(ph));
-        RevisionDate = cipher.RevisionDate;
-        OrganizationId = cipher.OrganizationId;
-        Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
-        OrganizationUseTotp = orgUseTotp;
-        CreationDate = cipher.CreationDate;
-        DeletedDate = cipher.DeletedDate;
-        Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
-        Key = cipher.Key;
     }
 
     public Guid Id { get; set; }
     public Guid? OrganizationId { get; set; }
     public CipherType Type { get; set; }
     public string Data { get; set; }
+
+    /// <summary>
+    /// The reduced data blob returned in place of <see cref="Data"/> when the caller can only reach this
+    /// cipher through leasing-enabled collections (PAM credential leasing). Contains the encrypted title
+    /// and, for logins, the encrypted URIs — never the dropped secrets. Null for full responses.
+    /// </summary>
+    /// <remarks>
+    /// Declared ahead of the behavior that populates it, so the wire contract and the generated client
+    /// bindings exist first. Nothing sets it yet: every response is still full, and because the property
+    /// is omitted when null the serialized output is unchanged.
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string PartialData { get; set; }
 
     [Obsolete("Use Data instead.")]
     public string Name { get; set; }
@@ -99,6 +134,15 @@ public class CipherMiniResponseModel : ResponseModel
     public CipherSSHKeyModel SSHKey { get; set; }
 
     [Obsolete("Use Data instead.")]
+    public CipherBankAccountModel BankAccount { get; set; }
+
+    [Obsolete("Use Data instead.")]
+    public CipherDriversLicenseModel DriversLicense { get; set; }
+
+    [Obsolete("Use Data instead.")]
+    public CipherPassportModel Passport { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public IEnumerable<CipherFieldModel> Fields { get; set; }
 
     [Obsolete("Use Data instead.")]
@@ -111,13 +155,13 @@ public class CipherMiniResponseModel : ResponseModel
     public CipherRepromptType Reprompt { get; set; }
     public string Key { get; set; }
 }
-
+#nullable enable
 public class CipherResponseModel : CipherMiniResponseModel
 {
     public CipherResponseModel(
         CipherDetails cipher,
         User user,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities,
+        OrganizationAbility? organizationAbility,
         IGlobalSettings globalSettings,
         string obj = "cipher")
         : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj)
@@ -127,7 +171,7 @@ public class CipherResponseModel : CipherMiniResponseModel
         Edit = cipher.Edit;
         ArchivedDate = cipher.ArchivedDate;
         ViewPassword = cipher.ViewPassword;
-        Permissions = new CipherPermissionsResponseModel(user, cipher, organizationAbilities);
+        Permissions = new CipherPermissionsResponseModel(user, cipher, organizationAbility);
     }
 
     public Guid? FolderId { get; set; }
@@ -143,10 +187,10 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public CipherDetailsResponseModel(
         CipherDetails cipher,
         User user,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities,
+        OrganizationAbility? organizationAbility,
         GlobalSettings globalSettings,
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
-        : base(cipher, user, organizationAbilities, globalSettings, obj)
+        : base(cipher, user, organizationAbility, globalSettings, obj)
     {
         if (collectionCiphers?.TryGetValue(cipher.Id, out var collectionCipher) ?? false)
         {
@@ -161,10 +205,10 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public CipherDetailsResponseModel(
         CipherDetails cipher,
         User user,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities,
+        OrganizationAbility? organizationAbility,
         GlobalSettings globalSettings,
         IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails")
-        : base(cipher, user, organizationAbilities, globalSettings, obj)
+        : base(cipher, user, organizationAbility, globalSettings, obj)
     {
         CollectionIds = collectionCiphers?.Select(c => c.CollectionId) ?? [];
     }
@@ -172,10 +216,10 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public CipherDetailsResponseModel(
         CipherDetailsWithCollections cipher,
         User user,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities,
+        OrganizationAbility? organizationAbility,
         GlobalSettings globalSettings,
         string obj = "cipherDetails")
-        : base(cipher, user, organizationAbilities, globalSettings, obj)
+        : base(cipher, user, organizationAbility, globalSettings, obj)
     {
         CollectionIds = cipher.CollectionIds ?? [];
     }

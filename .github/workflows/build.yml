@@ -1,23 +1,22 @@
 name: Build
 
 on:
-  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize]
   push:
     branches:
       - "main"
       - "rc"
       - "hotfix-rc"
-  pull_request:
-    types: [opened, synchronize]
   workflow_call:
-    inputs: {}
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
-  _GITHUB_PR_REPO_NAME: ${{ github.event.pull_request.head.repo.full_name }}
+  _GHCR_REGISTRY: "ghcr.io/bitwarden"
 
 jobs:
   lint:
@@ -25,13 +24,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          allow-unsafe-pr-checkout: true
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
       - name: Verify format
         run: dotnet format --verify-no-changes
@@ -43,8 +43,8 @@ jobs:
     outputs:
       has_secrets: ${{ steps.check-secrets.outputs.has_secrets }}
     permissions:
-      security-events: write
       id-token: write
+      packages: write
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -87,6 +87,10 @@ jobs:
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
+          - project_name: SeederApi
+            base_path: ./util
+            platforms: linux/amd64,linux/arm64
+            dotnet: true
           - project_name: Setup
             base_path: ./util
             dotnet: true
@@ -101,10 +105,11 @@ jobs:
           echo "has_secrets=$has_secrets" >> "$GITHUB_OUTPUT"
 
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          allow-unsafe-pr-checkout: true
 
       - name: Check branch to publish
         env:
@@ -119,14 +124,14 @@ jobs:
           fi
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
       - name: Set up Node
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           cache: "npm"
           cache-dependency-path: "**/package-lock.json"
-          node-version: "16"
+          node-version: "24"
 
       - name: Print environment
         run: |
@@ -159,7 +164,7 @@ jobs:
           ls -atlh ../../../
 
       - name: Upload project artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ matrix.dotnet }}
         with:
           name: ${{ matrix.project_name }}.zip
@@ -168,12 +173,19 @@ jobs:
 
       ########## Set up Docker ##########
       - name: Set up QEMU emulators
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
-      ########## ACRs ##########
+      ########## Registries ##########
+      - name: Log in to GHCR
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Log in to Azure
         uses: bitwarden/gh-actions/azure-login@main
         with:
@@ -181,30 +193,21 @@ jobs:
           tenant_id: ${{ secrets.AZURE_TENANT_ID }}
           client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
-      - name: Log in to ACR - production subscription
+      - name: Log in to ACR
         run: az acr login -n bitwardenprod
 
       ########## Generate image tag and build Docker image ##########
       - name: Generate Docker image tag
         id: tag
+        uses: bitwarden/gh-actions/sanitize-image-tag@main
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          fork_repo: ${{ github.event.pull_request.head.repo.fork == true && github.event.pull_request.head.repo.full_name || '' }}
+
+      - name: Report Docker image tag
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" || "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
-            IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | sed "s/[^a-zA-Z0-9]/-/g") # Sanitize branch name to alphanumeric only
-          else
-            IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")
-          fi
-
-          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
-            SANITIZED_REPO_NAME=$(echo "$_GITHUB_PR_REPO_NAME" | sed "s/[^a-zA-Z0-9]/-/g") # Sanitize repo name to alphanumeric only
-            IMAGE_TAG=$SANITIZED_REPO_NAME-$IMAGE_TAG # Add repo name to the tag
-            IMAGE_TAG=${IMAGE_TAG:0:128}  # Limit to 128 characters, as that's the max length for Docker image tags
-          fi
-
-          if [[ "$IMAGE_TAG" == "main" ]]; then
-            IMAGE_TAG=dev
-          fi
-
-          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
           echo "### :mega: Docker Image Tag: $IMAGE_TAG" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up project name
@@ -214,41 +217,102 @@ jobs:
           echo "Matrix name: ${{ matrix.project_name }}"
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
+          echo "platforms: ${{ matrix.platforms }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate image tags(s)
         id: image-tags
         env:
-          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           SHA: ${{ github.sha }}
         run: |
-          TAGS="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
-          echo "primary_tag=$TAGS" >> "$GITHUB_OUTPUT"
+          # Always push to ACR
+          ACR_TAG="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          TAGS="${ACR_TAG}"
+
+          # Additionally push rc and hotfix-rc tags to GHCR
+          if [[ "${IMAGE_TAG}" == "rc" || "${IMAGE_TAG}" == "hotfix-rc" ]]; then
+            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          fi
+
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
             SHORT_SHA=$(git rev-parse --short "${SHA}")
             TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
+            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:dev"
+            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
+
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Set platforms
+        id: platforms
+        run: |
+          PLATFORMS="${{ matrix.platforms }}"
+          if [ -z "$PLATFORMS" ]; then
+            PLATFORMS="linux/amd64,linux/arm/v7,linux/arm64"
+          fi
+          echo "platforms=$PLATFORMS" >> "$GITHUB_OUTPUT"
+
+      - name: Get Azure Key Vault secrets
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-org-bitwarden
+          secrets: "DOCKERHUB-OAT"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: bitwarden
+          password: ${{ steps.get-kv-secrets.outputs.DOCKERHUB-OAT }}
 
       - name: Build Docker image
         id: build-artifacts
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
-          platforms: |
-            linux/amd64,
-            linux/arm/v7,
-            linux/arm64
+          platforms: ${{ steps.platforms.outputs.platforms }}
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
 
+      - name: Generate image manifest fragment
+        env:
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          DIGEST: ${{ steps.build-artifacts.outputs.digest }}
+          TAGS: ${{ steps.image-tags.outputs.tags }}
+        run: |
+          fragment='{}'
+          IFS=',' read -r -a tags_array <<< "$TAGS"
+          for tag in "${tags_array[@]}"; do
+            image_uri="${tag%:*}"   # strip ":tag" -> full repo URI, e.g. ghcr.io/bitwarden/api
+            host="${tag%%/*}"       # registry host, e.g. bitwardenprod.azurecr.io / ghcr.io
+            base_domain=$(echo "$host" | awk -F. 'NF>=2{printf "%s.%s",$(NF-1),$NF} NF<2{printf "%s",$0}')
+            fragment=$(echo "$fragment" | jq \
+              --arg k "${PROJECT_NAME}-${base_domain}" \
+              --arg image "$image_uri" \
+              --arg tag "$IMAGE_TAG" \
+              --arg digest "$DIGEST" \
+              '. + {($k): {type: "container_image", image: $image, tag: $tag, digest: $digest}}')
+          done
+
+          mkdir -p image-manifest-fragments
+          echo "$fragment" > "image-manifest-fragments/${PROJECT_NAME}.json"
+
+      - name: Upload image manifest fragment
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-manifest-fragment-${{ steps.setup.outputs.project_name }}
+          path: image-manifest-fragments/${{ steps.setup.outputs.project_name }}.json
+          if-no-files-found: error
+
       - name: Install Cosign
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        if: github.event_name != 'pull_request' && env.is_publish_branch == 'true'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign image with Cosign
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && env.is_publish_branch == 'true'
         env:
           DIGEST: ${{ steps.build-artifacts.outputs.digest }}
           TAGS: ${{ steps.image-tags.outputs.tags }}
@@ -261,23 +325,57 @@ jobs:
           cosign sign --yes ${images[@]}
           echo "images=${images[*]}" >> "$GITHUB_OUTPUT"
 
-      - name: Scan Docker image
-        id: container-scan
-        uses: anchore/scan-action@0d444ed77d83ee2ba7f5ced0d90d640a1281d762 # v7.3.0
-        with:
-          image: ${{ steps.image-tags.outputs.primary_tag }}
-          fail-build: false
-          output-format: sarif
-
-      - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@cdefb33c0f6224e58673d9004f47f7cb3e328b89 # v4.31.10
-        with:
-          sarif_file: ${{ steps.container-scan.outputs.sarif }}
-          sha: ${{ contains(github.event_name, 'pull_request') && github.event.pull_request.head.sha || github.sha }}
-          ref: ${{ contains(github.event_name, 'pull_request') && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
+      - name: Log out from Docker Hub and GHCR
+        run: |
+          docker logout docker.io
+          docker logout ghcr.io
 
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
+
+  image-manifest:
+    name: Build image manifest
+    runs-on: ubuntu-22.04
+    needs: build-artifacts
+    permissions:
+      contents: read
+      actions: write # delete the intermediate fragment artifacts after aggregating
+    steps:
+      - name: Download image manifest fragments
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: image-manifest-fragment-*
+          path: image-manifest-fragments
+          merge-multiple: true
+
+      - name: Combine image manifest fragments
+        id: combine
+        run: |
+          additional_artifacts=$(jq -s 'add' image-manifest-fragments/*.json)
+          {
+            echo "additional_artifacts<<EOF"
+            echo "$additional_artifacts"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and upload artifact manifest
+        uses: bitwarden/gh-actions/artifact-manifest@main
+        with:
+          mode: upload
+          additional_artifacts: ${{ steps.combine.outputs.additional_artifacts }}
+
+      - name: Delete intermediate fragment artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for f in image-manifest-fragments/*.json; do
+            name="image-manifest-fragment-$(basename "$f" .json)"
+            id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?name=${name}" --jq '.artifacts[0].id // empty')
+            if [ -n "$id" ]; then
+              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}"
+              echo "Deleted fragment artifact ${name} (${id})"
+            fi
+          done
 
   upload:
     name: Upload
@@ -288,23 +386,21 @@ jobs:
       actions: read
     steps:
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          allow-unsafe-pr-checkout: true
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
-      - name: Log in to Azure
-        uses: bitwarden/gh-actions/azure-login@main
+      - name: Log in to GHCR
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
-
-      - name: Log in to ACR - production subscription
-        run: az acr login -n "$_AZ_REGISTRY" --only-show-errors
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Make Docker stubs
         if: |
@@ -314,13 +410,13 @@ jobs:
           # Set proper setup image based on branch
           case "$GITHUB_REF" in
             "refs/heads/main")
-                SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
+                SETUP_IMAGE="${_GHCR_REGISTRY}/setup:dev"
                 ;;
             "refs/heads/rc")
-                SETUP_IMAGE="$_AZ_REGISTRY/setup:rc"
+                SETUP_IMAGE="${_GHCR_REGISTRY}/setup:rc"
                 ;;
             "refs/heads/hotfix-rc")
-                SETUP_IMAGE="$_AZ_REGISTRY/setup:hotfix-rc"
+                SETUP_IMAGE="${_GHCR_REGISTRY}/setup:hotfix-rc"
                 ;;
           esac
 
@@ -348,14 +444,14 @@ jobs:
           cd docker-stub/US; zip -r ../../docker-stub-US.zip ./*; cd ../..
           cd docker-stub/EU; zip -r ../../docker-stub-EU.zip ./*; cd ../..
 
-      - name: Log out from Azure
-        uses: bitwarden/gh-actions/azure-logout@main
+      - name: Log out from GHCR
+        run: docker logout ghcr.io
 
       - name: Upload Docker stub US artifact
         if: |
           github.event_name != 'pull_request'
           && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docker-stub-US.zip
           path: docker-stub-US.zip
@@ -365,7 +461,7 @@ jobs:
         if: |
           github.event_name != 'pull_request'
           && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docker-stub-EU.zip
           path: docker-stub-EU.zip
@@ -377,21 +473,21 @@ jobs:
           pwsh ./generate_openapi_files.ps1
 
       - name: Upload Public API Swagger artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: swagger.json
           path: api.public.json
           if-no-files-found: error
 
       - name: Upload Internal API Swagger artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: internal.json
           path: api.json
           if-no-files-found: error
 
       - name: Upload Identity Swagger artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: identity.json
           path: identity.json
@@ -414,13 +510,14 @@ jobs:
           - win-x64
     steps:
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          allow-unsafe-pr-checkout: true
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
       - name: Print environment
         run: |
@@ -436,7 +533,7 @@ jobs:
 
       - name: Upload project artifact for Windows
         if: ${{ contains(matrix.target, 'win') == true }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: MsSqlMigratorUtility-${{ matrix.target }}
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility.exe
@@ -444,7 +541,7 @@ jobs:
 
       - name: Upload project artifact
         if: ${{ contains(matrix.target, 'win') == false }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: MsSqlMigratorUtility-${{ matrix.target }}
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
@@ -452,14 +549,27 @@ jobs:
 
   bitwarden-lite-build:
     name: Trigger Bitwarden lite build
-    if: |
-      github.event_name != 'pull_request'
-      && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-22.04
     needs: build-artifacts
     permissions:
       id-token: write
     steps:
+      - name: Compute Bitwarden lite server tag
+        id: server-tag
+        uses: bitwarden/gh-actions/sanitize-image-tag@main
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          fork_repo: ${{ github.event.pull_request.head.repo.fork == true && github.event.pull_request.head.repo.full_name || '' }}
+
+      - name: Compute Bitwarden lite override tag
+        id: override-tag
+        uses: bitwarden/gh-actions/sanitize-image-tag@main
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          fork_repo: ${{ github.event.pull_request.head.repo.fork == true && github.event.pull_request.head.repo.full_name || '' }}
+          prefix: "server-"
+
       - name: Log in to Azure
         uses: bitwarden/gh-actions/azure-login@main
         with:
@@ -478,7 +588,7 @@ jobs:
         uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Generate GH App token
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
           app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}
@@ -487,7 +597,11 @@ jobs:
           repositories: self-host
 
       - name: Trigger Bitwarden lite build
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          SERVER_BRANCH: ${{ github.head_ref || github.ref_name }}
+          SERVER_TAG: ${{ steps.server-tag.outputs.tag }}
+          OVERRIDE_TAG: ${{ steps.override-tag.outputs.tag }}
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
@@ -497,7 +611,9 @@ jobs:
               workflow_id: 'build-bitwarden-lite.yml',
               ref: 'main',
               inputs: {
-                server_branch: process.env.GITHUB_REF
+                server_branch: process.env.SERVER_BRANCH,
+                server_tag: process.env.SERVER_TAG,
+                override_tag: process.env.OVERRIDE_TAG
               }
             });
 
@@ -505,111 +621,33 @@ jobs:
     name: Trigger K8s deploy
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
-    needs: build-artifacts
-    permissions:
-      id-token: write
-    steps:
-      - name: Log in to Azure
-        uses: bitwarden/gh-actions/azure-login@main
-        with:
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
-
-      - name: Get Azure Key Vault secrets
-        id: get-kv-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@main
-        with:
-          keyvault: gh-org-bitwarden
-          secrets: "BW-GHAPP-ID,BW-GHAPP-KEY"
-
-      - name: Log out from Azure
-        uses: bitwarden/gh-actions/azure-logout@main
-
-      - name: Generate GH App token
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
-        id: app-token
-        with:
-          app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}
-          private-key: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: devops
-
-      - name: Trigger K8s deploy
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
-        with:
-          github-token: ${{ steps.app-token.outputs.token }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: 'bitwarden',
-              repo: 'devops',
-              workflow_id: 'deploy-k8s.yml',
-              ref: 'main',
-              inputs: {
-                environment: 'US-DEV Cloud',
-                tag: 'main'
-              }
-            })
-
-  setup-ephemeral-environment:
-    name: Setup Ephemeral Environment
-    needs: build-artifacts
-    if: |
-      needs.build-artifacts.outputs.has_secrets == 'true'
-      && github.event_name == 'pull_request'
-      && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
-    uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
-    with:
-      project: server
-      pull_request_number: ${{ github.event.number || 0 }}
-    secrets: inherit
-    permissions:
-      contents: read
-      id-token: write
-
-  check-failures:
-    name: Check for failures
-    if: always()
-    runs-on: ubuntu-22.04
     needs:
-      - lint
       - build-artifacts
-      - upload
-      - build-mssqlmigratorutility
-      - bitwarden-lite-build
-      - trigger-k8s-deploy
+      - image-manifest
     permissions:
       id-token: write
     steps:
-      - name: Check if any job failed
-        if: |
-          github.event_name != 'pull_request'
-          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-          && contains(needs.*.result, 'failure')
-        run: exit 1
-
-      - name: Log in to Azure
-        uses: bitwarden/gh-actions/azure-login@main
+      - name: Trigger deployment
+        uses: bitwarden/gh-actions/trigger-actions@main
         with:
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          task: deploy-server-dev
+          description: "Triggered by server build on main"
 
-      - name: Retrieve secrets
-        id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@main
-        if: failure()
+  trigger-downstream-build:
+    name: Trigger downstream build
+    if: github.event_name == 'push' && contains(fromJSON('["refs/heads/main", "refs/heads/rc", "refs/heads/hotfix-rc"]'), github.ref)
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+    steps:
+      - name: Trigger downstream build
+        uses: bitwarden/gh-actions/trigger-actions@main
         with:
-          keyvault: "bitwarden-ci"
-          secrets: "devops-alerts-slack-webhook-url"
-
-      - name: Log out from Azure
-        uses: bitwarden/gh-actions/azure-logout@main
-
-      - name: Notify Slack on failure
-        uses: act10ns/slack@44541246747a30eb3102d87f7a4cc5471b0ffb7d # v2.1.0
-        if: failure()
-        env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
-        with:
-          status: ${{ job.status }}
+          azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          task: build-downstream-artifacts
+          monitor-deployment: false

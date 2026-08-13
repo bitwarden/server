@@ -11,7 +11,7 @@ namespace Bit.Core.AdminConsole.Repositories;
 public interface IPolicyRepository : IRepository<Policy, Guid>
 {
     /// <summary>
-    /// Gets all policies of a given type for an organization.
+    /// Gets all policies of a given type for an organization where the user is in the Confirmed status.
     /// </summary>
     /// <remarks>
     /// WARNING: do not use this to enforce policies against a user! It returns raw data and does not take into account
@@ -19,7 +19,20 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// </remarks>
     Task<Policy?> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type);
     Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId);
+
+    /// <summary>
+    /// Gets all policies for a user across organizations where the user is in the Confirmed status.
+    /// </summary>
     Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId);
+
+    /// <summary>
+    /// Gets all policies for a user across organizations where the user is in the Confirmed or Accepted status.
+    /// </summary>
+    /// <remarks>
+    /// WARNING: do not use this to enforce policies against a user! It returns raw data and does not take into account
+    /// various business rules. Use <see cref="IPolicyRequirementQuery"/> instead.
+    /// </remarks>
+    Task<ICollection<Policy>> GetManyConfirmedAcceptedByUserIdAsync(Guid userId);
 
     /// <summary>
     /// Retrieves <see cref="OrganizationPolicyDetails"/> of the specified <paramref name="policyType"/>
@@ -44,4 +57,20 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// associated with the specified users and policy type.
     /// </returns>
     Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByUserIdsAndPolicyType(IEnumerable<Guid> userIds, PolicyType policyType);
+
+    /// <summary>
+    /// Retrieves policy details for a single user filtered by the specified policy type.
+    /// </summary>
+    /// <remarks>
+    /// Returns policy details only for enabled policies from enabled organizations that support policies.
+    /// This includes both confirmed users (matched by UserId) and invited users (matched by email).
+    /// Provider users are identified via the IsProvider flag.
+    /// </remarks>
+    /// <param name="userId">The user identifier for which policy details are to be fetched.</param>
+    /// <param name="policyType">The type of policy for which the details are required.</param>
+    /// <returns>
+    /// An asynchronous task that returns a collection of <see cref="PolicyDetails"/> objects containing
+    /// the policy information associated with the specified user and policy type.
+    /// </returns>
+    Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserIdAndPolicyTypeAsync(Guid userId, PolicyType policyType);
 }

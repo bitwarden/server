@@ -8,6 +8,10 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Billing.Organizations.Schedules;
+using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -50,6 +54,7 @@ public class StripePaymentService : IStripePaymentService
         _pricingClient = pricingClient;
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand
     private async Task ChangeOrganizationSponsorship(
         Organization org,
         OrganizationSponsorship sponsorship,
@@ -73,9 +78,11 @@ public class StripePaymentService : IStripePaymentService
         }
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand
     public Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, true);
 
+    // TODO: Remove -> Unused
     public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
@@ -119,16 +126,6 @@ public class StripePaymentService : IStripePaymentService
 
         if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            if (sub.Customer is
-                {
-                    Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates,
-                    TaxExempt: not StripeConstants.TaxExempt.Reverse
-                })
-            {
-                await _stripeAdapter.UpdateCustomerAsync(sub.CustomerId,
-                    new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
-            }
-
             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
@@ -227,6 +224,7 @@ public class StripePaymentService : IStripePaymentService
         return paymentIntentClientSecret;
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpgradeOrganizationPlanCommand
     public async Task<string> AdjustSubscription(
         Organization organization,
         StaticStore.Plan updatedPlan,
@@ -254,14 +252,17 @@ public class StripePaymentService : IStripePaymentService
                 }), true);
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated OrganizationService.AdjustSeatsAsync
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpdateSecretsManagerSubscriptionCommand
     public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(
             organization,
             new SmSeatSubscriptionUpdate(organization, plan, additionalSeats));
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpdateSecretsManagerSubscriptionCommand
     public Task<string> AdjustServiceAccountsAsync(
         Organization organization,
         StaticStore.Plan plan,
@@ -494,83 +495,6 @@ public class StripePaymentService : IStripePaymentService
         return paymentIntentClientSecret;
     }
 
-    public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false)
-    {
-        if (subscriber == null)
-        {
-            throw new ArgumentNullException(nameof(subscriber));
-        }
-
-        if (string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
-        {
-            throw new GatewayException("No subscription.");
-        }
-
-        var sub = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
-        if (sub == null)
-        {
-            throw new GatewayException("Subscription was not found.");
-        }
-
-        if (sub.CanceledAt.HasValue || sub.Status == "canceled" || sub.Status == "unpaid" ||
-            sub.Status == "incomplete_expired")
-        {
-            // Already canceled
-            return;
-        }
-
-        try
-        {
-            var canceledSub = endOfPeriod
-                ? await _stripeAdapter.UpdateSubscriptionAsync(sub.Id,
-                    new SubscriptionUpdateOptions { CancelAtPeriodEnd = true })
-                : await _stripeAdapter.CancelSubscriptionAsync(sub.Id, new SubscriptionCancelOptions());
-            if (!canceledSub.CanceledAt.HasValue)
-            {
-                throw new GatewayException("Unable to cancel subscription.");
-            }
-        }
-        catch (StripeException e)
-        {
-            if (e.Message != $"No such subscription: {subscriber.GatewaySubscriptionId}")
-            {
-                throw;
-            }
-        }
-    }
-
-    public async Task ReinstateSubscriptionAsync(ISubscriber subscriber)
-    {
-        if (subscriber == null)
-        {
-            throw new ArgumentNullException(nameof(subscriber));
-        }
-
-        if (string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
-        {
-            throw new GatewayException("No subscription.");
-        }
-
-        var sub = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
-        if (sub == null)
-        {
-            throw new GatewayException("Subscription was not found.");
-        }
-
-        if ((sub.Status != "active" && sub.Status != "trialing" && !sub.Status.StartsWith("incomplete")) ||
-            !sub.CanceledAt.HasValue)
-        {
-            throw new GatewayException("Subscription is not marked for cancellation.");
-        }
-
-        var updatedSub = await _stripeAdapter.UpdateSubscriptionAsync(sub.Id,
-            new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
-        if (updatedSub.CanceledAt.HasValue)
-        {
-            throw new GatewayException("Unable to reinstate subscription.");
-        }
-    }
-
     public async Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount)
     {
         Customer customer = null;
@@ -653,6 +577,8 @@ public class StripePaymentService : IStripePaymentService
             subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(discount);
         }
 
+        await ApplySchedulePhase2DataAsync(subscription, subscriptionInfo, subscriber);
+
         var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(subscription);
 
         if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
@@ -694,15 +620,130 @@ public class StripePaymentService : IStripePaymentService
         return subscriptionInfo;
     }
 
-    public async Task<string> AddSecretsManagerToSubscription(
-        Organization org,
-        StaticStore.Plan plan,
-        int additionalSmSeats,
-        int additionalServiceAccount) =>
-        await FinalizeSubscriptionChangeAsync(
-            org,
-            new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount),
-            true);
+    private async Task ApplySchedulePhase2DataAsync(Subscription subscription, SubscriptionInfo subscriptionInfo,
+        ISubscriber subscriber)
+    {
+        if (string.IsNullOrEmpty(subscription.ScheduleId))
+        {
+            return;
+        }
+
+        try
+        {
+            var schedule = await _stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
+                new SubscriptionScheduleGetOptions
+                {
+                    Expand = ["phases.discounts.coupon.applies_to", "phases.items.price"]
+                });
+
+            if (schedule.Status != StripeConstants.SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
+            {
+                return;
+            }
+
+            // An annual-upgrade phase 2 prices at a different interval, so its amounts don't belong
+            // on a still-monthly line item.
+            if (SubscriptionScheduleOwnershipMapper.MapSchedule(schedule) ==
+                OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
+            {
+                return;
+            }
+
+            var phase2 = schedule.Phases[1];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            if (phase2.StartDate < now)
+            {
+                return;
+            }
+
+            // Override line item amounts with Phase 2 prices
+            if (phase2.Items != null && subscriptionInfo.Subscription?.Items != null)
+            {
+                var items = subscriptionInfo.Subscription.Items.ToList();
+                var matchedPhase1Items = new HashSet<SubscriptionInfo.BillingSubscription.BillingSubscriptionItem>();
+                var unmatchedPhase2Items = new List<SubscriptionSchedulePhaseItem>();
+
+                // A Packaged migration source (e.g. Teams 2019) folds its base-bundle and seat-overage lines
+                // into one migrated seat line. Drop the overage line up front (keyed on the source plan's seat
+                // price) so the passes below reprice the base line instead of leaving its legacy amount.
+                if (subscriber is Organization organization && ShouldCollapseSeatOverageLine(organization))
+                {
+                    var sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+                    if (sourcePlan.PasswordManager is { StripeSeatPlanId: not null and not "" } passwordManager)
+                    {
+                        items.RemoveAll(item => item.PriceId == passwordManager.StripeSeatPlanId);
+                    }
+                }
+
+                // Pass 1: Match by product ID
+                foreach (var phase2Item in phase2.Items)
+                {
+                    if (phase2Item.Price is not { UnitAmount: not null, ProductId: not null })
+                    {
+                        continue;
+                    }
+
+                    var matchingItem = items.FirstOrDefault(i => i.ProductId == phase2Item.Price.ProductId);
+                    if (matchingItem != null)
+                    {
+                        matchingItem.Amount = phase2Item.Price.UnitAmount.Value / 100M;
+                        matchedPhase1Items.Add(matchingItem);
+                    }
+                    else
+                    {
+                        unmatchedPhase2Items.Add(phase2Item);
+                    }
+                }
+
+                // Pass 2: Fallback for cross-product migrations (e.g., Families 2019 → current Families)
+                // where the old and new plans use different Stripe products.
+                foreach (var phase2Item in unmatchedPhase2Items)
+                {
+                    var fallbackItem = items.FirstOrDefault(i =>
+                        !matchedPhase1Items.Contains(i) && !i.AddonSubscriptionItem);
+
+                    if (fallbackItem != null)
+                    {
+                        fallbackItem.Amount = phase2Item.Price.UnitAmount!.Value / 100M;
+                        fallbackItem.ProductId = phase2Item.Price.ProductId;
+                        fallbackItem.Name = phase2Item.Price.Nickname;
+                        // A packaged base line (qty 1) collapses onto a scalable seat line whose quantity
+                        // is the migrated seat count; carry it so the Phase 2 preview total is correct.
+                        fallbackItem.Quantity = (int)phase2Item.Quantity;
+                        matchedPhase1Items.Add(fallbackItem);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Phase 2 item with product {ProductId} could not be matched to any Phase 1 item for subscription schedule ({ScheduleId})",
+                            phase2Item.Price.ProductId,
+                            subscription.ScheduleId);
+                    }
+                }
+
+                subscriptionInfo.Subscription.Items = items;
+            }
+
+            // Override discount with Phase 2 discount
+            var phase2Discount = phase2.Discounts?.FirstOrDefault();
+            if (phase2Discount?.Coupon != null)
+            {
+                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
+                subscriptionInfo.CustomerDiscount.IsFromSchedule = true;
+            }
+        }
+        catch (StripeException ex)
+        {
+            // Fallback: user sees current Phase 1 prices instead of Phase 2 prices.
+            // Accepted tradeoff: showing current data is better than failing the page.
+            _logger.LogWarning(ex,
+                "Failed to retrieve subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}), Phase 2 data resolution. Error Code: {ErrorCode}",
+                subscription.ScheduleId,
+                subscription.Id,
+                ex.StripeError?.Code);
+        }
+    }
 
     public async Task<bool> HasSecretsManagerStandalone(Organization organization) =>
         await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,
@@ -913,4 +954,15 @@ public class StripePaymentService : IStripePaymentService
             throw new GatewayException("Failed to retrieve current invoices", exception);
         }
     }
+
+    /// <summary>
+    /// Evaluates whether the organization's pending migration folds a legacy seat-overage line into the migrated
+    /// seat line — true only for usage-resolved Packaged sources (e.g. Teams 2019).
+    /// </summary>
+    /// <param name="organization">The organization to evaluate.</param>
+    /// <returns>True if the seat-overage line should be collapsed into the migrated seat line.</returns>
+    private static bool ShouldCollapseSeatOverageLine(Organization organization) =>
+        MigrationPaths.All.Any(path =>
+            path.FromPlan == organization.PlanType &&
+            path.SeatCountPolicy == SeatCountPolicy.ActualUsage);
 }

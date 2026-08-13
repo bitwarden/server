@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "user": {
+    "email": "blobmigration@individual.example",
+    "premium": true,
+    "maxStorageGb": 1
+  },
+  "ciphers": { "fixture": "blob-migration" }
+}

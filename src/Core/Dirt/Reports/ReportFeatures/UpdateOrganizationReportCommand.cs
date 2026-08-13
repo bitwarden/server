@@ -4,7 +4,10 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -13,15 +16,17 @@ public class UpdateOrganizationReportCommand : IUpdateOrganizationReportCommand
     private readonly IOrganizationRepository _organizationRepo;
     private readonly IOrganizationReportRepository _organizationReportRepo;
     private readonly ILogger<UpdateOrganizationReportCommand> _logger;
-
+    private readonly IFusionCache _cache;
     public UpdateOrganizationReportCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationReportRepository organizationReportRepository,
-        ILogger<UpdateOrganizationReportCommand> logger)
+        ILogger<UpdateOrganizationReportCommand> logger,
+        [FromKeyedServices(OrganizationReportCacheConstants.CacheName)] IFusionCache cache)
     {
         _organizationRepo = organizationRepository;
         _organizationReportRepo = organizationReportRepository;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task<OrganizationReport> UpdateOrganizationReportAsync(UpdateOrganizationReportRequest request)
@@ -61,6 +66,9 @@ public class UpdateOrganizationReportCommand : IUpdateOrganizationReportCommand
 
             await _organizationReportRepo.UpsertAsync(existingReport);
 
+            // Invalidate cache
+            await _cache.RemoveByTagAsync(OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(request.OrganizationId));
+
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);
 
@@ -83,16 +91,6 @@ public class UpdateOrganizationReportCommand : IUpdateOrganizationReportCommand
 
     private async Task<(bool IsValid, string errorMessage)> ValidateRequestAsync(UpdateOrganizationReportRequest request)
     {
-        if (request.OrganizationId == Guid.Empty)
-        {
-            return (false, "OrganizationId is required");
-        }
-
-        if (request.ReportId == Guid.Empty)
-        {
-            return (false, "ReportId is required");
-        }
-
         var organization = await _organizationRepo.GetByIdAsync(request.OrganizationId);
         if (organization == null)
         {

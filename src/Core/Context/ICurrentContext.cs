@@ -32,7 +32,7 @@ public interface ICurrentContext
     Guid? OrganizationId { get; set; }
     IdentityClientType IdentityClientType { get; set; }
     string ClientId { get; set; }
-    Version ClientVersion { get; set; }
+    Version? ClientVersion { get; set; }
     bool ClientVersionIsPrerelease { get; set; }
 
     Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
@@ -79,8 +79,6 @@ public interface ICurrentContext
     bool ProviderUser(Guid providerId);
     bool ProviderManageUsers(Guid providerId);
     bool ProviderAccessEventLogs(Guid providerId);
-    bool AccessProviderOrganizations(Guid providerId);
-    bool ManageProviderOrganizations(Guid providerId);
 
     Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
         IOrganizationUserRepository organizationUserRepository, Guid userId);

@@ -45,42 +45,12 @@ public static class CoreHelpers
     /// information for sequential ordering. This should be preferred to <see cref="Guid.NewGuid"/> for any database IDs.
     /// </summary>
     /// <remarks>
-    /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
+    /// Delegates to <see cref="CombGuid"/>, which is the shared implementation in the Data project.
     /// </remarks>
     /// <returns>A comb Guid.</returns>
+    [Obsolete("Use Bit.Core.Utilities.CombGuid.Generate() instead.")]
     public static Guid GenerateComb()
-        => GenerateComb(Guid.NewGuid(), DateTime.UtcNow);
-
-    /// <summary>
-    /// Implementation of <see cref="GenerateComb()" /> with input parameters to remove randomness.
-    /// This should NOT be used outside of testing.
-    /// </summary>
-    /// <remarks>
-    /// You probably don't want to use this method and instead want to use <see cref="GenerateComb()" /> with no parameters
-    /// </remarks>
-    internal static Guid GenerateComb(Guid startingGuid, DateTime time)
-    {
-        var guidArray = startingGuid.ToByteArray();
-
-        // Get the days and milliseconds which will be used to build the byte string
-        var days = new TimeSpan(time.Ticks - _baseDateTicks);
-        var msecs = time.TimeOfDay;
-
-        // Convert to a byte array
-        // Note that SQL Server is accurate to 1/300th of a millisecond so we divide by 3.333333
-        var daysArray = BitConverter.GetBytes(days.Days);
-        var msecsArray = BitConverter.GetBytes((long)(msecs.TotalMilliseconds / 3.333333));
-
-        // Reverse the bytes to match SQL Servers ordering
-        Array.Reverse(daysArray);
-        Array.Reverse(msecsArray);
-
-        // Copy the bytes into the guid
-        Array.Copy(daysArray, daysArray.Length - 2, guidArray, guidArray.Length - 6, 2);
-        Array.Copy(msecsArray, msecsArray.Length - 4, guidArray, guidArray.Length - 4, 4);
-
-        return new Guid(guidArray);
-    }
+        => CombGuid.Generate();
 
     internal static DateTime DateFromComb(Guid combGuid)
     {
@@ -141,7 +111,7 @@ public static class CoreHelpers
 
     public static X509Certificate2 GetCertificate(string file, string password)
     {
-        return new X509Certificate2(file, password);
+        return LoadCertificateByContentType(File.ReadAllBytes(file), password);
     }
 
     public async static Task<X509Certificate2> GetEmbeddedCertificateAsync(string file, string password)
@@ -151,7 +121,7 @@ public static class CoreHelpers
         using (var ms = new MemoryStream())
         {
             await s.CopyToAsync(ms);
-            return new X509Certificate2(ms.ToArray(), password);
+            return LoadCertificateByContentType(ms.ToArray(), password);
         }
     }
 
@@ -176,7 +146,7 @@ public static class CoreHelpers
 
             using var memStream = new MemoryStream();
             await blobRef.DownloadToAsync(memStream).ConfigureAwait(false);
-            return new X509Certificate2(memStream.ToArray(), password);
+            return LoadCertificateByContentType(memStream.ToArray(), password);
         }
         catch (RequestFailedException ex)
         when (ex.ErrorCode == BlobErrorCode.ContainerNotFound || ex.ErrorCode == BlobErrorCode.BlobNotFound)
@@ -188,6 +158,13 @@ public static class CoreHelpers
             return null;
         }
     }
+
+    private static X509Certificate2 LoadCertificateByContentType(byte[] data, string password) =>
+        X509Certificate2.GetCertContentType(data) switch
+        {
+            X509ContentType.Pkcs12 => X509CertificateLoader.LoadPkcs12(data, password),
+            _ => X509CertificateLoader.LoadCertificate(data),
+        };
 
     public static long ToEpocMilliseconds(DateTime date)
     {
@@ -515,7 +492,13 @@ public static class CoreHelpers
         return val.ToString();
     }
 
-    public static string SanitizeForEmail(string value, bool htmlEncode = true)
+    /// <summary>
+    /// Sanitizes a value for display in an email by neutralizing anything that looks like an
+    /// address or link (e.g. "@" and "scheme://"). It deliberately does NOT HTML-encode the
+    /// result: the mail templates are rendered by Handlebars, which HTML-encodes interpolated
+    /// values ({{ }}) by default. Encoding here as well produced double-encoded output.
+    /// </summary>
+    public static string SanitizeForEmail(string value)
     {
         var cleanedValue = value.Replace("@", "[at]");
         var regexOptions = RegexOptions.CultureInvariant |
@@ -528,7 +511,7 @@ public static class CoreHelpers
             cleanedValue = Regex.Replace(cleanedValue, @"((^|\b)(\w*)://)",
                 string.Empty, regexOptions);
         }
-        return htmlEncode ? HttpUtility.HtmlEncode(cleanedValue) : cleanedValue;
+        return cleanedValue;
     }
 
     public static string DateTimeToTableStorageKey(DateTime? date = null)
@@ -574,14 +557,6 @@ public static class CoreHelpers
     public static string CustomProviderName(TwoFactorProviderType type)
     {
         return string.Concat("Custom_", type.ToString());
-    }
-
-    // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-    public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
-        Guid orgUserId, IGlobalSettings globalSettings)
-    {
-        return TokenIsValid("OrganizationUserInvite", protector, token, userEmail, orgUserId,
-            globalSettings.OrganizationInviteExpirationHours);
     }
 
     public static bool TokenIsValid(string firstTokenPart, IDataProtector protector, string token, string userEmail,
@@ -655,6 +630,8 @@ public static class CoreHelpers
             origin == globalSettings.BaseServiceUri.Vault ||
             // Safari extension origin
             origin == "file://" ||
+            // Desktop application custom file protocol
+            origin == "bw-desktop-file://bundle" ||
             // Product website
             (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
     }
@@ -686,6 +663,11 @@ public static class CoreHelpers
     public static Dictionary<string, object> AdjustIdentityServerConfig(Dictionary<string, object> configDict,
         string publicServiceUri, string internalServiceUri)
     {
+        // Remove metadata for endpoints/features we don't support
+        configDict.Remove("revocation_endpoint_auth_methods_supported");
+        configDict.Remove("introspection_endpoint_auth_methods_supported");
+        configDict.Remove("backchannel_authentication_request_signing_alg_values_supported");
+
         var dictReplace = new Dictionary<string, object>();
         foreach (var item in configDict)
         {
@@ -775,6 +757,12 @@ public static class CoreHelpers
                     {
                         claims.Add(new KeyValuePair<string, string>(Claims.SecretsManagerAccess, org.Id.ToString()));
                     }
+                }
+
+                // Privileged Access Manager
+                foreach (var org in group.Where(o => o.AccessPam))
+                {
+                    claims.Add(new KeyValuePair<string, string>(Claims.PamAccess, org.Id.ToString()));
                 }
             }
         }

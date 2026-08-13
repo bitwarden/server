@@ -31,6 +31,9 @@ public class OrganizationAbility
         UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation;
         UseDisableSmAdsForUsers = organization.UseDisableSmAdsForUsers;
         UsePhishingBlocker = organization.UsePhishingBlocker;
+        UseMyItems = organization.UseMyItems;
+        UseInviteLinks = organization.UseInviteLinks;
+        UsePam = organization.UsePam;
     }
 
     public Guid Id { get; set; }
@@ -55,4 +58,7 @@ public class OrganizationAbility
     public bool UseAutomaticUserConfirmation { get; set; }
     public bool UseDisableSmAdsForUsers { get; set; }
     public bool UsePhishingBlocker { get; set; }
+    public bool UseMyItems { get; set; }
+    public bool UseInviteLinks { get; set; }
+    public bool UsePam { get; set; }
 }

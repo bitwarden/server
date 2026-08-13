@@ -1,9 +1,9 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
+﻿using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
@@ -18,7 +18,7 @@ public abstract class BaseIdentityClientService : IDisposable
     private readonly string _identityClientSecret;
     protected readonly ILogger<BaseIdentityClientService> _logger;
 
-    private JsonDocument _decodedToken;
+    private JsonDocument? _decodedToken;
     private DateTime? _nextAuthAttempt = null;
 
     public BaseIdentityClientService(
@@ -47,15 +47,15 @@ public abstract class BaseIdentityClientService : IDisposable
 
     protected HttpClient Client { get; private set; }
     protected HttpClient IdentityClient { get; private set; }
-    protected string AccessToken { get; private set; }
+    protected string? AccessToken { get; private set; }
 
     protected Task SendAsync(HttpMethod method, string path) =>
-        SendAsync<object>(method, path, null);
+        SendAsync<object?>(method, path, null);
 
     protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest requestModel) =>
         SendAsync<TRequest, object>(method, path, requestModel, false);
 
-    protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path,
+    protected async Task<TResult?> SendAsync<TRequest, TResult>(HttpMethod method, string path,
         TRequest requestModel, bool hasJsonResult)
     {
         var fullRequestPath = string.Concat(Client.BaseAddress, path);
@@ -63,10 +63,13 @@ public abstract class BaseIdentityClientService : IDisposable
         var tokenStateResponse = await HandleTokenStateAsync();
         if (!tokenStateResponse)
         {
-            _logger.LogError("Unable to send {method} request to {requestUri} because an access token was unable to be obtained",
+            _logger.LogError("Unable to send {Method} request to {RequestUri} because an access token was unable to be obtained",
                 method.Method, fullRequestPath);
             return default;
         }
+
+        // HandleTokenStateAsync should not return true when AccessToken is still null
+        Debug.Assert(AccessToken is not null);
 
         var message = new TokenHttpRequestMessage(requestModel, AccessToken)
         {
@@ -85,8 +88,9 @@ public abstract class BaseIdentityClientService : IDisposable
             }
             else
             {
-                _logger.LogError("Request to {url} is unsuccessful with status of {code}-{reason}",
-                    message.RequestUri.ToString(), response.StatusCode, response.ReasonPhrase);
+                var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                _logger.LogError("Request to {Url} is unsuccessful with status of {Code}-{Reason}: {Message}",
+                    message.RequestUri.ToString(), response.StatusCode, response.ReasonPhrase, errorResponse);
             }
             return default;
         }
@@ -124,7 +128,7 @@ public abstract class BaseIdentityClientService : IDisposable
             })
         };
 
-        HttpResponseMessage response = null;
+        HttpResponseMessage? response = null;
         try
         {
             response = await IdentityClient.SendAsync(requestMessage);
@@ -172,13 +176,39 @@ public abstract class BaseIdentityClientService : IDisposable
             Headers.Add("Authorization", $"Bearer {token}");
         }
 
-        public TokenHttpRequestMessage(object requestObject, string token)
+        public TokenHttpRequestMessage(object? requestObject, string token)
             : this(token)
         {
             if (requestObject != null)
             {
                 Content = JsonContent.Create(requestObject);
             }
+        }
+    }
+    private class ErrorResponse
+    {
+        public string? Message { get; set; }
+        public Dictionary<string, string[]>? ValidationErrors { get; set; }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine(Message ?? "Unknown error");
+
+            if (ValidationErrors != null)
+            {
+                sb.AppendLine("Validation Errors:");
+
+                foreach (var (key, value) in ValidationErrors)
+                {
+                    sb.Append(CultureInfo.InvariantCulture, $"{key}: ");
+                    sb.AppendJoin(", ", value);
+                    sb.AppendLine();
+                }
+            }
+
+            return sb.ToString();
         }
     }
 

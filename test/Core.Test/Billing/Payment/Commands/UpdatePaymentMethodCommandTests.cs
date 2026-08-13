@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Models;
@@ -25,7 +24,6 @@ public class UpdatePaymentMethodCommandTests
     private readonly IBraintreeGateway _braintreeGateway = Substitute.For<IBraintreeGateway>();
     private readonly IBraintreeService _braintreeService = Substitute.For<IBraintreeService>();
     private readonly IGlobalSettings _globalSettings = Substitute.For<IGlobalSettings>();
-    private readonly ISetupIntentCache _setupIntentCache = Substitute.For<ISetupIntentCache>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly UpdatePaymentMethodCommand _command;
@@ -37,7 +35,6 @@ public class UpdatePaymentMethodCommandTests
             _braintreeService,
             _globalSettings,
             Substitute.For<ILogger<UpdatePaymentMethodCommand>>(),
-            _setupIntentCache,
             _stripeAdapter,
             _subscriberService);
     }
@@ -102,7 +99,8 @@ public class UpdatePaymentMethodCommandTests
         Assert.Equal("9999", maskedBankAccount.Last4);
         Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
 
-        await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
+        await _stripeAdapter.Received(1).UpdateSetupIntentAsync(setupIntent.Id,
+            Arg.Is<SetupIntentUpdateOptions>(options => options.Customer == customer.Id));
     }
 
     [Fact]
@@ -166,7 +164,8 @@ public class UpdatePaymentMethodCommandTests
 
         await _subscriberService.Received(1).CreateStripeCustomer(organization);
 
-        await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
+        await _stripeAdapter.Received(1).UpdateSetupIntentAsync(setupIntent.Id,
+            Arg.Is<SetupIntentUpdateOptions>(options => options.Customer == customer.Id));
     }
 
     [Fact]
@@ -233,7 +232,8 @@ public class UpdatePaymentMethodCommandTests
         Assert.Equal("9999", maskedBankAccount.Last4);
         Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
 
-        await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
+        await _stripeAdapter.Received(1).UpdateSetupIntentAsync(setupIntent.Id,
+            Arg.Is<SetupIntentUpdateOptions>(options => options.Customer == customer.Id));
         await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id, Arg.Is<CustomerUpdateOptions>(options =>
             options.Metadata[MetadataKeys.BraintreeCustomerId] == string.Empty &&
             options.Metadata[MetadataKeys.RetiredBraintreeCustomerId] == "braintree_customer_id"));

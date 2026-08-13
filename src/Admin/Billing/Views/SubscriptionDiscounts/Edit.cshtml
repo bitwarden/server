@@ -1,0 +1,133 @@
+@model EditSubscriptionDiscountModel
+@{
+    ViewData["Title"] = "Edit Discount";
+}
+
+<h1>Edit Discount</h1>
+
+<div asp-validation-summary="All" class="alert alert-danger"></div>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" id="edit-form">
+    <input type="hidden" asp-for="StripeCouponId" />
+    <input type="hidden" asp-for="Name" />
+    <input type="hidden" asp-for="PercentOff" />
+    <input type="hidden" asp-for="AmountOff" />
+    <input type="hidden" asp-for="Currency" />
+    <input type="hidden" asp-for="Duration" />
+    <input type="hidden" asp-for="DurationInMonths" />
+    @if (Model.AppliesToProducts != null)
+    {
+        var index = 0;
+        @foreach (var product in Model.AppliesToProducts)
+        {
+            <input type="hidden" name="AppliesToProducts[@index].Key" value="@product.Key" />
+            <input type="hidden" name="AppliesToProducts[@index].Value" value="@product.Value" />
+            index++;
+        }
+    }
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5>Stripe Coupon Details</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Coupon ID:</dt>
+                <dd class="col-sm-9"><code>@Model.StripeCouponId</code></dd>
+
+                @if (!string.IsNullOrEmpty(Model.Name))
+                {
+                    <dt class="col-sm-3">Name:</dt>
+                    <dd class="col-sm-9">@Model.Name</dd>
+                }
+
+                <dt class="col-sm-3">Discount:</dt>
+                <dd class="col-sm-9">
+                    @if (Model.PercentOff.HasValue)
+                    {
+                        <text>@Model.PercentOff% off</text>
+                    }
+                    else if (Model.AmountOff.HasValue)
+                    {
+                        <text>$@(Model.AmountOff / 100m) off</text>
+                        @if (!string.IsNullOrEmpty(Model.Currency))
+                        {
+                            <text> (@Model.Currency.ToUpper())</text>
+                        }
+                    }
+                </dd>
+
+                <dt class="col-sm-3">Duration:</dt>
+                <dd class="col-sm-9">
+                    @Model.Duration
+                    @if (Model.DurationInMonths.HasValue)
+                    {
+                        <text>(@Model.DurationInMonths months)</text>
+                    }
+                </dd>
+
+                @if (Model.AppliesToProducts != null && Model.AppliesToProducts.Count != 0)
+                {
+                    <dt class="col-sm-3">Applies To Products:</dt>
+                    <dd class="col-sm-9">
+                        <ul class="mb-0">
+                            @foreach (var product in Model.AppliesToProducts)
+                            {
+                                <li>@product.Value</li>
+                            }
+                        </ul>
+                    </dd>
+                }
+                else if (Model.StripeProductIds != null && Model.StripeProductIds.Count != 0)
+                {
+                    <dt class="col-sm-3">Applies To Products:</dt>
+                    <dd class="col-sm-9">
+                        <ul class="mb-0">
+                            @foreach (var productId in Model.StripeProductIds)
+                            {
+                                <li><code>@productId</code></li>
+                            }
+                        </ul>
+                    </dd>
+                }
+            </dl>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5>Bitwarden Configuration</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label asp-for="StartDate" class="form-label"></label>
+                        <input asp-for="StartDate" type="date" class="form-control" required />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label asp-for="EndDate" class="form-label"></label>
+                        <input asp-for="EndDate" type="date" class="form-control" required />
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input asp-for="RestrictToNewUsersOnly" type="checkbox" class="form-check-input" />
+                <label asp-for="RestrictToNewUsersOnly" class="form-check-label"></label>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="d-flex mt-4">
+    <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
+    <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+    <div class="ms-auto d-flex">
+        <form method="post" asp-action="Delete" asp-route-id="@Model.Id"
+              onsubmit="return confirm('Are you sure you want to delete this discount?')">
+            <button class="btn btn-danger" type="submit">Delete Discount</button>
+        </form>
+    </div>
+</div>

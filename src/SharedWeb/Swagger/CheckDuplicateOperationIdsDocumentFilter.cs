@@ -1,4 +1,4 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;
@@ -15,19 +15,22 @@ public class CheckDuplicateOperationIdsDocumentFilter(bool printDuplicates = tru
 
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
     {
-        var operationIdMap = new Dictionary<string, List<(string Path, OpenApiPathItem PathItem, OperationType Method, OpenApiOperation Operation)>>();
+        var operationIdMap = new Dictionary<string, List<(string Path, IOpenApiPathItem PathItem, HttpMethod Method, OpenApiOperation Operation)>>();
 
         foreach (var (path, pathItem) in swaggerDoc.Paths)
         {
-            foreach (var operation in pathItem.Operations)
+            if (pathItem.Operations is null) continue;
+
+            foreach (var (method, operation) in pathItem.Operations)
             {
-                if (!operationIdMap.TryGetValue(operation.Value.OperationId, out var list))
+                var operationId = operation.OperationId ?? string.Empty;
+                if (!operationIdMap.TryGetValue(operationId, out var list))
                 {
                     list = [];
-                    operationIdMap[operation.Value.OperationId] = list;
+                    operationIdMap[operationId] = list;
                 }
 
-                list.Add((path, pathItem, operation.Key, operation.Value));
+                list.Add((path, pathItem, method, operation));
 
             }
         }
@@ -57,11 +60,15 @@ public class CheckDuplicateOperationIdsDocumentFilter(bool printDuplicates = tru
                     {
                         Console.Write($"    {method.ToString().ToUpper()} {path}");
 
+                        if (operation.Extensions is null) continue;
 
-                        if (operation.Extensions.TryGetValue("x-source-file", out var sourceFile) && operation.Extensions.TryGetValue("x-source-line", out var sourceLine))
+                        if (operation.Extensions.TryGetValue("x-source-file", out var sourceFile)
+                            && operation.Extensions.TryGetValue("x-source-line", out var sourceLine)
+                            && sourceFile is JsonNodeExtension sourceFileNodeExt
+                            && sourceLine is JsonNodeExtension sourceLineNodeExt)
                         {
-                            var sourceFileString = ((Microsoft.OpenApi.Any.OpenApiString)sourceFile).Value;
-                            var sourceLineString = ((Microsoft.OpenApi.Any.OpenApiInteger)sourceLine).Value;
+                            var sourceFileString = sourceFileNodeExt.Node.ToString();
+                            var sourceLineString = sourceLineNodeExt.Node.ToString();
 
                             Console.WriteLine($"    {sourceFileString}:{sourceLineString}");
                         }

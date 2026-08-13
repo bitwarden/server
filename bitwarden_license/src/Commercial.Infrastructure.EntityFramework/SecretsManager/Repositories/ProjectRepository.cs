@@ -22,6 +22,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         {
             var dbContext = GetDatabaseContext(scope);
             var project = await dbContext.Project
+                                    .AsNoTracking()
                                     .Where(c => c.Id == id && c.DeletedDate == null)
                                     .FirstOrDefaultAsync();
             return Mapper.Map<Core.SecretsManager.Entities.Project>(project);
@@ -36,7 +37,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null).OrderBy(p => p.RevisionDate);
+        var query = dbContext.Project.AsNoTracking().Where(p => p.OrganizationId == organizationId && p.DeletedDate == null).OrderBy(p => p.RevisionDate);
 
         var projects = ProjectToPermissionDetails(query, userId, accessType);
 
@@ -58,7 +59,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
+        var query = dbContext.Project.AsNoTracking().Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
 
         query = accessType switch
         {
@@ -118,6 +119,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         {
             var dbContext = GetDatabaseContext(scope);
             var projects = await dbContext.Project
+                .AsNoTracking()
                 .Include(p => p.Secrets)
                 .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
                 .ToListAsync();
@@ -141,6 +143,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         var dbContext = GetDatabaseContext(scope);
 
         var projectQuery = dbContext.Project
+            .AsNoTracking()
             .Where(s => s.Id == id);
 
         var accessQuery = BuildProjectAccessQuery(projectQuery, userId, accessType);
@@ -153,7 +156,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var results = await dbContext.Project.Where(p => p.OrganizationId == organizationId && projectIds.Contains(p.Id)).ToListAsync();
+        var results = await dbContext.Project.AsNoTracking().Where(p => p.OrganizationId == organizationId && projectIds.Contains(p.Id)).ToListAsync();
 
         return projectIds.Count == results.Count;
     }
@@ -166,7 +169,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var projectsQuery = dbContext.Project.Where(p => projectIds.Contains(p.Id));
+        var projectsQuery = dbContext.Project.AsNoTracking().Where(p => projectIds.Contains(p.Id));
         var accessQuery = BuildProjectAccessQuery(projectsQuery, userId, accessType);
 
         return await accessQuery.ToDictionaryAsync(pa => pa.Id, pa => (pa.Read, pa.Write));
@@ -177,7 +180,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
+        var query = dbContext.Project.AsNoTracking().Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
 
         query = accessType switch
         {
@@ -193,7 +196,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Project.Where(p => p.Id == projectId && p.DeletedDate == null);
+        var query = dbContext.Project.AsNoTracking().Where(p => p.Id == projectId && p.DeletedDate == null);
 
         var queryReadAccess = accessType switch
         {

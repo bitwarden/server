@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "name": "Density MegaGroup Test",
+    "domain": "density-megagroup.example",
+    "planType": "enterprise-annually"
+  },
+  "users": { "count": 100 },
+  "groups": { "count": 5 },
+  "collections": { "count": 100 },
+  "density": {
+    "membership": { "shape": "megaGroup", "skew": 0.9 },
+    "collectionFanOut": {
+      "min": 1,
+      "max": 3,
+      "shape": "frontLoaded"
+    },
+    "directAccessRatio": 0.0,
+    "permissions": {
+      "readOnly": 0.25,
+      "readWrite": 0.25,
+      "manage": 0.25,
+      "hidePasswords": 0.25
+    }
+  },
+  "ciphers": { "count": 1000 }
+}

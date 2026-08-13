@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System.Net;
+using Bit.Core.Utilities;
 using Bit.Icons.Extensions;
 
 namespace Bit.Icons.Models;

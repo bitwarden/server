@@ -65,6 +65,7 @@ public class BusinessUnitConverter(
         organization.MaxCollections = updatedPlan.PasswordManager.MaxCollections;
         organization.MaxStorageGb = updatedPlan.PasswordManager.BaseStorageGb;
         organization.UsePolicies = updatedPlan.HasPolicies;
+        organization.UseMyItems = updatedPlan.HasMyItems;
         organization.UseSso = updatedPlan.HasSso;
         organization.UseOrganizationDomains = updatedPlan.HasOrganizationDomains;
         organization.UseGroups = updatedPlan.HasGroups;
@@ -78,6 +79,7 @@ public class BusinessUnitConverter(
         organization.UsersGetPremium = updatedPlan.UsersGetPremium;
         organization.UseCustomPermissions = updatedPlan.HasCustomPermissions;
         organization.UseScim = updatedPlan.HasScim;
+        organization.UseRiskInsights = updatedPlan.HasRiskInsights;
         organization.UseKeyConnector = updatedPlan.HasKeyConnector;
         organization.MaxStorageGb = updatedPlan.PasswordManager.BaseStorageGb;
         organization.BillingEmail = provider.BillingEmail!;
@@ -331,6 +333,11 @@ public class BusinessUnitConverter(
             Fail("Organization must be on an enterprise plan.");
         }
 
+        if (organization.UseSecretsManager)
+        {
+            Fail("Organization is subscribed to Secrets Manager.");
+        }
+
         var subscription = await subscriberService.GetSubscription(organization);
 
         if (subscription is not
@@ -415,6 +422,11 @@ public class BusinessUnitConverter(
         if (organization.PlanType.GetProductTier() != ProductTierType.Enterprise)
         {
             problems.Add("Organization must be on an enterprise plan.");
+        }
+
+        if (organization.UseSecretsManager)
+        {
+            problems.Add("Organization is subscribed to Secrets Manager. Please contact Customer Support to convert this organization to a business unit.");
         }
 
         var subscription = await subscriberService.GetSubscription(organization);

@@ -59,7 +59,7 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
         var policyDetail = _policyDetails
             .FirstOrDefault(p => p.OrganizationId == organizationId);
 
-        if (policyDetail != null && policyDetail.HasStatus([OrganizationUserStatusType.Confirmed]))
+        if (policyDetail is { OrganizationUserStatus: OrganizationUserStatusType.Confirmed })
         {
             return new DefaultCollectionRequest(policyDetail.OrganizationUserId, true);
         }
@@ -68,9 +68,14 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
         return noCollectionNeeded;
     }
 
-    public bool RequiresDefaultCollectionOnConfirm(Guid organizationId)
+    public DefaultCollectionRequest GetDefaultCollectionRequestOnConfirm(Guid organizationId)
     {
-        return _policyDetails.Any(p => p.OrganizationId == organizationId);
+        var matchingOrgUserId =
+            _policyDetails.FirstOrDefault(p => p.OrganizationId == organizationId)?.OrganizationUserId;
+
+        return new DefaultCollectionRequest(
+            OrganizationUserId: matchingOrgUserId.GetValueOrDefault(Guid.Empty),
+            ShouldCreateDefaultCollection: matchingOrgUserId.HasValue);
     }
 
     /// <summary>
@@ -78,11 +83,8 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     /// Allows users to seamlessly migrate their data into the organization without being blocked by storage limits.
     /// Organization admins will need to manage storage after migration should overages occur.
     /// </summary>
-    public bool IgnoreStorageLimitsOnMigration(Guid organizationId)
-    {
-        return _policyDetails.Any(p => p.OrganizationId == organizationId &&
-                                       p.OrganizationUserStatus == OrganizationUserStatusType.Confirmed);
-    }
+    public bool IgnoreStorageLimitsOnMigration(Guid organizationId) =>
+        AppliesToConfirmedUserForOrganization(organizationId);
 
     /// <summary>
     /// Determines if a user is eligible for self-revocation under the Organization Data Ownership policy.
@@ -94,13 +96,14 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     /// <remarks>
     /// Self-revoke is used to opt out of migrating the user's personal vault to the organization as required by this policy.
     /// </remarks>
-    public bool EligibleForSelfRevoke(Guid organizationId)
-    {
-        var policyDetail = _policyDetails
-            .FirstOrDefault(p => p.OrganizationId == organizationId);
+    public bool EligibleForSelfRevoke(Guid organizationId) => AppliesToConfirmedUserForOrganization(organizationId);
 
-        return policyDetail?.HasStatus([OrganizationUserStatusType.Confirmed]) ?? false;
-    }
+    public bool GetDefaultCollectionRequestOnUpdate(Guid organizationId) =>
+        AppliesToConfirmedUserForOrganization(organizationId);
+
+    private bool AppliesToConfirmedUserForOrganization(Guid organizationId) =>
+        _policyDetails.Any(p =>
+            p.OrganizationId == organizationId && p.OrganizationUserStatus == OrganizationUserStatusType.Confirmed);
 }
 
 public record DefaultCollectionRequest(Guid OrganizationUserId, bool ShouldCreateDefaultCollection)

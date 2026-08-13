@@ -23,19 +23,22 @@ public class GroupsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
+    private readonly TimeProvider _timeProvider;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
         ICurrentContext currentContext,
         ICreateGroupCommand createGroupCommand,
-        IUpdateGroupCommand updateGroupCommand)
+        IUpdateGroupCommand updateGroupCommand,
+        TimeProvider timeProvider)
     {
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
         _currentContext = currentContext;
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -168,7 +171,7 @@ public class GroupsController : Controller
         {
             return new NotFoundResult();
         }
-        await _groupRepository.UpdateUsersAsync(existingGroup.Id, model.MemberIds);
+        await _groupRepository.UpdateUsersAsync(existingGroup.Id, model.MemberIds, _timeProvider.GetUtcNow().UtcDateTime);
         return new OkResult();
     }
 

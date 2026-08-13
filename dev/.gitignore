@@ -19,3 +19,5 @@ signingkey.jwk
 # Reverse Proxy Conifg
 reverse-proxy.conf
 *.crt
+
+seeds.local.json

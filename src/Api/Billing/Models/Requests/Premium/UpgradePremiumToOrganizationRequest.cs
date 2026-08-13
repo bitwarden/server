@@ -14,11 +14,19 @@ public class UpgradePremiumToOrganizationRequest
     public string Key { get; set; } = null!;
 
     [Required]
+    public string PublicKey { get; set; } = null!;
+
+    [Required]
+    public string EncryptedPrivateKey { get; set; } = null!;
+
+    public string? CollectionName { get; set; }
+
+    [Required]
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public required ProductTierType TargetProductTierType { get; set; }
 
     [Required]
-    public required MinimalBillingAddressRequest BillingAddress { get; set; }
+    public required CheckoutBillingAddressRequest BillingAddress { get; set; }
 
     private PlanType PlanType
     {
@@ -39,6 +47,6 @@ public class UpgradePremiumToOrganizationRequest
         }
     }
 
-    public (string OrganizationName, string Key, PlanType PlanType, Core.Billing.Payment.Models.BillingAddress BillingAddress) ToDomain() =>
-        (OrganizationName, Key, PlanType, BillingAddress.ToDomain());
+    public (string OrganizationName, string Key, string PublicKey, string EncryptedPrivateKey, string? CollectionName, PlanType PlanType, Core.Billing.Payment.Models.BillingAddress BillingAddress) ToDomain() =>
+        (OrganizationName, Key, PublicKey, EncryptedPrivateKey, CollectionName, PlanType, BillingAddress.ToDomain());
 }

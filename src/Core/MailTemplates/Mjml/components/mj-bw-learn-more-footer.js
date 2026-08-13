@@ -25,10 +25,10 @@ class MjBwLearnMoreFooter extends BodyComponent {
   render() {
     return this.renderMJML(
       `
-      <mj-section border-radius="0px 0px 4px 4px" background-color="#F3F6F9" padding="5px 10px 10px 10px">
+      <mj-section border-radius="0px 0px 4px 4px" background-color="#F3F6F9">
         <mj-column width="70%">
           <mj-text line-height="24px">
-            <p style="font-size: 18px; line-height: 28px; font-weight: bold;">
+            <p style="font-size: 18px; line-height: 28px; font-weight: 500; margin-top: 0px;">
               Learn more about Bitwarden
             </p>
             Find user guides, product documentation, and videos on the

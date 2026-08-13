@@ -32,8 +32,10 @@ public class EmergencyAccessDetailsViewQuery : IQuery<EmergencyAccessDetails>
             RevisionDate = x.ea.RevisionDate,
             GranteeName = x.grantee.Name,
             GranteeEmail = x.grantee.Email ?? x.ea.Email,
+            GranteeAvatarColor = x.grantee.AvatarColor,
             GrantorName = x.grantor.Name,
             GrantorEmail = x.grantor.Email,
+            GrantorAvatarColor = x.grantor.AvatarColor,
         });
     }
 }

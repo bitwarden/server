@@ -24,12 +24,12 @@
       <mj-section background-color="#fff">
         <mj-column padding="0px">
           <mj-text> Your verification code is: </mj-text>
-          <mj-text font-size="32px">
-            <b>{{Token}}</b>
+          <mj-text font-size="32px" font-weight="500">
+            {{ Token }}
           </mj-text>
           <mj-spacer height="20px" />
           <mj-text>
-            This code expires in {{Expiry}} minutes. After that, you'll need
+            This code expires in {{ Expiry }} minutes. After that, you'll need
             to verify your email again.
           </mj-text>
         </mj-column>
@@ -42,10 +42,10 @@
           inner-border-radius="16px"
           padding="0px"
         >
-          <mj-text>
+          <mj-text line-height="24px">
             <p>
-              Bitwarden Send transmits sensitive, temporary information to
-              others easily and securely. Learn more about
+              Bitwarden Send securely shares sensitive information. Learn more
+              about
               <a href="https://bitwarden.com/help/send" class="link"
                 >Bitwarden Send</a
               >

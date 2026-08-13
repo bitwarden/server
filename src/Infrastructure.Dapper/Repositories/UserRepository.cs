@@ -4,6 +4,7 @@ using Bit.Core;
 using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
@@ -33,6 +34,34 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         var user = await base.GetByIdAsync(id);
         UnprotectData(user);
         return user;
+    }
+
+    public async Task<User?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                "[dbo].[User_ReadByGatewayCustomerId]",
+                new { GatewayCustomerId = gatewayCustomerId },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.FirstOrDefault();
+        }
+    }
+
+    public async Task<User?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                "[dbo].[User_ReadByGatewaySubscriptionId]",
+                new { GatewaySubscriptionId = gatewaySubscriptionId },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.FirstOrDefault();
+        }
     }
 
     public async Task<User?> GetByEmailAsync(string email)
@@ -237,6 +266,12 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     user.AccountRevisionDate;
                 cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value =
                     user.LastKeyRotationDate;
+
+                // User_UpdateKeys assigns UserKeyId unconditionally, so the parameter has to be
+                // supplied even when it is null or a rotation would clear a key id it should keep.
+                cmd.Parameters.Add("@UserKeyId", SqlDbType.VarChar).Value =
+                    (object?)user.UserKeyId ?? DBNull.Value;
+
                 cmd.ExecuteNonQuery();
             }
 
@@ -404,6 +439,9 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
     {
+        var protectedKeyConnectorWrappedUserKey = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(keyConnectorWrappedUserKey));
+
         return async (connection, transaction) =>
         {
             var timestamp = DateTime.UtcNow;
@@ -413,12 +451,12 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new
                 {
                     Id = userId,
-                    Key = keyConnectorWrappedUserKey,
+                    Key = protectedKeyConnectorWrappedUserKey,
                     // Key Connector does not use KDF, so we set some defaults
                     Kdf = KdfType.Argon2id,
-                    KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
-                    KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
-                    KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+                    KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
+                    KdfMemory = KdfConstants.ARGON2_MEMORY.Default,
+                    KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default,
                     UsesKeyConnector = true,
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp
@@ -431,6 +469,13 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
         string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint)
     {
+        var protectedMasterKeyWrappedUserKey = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(masterPasswordUnlockData.MasterKeyWrappedUserKey));
+
+        var protectedServerSideHashedMasterPasswordAuthenticationHash = string.Concat(
+            Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(serverSideHashedMasterPasswordAuthenticationHash));
+
         return async (connection, transaction) =>
         {
             var timestamp = DateTime.UtcNow;
@@ -440,15 +485,20 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new
                 {
                     Id = userId,
-                    MasterPassword = serverSideHashedMasterPasswordAuthenticationHash,
+                    MasterPassword = protectedServerSideHashedMasterPasswordAuthenticationHash,
                     MasterPasswordHint = masterPasswordHint,
-                    Key = masterPasswordUnlockData.MasterKeyWrappedUserKey,
+                    Key = protectedMasterKeyWrappedUserKey,
                     Kdf = masterPasswordUnlockData.Kdf.KdfType,
                     KdfIterations = masterPasswordUnlockData.Kdf.Iterations,
                     KdfMemory = masterPasswordUnlockData.Kdf.Memory,
                     KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
                     RevisionDate = timestamp,
-                    AccountRevisionDate = timestamp
+                    AccountRevisionDate = timestamp,
+                    MasterPasswordSalt = masterPasswordUnlockData.Salt
+                    // TODO (PM-35501): Add SecurityStamp so the rotation done in
+                    // MasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword
+                    // is persisted.
+                    // TODO Need to add User.LastPasswordChangeDate here in PM-34905
                 },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
@@ -475,6 +525,44 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    public UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData)
+    {
+        return async (connection, transaction) =>
+        {
+            var timestamp = DateTime.UtcNow;
+
+            await connection!.ExecuteAsync(
+                "[dbo].[User_UpdateMasterPasswordUnlockData]",
+                new
+                {
+                    Id = userId,
+                    Kdf = registerFinishData.Kdf.KdfType,
+                    KdfIterations = registerFinishData.Kdf.Iterations,
+                    KdfMemory = registerFinishData.Kdf.Memory,
+                    KdfParallelism = registerFinishData.Kdf.Parallelism,
+                    MasterPasswordSalt = registerFinishData.Salt,
+                    Key = registerFinishData.MasterKeyWrappedUserKey,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp,
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    /// <inheritdoc />
+    public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            await connection!.ExecuteAsync(
+                "[dbo].[User_SetUserKeyId]",
+                new { Id = userId, UserKeyId = userKeyId.ToString(), RevisionDate = DateTime.UtcNow },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
     }
 
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)

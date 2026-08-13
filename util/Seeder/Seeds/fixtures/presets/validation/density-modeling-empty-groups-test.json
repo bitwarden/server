@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "name": "Density Empty Groups Test",
+    "domain": "density-empty-groups.example",
+    "planType": "enterprise-annually"
+  },
+  "users": { "count": 50 },
+  "groups": { "count": 10 },
+  "collections": { "count": 20 },
+  "density": {
+    "membership": { "shape": "uniform" },
+    "collectionFanOut": {
+      "min": 2,
+      "max": 4,
+      "emptyGroupRate": 0.5
+    },
+    "directAccessRatio": 0.5
+  },
+  "ciphers": { "count": 200 }
+}

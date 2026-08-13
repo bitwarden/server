@@ -111,7 +111,7 @@ public class EncryptedStringAttribute : ValidationAttribute
             if (requiredPieces == 1)
             {
                 // Only one more part is needed so don't split and check the chunk
-                if (rest.IsEmpty || !Base64.IsValid(rest))
+                if (rest.IsEmpty || !IsValidBase64Permissive(rest))
                 {
                     return false;
                 }
@@ -128,7 +128,7 @@ public class EncryptedStringAttribute : ValidationAttribute
                 }
 
                 // Is the required chunk valid base 64?
-                if (chunk.IsEmpty || !Base64.IsValid(chunk))
+                if (chunk.IsEmpty || !IsValidBase64Permissive(chunk))
                 {
                     return false;
                 }
@@ -140,5 +140,58 @@ public class EncryptedStringAttribute : ValidationAttribute
 
         // No more parts are required, so check there are no extra parts
         return rest.IndexOf('|') == -1;
+    }
+
+    private const string _base64Chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    private static int Base64CharValue(char c) => c switch
+    {
+        >= 'A' and <= 'Z' => c - 'A',
+        >= 'a' and <= 'z' => c - 'a' + 26,
+        >= '0' and <= '9' => c - '0' + 52,
+        '+' => 62,
+        '/' => 63,
+        _ => -1,
+    };
+
+    /// <summary>
+    /// Validates base64 permissively by accepting non-zero padding bits.
+    /// </summary>
+    private static bool IsValidBase64Permissive(ReadOnlySpan<char> value)
+    {
+        // Obviously not base64
+        if (value.IsEmpty || value.Length % 4 != 0)
+            return false;
+
+        // If there isn't any padding, there's nothing to be permissive about.
+        var padCount = 0;
+        if (value[^1] == '=') { padCount++; if (value[^2] == '=') padCount++; }
+        if (padCount == 0)
+            return Base64.IsValid(value);
+
+        // Get the last non-padding char. Ensure it's in the base64 alphabet.
+        var lastDataIdx = value.Length - padCount - 1;
+        var charVal = Base64CharValue(value[lastDataIdx]);
+        if (charVal < 0)
+            return false;
+
+        // Compute the correct char. If the original char is already valid,
+        // test the full string.
+        var dataBitMask = padCount == 2 ? 0b110000 : 0b111100;
+        var newCharVal = charVal & dataBitMask;
+        if (newCharVal == charVal)
+            return Base64.IsValid(value);
+
+        // Validate all but the last block, to minimize allocation in the next
+        // section.
+        if (value.Length > 4 && !Base64.IsValid(value[..^4]))
+            return false;
+
+        // Apply the correct char and validate the last block 
+        Span<char> canonical = stackalloc char[4];
+        value[^4..].CopyTo(canonical);
+        canonical[4 - padCount - 1] = _base64Chars[newCharVal];
+        return Base64.IsValid(canonical);
     }
 }

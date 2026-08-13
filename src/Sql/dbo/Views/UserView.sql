@@ -46,6 +46,10 @@ SELECT
     [VerifyDevices],
     [SecurityState],
     [SecurityVersion],
-    [SignedPublicKey]
+    [SignedPublicKey],
+    [V2UpgradeToken],
+    [MasterPasswordSalt],
+    [LastApiKeyRotationDate],
+    [UserKeyId]
 FROM
     [dbo].[User]

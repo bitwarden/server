@@ -61,7 +61,8 @@ public class OrganizationController : Controller
                 model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
                 model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
                 model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
-                model.OverwriteExisting.GetValueOrDefault()
+                model.OverwriteExisting.GetValueOrDefault(),
+                model.InviteUsersAfterProvisioning
                 );
 
         return new OkResult();

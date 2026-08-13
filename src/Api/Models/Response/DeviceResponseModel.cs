@@ -24,6 +24,7 @@ public class DeviceResponseModel : ResponseModel
         Type = device.Type;
         Identifier = device.Identifier;
         CreationDate = device.CreationDate;
+        LastActivityDate = device.LastActivityDate;
         IsTrusted = device.IsTrusted();
         EncryptedUserKey = device.EncryptedUserKey;
         EncryptedPublicKey = device.EncryptedPublicKey;
@@ -34,6 +35,7 @@ public class DeviceResponseModel : ResponseModel
     public DeviceType Type { get; set; }
     public string Identifier { get; set; }
     public DateTime CreationDate { get; set; }
+    public DateTime? LastActivityDate { get; set; }
     public bool IsTrusted { get; set; }
     [EncryptedString]
     [EncryptedStringLength(2000)]

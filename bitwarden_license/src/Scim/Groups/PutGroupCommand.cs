@@ -52,6 +52,6 @@ public class PutGroupCommand : IPutGroupCommand
             }
         }
 
-        await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
+        await _groupRepository.UpdateUsersAsync(group.Id, memberIds, group.RevisionDate);
     }
 }

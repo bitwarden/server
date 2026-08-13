@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
@@ -21,25 +22,6 @@ public class OrganizationBillingController(
     IStripePaymentService paymentService,
     IPaymentHistoryService paymentHistoryService) : BaseBillingController
 {
-    // TODO: Remove when pm-25379-use-new-organization-metadata-structure is removed.
-    [HttpGet("metadata")]
-    public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
-    {
-        if (!await currentContext.OrganizationUser(organizationId))
-        {
-            return Error.Unauthorized();
-        }
-
-        var metadata = await organizationBillingService.GetMetadata(organizationId);
-
-        if (metadata == null)
-        {
-            return Error.NotFound();
-        }
-
-        return TypedResults.Ok(metadata);
-    }
-
     // TODO: Migrate to Query / OrganizationBillingVNextController
     [HttpGet("history")]
     public async Task<IResult> GetHistoryAsync([FromRoute] Guid organizationId)
@@ -185,6 +167,11 @@ public class OrganizationBillingController(
         if (organization.PlanType == request.NewPlanType)
         {
             return Error.BadRequest("Organization is already on the requested plan frequency.");
+        }
+
+        if (organization.PlanType.GetProductTier() != request.NewPlanType.GetProductTier())
+        {
+            return Error.BadRequest("Plan frequency changes must stay within the same product tier.");
         }
 
         await organizationBillingService.UpdateSubscriptionPlanFrequency(

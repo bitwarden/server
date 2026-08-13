@@ -70,6 +70,8 @@ public class Startup
         services.AddScoped<IPaymentSucceededHandler, PaymentSucceededHandler>();
         services.AddScoped<IInvoiceFinalizedHandler, InvoiceFinalizedHandler>();
         services.AddScoped<ISetupIntentSucceededHandler, SetupIntentSucceededHandler>();
+        services.AddScoped<ICouponDeletedHandler, CouponDeletedHandler>();
+        services.AddScoped<ICheckoutSessionCompletedHandler, CheckoutSessionCompletedHandler>();
         services.AddScoped<IStripeEventProcessor, StripeEventProcessor>();
 
         // Identity
@@ -140,6 +142,10 @@ public class Startup
         app.UseRouting();
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
     }
 }

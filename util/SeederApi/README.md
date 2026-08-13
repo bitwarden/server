@@ -15,6 +15,7 @@ The SeederApi consists of three main components:
 1. **Controllers** - HTTP endpoints for seeding, querying, and managing test data
 2. **Services** - Business logic for scene and query execution
 3. **Models** - Request/response models for API communication
+4. **Jobs** - Scheduled jobs run through JobsHostedService.
 
 ### Key Components
 
@@ -23,6 +24,7 @@ The SeederApi consists of three main components:
 - **InfoController** (`/alive`, `/version`) - Health check and version information
 - **SceneService** - Manages scene execution and cleanup with play ID tracking
 - **QueryService** - Executes read-only query operations
+- **Cleanup Job** - Executes every 15 minutes to delete old play data.
 
 ## How To Use
 
@@ -38,7 +40,7 @@ The API will start on the configured port (typically `http://localhost:5000`).
 ### Seeding Data
 
 Send a POST request to `/seed` with a scene template name and optional arguments. Include the `X-Play-Id` header to
-track the seeded data for later cleanup:
+track the seeded data for later cleanup. You need to set the password argument to a master password for the mock user account that is at least 8-characters. You should always use an email address with a top-level domain of example.com (see RFC 2606 — guaranteed unresolvable for more details).
 
 ```bash
 curl -X POST http://localhost:5000/seed \
@@ -47,7 +49,8 @@ curl -X POST http://localhost:5000/seed \
   -d '{
     "template": "SingleUserScene",
     "arguments": {
-      "email": "test@example.com"
+      "email": "test@example.com",
+      "password": "REPLACE_ME"
     }
   }'
 ```
@@ -66,6 +69,73 @@ curl -X POST http://localhost:5000/seed \
 
 The `result` contains the data returned by the scene, and `mangleMap` contains ID mappings if ID mangling is enabled.
 Use the `X-Play-Id` header value to later destroy the seeded data.
+
+### Seeding a Parameterized Organization
+
+`SingleOrganizationScene` seeds an organization on a chosen plan and links an existing user as a confirmed owner
+(seed the owner first via `SingleUserScene` and pass its `userId` as `ownerUserId`).
+
+Beyond `planType` and `seats`, the request accepts:
+
+- `overrides` — optional capability/collection-management flags applied **on top of** the plan defaults. Any flag left
+  unset keeps the plan default. Set Secrets Manager via `enableSecretsManager` (with optional `smSeats` /
+  `smServiceAccounts`), not via `overrides`.
+- `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded org resembles a
+  real billed org.
+
+Enum fields (`planType`, `gateway`) must be sent as their **numeric value**. In the example
+below, `planType: 0` is `Free` and `gateway: 0` is `Stripe`.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "SingleOrganizationScene",
+    "arguments": {
+      "ownerUserId": "42bcf05d-7ad0-4e27-8b53-b3b700acc664",
+      "planType": 0,
+      "name": "Acme",
+      "domain": "acme.example",
+      "seats": 5,
+      "overrides": {
+        "useSso": true,
+        "useGroups": true
+      },
+      "gateway": 0,
+      "gatewayCustomerId": "cus_123",
+      "gatewaySubscriptionId": "sub_456"
+    }
+  }'
+```
+
+### Seeding a User with Billing Gateway Identity
+
+`SingleUserScene` seeds a standalone user. Beyond `email` and `password`, the request accepts:
+
+- `premium` — when true, marks the account premium (enables 1 GB storage and sets a premium expiration).
+- `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded user resembles a
+  real premium cloud user linked to a Stripe (or other gateway) customer/subscription. Any field left unset leaves the
+  user's existing value unchanged.
+
+Enum fields (`gateway`) must be sent as their **numeric value**. In the example below, `gateway: 0` is `Stripe`.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "SingleUserScene",
+    "arguments": {
+      "email": "premium@example.com",
+      "password": "REPLACE_ME",
+      "premium": true,
+      "gateway": 0,
+      "gatewayCustomerId": "cus_123",
+      "gatewaySubscriptionId": "sub_456"
+    }
+  }'
+```
 
 ### Querying Data
 
@@ -108,9 +178,17 @@ curl -X DELETE http://localhost:5000/seed/batch \
 
 #### Delete All Seeded Data
 
+Deletes seeded data tagged with a play ID older than the provided date. Date is optional and defaults to 1 day prior to the current time of the request.
+
 ```bash
-curl -X DELETE http://localhost:5000/seed
+curl -X DELETE http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -d '"2026-03-23T10:45:47.0690009-10:00"'
 ```
+
+#### PlayData is ephemeral
+
+A scheduled job runs every fifteen minutes that deletes data tagged with a play ID older than 1 day. Any data you want to persist for an extended period of time must not be tagged with a play ID.
 
 ### Health Checks
 
@@ -142,6 +220,32 @@ The SeederApi requires the following configuration:
 
 - **Database Connection** - Connection string to the Bitwarden database
 - **Global Settings** - Standard Bitwarden `GlobalSettings` configuration
+- **Distributed Cache** - Required for queries that read codes from the persistent distributed cache (e.g.
+  `UserEmailTokenCodeQuery`, which reads email 2FA / user-verification OTP codes). The SeederApi must share the
+  **same cache backend** as the server (Identity/Api) that generated the code.
+
+#### Shared Distributed Cache
+
+Code-reading queries look up the code in the persistent keyed `IDistributedCache`, so they only succeed when
+the SeederApi and the code-generating server point at the same backend. Configure a shared backend under
+`globalSettings.distributedCache`:
+
+```json
+"globalSettings": {
+  "distributedCache": {
+    "redis": { "connectionString": "<same Redis connection as Identity/Api>" }
+  }
+}
+```
+
+Cosmos DB (`distributedCache.cosmos.connectionString`) or, for self-hosted deployments, the SQL Server
+`dbo.Cache` table are the other shared-backend options.
+
+> [!IMPORTANT]
+> Without a shared backend, SeederApi falls back to an in-memory cache that is local to the process, so
+> code-reading queries return `Found: false` even though the code was generated elsewhere. See
+> `AddDistributedCache` in `src/SharedWeb/Utilities/ServiceCollectionExtensions.cs` for the backend selection
+> logic.
 
 ## Play ID Tracking
 

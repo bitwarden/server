@@ -1,21 +1,23 @@
 ﻿using Bit.SeederApi.Execution;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.SeederApi.Controllers;
 
+[Authorize]
 [Route("query")]
 public class QueryController(ILogger<QueryController> logger, IQueryExecutor queryExecutor) : Controller
 {
     [HttpPost]
-    public IActionResult Query([FromBody] QueryRequestModel request)
+    public async Task<IActionResult> Query([FromBody] QueryRequestModel request)
     {
         logger.LogInformation("Executing query: {Query}", request.Template);
 
         try
         {
-            var result = queryExecutor.Execute(request.Template, request.Arguments);
+            var result = await queryExecutor.Execute(request.Template, request.Arguments);
 
             return Json(result);
         }

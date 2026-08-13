@@ -8,6 +8,8 @@ public class PlayIdService(IHostEnvironment hostEnvironment) : IPlayIdService
     public bool InPlay(out string playId)
     {
         playId = PlayId ?? string.Empty;
-        return !string.IsNullOrEmpty(PlayId) && hostEnvironment.IsDevelopment();
+        var hasPlayId = !string.IsNullOrEmpty(playId);
+        var isNotProd = !hostEnvironment.IsProduction();
+        return hasPlayId && isNotProd;
     }
 }

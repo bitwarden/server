@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -25,7 +24,7 @@ public class SsoConfigService : ISsoConfigService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IEventService _eventService;
-    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
+    private readonly ISavePolicyCommand _savePolicyCommand;
 
     public SsoConfigService(
         ISsoConfigRepository ssoConfigRepository,
@@ -33,14 +32,14 @@ public class SsoConfigService : ISsoConfigService
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IEventService eventService,
-        IVNextSavePolicyCommand vNextSavePolicyCommand)
+        ISavePolicyCommand savePolicyCommand)
     {
         _ssoConfigRepository = ssoConfigRepository;
         _policyQuery = policyQuery;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _eventService = eventService;
-        _vNextSavePolicyCommand = vNextSavePolicyCommand;
+        _savePolicyCommand = savePolicyCommand;
     }
 
     public async Task SaveAsync(SsoConfig config, Organization organization)
@@ -91,9 +90,9 @@ public class SsoConfigService : ISsoConfigService
             };
 
             var performedBy = new SystemUser(EventSystemUser.Unknown);
-            await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(singleOrgPolicy, performedBy));
-            await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(resetPasswordPolicy, performedBy));
-            await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(requireSsoPolicy, performedBy));
+            await _savePolicyCommand.SaveAsync(new SavePolicyModel(singleOrgPolicy, performedBy));
+            await _savePolicyCommand.SaveAsync(new SavePolicyModel(resetPasswordPolicy, performedBy));
+            await _savePolicyCommand.SaveAsync(new SavePolicyModel(requireSsoPolicy, performedBy));
         }
 
         await LogEventsAsync(config, oldConfig);

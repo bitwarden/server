@@ -2,7 +2,7 @@
 
 using System.Text.Json;
 using Bit.Core.Utilities;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;
@@ -13,7 +13,7 @@ namespace Bit.SharedWeb.Swagger;
 /// </summary>
 public class EncryptedStringSchemaFilter : ISchemaFilter
 {
-    public void Apply(OpenApiSchema schema, SchemaFilterContext context)
+    public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
         if (context.Type == null || schema.Properties == null)
             return;
@@ -30,9 +30,9 @@ public class EncryptedStringSchemaFilter : ISchemaFilter
                 // Convert prop.Name to camelCase for JSON schema property lookup
                 var jsonPropName = JsonNamingPolicy.CamelCase.ConvertName(prop.Name);
 
-                if (schema.Properties.TryGetValue(jsonPropName, out var value))
+                if (schema.Properties.TryGetValue(jsonPropName, out var value) && value is OpenApiSchema innerSchema)
                 {
-                    value.Format = "x-enc-string";
+                    innerSchema.Format = "x-enc-string";
                 }
             }
         }

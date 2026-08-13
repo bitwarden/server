@@ -19,7 +19,25 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 /// <param name="policyDetails">Collection of policy details that apply to this user id</param>
 public class AutomaticUserConfirmationPolicyRequirement(IEnumerable<PolicyDetails> policyDetails) : IPolicyRequirement
 {
-    public bool CannotHaveEmergencyAccess() => policyDetails.Any();
+    /// <summary>
+    /// Returns true if the user cannot invite to emergency access because they are in an
+    /// auto-confirm organization with status Accepted, Confirmed, or Revoked.
+    /// </summary>
+    public bool GrantorCannotInviteToEmergencyAccess() => policyDetails.Any(p =>
+        p.OrganizationUserStatus is
+            OrganizationUserStatusType.Accepted or
+            OrganizationUserStatusType.Confirmed or
+            OrganizationUserStatusType.Revoked);
+
+    /// <summary>
+    /// Returns true if the user cannot accept emergency access because they are in an
+    /// auto-confirm organization with status Accepted, Confirmed, or Revoked.
+    /// </summary>
+    public bool GranteeCannotAcceptEmergencyAccess() => policyDetails.Any(p =>
+        p.OrganizationUserStatus is
+            OrganizationUserStatusType.Accepted or
+            OrganizationUserStatusType.Confirmed or
+            OrganizationUserStatusType.Revoked);
 
     public bool CannotJoinProvider() => policyDetails.Any();
 

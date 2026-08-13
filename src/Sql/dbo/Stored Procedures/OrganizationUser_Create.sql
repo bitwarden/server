@@ -11,7 +11,10 @@
     @RevisionDate DATETIME2(7),
     @Permissions NVARCHAR(MAX),
     @ResetPasswordKey VARCHAR(MAX),
-    @AccessSecretsManager BIT = 0
+    @AccessSecretsManager BIT = 0,
+    @RevocationReason TINYINT = NULL,
+    @StatusNew SMALLINT = NULL,
+    @AccessPam BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -30,7 +33,10 @@ BEGIN
         [RevisionDate],
         [Permissions],
         [ResetPasswordKey],
-        [AccessSecretsManager]
+        [AccessSecretsManager],
+        [RevocationReason],
+        [StatusNew],
+        [AccessPam]
     )
     VALUES
     (
@@ -46,6 +52,9 @@ BEGIN
         @RevisionDate,
         @Permissions,
         @ResetPasswordKey,
-        @AccessSecretsManager
+        @AccessSecretsManager,
+        @RevocationReason,
+        @StatusNew,
+        @AccessPam
     )
 END

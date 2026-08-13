@@ -4,11 +4,9 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Models;
-using Bit.Core.Billing.Tax.Models;
 using Stripe;
 
 namespace Bit.Core.Billing.Providers.Services;
@@ -39,10 +37,13 @@ public interface IProviderBillingService
     /// <summary>
     /// Generate a provider's client invoice report in CSV format for the specified <paramref name="invoiceId"/>. Utilizes the <see cref="ProviderInvoiceItem"/>
     /// records saved for the <paramref name="invoiceId"/> as part of our webhook processing for the <b>"invoice.created"</b> and <b>"invoice.finalized"</b> Stripe events.
+    /// The report is scoped to the provided <paramref name="providerId"/>, so a provider can only generate reports for invoices it owns.
     /// </summary>
+    /// <param name="providerId">The ID of the <see cref="Provider"/> that owns the invoice. Only items belonging to this provider are included.</param>
     /// <param name="invoiceId">The ID of the Stripe <see cref="Stripe.Invoice"/> to generate the report for.</param>
     /// <returns>The provider's client invoice report as a byte array.</returns>
     Task<byte[]> GenerateClientInvoiceReport(
+        Guid providerId,
         string invoiceId);
 
     Task<IEnumerable<AddableOrganization>> GetAddableOrganizations(
@@ -100,17 +101,6 @@ public interface IProviderBillingService
     /// <remarks>This method requires the <paramref name="provider"/> to already have a linked Stripe <see cref="Stripe.Customer"/> via its <see cref="Provider.GatewayCustomerId"/> field.</remarks>
     Task<Subscription> SetupSubscription(
         Provider provider);
-
-    /// <summary>
-    /// Updates the <paramref name="provider"/>'s payment source and tax information and then sets their subscription's collection_method to be "charge_automatically".
-    /// </summary>
-    /// <param name="provider">The <paramref name="provider"/> to update the payment source and tax information for.</param>
-    /// <param name="tokenizedPaymentSource">The tokenized payment source (ex. Credit Card) to attach to the <paramref name="provider"/>.</param>
-    /// <param name="taxInformation">The <paramref name="provider"/>'s updated tax information.</param>
-    Task UpdatePaymentMethod(
-        Provider provider,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation);
 
     Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command);
 

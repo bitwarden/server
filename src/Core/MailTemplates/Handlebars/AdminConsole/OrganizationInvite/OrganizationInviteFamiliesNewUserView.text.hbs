@@ -1,0 +1,15 @@
+{{#>TitleContactUsTextLayout}}
+{{OrganizationName}} is using Bitwarden to simplify password sharing and protect your sensitive data. Once you finish account setup, you can:
+
+- Store logins securely so you never forget your passwords.
+- Sign in to accounts quickly by filling passwords with one click.
+- Share logins easily with your friends, family, or coworkers.
+
+{{#if InviterEmail}}
+This invitation was sent by {{InviterEmail}} and expires {{ExpirationDate}}.
+{{else}}
+This invitation expires {{ExpirationDate}}.
+{{/if}}
+
+Finish account setup: {{Url}}
+{{/TitleContactUsTextLayout}}

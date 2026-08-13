@@ -1,7 +1,7 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.21 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-alpine3.23 AS build
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
@@ -37,7 +37,7 @@ RUN . /tmp/rid.txt && dotnet publish \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.21
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine3.23
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
@@ -47,7 +47,7 @@ ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
-RUN apk add --no-cache curl \
+RUN apk add --no-cache \
     icu-libs \
     shadow \
     tzdata \
@@ -60,6 +60,6 @@ COPY ./src/Notifications/entrypoint.sh /entrypoint.sh
 RUN echo "net.ipv4.ip_local_port_range = 5024 65000" >> /etc/sysctl.d/99-sysctl.conf
 RUN echo "net.ipv4.tcp_fin_timeout = 30" >> /etc/sysctl.d/99-sysctl.conf
 RUN chmod +x /entrypoint.sh
-HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
+HEALTHCHECK CMD wget --quiet --tries=1 --output-document=/dev/null http://localhost:5000/alive || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

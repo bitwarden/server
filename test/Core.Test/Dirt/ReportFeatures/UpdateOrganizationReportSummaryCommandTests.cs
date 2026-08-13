@@ -6,11 +6,13 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Test.Dirt.ReportFeatures;
 
@@ -59,6 +61,8 @@ public class UpdateOrganizationReportSummaryCommandTests
         Assert.Equal(updatedReport.OrganizationId, result.OrganizationId);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .Received(1).UpdateSummaryDataAsync(request.OrganizationId, request.ReportId, request.SummaryData);
+        await sutProvider.GetDependency<IFusionCache>().Received(1)
+            .RemoveByTagAsync(OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(request.OrganizationId));
     }
 
     [Theory]

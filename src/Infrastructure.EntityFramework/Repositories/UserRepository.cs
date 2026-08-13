@@ -1,16 +1,16 @@
-﻿using AutoMapper;
-using Bit.Core;
+﻿using System.Data.Common;
+using AutoMapper;
 using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
-
-#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -19,6 +19,44 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     public UserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
     { }
+
+    /// <summary>
+    /// Builds the context an <see cref="UpdateUserData"/> action writes through.
+    /// </summary>
+    private async Task<DatabaseContext> GetUpdateUserDataContextAsync(IServiceScope scope, DbConnection? connection,
+        DbTransaction? transaction)
+    {
+        var dbContext = GetDatabaseContext(scope);
+        if (connection != null)
+        {
+            dbContext.Database.SetDbConnection(connection);
+            await dbContext.Database.UseTransactionAsync(transaction);
+        }
+
+        return dbContext;
+    }
+
+    public async Task<Core.Entities.User?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entity = await GetDbSet(dbContext)
+                .FirstOrDefaultAsync(e => e.GatewayCustomerId == gatewayCustomerId);
+            return Mapper.Map<Core.Entities.User>(entity);
+        }
+    }
+
+    public async Task<Core.Entities.User?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entity = await GetDbSet(dbContext)
+                .FirstOrDefaultAsync(e => e.GatewaySubscriptionId == gatewaySubscriptionId);
+            return Mapper.Map<Core.Entities.User>(entity);
+        }
+    }
 
     public async Task<Core.Entities.User?> GetByEmailAsync(string email)
     {
@@ -53,7 +91,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                     Kdf = e.Kdf,
                     KdfIterations = e.KdfIterations,
                     KdfMemory = e.KdfMemory,
-                    KdfParallelism = e.KdfParallelism
+                    KdfParallelism = e.KdfParallelism,
+                    MasterPasswordSalt = e.MasterPasswordSalt
                 }).SingleOrDefaultAsync();
         }
     }
@@ -179,6 +218,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             entity.LastKeyRotationDate = user.LastKeyRotationDate;
             entity.AccountRevisionDate = user.AccountRevisionDate;
             entity.RevisionDate = user.RevisionDate;
+            entity.UserKeyId = user.UserKeyId;
 
             await dbContext.SaveChangesAsync();
 
@@ -229,9 +269,18 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.MasterPassword = user.MasterPassword;
         userEntity.MasterPasswordHint = user.MasterPasswordHint;
 
+        userEntity.LastPasswordChangeDate = user.LastPasswordChangeDate;
         userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
         userEntity.AccountRevisionDate = user.AccountRevisionDate;
         userEntity.RevisionDate = user.RevisionDate;
+
+        userEntity.SignedPublicKey = user.SignedPublicKey;
+        userEntity.SecurityState = user.SecurityState;
+        userEntity.SecurityVersion = user.SecurityVersion;
+
+        userEntity.V2UpgradeToken = user.V2UpgradeToken;
+
+        userEntity.UserKeyId = user.UserKeyId;
 
         await dbContext.SaveChangesAsync();
 
@@ -281,7 +330,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.SecurityVersion = accountKeysData.SecurityStateData.SecurityVersion;
         userEntity.SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
 
-        // Replace existing keypair if it exists
+        // Replace existing key-pair if it exists
         var existingKeyPair = await dbContext.UserSignatureKeyPairs
             .FirstOrDefaultAsync(x => x.UserId == userId);
         if (existingKeyPair != null)
@@ -313,7 +362,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         {
             foreach (var action in updateUserDataActions)
             {
-                await action();
+                await action(dbContext.Database.GetDbConnection(), transaction.GetDbTransaction());
             }
         }
         await transaction.CommitAsync();
@@ -483,10 +532,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
 
             var userEntity = await dbContext.Users.FindAsync(userId);
             if (userEntity == null)
@@ -499,9 +548,9 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.Key = keyConnectorWrappedUserKey;
             // Key Connector does not use KDF, so we set some defaults
             userEntity.Kdf = KdfType.Argon2id;
-            userEntity.KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default;
-            userEntity.KdfMemory = AuthConstants.ARGON2_MEMORY.Default;
-            userEntity.KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
+            userEntity.KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default;
+            userEntity.KdfMemory = KdfConstants.ARGON2_MEMORY.Default;
+            userEntity.KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default;
             userEntity.UsesKeyConnector = true;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
@@ -513,10 +562,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
         string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
 
             var userEntity = await dbContext.Users.FindAsync(userId);
             if (userEntity == null)
@@ -535,7 +584,11 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
-
+            userEntity.MasterPasswordSalt = masterPasswordUnlockData.Salt;
+            // TODO (PM-35501): Persist SecurityStamp so the rotation done in
+            // MasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword
+            // is persisted.
+            // userEntity.LastPasswordChangeDate = timestamp; This needs adding in PM-34905
             await dbContext.SaveChangesAsync();
         };
     }
@@ -549,10 +602,54 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         foreach (var action in updateUserDataActions)
         {
-            await action();
+            await action(dbContext.Database.GetDbConnection(), transaction.GetDbTransaction());
         }
 
         await transaction.CommitAsync();
+    }
+
+    public UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData)
+    {
+        return async (connection, transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
+
+            var userEntity = await dbContext.Users.FindAsync(userId) ?? throw new ArgumentException("User not found", nameof(userId));
+            var timestamp = DateTime.UtcNow;
+
+            userEntity.Kdf = registerFinishData.Kdf.KdfType;
+            userEntity.KdfIterations = registerFinishData.Kdf.Iterations;
+            userEntity.KdfMemory = registerFinishData.Kdf.Memory;
+            userEntity.KdfParallelism = registerFinishData.Kdf.Parallelism;
+            userEntity.MasterPasswordSalt = registerFinishData.Salt;
+            userEntity.Key = registerFinishData.MasterKeyWrappedUserKey;
+            userEntity.RevisionDate = timestamp;
+            userEntity.AccountRevisionDate = timestamp;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
+    /// <inheritdoc />
+    public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            userEntity.UserKeyId = userKeyId.ToString();
+            userEntity.RevisionDate = DateTime.UtcNow;
+
+            await dbContext.SaveChangesAsync();
+        };
     }
 
     private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)

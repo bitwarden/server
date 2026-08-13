@@ -7,10 +7,12 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Mail;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
@@ -77,7 +79,8 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendRegistrationVerificationEmailAsync(string email, string token, string? fromMarketing)
+    public async Task SendRegistrationVerificationEmailAsync(string email, string token, string? fromMarketing,
+        string? sealedOpenOrgInviteData = null)
     {
         var message = CreateDefaultMessage("Verify Your Email", email);
         var model = new RegisterVerifyEmail
@@ -87,6 +90,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
             SiteName = _globalSettings.SiteName,
             FromMarketing = WebUtility.UrlEncode(fromMarketing),
+            SealedOpenOrgInviteData = WebUtility.UrlEncode(sealedOpenOrgInviteData),
         };
         await AddMessageContentAsync(message, "Auth.RegistrationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -100,7 +104,8 @@ public class HandlebarsMailService : IMailService
         string token,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trialLength)
+        int trialLength,
+        bool paymentOptional = false)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
@@ -112,7 +117,8 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
             ProductTier = productTier,
             Product = products,
-            TrialLength = trialLength
+            TrialLength = trialLength,
+            PaymentOptional = paymentOptional
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -140,7 +146,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendCannotDeleteClaimedAccountEmailAsync(string email)
     {
-        var message = CreateDefaultMessage("Delete Your Account", email);
+        var message = CreateDefaultMessage("Delete your account", email);
         var model = new CannotDeleteClaimedAccountViewModel
         {
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -269,7 +275,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Your Master Password Hint", email);
         var model = new MasterPasswordHintViewModel
         {
-            Hint = CoreHelpers.SanitizeForEmail(hint, false),
+            Hint = CoreHelpers.SanitizeForEmail(hint),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -324,11 +330,11 @@ public class HandlebarsMailService : IMailService
     public async Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
         IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false)
     {
-        var message = CreateDefaultMessage($"Action Required: {userIdentifier} Needs to Be Confirmed", adminEmails);
+        var message = CreateDefaultMessage($"Action required: {userIdentifier} needs to be confirmed", adminEmails);
         var model = new OrganizationUserAcceptedViewModel
         {
             OrganizationId = organization.Id,
-            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName(), false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName()),
             UserIdentifier = userIdentifier,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
@@ -340,13 +346,13 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false)
     {
-        var message = CreateDefaultMessage($"You Have Been Confirmed To {organizationName}", email);
+        var message = CreateDefaultMessage($"You have been confirmed to {organizationName}", email);
         var model = new OrganizationUserConfirmedViewModel
         {
             TitleFirst = "You're confirmed as a member of ",
-            TitleSecondBold = CoreHelpers.SanitizeForEmail(organizationName, false),
+            TitleSecondBold = CoreHelpers.SanitizeForEmail(organizationName),
             TitleThird = "!",
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
             WebVaultUrl = hasAccessSecretsManager
                 ? _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
                 : _globalSettings.BaseServiceUri.VaultWithHash,
@@ -378,9 +384,9 @@ public class HandlebarsMailService : IMailService
 
             var subject = model! switch
             {
-                { IsFreeOrg: true, OrgUserHasExistingUser: true } => "You have been invited to a Bitwarden Organization",
+                { IsFreeOrg: true, OrgUserHasExistingUser: true } => "You have been invited to a Bitwarden vault",
                 { IsFreeOrg: true, OrgUserHasExistingUser: false } => "You have been invited to Bitwarden Password Manager",
-                { IsFreeOrg: false, OrgUserHasExistingUser: true } => $"{model.OrganizationName} invited you to their Bitwarden organization",
+                { IsFreeOrg: false, OrgUserHasExistingUser: true } => $"{model.OrganizationName} invited you to their Bitwarden vault",
                 { IsFreeOrg: false, OrgUserHasExistingUser: false } => $"{model.OrganizationName} set up a Bitwarden account for you"
             };
 
@@ -390,12 +396,71 @@ public class HandlebarsMailService : IMailService
         }
     }
 
+    public async Task SendUpdatedOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
+    {
+        var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
+        {
+            Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
+
+            var userHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUserTokenPair.OrgUser.Id];
+            var organizationName = orgInvitesInfo.OrganizationName;
+
+            var (subject, templateName, buttonText) = GetUpdatedInviteTemplateInfo(
+                orgInvitesInfo.PlanType, userHasExistingUser, organizationName);
+
+            var url = BuildInvitationUrl(orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token);
+            var expirationDate = $"{orgUserTokenPair.Token.ExpirationDate.ToLongDateString()} {orgUserTokenPair.Token.ExpirationDate.ToShortTimeString()} UTC";
+
+            var message = CreateDefaultMessage(subject, orgUserTokenPair.OrgUser.Email);
+
+            return new MailQueueMessage(message, templateName, new
+            {
+                OrganizationName = organizationName,
+                Email = orgUserTokenPair.OrgUser.Email,
+                ExpirationDate = expirationDate,
+                Url = url,
+                ButtonText = buttonText,
+                InviterEmail = orgInvitesInfo.InviterEmail,
+                CurrentYear = DateTime.UtcNow.Year.ToString()
+            });
+        });
+
+        await EnqueueMailAsync(messageModels);
+    }
+
+    public async Task SendUpdatedOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager = false)
+    {
+        var organizationName = organization.DisplayName();
+        var webVaultUrl = accessSecretsManager
+            ? _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
+            : _globalSettings.BaseServiceUri.VaultWithHash;
+
+        var templateName = IsEnterpriseOrTeamsPlan(organization.PlanType)
+            ? "AdminConsole.OrganizationConfirmation.OrganizationConfirmationEnterpriseTeamsView"
+            : "AdminConsole.OrganizationConfirmation.OrganizationConfirmationFamilyFreeView";
+
+        var message = CreateDefaultMessage($"You can now access items from {organizationName}", userEmail);
+
+        var queueMessage = new MailQueueMessage(message, templateName, new
+        {
+            OrganizationName = organizationName,
+            TitleFirst = "You're confirmed as a member of ",
+            TitleSecondBold = organizationName,
+            TitleThird = "!",
+            WebVaultUrl = webVaultUrl,
+            CurrentYear = DateTime.UtcNow.Year.ToString()
+        });
+        queueMessage.Category = "OrganizationUserConfirmed";
+
+        await EnqueueMailAsync(queueMessage);
+    }
+
     public async Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email)
     {
         var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
         var model = new OrganizationUserRevokedForPolicyTwoFactorViewModel
         {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -439,7 +504,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
         var model = new OrganizationWelcomeEmailViewModel
         {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -454,7 +519,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
         var model = new OrganizationWelcomeEmailViewModel
         {
-            OrganizationName = CoreHelpers.SanitizeForEmail(familyOrganizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(familyOrganizationName),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -485,7 +550,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
             ProviderId = provider.Id,
-            ProviderName = CoreHelpers.SanitizeForEmail(provider.DisplayName()!, false),
+            ProviderName = CoreHelpers.SanitizeForEmail(provider.DisplayName()!),
             ProviderNameUrlEncoded = WebUtility.UrlEncode(provider.Name),
             ProviderBillingEmail = provider.BillingEmail,
             ProviderCreationDate = provider.CreationDate.ToLongDateString(),
@@ -608,7 +673,7 @@ public class HandlebarsMailService : IMailService
         var model = new LicenseExpiredViewModel();
         if (organizationName != null)
         {
-            model.OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false);
+            model.OrganizationName = CoreHelpers.SanitizeForEmail(organizationName);
         }
         await AddMessageContentAsync(message, "LicenseExpired", model);
         message.Category = "LicenseExpired";
@@ -620,9 +685,9 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Access Requested for Secrets Manager", emails);
         var model = new RequestSecretsManagerAccessViewModel
         {
-            OrgName = CoreHelpers.SanitizeForEmail(organizationName, false),
-            UserNameRequestingAccess = CoreHelpers.SanitizeForEmail(requestingUserName, false),
-            EmailContent = CoreHelpers.SanitizeForEmail(emailContent, false),
+            OrgName = CoreHelpers.SanitizeForEmail(organizationName),
+            UserNameRequestingAccess = CoreHelpers.SanitizeForEmail(requestingUserName),
+            EmailContent = CoreHelpers.SanitizeForEmail(emailContent),
         };
         await AddMessageContentAsync(message, "SecretsManagerAccessRequest", model);
         message.Category = "SecretsManagerAccessRequest";
@@ -632,16 +697,19 @@ public class HandlebarsMailService : IMailService
     public async Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList)
     {
         await EnqueueMailAsync(emailList.EmailList.Select(email =>
-            CreateMessage(email, emailList.Organization)));
+            CreateMessage(email, emailList.Organization, emailList.DomainName)));
         return;
 
-        MailQueueMessage CreateMessage(string emailAddress, Organization org) =>
+        MailQueueMessage CreateMessage(string emailAddress, Organization org, string domainName) =>
             new(CreateDefaultMessage($"Important update to your Bitwarden account", emailAddress),
                 "AdminConsole.DomainClaimedByOrganization",
                 new ClaimedDomainUserNotificationViewModel
                 {
-                    TitleFirst = $"Important update to your Bitwarden account",
-                    OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
+                    TitleFirst = $"Important update to your<br>Bitwarden account",
+                    OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName()),
+                    DomainName = domainName,
+                    EmailDomain = emailAddress.Split('@').LastOrDefault() ?? "",
+                    UserEmail = emailAddress
                 });
     }
 
@@ -685,7 +753,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
         var model = new OrganizationUserRevokedForPolicySingleOrgViewModel
         {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -703,13 +771,17 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName)
+    public async Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName, bool resetMasterPassword, bool resetTwoFactor)
     {
-        var message = CreateDefaultMessage("Your admin has initiated account recovery", email);
+        var message = CreateDefaultMessage($"{orgName} has initiated account recovery", email);
         var model = new AdminResetPasswordViewModel()
         {
-            UserName = GetUserIdentifier(email, userName),
-            OrgName = CoreHelpers.SanitizeForEmail(orgName, false),
+            UserName = email,
+            OrgName = CoreHelpers.SanitizeForEmail(orgName),
+            ResetMasterPassword = resetMasterPassword,
+            ResetTwoFactor = resetTwoFactor,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
         };
         await AddMessageContentAsync(message, "AdminResetPassword", model);
         message.Category = "AdminResetPassword";
@@ -721,6 +793,103 @@ public class HandlebarsMailService : IMailService
 
     private Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> queueMessages) =>
         _mailEnqueuingService.EnqueueManyAsync(queueMessages, SendEnqueuedMailMessageAsync);
+
+    private static (string Subject, string TemplateName, string ButtonText) GetUpdatedInviteTemplateInfo(
+        PlanType planType, bool userHasExistingUser, string organizationName)
+    {
+        const string newUserSubject = "set up a Bitwarden account for you";
+        const string newUserButton = "Finish account setup";
+        const string existingUserSubject = "invited you to their Bitwarden vault";
+        const string existingUserButton = "Accept invitation";
+
+        if (IsEnterpriseOrTeamsPlan(planType))
+        {
+            return userHasExistingUser
+                ? ($"{organizationName} {existingUserSubject}",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteEnterpriseTeamsExistingUserView",
+                    existingUserButton)
+                : ($"{organizationName} {newUserSubject}",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteEnterpriseTeamsNewUserView",
+                    newUserButton);
+        }
+
+        if (IsFamiliesPlan(planType))
+        {
+            return userHasExistingUser
+                ? ($"{organizationName} {existingUserSubject}",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteFamiliesExistingUserView",
+                    existingUserButton)
+                : ($"{organizationName} {newUserSubject}",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteFamiliesNewUserView",
+                    newUserButton);
+        }
+
+        return (userHasExistingUser
+                ? "You have been invited to a Bitwarden vault"
+                : "You have been invited to Bitwarden Password Manager",
+            "AdminConsole.OrganizationInvite.OrganizationInviteFreeView",
+            existingUserButton);
+    }
+
+    private static bool IsEnterpriseOrTeamsPlan(PlanType planType)
+    {
+        return planType switch
+        {
+            PlanType.TeamsMonthly2019 or
+            PlanType.TeamsAnnually2019 or
+            PlanType.TeamsMonthly2020 or
+            PlanType.TeamsAnnually2020 or
+            PlanType.TeamsMonthly2023 or
+            PlanType.TeamsAnnually2023 or
+            PlanType.TeamsStarter2023 or
+            PlanType.TeamsMonthly or
+            PlanType.TeamsAnnually or
+            PlanType.TeamsStarter or
+            PlanType.EnterpriseMonthly2019 or
+            PlanType.EnterpriseAnnually2019 or
+            PlanType.EnterpriseMonthly2020 or
+            PlanType.EnterpriseAnnually2020 or
+            PlanType.EnterpriseMonthly2023 or
+            PlanType.EnterpriseAnnually2023 or
+            PlanType.EnterpriseMonthly or
+            PlanType.EnterpriseAnnually or
+            PlanType.Custom => true,
+            _ => false
+        };
+    }
+
+    private static bool IsFamiliesPlan(PlanType planType)
+    {
+        return planType switch
+        {
+            PlanType.FamiliesAnnually2019 or
+            PlanType.FamiliesAnnually2025 or
+            PlanType.FamiliesAnnually => true,
+            _ => false
+        };
+    }
+
+    private string BuildInvitationUrl(OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token)
+    {
+        var baseUrl = $"{_globalSettings.BaseServiceUri.VaultWithHash}/accept-organization";
+        var queryParams = new List<string>
+        {
+            $"organizationId={orgUser.OrganizationId}",
+            $"organizationUserId={orgUser.Id}",
+            $"email={WebUtility.UrlEncode(orgUser.Email)}",
+            $"organizationName={WebUtility.UrlEncode(orgInvitesInfo.OrganizationName)}",
+            $"token={WebUtility.UrlEncode(token.Token)}",
+            $"initOrganization={orgInvitesInfo.InitOrganization}",
+            $"orgUserHasExistingUser={orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id]}"
+        };
+
+        if (orgInvitesInfo.OrgSsoEnabled && orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled)
+        {
+            queryParams.Add($"orgSsoIdentifier={orgInvitesInfo.OrgSsoIdentifier}");
+        }
+
+        return $"{baseUrl}?{string.Join("&", queryParams)}";
+    }
 
     private MailMessage CreateDefaultMessage(string subject, string toEmail)
     {
@@ -1175,7 +1344,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"Join {providerName}", email);
         var model = new ProviderUserInvitedViewModel
         {
-            ProviderName = CoreHelpers.SanitizeForEmail(providerName, false),
+            ProviderName = CoreHelpers.SanitizeForEmail(providerName),
             Email = WebUtility.UrlEncode(providerUser.Email),
             ProviderId = providerUser.ProviderId.ToString(),
             ProviderUserId = providerUser.Id.ToString(),
@@ -1395,14 +1564,14 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
     {
-        var message = CreateDefaultMessage("Request to Delete Your Organization", email);
+        var message = CreateDefaultMessage("Request to delete your organization", email);
         var model = new OrganizationInitiateDeleteModel
         {
             Token = WebUtility.UrlEncode(token),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
             OrganizationId = organization.Id,
-            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName(), false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName()),
             OrganizationNameUrlEncoded = WebUtility.UrlEncode(organization.Name),
             OrganizationBillingEmail = organization.BillingEmail,
             OrganizationPlan = organization.Plan,
@@ -1454,11 +1623,11 @@ public class HandlebarsMailService : IMailService
     {
         MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
         {
-            var sanitizedOrgName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false);
-            var message = CreateDefaultMessage($"{sanitizedOrgName} has identified {notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")}", notification.Email);
+            var sanitizedOrgName = CoreHelpers.SanitizeForEmail(org.DisplayName());
+            var message = CreateDefaultMessage($"{notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")} identified", notification.Email);
             var model = new SecurityTaskNotificationViewModel
             {
-                OrgName = CoreHelpers.SanitizeForEmail(sanitizedOrgName, false),
+                OrgName = sanitizedOrgName,
                 TaskCount = notification.TaskCount,
                 AdminOwnerEmails = adminOwnerEmails.ToList(),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -1472,13 +1641,15 @@ public class HandlebarsMailService : IMailService
 
     private static string GetUserIdentifier(string email, string? userName)
     {
-        return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
+        return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName);
     }
 
-    private string GetCloudVaultSubscriptionUrl(Guid organizationId)
-        => _globalSettings.BaseServiceUri.CloudRegion?.ToLower() switch
-        {
-            "eu" => $"https://vault.bitwarden.eu/#/organizations/{organizationId}/billing/subscription",
-            _ => $"https://vault.bitwarden.com/#/organizations/{organizationId}/billing/subscription"
-        };
+    public string GetCloudVaultSubscriptionUrl(Guid organizationId)
+    {
+        var region = Enum.TryParse<CloudRegion>(_globalSettings.BaseServiceUri.CloudRegion, ignoreCase: true, out var parsed)
+            ? parsed
+            : CloudRegion.US;
+        var regionConfig = CloudRegionConfig.FindByRegion(region);
+        return $"{regionConfig.VaultUrl}/#/organizations/{organizationId}/billing/subscription";
+    }
 }

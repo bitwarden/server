@@ -59,7 +59,9 @@ BEGIN
            o.[LimitCollectionDeletion],
            o.[LimitItemDeletion],
            o.[AllowAdminAccessToAllCollectionItems],
-           o.[UseRiskInsights]
+           o.[UseRiskInsights],
+           o.[UseInviteLinks],
+           o.[UsePam]
     FROM [dbo].[OrganizationView] o
     INNER JOIN @OrganizationIds ids ON o.[Id] = ids.[Id]
 

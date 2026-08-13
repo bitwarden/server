@@ -1,5 +1,7 @@
-﻿using Bit.Api.Billing.Attributes;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.PreviewInvoice;
+using Bit.Api.Billing.Models.Requirements;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Premium.Commands;
@@ -18,14 +20,17 @@ public class PreviewInvoiceController(
     IPreviewPremiumUpgradeProrationCommand previewPremiumUpgradeProrationCommand) : BaseBillingController
 {
     [HttpPost("organizations/subscriptions/purchase")]
+    [InjectUser]
     public async Task<IResult> PreviewOrganizationSubscriptionPurchaseTaxAsync(
+        [BindNever] User user,
         [FromBody] PreviewOrganizationSubscriptionPurchaseTaxRequest request)
     {
         var (purchase, billingAddress) = request.ToDomain();
-        var result = await previewOrganizationTaxCommand.Run(purchase, billingAddress);
+        var result = await previewOrganizationTaxCommand.Run(user, purchase, billingAddress);
         return Handle(result.Map(pair => new { pair.Tax, pair.Total }));
     }
 
+    [Authorize<ManageOrganizationBillingRequirement>]
     [HttpPost("organizations/{organizationId:guid}/subscription/plan-change")]
     [InjectOrganization]
     public async Task<IResult> PreviewOrganizationSubscriptionPlanChangeTaxAsync(
@@ -37,6 +42,7 @@ public class PreviewInvoiceController(
         return Handle(result.Map(pair => new { pair.Tax, pair.Total }));
     }
 
+    [Authorize<ManageOrganizationBillingRequirement>]
     [HttpPut("organizations/{organizationId:guid}/subscription/update")]
     [InjectOrganization]
     public async Task<IResult> PreviewOrganizationSubscriptionUpdateTaxAsync(
@@ -49,11 +55,13 @@ public class PreviewInvoiceController(
     }
 
     [HttpPost("premium/subscriptions/purchase")]
+    [InjectUser]
     public async Task<IResult> PreviewPremiumSubscriptionPurchaseTaxAsync(
+        [BindNever] User user,
         [FromBody] PreviewPremiumSubscriptionPurchaseTaxRequest request)
     {
-        var (purchase, billingAddress) = request.ToDomain();
-        var result = await previewPremiumTaxCommand.Run(purchase, billingAddress);
+        var (preview, billingAddress) = request.ToDomain();
+        var result = await previewPremiumTaxCommand.Run(user, preview, billingAddress);
         return Handle(result.Map(pair => new { pair.Tax, pair.Total }));
     }
 

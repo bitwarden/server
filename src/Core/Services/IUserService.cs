@@ -7,8 +7,8 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
-using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Services;
@@ -22,37 +22,36 @@ public interface IUserService
     Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
     Task SaveUserAsync(User user, bool push = false);
     Task<IdentityResult> CreateUserAsync(User user);
-    Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
+    Task<IdentityResult> CreateUserAsync(User user, RegisterFinishData registerFinishData);
     Task SendMasterPasswordHintAsync(string email);
-    Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
-    Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
-    Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
     Task SendEmailVerificationAsync(User user);
     Task<IdentityResult> ConfirmEmailAsync(User user, string token);
     Task InitiateEmailChangeAsync(User user, string newEmail);
     Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
         string token, string key);
+    [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
     Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
     // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
     [Obsolete("Use ISetKeyConnectorKeyCommand instead. This method will be removed in a future version.")]
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
-    Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
+    [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
+    /// <summary>
+    /// Removes the entry for <paramref name="type"/> from the user's <c>TwoFactorProviders</c> JSON column.
+    /// The provider's <c>MetaData</c> (TOTP shared secret, Duo client secret, YubiKey IDs, WebAuthn credentials, etc.)
+    /// is destroyed in the process; the name is historical — this is a hard delete of the provider configuration,
+    /// not a reversible disable. No-op if <paramref name="type"/> is not currently configured. Emits
+    /// <see cref="Bit.Core.Enums.EventType.User_Disabled2fa"/> and re-evaluates 2FA-removal policies if no
+    /// providers remain.
+    /// </summary>
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);
     Task SendDeleteConfirmationAsync(string email);
-    Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
-        PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
-        TaxInfo taxInfo);
     Task UpdateLicenseAsync(User user, UserLicense license);
-    Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);
-    Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType, TaxInfo taxInfo);
-    Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
-    Task ReinstatePremiumAsync(User user);
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
@@ -82,11 +81,13 @@ public interface IUserService
 
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
         bool validatePassword = true, bool refreshStamp = true);
+    // TODO: Remove this method when the PM37165_RotateUserApiKeyCommand feature flag is cleaned up.
+    [Obsolete("Use IRotateUserApiKeyCommand instead. This method will be removed once the PM37165_RotateUserApiKeyCommand feature flag is removed.")]
     Task RotateApiKeyAsync(User user);
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
-    Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);
+    Task<bool> VerifySecretAsync(User user, string secret);
     /// <summary>
     /// We use this method to check if the user has an active new device verification bypass
     /// </summary>

@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Tools.Models.Data;
+﻿using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Tools.Models;
@@ -18,6 +15,6 @@ public class SendTextModel
 
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public string Text { get; set; }
+    public string? Text { get; set; }
     public bool Hidden { get; set; }
 }

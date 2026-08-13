@@ -1,215 +1,211 @@
-# Seeder - Claude Code Context
+# Bitwarden Seeder Library - Claude Code Configuration
 
-## Ubiquitous Language
+## Quick Reference
 
-The Seeder follows six core patterns:
+**For detailed pattern descriptions (Factories, Recipes, Models, Scenes, Queries, Data), read `README.md`.**
 
-1. **Factories** - Create ONE entity with encryption. Named `{Entity}Seeder` with `Create{Type}{Entity}()` methods. Do not interact with database.
+**For detailed usages of the Seeder library, read `util/SeederUtility/README.md` and `util/SeederApi/README.md`**
 
-2. **Recipes** - Orchestrate MANY entities. Named `{DomainConcept}Recipe`. **MUST have `Seed()` method** as primary interface, not `AddToOrganization()` or similar. Use parameters for variations, not separate methods. Compose Factories internally.
+## Commands
 
-3. **Models** - DTOs bridging SDK ↔ Server format. Named `{Entity}ViewDto` (plaintext), `Encrypted{Entity}Dto` (SDK format). Pure data, no logic.
+```bash
+# Build
+dotnet build util/Seeder/Seeder.csproj
 
-4. **Scenes** - Complete test scenarios with ID mangling. Implement `IScene<TReques, TResult>`. Async, returns `SceneResult<TResult>` with MangleMap and result property populated with `TResult`. Named `{Scenario}Scene`.
+# Run tests
+dotnet test test/SeederApi.IntegrationTest/
 
-5. **Queries** - Read-only data retrieval. Implement `IQuery<TRequest, TResult>`. Synchronous, no DB modifications. Named `{DataToRetrieve}Query`.
-
-6. **Data** - Static, filterable test data collections (Companies, Passwords, Names, OrgStructures). Deterministic, composable. Enums provide public API.
-
-## The Recipe Contract
-
-Recipes follow strict rules (like a cooking recipe that you follow completely):
-
-1. A Recipe SHALL have exactly one public method named `Seed()`
-2. A Recipe MUST produce one cohesive result (like baking one complete cake)
-3. A Recipe MAY have overloaded `Seed()` methods with different parameters
-4. A Recipe SHALL use private helper methods for internal steps
-5. A Recipe SHALL use BulkCopy for performance when creating multiple entities
-6. A Recipe SHALL compose Factories for individual entity creation
-7. A Recipe SHALL NOT expose implementation details as public methods
-
-**Current violations** (to be refactored):
-
-- `CiphersRecipe` - Uses `AddLoginCiphersToOrganization()` instead of `Seed()`
-- `CollectionsRecipe` - Uses `AddFromStructure()` and `AddToOrganization()` instead of `Seed()`
-- `GroupsRecipe` - Uses `AddToOrganization()` instead of `Seed()`
-- `OrganizationDomainRecipe` - Uses `AddVerifiedDomainToOrganization()` instead of `Seed()`
+# Run single test
+dotnet test test/SeederApi.IntegrationTest/ --filter "FullyQualifiedName~TestMethodName"
+```
 
 ## Pattern Decision Tree
 
 ```
 Need to create test data?
 ├─ ONE entity with encryption? → Factory
-├─ MANY entities as cohesive operation? → Recipe
-├─ Complete test scenario with ID mangling to be used by the Seeder API? → Scene
+├─ ONE cipher from a SeedVaultItem? → CipherSeed.FromSeedItem() + {Type}CipherSeeder.Create()
+├─ MANY entities as cohesive operation? → Recipe or Pipeline
+├─ Flexible preset-based seeding? → Pipeline (RecipeBuilder + Steps)
+├─ Complete test scenario with ID mangling? → Scene
 ├─ READ existing seeded data? → Query
-└─ Data transformation SDK ↔ Server? → Model
+└─ Data transformation plaintext ↔ encrypted? → Model
 ```
 
-## When to Use the Seeder
+## Pipeline Architecture
 
-✅ Use for:
+**Modern pattern for composable fixture-based and generated seeding.**
 
-- Local development database setup
-- Integration test data creation
-- Performance testing with realistic encrypted data
+**Flow**: Preset JSON or Options → RecipeOrchestrator → RecipeBuilder → IStep/IAsyncStep[] → RecipeExecutor → SeederContext → BulkCommitter → IPostCommitStep[]
 
-❌ Do NOT use for:
+**Key actors**:
 
-- Production data
-- Copying real user vaults (use backup/restore instead)
+- **RecipeBuilder**: Fluent API with dependency validation
+- **IStep / IAsyncStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.). Use `IAsyncStep` for steps that do real I/O. A step additionally marked `IPostCommitStep` is deferred until after the bulk commit, so it observes committed rows — but sees cleared entity lists, since only the `EntityRegistry` and the context's scalar properties survive the commit.
+- **SeederContext**: Shared mutable state bag (NOT thread-safe)
+- **RecipeExecutor**: Awaits steps sequentially, captures statistics, commits via BulkCommitter, then runs any post-commit steps
+- **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
+- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`, `ILicensingService`, `IAttachmentStorageService`) into a single record. Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`.
+
+**Why two step interfaces, not one async contract?** Deliberate — don't unify. Collapsing to one `Task ExecuteAsync(SeederContext)` costs: rewrite 22 step classes (18 in `Steps/`, 4 test doubles); force 20 `.Execute(context)` sites in `test/SeederApi.IntegrationTest/Steps/` to `await`, their test methods to `async`; and `TreatWarningsAsErrors` is on repo-wide (`Directory.Build.props`), so CS1998 makes `async` without `await` a build error — every sync step needs `return Task.CompletedTask`. Permanent trap. The split costs less: two-arm union in `OrderedStep`, `object`-typed `Inner`, one duplicated `RecipeBuilder` registration. Diverges from `IScene`/`IQuery` — single `Task`-returning, no sync twin.
+
+**Fixture/preset separation**: Fixtures (organizations, rosters, ciphers) are independent and never reference each other. The preset is the only layer that composes fixtures and defines cross-cutting relationships (folder assignments, favorites). See `Seeds/docs/architecture.md`.
+
+**Phase order (org presets)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (individual presets)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → CipherAttachments → FolderAssignments → FavoriteAssignments
+
+**Individual user presets** use the Pipeline with `CreateIndividualUserStep` (no org, no groups, no collections). These presets live in `Seeds/fixtures/presets/individual/` and are identified by having a `"user"` key instead of `"organization"`. They support `folderNames`, `folderAssignments`, and `favoriteAssignments` for fixture-driven personal vault organization. See `Seeds/docs/presets.md` for the catalog.
+
+See `Pipeline/` folder for implementation.
+
+## Parallelism
+
+Steps execute sequentially (phase order preserved by RecipeExecutor). Async steps are awaited one at a time and MUST NOT be batched with `Task.WhenAll` — `SeederContext` is not thread-safe and each step reads state written by the ones before it. Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
+
+**Thread-safety requirements:**
+
+- `GeneratorContext` lazy properties (`??=`) must be force-initialized before any `Parallel.For` loop to prevent a data race
+- Generators use `ThreadLocal<Faker>` for thread-safe deterministic data generation
+- `ManglerService` and `SeederContext` are NOT thread-safe -- pre-compute their outputs before entering parallel loops
+
+## Performance A/B Testing
+
+When measuring step-level performance changes, use paired worktrees:
+
+- Create `server-PM-XXXXX/perf-baseline` and `server-PM-XXXXX/perf-optimized` worktrees
+- Both worktrees get `Stopwatch` timing in `RecipeExecutor.ExecuteAsync()` (the baseline measurement)
+- Only the optimized worktree gets actual code changes
+- Run presets with `--mangle` flag to avoid DB collisions between runs
+- Compare per-step timings across 3+ runs each, discard the first run (JIT warmup)
+- `.worktrees/` is already in `.gitignore`
+
+## Density Profiles
+
+Steps accept an optional `DensityProfile` that controls relationship patterns between users, groups, collections, and ciphers. When null, steps use the original round-robin behavior. When present, steps branch into density-aware algorithms.
+
+**Key files**:
+
+- `Options/DensityProfile.cs` — strongly-typed options (public class)
+- `Models/SeedPresetDensity.cs` — JSON preset deserialization targets (internal records)
+- `Data/Enums/MembershipDistributionShape.cs` — Uniform, PowerLaw, MegaGroup
+- `Data/Enums/CollectionFanOutShape.cs` — Uniform, PowerLaw, FrontLoaded
+- `Data/Enums/CipherCollectionSkew.cs` — Uniform, HeavyRight
+- `Data/Distributions/PermissionDistributions.cs` — 11 named distributions by org tier
+
+**Backward compatibility contract**: `DensityProfile? == null` MUST produce identical output to the original code. Every step guards this with `if (_density == null) { /* original path */ }`.
+
+**Preset JSON**: Add an optional `"density": { ... }` block. See `Seeds/schemas/preset.schema.json` for the full schema.
+
+**Presets**: Organized into `features/`, `qa/`, `scale/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
+
+**Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
+
+## Regression Testing
+
+Changes to `Factories/`, `Steps/`, `Scenes/`, or `Recipes/` need more than the unit suite — it covers none of the CLI, the SeederApi, or a real database. `Seeds/docs/regression.md` maps each changed path to the preset that reaches it and the assertion that proves it, and records the known non-regressions worth not chasing. Claude drives the CLI, API, and SQL; the developer smoke-tests the web vault.
+
+## Data/ File Organization
+
+New files under `Data/` belong in the matching subfolder (`Distributions/`, `Enums/`, `Generators/`, `Static/`) — never loose at the top level. See `Data/README.md` for what each subfolder holds. If a new file's concern doesn't fit an existing subfolder, that's a signal to create one, not to drop it loose.
+
+**Two Enums homes, by concern:** `Data/Enums/` (namespace `Bit.Seeder.Data.Enums`) holds the generation-config surface (`CompanyType`, `PasswordStrength`, distribution shapes, etc. — "Enums are the API"). Crypto-taxonomy enums that describe how seeded vault data is encrypted (`CipherEncryptionType`, `AttachmentSchemeType`) live in the top-level `Enums/` folder (namespace `Bit.Seeder.Enums`), one enum per file.
+
+## The Recipe Contract
+
+Recipes follow strict rules:
+
+1. A Recipe SHALL accept `SeederDependencies` as its single constructor parameter
+2. A Recipe SHALL have exactly one public entry point — `Seed()` when synchronous, `SeedAsync()` when it returns `Task`/`Task<T>`. Pipeline-backed Recipes (`OrganizationRecipe`, `IndividualUserRecipe`) are async; the direct-to-database Recipes (`CollectionsRecipe`, `GroupsRecipe`, `OrganizationDomainRecipe`, `OrganizationWithUsersRecipe`) remain synchronous.
+3. A Recipe MUST produce one cohesive result
+4. A Recipe MAY overload that entry point with different parameters
+5. A Recipe SHALL use private helper methods for internal steps
+6. A Recipe SHALL use BulkCopy for performance when creating multiple entities
+7. A Recipe SHALL compose Factories for individual entity creation
+8. A Recipe SHALL NOT expose implementation details as public methods
 
 ## Zero-Knowledge Architecture
 
-**Critical Principle:** Unencrypted vault data never leaves the client. The server never sees plaintext.
+**Critical:** Unencrypted vault data never leaves the client. The server never sees plaintext.
 
-### Why Seeder Uses the Rust SDK
+The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarden client:
 
-The Seeder must behave exactly like any other Bitwarden client. Since the server:
+1. Generate encryption keys (like client account setup)
+2. Encrypt vault data client-side (same SDK as real clients)
+3. Store only encrypted result
 
-- Never receives plaintext
-- Cannot perform encryption (doesn't have keys)
-- Only stores/retrieves encrypted blobs
+## Data Flow
 
-...the Seeder cannot simply write plaintext to the database. It must:
-
-1. Generate encryption keys (like a client does during account setup)
-2. Encrypt vault data client-side (using the same SDK the real clients use)
-3. Store only the encrypted result
-
-This is why we use the Rust SDK via FFI - it's the same cryptographic implementation used by the official clients.
-
-## Cipher Encryption Architecture
-
-### The Two-State Pattern
-
-Bitwarden uses a clean separation between encrypted and decrypted data:
-
-| State     | SDK Type     | Description               | Stored in DB? |
-| --------- | ------------ | ------------------------- | ------------- |
-| Plaintext | `CipherView` | Decrypted, human-readable | Never         |
-| Encrypted | `Cipher`     | EncString values          | Yes           |
-
-**Encryption flow:**
+### Pipeline path (fixture → entity)
 
 ```
-CipherView (plaintext) → encrypt_composite() → Cipher (encrypted)
+SeedVaultItem → CipherSeed.FromSeedItem() → CipherSeed → {Type}CipherSeeder.Create(options) → CipherViewDto → encrypt_fields (Rust FFI) → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
 ```
 
-**Decryption flow:**
+### Core encryption (shared by all paths)
 
 ```
-Cipher (encrypted) → decrypt() → CipherView (plaintext)
+CipherViewDto → JSON + [EncryptProperty] field paths → encrypt_fields (Rust FFI, bitwarden_crypto) → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
 ```
 
-### SDK vs Server Format Difference
+Shared logic: `Factories/CipherEncryption.cs`, `Models/EncryptedCipherDtoExtensions.cs`
 
-**Critical:** The SDK and server use different JSON structures.
+## Rust Crypto Dependency
 
-**SDK Cipher (nested):**
+The Rust shim (`util/RustSdk/rust/`) depends only on `bitwarden_crypto`. It does **not** depend on `bitwarden_vault` — the seeder drives field selection via `[EncryptProperty]` attributes, not SDK cipher types.
 
-```json
-{
-  "name": "2.abc...",
-  "login": {
-    "username": "2.def...",
-    "password": "2.ghi..."
-  }
-}
-```
+Before modifying encryption integration, run `RustSdkCipherTests` to validate roundtrip encryption.
 
-**Server Cipher.Data (flat CipherLoginData):**
+## Encryption Schemes (crypto taxonomy)
 
-```json
-{
-  "Name": "2.abc...",
-  "Username": "2.def...",
-  "Password": "2.ghi..."
-}
-```
+Seeded data spans two orthogonal encryption axes, named with Bitwarden's canonical vocabulary (defined in `Enums/CipherEncryptionType.cs` and `Enums/AttachmentSchemeType.cs`):
 
-### Data Flow in Seeder
+- **Cipher encryption** (`cipherEncryption`): `userKey` (no cipher key; `Cipher.Key` null) or `cipherKey` (per-cipher key wrapped by the vault key).
+- **Attachment scheme version** (`attachmentVersion`): `v0` (no attachment key), `v1` (attachment key wrapped by the vault key), `v2` (attachment key wrapped by the cipher key).
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────────┐
-│  CipherViewDto  │────▶│  Rust SDK        │────▶│  EncryptedCipherDto │
-│  (plaintext)    │     │  encrypt_cipher  │     │  (SDK Cipher)       │
-└─────────────────┘     └──────────────────┘     └─────────────────────┘
-                                                           │
-                                                           ▼
-                                               ┌───────────────────────┐
-                                               │  TransformToServer    │
-                                               │  (flatten nested →    │
-                                               │   flat structure)     │
-                                               └───────────────────────┘
-                                                           │
-                                                           ▼
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────────┐
-│  Server Cipher  │◀────│  CipherLoginData │◀────│  Flattened JSON     │
-│  Entity         │     │  (serialized)    │     │                     │
-└─────────────────┘     └──────────────────┘     └─────────────────────┘
-```
+**Invariant:** a cipher and its attachments use the same strategy — `v2` requires a `cipherKey` host. `Steps/CreateCipherAttachmentsStep.cs` and `Seeds/schemas/cipher.schema.json` both enforce this; keep them in sync.
 
-### Key Hierarchy
+**Wire mapping:** `AttachmentSchemeType.{V0,V1,V2}` casts to `u32 {0,1,2}` and is matched verbatim in `util/RustSdk/rust/src/attachment.rs`. The value *is* the version number — do not reintroduce an offset.
 
-Bitwarden uses a two-level encryption hierarchy:
+**Do not conflate with account Encryption V1/V2.** Attachment `v0/v1/v2` is key-wrapping only. Everything the seeder emits is Encryption-V1 type-2 `EncString` (AES-256-CBC-HMAC); no COSE/type-7 path exists. A future V2/COSE capability is a **separate** axis (a new enum), never a new attachment version.
 
-1. **User/Organization Key** - Encrypts the cipher's individual key
-2. **Cipher Key** (optional) - Encrypts the actual cipher data
+## Deterministic Data Generation
 
-For seeding, we use the organization's symmetric key directly (no per-cipher key).
-
-## Rust SDK FFI
-
-### Error Handling
-
-SDK functions return JSON with an `"error"` field on failure:
-
-```json
-{ "error": "Failed to parse CipherView JSON" }
-```
-
-Always check for `"error"` in the response before parsing.
-
-## Testing
-
-Integration tests in `test/SeederApi.IntegrationTest` verify:
-
-1. **Roundtrip encryption** - Encrypt then decrypt preserves plaintext
-2. **Server format compatibility** - Output matches CipherLoginData structure
-3. **Field encryption** - Custom fields are properly encrypted
-4. **Security** - Plaintext never appears in encrypted output
-
-## Common Patterns
-
-### Creating a Cipher
+Same domain = same seed = reproducible data:
 
 ```csharp
-var sdk = new RustSdkService();
-var seeder = new CipherSeeder(sdk);
-
-var cipher = seeder.CreateOrganizationLoginCipher(
-    organizationId,
-    orgKey,  // Base64-encoded symmetric key
-    name: "My Login",
-    username: "user@example.com",
-    password: "secret123");
+var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
 
-### Bulk Cipher Creation
+## Scenarios
 
-```csharp
-var recipe = new CiphersRecipe(dbContext, sdkService);
+Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an engineering problem to a Seeder command.
 
-var cipherIds = recipe.AddLoginCiphersToOrganization(
-    organizationId,
-    orgKey,
-    collectionIds,
-    count: 100);
-```
+**Maintenance rules:**
+
+- When adding a new preset, check if an existing scenario should reference it as a variation
+- When adding a new command or flag, check if it enables a new scenario or changes an existing one
+- When CLI flags, commands, or preset names change, scan all `*.md` files under `Seeds/` and `SeederUtility/` for stale references
+- Scenario files follow the template in `Seeds/docs/scenarios/README.md`
+- Never duplicate CLI flag documentation — link to `SeederUtility/README.md`
+- Never duplicate preset catalog details — link to `Seeds/docs/presets.md`
+- Scenarios describe _why_ (the problem). READMEs describe _how_ (the tool). Keep the split clean.
+
+**File relationships:**
+
+- `SeederUtility/README.md` → CLI reference (commands, flags, examples) → links to scenarios
+- `Seeds/docs/presets.md` → what exists (the catalog) → scenarios link back to it
+- `Seeds/docs/scenarios/` → why you'd use it (problem → command)
+
+## Collection Management Settings
+
+**Collection management settings are not plan-gated.** `AllowAdminAccessToAllCollectionItems`, `LimitCollectionCreation`, `LimitCollectionDeletion`, and `LimitItemDeletion` apply identically across all plan types. They are org-level admin settings, not billing-plan features.
+
+**These settings alter access control behavior.** When seeding scenarios that test member vs. admin permissions, collection creation/deletion policies, or item-level access, set them explicitly in the preset rather than relying on defaults.
+
+**Configurable in presets and CLI.** Use the JSON preset `organization` block (e.g. `"limitCollectionCreation": true`) or the CLI flags: `--limit-collection-creation`, `--limit-collection-deletion`, `--limit-item-deletion`, `--allow-admin-collection-access`.
 
 ## Security Reminders
 
-- Generated test passwords are intentionally weak (`asdfasdfasdf`)
-- Never commit database dumps containing seeded data to version control
-- Seeded keys are for testing only - regenerate for each test run
+- Default test password: `asdfasdfasdf` (overridable via `--password` CLI flag or `SeederSettings`)
+- Never commit database dumps with seeded data
+- Seeded keys are for testing only

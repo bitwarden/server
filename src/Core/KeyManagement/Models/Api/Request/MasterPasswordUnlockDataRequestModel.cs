@@ -14,9 +14,12 @@ public class MasterPasswordUnlockDataRequestModel
     [Required]
     [EncryptedString]
     public required string MasterKeyWrappedUserKey { get; init; }
-    [Required]
+    [Required(AllowEmptyStrings = false)]
     [StringLength(256)]
     public required string Salt { get; init; }
+
+    [KeyId]
+    public string? ContainedKeyId { get; init; }
 
     public MasterPasswordUnlockData ToData()
     {
@@ -24,7 +27,8 @@ public class MasterPasswordUnlockDataRequestModel
         {
             Kdf = Kdf.ToData(),
             MasterKeyWrappedUserKey = MasterKeyWrappedUserKey,
-            Salt = Salt
+            Salt = Salt,
+            ContainedKeyId = KeyId.FromHexEncodedString(ContainedKeyId)
         };
     }
 }

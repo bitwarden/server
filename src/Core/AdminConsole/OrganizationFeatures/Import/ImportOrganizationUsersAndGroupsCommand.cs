@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -23,6 +24,8 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     private readonly IGroupRepository _groupRepository;
     private readonly IEventService _eventService;
     private readonly IOrganizationService _organizationService;
+    private readonly IFeatureService _featureService;
+    private readonly ICreateStagedOrganizationUsersCommand _createStagedOrganizationUsersCommand;
 
     private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
 
@@ -31,7 +34,9 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             IStripePaymentService paymentService,
             IGroupRepository groupRepository,
             IEventService eventService,
-            IOrganizationService organizationService)
+            IOrganizationService organizationService,
+            IFeatureService featureService,
+            ICreateStagedOrganizationUsersCommand createStagedOrganizationUsersCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -39,6 +44,8 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         _groupRepository = groupRepository;
         _eventService = eventService;
         _organizationService = organizationService;
+        _featureService = featureService;
+        _createStagedOrganizationUsersCommand = createStagedOrganizationUsersCommand;
     }
 
     /// <summary>
@@ -50,13 +57,16 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     /// <param name="removeUserExternalIds">A collection of ExternalUserIds to be removed from the organization.</param>
     /// <param name="overwriteExisting">Indicates whether to delete existing external users from the organization
     /// who are not included in the current import.</param>
+    /// <param name="inviteUsersAfterProvisioning">Indicates whether new users are sent an invitation email.
+    /// When false, new users are created in the Staged status without an invitation.</param>
     /// <exception cref="NotFoundException">Thrown if the organization does not exist.</exception>
     /// <exception cref="BadRequestException">Thrown if the organization is not configured to use directory syncing.</exception>
     public async Task ImportAsync(Guid organizationId,
         IEnumerable<ImportedGroup> importedGroups,
         IEnumerable<ImportedOrganizationUser> importedUsers,
         IEnumerable<string> removeUserExternalIds,
-        bool overwriteExisting)
+        bool overwriteExisting,
+        bool inviteUsersAfterProvisioning)
     {
         var organization = await GetOrgById(organizationId);
         if (organization is null)
@@ -82,7 +92,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
         await UpdateExistingUsers(importedUsers, importUserData);
 
-        await AddNewUsers(organization, importedUsers, importUserData);
+        await AddNewUsers(organization, importedUsers, importUserData, inviteUsersAfterProvisioning);
 
         await ImportGroups(organization, importedGroups, importUserData);
 
@@ -172,28 +182,36 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     /// <summary>
     /// Adds new external users to the organization by inviting users who are present in the imported data
     /// but not already part of the organization. Sends invitations, updates the user Id mapping on success,
-    /// and throws exceptions on failure.
+    /// and throws exceptions on failure. When <paramref name="inviteUsersAfterProvisioning"/> is false, new
+    /// users are created in the Staged status instead of being invited.
     /// </summary>
     /// <param name="organization">The target organization to which users are being added.</param>
     /// <param name="importedUsers">A collection of imported users to consider for addition.</param>
     /// <param name="importUserData">Data containing imported user info and existing user mappings.</param>
+    /// <param name="inviteUsersAfterProvisioning">Indicates whether new users are sent an invitation email.</param>
     private async Task AddNewUsers(Organization organization,
             IEnumerable<ImportedOrganizationUser> importedUsers,
-            OrganizationUserImportData importUserData)
+            OrganizationUserImportData importUserData,
+            bool inviteUsersAfterProvisioning)
     {
         // Determine which users are already in the organization
         var existingUsersSet = new HashSet<string>(importUserData.ExistingExternalUsersIdDict.Keys);
         var usersToAdd = importUserData.ImportedExternalIds.Except(existingUsersSet).ToList();
+        var newUsers = importedUsers
+            .Where(u => usersToAdd.Contains(u.ExternalId) && !string.IsNullOrWhiteSpace(u.Email))
+            .ToList();
+
+        if (!inviteUsersAfterProvisioning && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+        {
+            await StageNewUsers(organization, newUsers, importUserData);
+            return;
+        }
+
         var userInvites = new List<(OrganizationUserInvite, string)>();
         var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
 
-        foreach (var user in importedUsers)
+        foreach (var user in newUsers)
         {
-            if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
-            {
-                continue;
-            }
-
             try
             {
                 var invite = new OrganizationUserInvite
@@ -216,6 +234,39 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         foreach (var invitedUser in invitedUsers)
         {
             importUserData.ExistingExternalUsersIdDict.TryAdd(invitedUser.ExternalId!, invitedUser.Id);
+        }
+    }
+
+    /// <summary>
+    /// Creates new external users in the Staged status without sending invitations, and updates the user Id
+    /// mapping so staged users can be associated with imported groups.
+    /// </summary>
+    /// <param name="organization">The target organization to which users are being added.</param>
+    /// <param name="newUsers">The imported users that are not already part of the organization.</param>
+    /// <param name="importUserData">Data containing imported user info and existing user mappings.</param>
+    private async Task StageNewUsers(Organization organization,
+            IEnumerable<ImportedOrganizationUser> newUsers,
+            OrganizationUserImportData importUserData)
+    {
+        var result = await _createStagedOrganizationUsersCommand.RunAsync(new CreateStagedOrganizationUsersRequest
+        {
+            Organization = organization,
+            Users = newUsers.Select(u => new StagedOrganizationUserRequest
+            {
+                Email = u.Email,
+                ExternalId = u.ExternalId
+            }),
+            EventSystemUser = _EventSystemUser
+        });
+
+        if (result.IsError)
+        {
+            throw new BadRequestException(result.AsError.Message);
+        }
+
+        foreach (var stagedUser in result.AsSuccess)
+        {
+            importUserData.ExistingExternalUsersIdDict.TryAdd(stagedUser.ExternalId!, stagedUser.Id);
         }
     }
 
@@ -379,7 +430,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             return;
         }
 
-        await _groupRepository.UpdateUsersAsync(group.Id, users);
+        await _groupRepository.UpdateUsersAsync(group.Id, users, group.RevisionDate);
     }
 
     private async Task<Organization?> GetOrgById(Guid id)

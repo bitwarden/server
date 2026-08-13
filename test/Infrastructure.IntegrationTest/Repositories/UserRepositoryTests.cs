@@ -1,7 +1,11 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Enums;
+using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
@@ -42,8 +46,8 @@ public class UserRepositoryTests
 
         var group1 = await groupRepository.CreateTestGroupAsync(organization, "test-group-1");
         var group2 = await groupRepository.CreateTestGroupAsync(organization, "test-group-2");
-        await groupRepository.UpdateUsersAsync(group1.Id, [orgUser1.Id]);
-        await groupRepository.UpdateUsersAsync(group2.Id, [orgUser3.Id]);
+        await groupRepository.UpdateUsersAsync(group1.Id, [orgUser1.Id], DateTime.UtcNow);
+        await groupRepository.UpdateUsersAsync(group2.Id, [orgUser3.Id], DateTime.UtcNow);
 
         var collection1 = new Collection
         {
@@ -520,12 +524,422 @@ public class UserRepositoryTests
         Assert.Equal(keyConnectorWrappedKey, updatedUser.Key);
         Assert.True(updatedUser.UsesKeyConnector);
         Assert.Equal(KdfType.Argon2id, updatedUser.Kdf);
-        Assert.Equal(AuthConstants.ARGON2_ITERATIONS.Default, updatedUser.KdfIterations);
-        Assert.Equal(AuthConstants.ARGON2_MEMORY.Default, updatedUser.KdfMemory);
-        Assert.Equal(AuthConstants.ARGON2_PARALLELISM.Default, updatedUser.KdfParallelism);
+        Assert.Equal(KdfConstants.ARGON2_ITERATIONS.Default, updatedUser.KdfIterations);
+        Assert.Equal(KdfConstants.ARGON2_MEMORY.Default, updatedUser.KdfMemory);
+        Assert.Equal(KdfConstants.ARGON2_PARALLELISM.Default, updatedUser.KdfParallelism);
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
     }
+
+    /// <summary>
+    /// Happy Path
+    /// </summary>
+    [Theory, DatabaseData]
+    public async Task CreateAsync_ShouldCreateUser(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var email = $"TesT+{Guid.NewGuid()}@example.com";
+        var passwordSalt = "some_guid_or_random_string";
+        var user = new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            MasterPassword = "password_hash",
+            MasterPasswordSalt = passwordSalt
+        };
+
+        // Act
+        user = await userRepository.CreateAsync(user);
+
+        // Assert
+        var createdUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(createdUser);
+        Assert.Equal("Test User", createdUser.Name);
+        Assert.Equal(email, createdUser.Email);
+        Assert.Equal("TEST", createdUser.ApiKey);
+        Assert.Equal("stamp", createdUser.SecurityStamp);
+        Assert.Equal("password_hash", createdUser.MasterPassword);
+        Assert.Equal(passwordSalt, createdUser.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_DefaultsLastApiKeyRotationDateToNull(
+        IUserRepository userRepository)
+    {
+        var user = new User
+        {
+            Name = "Test User",
+            Email = $"create+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        };
+
+        await userRepository.CreateAsync(user);
+
+        var created = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(created);
+        Assert.Null(created.LastApiKeyRotationDate);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_SetsLastApiKeyRotationDate(
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Rotate User",
+            Email = $"rotate+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        Assert.Null(user.LastApiKeyRotationDate);
+
+        var rotatedAt = DateTime.UtcNow;
+        user.LastApiKeyRotationDate = rotatedAt;
+        await userRepository.ReplaceAsync(user);
+
+        var updated = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updated);
+        Assert.NotNull(updated.LastApiKeyRotationDate);
+        Assert.Equal(rotatedAt, updated.LastApiKeyRotationDate.Value, TimeSpan.FromMinutes(1));
+    }
+
+    /// <summary>
+    /// Happy path
+    /// </summary>
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_ShouldUpdateUser(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var originalEmail = $"original+{Guid.NewGuid()}@example.com";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = originalEmail,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            MasterPassword = "password_hash",
+        });
+
+        // Act
+        var newEmail = $"UpDAted+{Guid.NewGuid()}@example.com";
+        user.Email = newEmail;
+        var passwordSalt = "some_guid_or_random_string";
+        user.MasterPasswordSalt = passwordSalt;
+        await userRepository.ReplaceAsync(user);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("Test User", updatedUser.Name);
+        Assert.Equal("TEST", updatedUser.ApiKey);
+        Assert.Equal("stamp", updatedUser.SecurityStamp);
+        Assert.Equal("password_hash", updatedUser.MasterPassword);
+        // Assert updates where made
+        Assert.Equal(newEmail, updatedUser.Email);
+        Assert.Equal(passwordSalt, updatedUser.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_ShouldSetMasterPasswordSaltToNullWhenNoMasterPassword(
+    IUserRepository userRepository)
+    {
+        // Arrange
+        var originalEmail = $"OriGinaL+{Guid.NewGuid()}@example.com";
+        var user = new User
+        {
+            Name = "Test User",
+            Email = originalEmail,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        };
+
+        // Act
+        await userRepository.CreateAsync(user);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Null(updatedUser.MasterPasswordSalt);
+    }
+
+    /// <summary>
+    /// In this test we are testing that the MasterPasswordUnlockData set's the password data correctly.
+    /// including setting the masterPasswordSalt.
+    /// <see cref="TdeSetPasswordCommand.SetMasterPasswordAsync"/> and <see cref="FinishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync"/> for reference.
+    /// </summary>
+    [Theory, DatabaseData]
+    public async Task UpdateMasterPassword_MasterPasswordSaltIsUpdated(
+        IUserRepository userRepository, Database database)
+    {
+        // Arrange
+        var originalEmail = $"OriGinaL+{Guid.NewGuid()}@example.com";
+        var masterPasswordUnlockData = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType.Argon2id,
+                Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+                Memory = KdfConstants.ARGON2_MEMORY.Default,
+                Parallelism = KdfConstants.ARGON2_PARALLELISM.Default
+            },
+            MasterKeyWrappedUserKey = "wrapped-user-key",
+            // The salt is set to the email in the command handlers, so we can set
+            // it to the email here to verify it gets set correctly on the user.
+            Salt = originalEmail.ToLowerInvariant().Trim()
+        };
+
+        // Create user with no master password so that the MasterPasswordSalt will be null
+        // initially and we can verify it gets set on update.
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = originalEmail,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        });
+
+        // Act
+        var result = userRepository.SetMasterPassword(user.Id, masterPasswordUnlockData, "newMasterPasswordHash", "hint");
+        Assert.NotNull(result);
+        await RunUpdateUserDataAsync(result, database);
+
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.NotNull(updatedUser.MasterPasswordSalt);
+        Assert.Equal(originalEmail.ToLowerInvariant().Trim(), updatedUser.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateUserKeyAndEncryptedDataV2Async_UpdatesAllUserFields(IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+
+        var newSecurityStamp = Guid.NewGuid().ToString();
+        user.Key = "new-user-key";
+        user.PrivateKey = "new-private-key";
+        user.SecurityStamp = newSecurityStamp;
+        user.Kdf = KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+        user.Email = $"updated+{Guid.NewGuid()}@example.com";
+        user.MasterPassword = "new-master-password-hash";
+        user.MasterPasswordHint = "new-hint";
+        user.LastKeyRotationDate = DateTime.UtcNow;
+        user.RevisionDate = DateTime.UtcNow;
+        user.AccountRevisionDate = DateTime.UtcNow;
+        user.SignedPublicKey = "new-signed-public-key";
+        user.SecurityState = "new-security-state";
+        user.SecurityVersion = 2;
+        user.V2UpgradeToken = null;
+
+        // Act
+        await userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, []);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("new-user-key", updatedUser.Key);
+        Assert.Equal("new-private-key", updatedUser.PrivateKey);
+        Assert.Equal(newSecurityStamp, updatedUser.SecurityStamp);
+        Assert.Equal(KdfType.Argon2id, updatedUser.Kdf);
+        Assert.Equal(3, updatedUser.KdfIterations);
+        Assert.Equal(64, updatedUser.KdfMemory);
+        Assert.Equal(4, updatedUser.KdfParallelism);
+        Assert.Equal(user.Email, updatedUser.Email);
+        Assert.Equal("new-master-password-hash", updatedUser.MasterPassword);
+        Assert.Equal("new-hint", updatedUser.MasterPasswordHint);
+        Assert.Equal("new-signed-public-key", updatedUser.SignedPublicKey);
+        Assert.Equal("new-security-state", updatedUser.SecurityState);
+        Assert.Equal(2, updatedUser.SecurityVersion);
+        Assert.Null(updatedUser.V2UpgradeToken);
+        Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateUserKeyAndEncryptedDataV2Async_InvokesUpdateDataActions(IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        user.RevisionDate = DateTime.UtcNow;
+
+        var actionWasInvoked = false;
+        UpdateEncryptedDataForKeyRotation action = (_, _) =>
+        {
+            actionWasInvoked = true;
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, [action]);
+
+        // Assert
+        Assert.True(actionWasInvoked);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetKdfInformationByEmailAsync_WithPbkdf2User_ReturnsKdfInformation(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var salt = "test-salt-value";
+        await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            MasterPassword = "password_hash",
+            MasterPasswordSalt = salt,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+        });
+
+        // Act
+        var result = await userRepository.GetKdfInformationByEmailAsync(email);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(KdfType.PBKDF2_SHA256, result.Kdf);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, result.KdfIterations);
+        Assert.Null(result.KdfMemory);
+        Assert.Null(result.KdfParallelism);
+        Assert.Equal(salt, result.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetKdfInformationByEmailAsync_WithArgon2idUser_ReturnsKdfInformationWithMemoryAndParallelism(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var salt = "argon2-salt-value";
+        await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            MasterPassword = "password_hash",
+            MasterPasswordSalt = salt,
+            Kdf = KdfType.Argon2id,
+            KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = KdfConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default,
+        });
+
+        // Act
+        var result = await userRepository.GetKdfInformationByEmailAsync(email);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(KdfType.Argon2id, result.Kdf);
+        Assert.Equal(KdfConstants.ARGON2_ITERATIONS.Default, result.KdfIterations);
+        Assert.Equal(KdfConstants.ARGON2_MEMORY.Default, result.KdfMemory);
+        Assert.Equal(KdfConstants.ARGON2_PARALLELISM.Default, result.KdfParallelism);
+        Assert.Equal(salt, result.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetKdfInformationByEmailAsync_WithNoMasterPassword_ReturnsNullSalt(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        // Act
+        var result = await userRepository.GetKdfInformationByEmailAsync(email);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetKdfInformationByEmailAsync_WithNonExistentEmail_ReturnsNull(
+        IUserRepository userRepository)
+    {
+        // Act
+        var result = await userRepository.GetKdfInformationByEmailAsync($"nonexistent+{Guid.NewGuid()}@example.com");
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetV2AccountCryptographicStateAsync_RunsDelegatesInTheCallerTransaction(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        // The delegate writes the same user row the enclosing transaction has already written and not yet
+        // committed. If it does not enlist in that transaction it opens a second connection and blocks on
+        // the uncommitted row until the command times out, so this test failing as a timeout is the
+        // regression it guards against.
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var masterPasswordUnlockData = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType.PBKDF2_SHA256,
+                Iterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            },
+            MasterKeyWrappedUserKey = "wrapped-user-key",
+            Salt = email.ToLowerInvariant().Trim(),
+        };
+
+        // Act
+        await userRepository.SetV2AccountCryptographicStateAsync(user.Id, BuildV2AccountKeysData(),
+            [userRepository.SetMasterPassword(user.Id, masterPasswordUnlockData, "newHash", "hint")]);
+
+        // Assert
+        // Both halves of the transaction committed: the account keys and the delegate's write.
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("public-key", updatedUser.PublicKey);
+        Assert.Equal("newHash", updatedUser.MasterPassword);
+        Assert.Equal("hint", updatedUser.MasterPasswordHint);
+        Assert.Equal("wrapped-user-key", updatedUser.Key);
+    }
+
+    private static UserAccountKeysData BuildV2AccountKeysData() => new()
+    {
+        PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+            "wrapped-private-key",
+            "public-key",
+            "signed-public-key"),
+        SignatureKeyPairData = new SignatureKeyPairData(
+            SignatureAlgorithm.Ed25519,
+            "wrapped-signing-key",
+            "verifying-key"),
+        SecurityStateData = new SecurityStateData
+        {
+            SecurityState = "security-state",
+            SecurityVersion = 2
+        }
+    };
 
     private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
     {

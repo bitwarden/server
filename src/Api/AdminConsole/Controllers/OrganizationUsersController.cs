@@ -2,24 +2,28 @@
 // NOTE: This file is partially migrated to nullable reference types. Remove inline #nullable directives when addressing the FIXME.
 #nullable disable
 
+using System.Net;
+using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
-using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
-using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -28,15 +32,18 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
@@ -44,6 +51,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
 using V2_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -57,25 +65,24 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IUserService _userService;
-    private readonly IPolicyQuery _policyQuery;
     private readonly ICurrentContext _currentContext;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IApplicationCacheService _applicationCacheService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IDeleteClaimedOrganizationUserAccountCommand _deleteClaimedOrganizationUserAccountCommand;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IFeatureService _featureService;
+    private readonly IGetPendingAutoConfirmUsersQuery _getPendingAutoConfirmUsersQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IBulkResendOrganizationInvitesCommand _bulkResendOrganizationInvitesCommand;
     private readonly IAutomaticallyConfirmOrganizationUserCommand _automaticallyConfirmOrganizationUserCommand;
+    private readonly IBulkAutomaticallyConfirmOrganizationUsersCommand _bulkAutomaticallyConfirmOrganizationUsersCommand;
     private readonly V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand _revokeOrganizationUserCommandVNext;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
@@ -83,6 +90,13 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
+    private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
+    private readonly IAcceptOrganizationInviteLinkCommand _acceptOrganizationInviteLinkCommand;
+    private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
+    private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
+    private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommandVNext;
+    private readonly IGlobalSettings _globalSettings;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -90,21 +104,18 @@ public class OrganizationUsersController : BaseAdminConsoleController
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IUserService userService,
-        IPolicyQuery policyQuery,
         ICurrentContext currentContext,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
-        IApplicationCacheService applicationCacheService,
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IDeleteClaimedOrganizationUserAccountCommand deleteClaimedOrganizationUserAccountCommand,
         IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IPolicyRequirementQuery policyRequirementQuery,
-        IFeatureService featureService,
         IPricingClient pricingClient,
         IConfirmOrganizationUserCommand confirmOrganizationUserCommand,
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
@@ -114,8 +125,17 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
+        IBulkAutomaticallyConfirmOrganizationUsersCommand bulkAutomaticallyConfirmOrganizationUsersCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
-        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
+        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
+        IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
+        IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery,
+        IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand,
+        IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
+        IGetOrganizationInviteCommand getOrganizationInviteCommand,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
+        V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
+        IGlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -123,25 +143,24 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _collectionRepository = collectionRepository;
         _groupRepository = groupRepository;
         _userService = userService;
-        _policyQuery = policyQuery;
         _currentContext = currentContext;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _authorizationService = authorizationService;
-        _applicationCacheService = applicationCacheService;
         _ssoConfigRepository = ssoConfigRepository;
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _deleteClaimedOrganizationUserAccountCommand = deleteClaimedOrganizationUserAccountCommand;
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _policyRequirementQuery = policyRequirementQuery;
-        _featureService = featureService;
+        _getPendingAutoConfirmUsersQuery = getPendingAutoConfirmUsersQuery;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _bulkResendOrganizationInvitesCommand = bulkResendOrganizationInvitesCommand;
         _automaticallyConfirmOrganizationUserCommand = automaticallyConfirmOrganizationUserCommand;
+        _bulkAutomaticallyConfirmOrganizationUsersCommand = bulkAutomaticallyConfirmOrganizationUsersCommand;
         _revokeOrganizationUserCommandVNext = revokeOrganizationUserCommandVNext;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
@@ -149,13 +168,20 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
+        _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
+        _acceptOrganizationInviteLinkCommand = acceptOrganizationInviteLinkCommand;
+        _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
+        _getOrganizationInviteCommand = getOrganizationInviteCommand;
+        _featureService = featureService;
+        _updateOrganizationUserCommandVNext = updateOrganizationUserCommandVNext;
+        _globalSettings = globalSettings;
     }
 
     [HttpGet("{id}")]
     [Authorize<ManageUsersRequirement>]
     public async Task<OrganizationUserDetailsResponseModel> Get(Guid orgId, Guid id, bool includeGroups = false)
     {
-        var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
+        var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(id);
         if (organizationUser == null || organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
@@ -176,9 +202,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Returns a set of basic information about all members of the organization. This is available to all members of
-    /// the organization to manage collections. For this reason, it contains as little information as possible and no
-    /// cryptographic keys or other sensitive data.
+    /// Returns a set of basic information about all members of the organization. This is available to all members
+    /// of the organization, since a broad range of features across the app depend on basic member lookups
+    /// (collection management, group management, event logs, sponsorship, etc.) that are not specific to any one
+    /// permission. For this reason, it contains as little information as possible and no cryptographic keys or
+    /// other sensitive data.
     /// </summary>
     /// <param name="orgId">Organization identifier</param>
     /// <returns>List of users for the organization.</returns>
@@ -224,10 +252,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpGet("{id}/reset-password-details")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, Guid id)
+    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid id,
+        [BindOrganization] Organization organization)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (organizationUser is null || organizationUser.UserId is null)
+        if (organizationUser is null || organizationUser.OrganizationId != organization.Id || organizationUser.UserId is null)
         {
             throw new NotFoundException();
         }
@@ -240,14 +269,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new NotFoundException();
         }
 
-        // Retrieve Encrypted Private Key from organization
-        var org = await _organizationRepository.GetByIdAsync(orgId);
-        if (org == null)
-        {
-            throw new NotFoundException();
-        }
-
-        return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, org));
+        return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, organization));
     }
 
     [HttpPost("account-recovery-details")]
@@ -302,7 +324,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("{organizationUserId}/accept-init")]
-    public async Task AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
+    public async Task<IResult> AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -310,9 +332,20 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
-        await _initPendingOrganizationCommand.InitPendingOrganizationAsync(user, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName, model.Token);
-        await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
-        await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = organizationUserId,
+            OrganizationKeys = model.Keys.ToPublicKeyEncryptionKeyPairData(),
+            CollectionName = model.CollectionName,
+            EmailToken = model.Token,
+            EncryptedOrganizationSymmetricKey = model.Key
+        };
+
+        var result = await _initPendingOrganizationCommand.InitPendingOrganizationAsync(request);
+
+        return Handle(result);
     }
 
     [HttpPost("{organizationUserId}/accept")]
@@ -324,37 +357,26 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
-        var useMasterPasswordPolicy = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-        ? (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id)).AutoEnrollEnabled(orgId)
-        : await ShouldHandleResetPasswordAsync(orgId);
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+        if (organizationUser == null || organizationUser.OrganizationId != orgId)
+        {
+            throw new NotFoundException("Organization user mismatch");
+        }
 
-        if (useMasterPasswordPolicy && string.IsNullOrWhiteSpace(model.ResetPasswordKey))
+        var autoEnrollEnabled = (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id))
+            .AutoEnrollEnabled(orgId);
+
+        if (autoEnrollEnabled && !OrganizationUser.IsValidResetPasswordKey(model.ResetPasswordKey))
         {
             throw new BadRequestException("Master Password reset is required, but not provided.");
         }
 
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
 
-        if (useMasterPasswordPolicy)
+        if (autoEnrollEnabled)
         {
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+            await _updateUserResetPasswordEnrollmentCommand.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
         }
-    }
-
-    private async Task<bool> ShouldHandleResetPasswordAsync(Guid orgId)
-    {
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-
-        if (organizationAbility is not { UsePolicies: true })
-        {
-            return false;
-        }
-
-        var masterPasswordPolicy = await _policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
-        var useMasterPasswordPolicy = masterPasswordPolicy.Enabled &&
-                                      masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
-
-        return useMasterPasswordPolicy;
     }
 
     [HttpPost("{id}/confirm")]
@@ -388,10 +410,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}")]
     [Authorize<ManageUsersRequirement>]
-    public async Task Put(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
+    public async Task<IResult> Put([BindOrganization] Organization organization, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
         var (organizationUser, currentAccess) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
-        if (organizationUser == null || organizationUser.OrganizationId != orgId)
+
+        if (organizationUser == null || organizationUser.OrganizationId != organization.Id)
         {
             throw new NotFoundException();
         }
@@ -402,72 +425,101 @@ public class OrganizationUsersController : BaseAdminConsoleController
         // Authorization check:
         // If admins are not allowed access to all collections, you cannot add yourself to a group.
         // No error is thrown for this, we just don't update groups.
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-        var groupsToSave = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
+        var groupsToSave = editingSelf && !organization.AllowAdminAccessToAllCollectionItems
             ? null
             : model.Groups;
 
-        // Authorization check:
-        // If admins are not allowed access to all collections, you cannot add yourself to collections.
-        // This is not caught by the requirement below that you can ModifyUserAccess and must be checked separately
+        var existingUserType = organizationUser.Type;
+
+        var collectionAccessToSave = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp))
+        {
+
+            var actingContext = _currentContext.GetOrganization(organization.Id);
+
+            var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
+                organizationUser,
+                organization,
+                model.Type.Value,
+                model.Permissions,
+                model.AccessSecretsManager,
+                model.AccessPam,
+                collectionAccessToSave,
+                groupsToSave,
+                model.Email,
+                model.Name,
+                model.DefaultUserCollectionName,
+                new StandardUser(
+                    userId,
+                    await _currentContext.OrganizationOwner(organization.Id),
+                    actingContext?.Type,
+                    actingContext?.Permissions));
+
+            var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
+            return Handle(result);
+        }
+
+        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
+            collectionAccessToSave, groupsToSave, model.DefaultUserCollectionName);
+
+        return TypedResults.Ok();
+    }
+
+    /// <summary>
+    /// Resolves the collection access to persist for an organization user update, enforcing the saving user's
+    /// authorization over the affected collections.
+    /// </summary>
+    private async Task<List<CollectionAccessSelection>> GetAuthorizedCollectionsToSaveAsync(OrganizationUserUpdateRequestModel model, ICollection<CollectionAccessSelection> currentAccess, bool editingSelf, Organization organization)
+    {
+        // A self-editing user can't add themselves to collections they don't already have access to,
+        // unless admins can access all collections.
         var currentAccessIds = currentAccess.Select(c => c.Id).ToHashSet();
         if (editingSelf &&
-            !organizationAbility.AllowAdminAccessToAllCollectionItems &&
+            !organization.AllowAdminAccessToAllCollectionItems &&
             model.Collections.Any(c => !currentAccessIds.Contains(c.Id)))
         {
             throw new BadRequestException("You cannot add yourself to a collection.");
         }
 
         // Authorization check:
-        // You must have authorization to ModifyUserAccess for all collections being saved
-        var postedCollections = await _collectionRepository
-            .GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
-        foreach (var collection in postedCollections)
+        // You must have authorization to ModifyUserAccess for all collections being saved.
+        var postedCollections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
+        if (postedCollections.Count != 0 &&
+            !(await _authorizationService.AuthorizeAsync(User, postedCollections, BulkCollectionOperations.ModifyUserAccess)).Succeeded)
         {
-            if (!(await _authorizationService.AuthorizeAsync(User, collection,
-                    BulkCollectionOperations.ModifyUserAccess))
-                .Succeeded)
-            {
-                throw new NotFoundException();
-            }
+            throw new NotFoundException();
         }
 
-        // The client only sends collections that the saving user has permissions to edit.
-        // We need to combine these with collections that the user doesn't have permissions for, so that we don't
-        // accidentally overwrite those
-        var currentCollections = await _collectionRepository
-            .GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
+        // Preserve the target's current collections the saving user can't edit, so they aren't overwritten.
+        var currentCollections = await _collectionRepository.GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
 
         var readonlyCollectionIds = new HashSet<Guid>();
+
         foreach (var collection in currentCollections)
         {
-            if (!(await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess))
-                .Succeeded)
+            if (!(await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded)
             {
                 readonlyCollectionIds.Add(collection.Id);
             }
         }
 
-        var editedCollectionAccess = model.Collections
-            .Select(c => c.ToSelectionReadOnly());
-        var readonlyCollectionAccess = currentAccess
-            .Where(ca => readonlyCollectionIds.Contains(ca.Id));
-        var collectionsToSave = editedCollectionAccess
+        var defaultCollectionIds = postedCollections
+            .Concat(currentCollections)
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToHashSet();
+
+        var editedCollectionAccess = model.Collections.Select(c => c.ToSelectionReadOnly());
+
+        var readonlyCollectionAccess = currentAccess.Where(ca => readonlyCollectionIds.Contains(ca.Id));
+
+        var collectionAccessToSave = editedCollectionAccess
             .Concat(readonlyCollectionAccess)
+            .Where(ac => !defaultCollectionIds.Contains(ac.Id)) // Remove default collections
             .ToList();
 
-        var existingUserType = organizationUser.Type;
-
-        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
-            collectionsToSave, groupsToSave);
-    }
-
-    [HttpPost("{id}")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task PostPut(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
-    {
-        await Put(orgId, id, model);
+        return collectionAccessToSave;
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
@@ -481,13 +533,13 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
         var isTdeEnrollment = ssoConfig != null && ssoConfig.Enabled && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption;
-        if (!isTdeEnrollment && !string.IsNullOrWhiteSpace(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.MasterPasswordHash))
+        if (!isTdeEnrollment && OrganizationUser.IsValidResetPasswordKey(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.MasterPasswordHash))
         {
             throw new BadRequestException("Incorrect password");
         }
 
         var callingUserId = user.Id;
-        await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
+        await _updateUserResetPasswordEnrollmentCommand.UpdateUserResetPasswordEnrollmentAsync(
             orgId, userId, model.ResetPasswordKey, callingUserId);
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);
@@ -498,15 +550,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
 #nullable enable
-    [HttpPut("{id}/reset-password")]
+    [HttpPut("{id}/recover-account")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    public async Task<IResult> RecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model,
+        [InjectOrganizationUser] OrganizationUser targetOrganizationUser)
     {
-        var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
-        {
-            return TypedResults.NotFound();
-        }
 
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, targetOrganizationUser, new RecoverAccountAuthorizationRequirement());
         if (!authorizationResult.Succeeded)
@@ -518,19 +566,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
-        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
-        if (result.Succeeded)
-        {
-            return TypedResults.Ok();
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        return TypedResults.BadRequest(ModelState);
+        var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
+        return Handle(await _adminRecoverAccountCommand.RecoverAccountAsync(commandRequest));
     }
 #nullable disable
 
@@ -628,7 +665,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task RevokeAsync(Guid orgId, Guid id)
     {
-        await RestoreOrRevokeUserAsync(orgId, id, _revokeOrganizationUserCommand.RevokeUserAsync);
+        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, userId, RevocationReason.Manual));
     }
 
     [HttpPut("revoke-self")]
@@ -667,7 +704,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
             new V2_RevokeOrganizationUserCommand.RevokeOrganizationUsersRequest(
                 orgId,
                 model.Ids.ToArray(),
-                new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId))));
+                new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId)),
+                RevocationReason.Manual));
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results
             .Select(result => new OrganizationUserBulkResponseModel(result.Id,
@@ -687,6 +725,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}/restore")]
     [Authorize<ManageUsersRequirement>]
+    [Obsolete("This endpoint is deprecated. Use _vNext endpoint instead. This will be removed in a future release.")]
     public async Task RestoreAsync(Guid orgId, Guid id)
     {
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, null));
@@ -695,7 +734,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}/restore/vnext")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.DefaultUserCollectionRestore)]
     public async Task RestoreAsync_vNext(Guid orgId, Guid id, [FromBody] OrganizationUserRestoreRequest request)
     {
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, request.DefaultUserCollectionName));
@@ -738,12 +776,16 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new BadRequestException("Users invalid.");
         }
 
-        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(orgId,
-            orgUsers.Count);
+        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(orgId, orgUsers.Count);
         if (additionalSmSeatsRequired > 0)
         {
+            // Self-hosted instances can't autoscale their Stripe subscription, so reject before touching billing.
+            if (_globalSettings.SelfHosted)
+            {
+                throw new BadRequestException(new V2_UpdateUserCommand.CannotAutoscaleSecretsManagerSeatsOnSelfHost().Message);
+            }
+
             var organization = await _organizationRepository.GetByIdAsync(orgId);
-            // TODO: https://bitwarden.atlassian.net/browse/PM-17000
             var plan = await _pricingClient.GetPlanOrThrow(organization!.PlanType);
             var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                 .AdjustSeats(additionalSmSeatsRequired);
@@ -758,18 +800,40 @@ public class OrganizationUsersController : BaseAdminConsoleController
         await _organizationUserRepository.ReplaceManyAsync(orgUsers);
     }
 
-    [HttpPatch("enable-secrets-manager")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    /// <summary>
+    /// Grants PAM access to the specified members. A plain field write: PAM has no seats, so there is no
+    /// autoscale or billing step. Members who already have access are skipped.
+    /// </summary>
+    [HttpPut("enable-pam")]
     [Authorize<ManageUsersRequirement>]
-    public async Task PatchBulkEnableSecretsManagerAsync(Guid orgId,
+    public async Task BulkEnablePamAsync(Guid orgId,
         [FromBody] OrganizationUserBulkRequestModel model)
     {
-        await BulkEnableSecretsManagerAsync(orgId, model);
+        var orgUsers = (await _organizationUserRepository.GetManyAsync(model.Ids))
+            .Where(ou => ou.OrganizationId == orgId && !ou.AccessPam).ToList();
+        if (orgUsers.Count == 0)
+        {
+            throw new BadRequestException(new UsersInvalid().Message);
+        }
+
+        // Granting access on an organization without PAM would be inert: claim emission ANDs AccessPam with the
+        // organization's UsePam.
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        if (organization is not { UsePam: true })
+        {
+            throw new BadRequestException(new V2_UpdateUserCommand.PamNotEnabled().Message);
+        }
+
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.AccessPam = true;
+        }
+
+        await _organizationUserRepository.ReplaceManyAsync(orgUsers);
     }
 
     [HttpPost("{id}/auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.AutomaticConfirmUsers)]
     public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync([FromRoute] Guid orgId,
         [FromRoute] Guid id,
         [FromBody] OrganizationUserConfirmRequestModel model)
@@ -780,7 +844,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         {
             return TypedResults.Unauthorized();
         }
-
         return Handle(await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
             new AutomaticallyConfirmOrganizationUserRequest
             {
@@ -790,6 +853,43 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 DefaultUserCollectionName = model.DefaultUserCollectionName,
                 PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
             }));
+    }
+
+    [HttpGet("pending-auto-confirm")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>> GetPendingAutoConfirmUsersAsync(Guid orgId)
+    {
+        var pendingUsers = await _getPendingAutoConfirmUsersQuery.GetPendingAutoConfirmUsersAsync(orgId);
+        return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>(
+            pendingUsers.Select(u => new OrganizationUserPendingAutoConfirmResponseModel(u)));
+    }
+
+    [HttpPost("bulk-auto-confirm")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkAutomaticallyConfirmOrganizationUsersAsync(
+        [BindOrganization] Organization organization,
+        [FromBody] OrganizationUserBulkConfirmRequestModel model)
+    {
+        var request = new BulkAutomaticallyConfirmOrganizationUsersRequest
+        {
+            Organization = organization,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
+            UsersToConfirm = model.Keys
+                .Select(entry => new BulkAutoConfirmUserEntry
+                {
+                    OrganizationUserId = entry.Id,
+                    Key = entry.Key,
+                })
+                .ToList(),
+        };
+
+        var results = await _bulkAutomaticallyConfirmOrganizationUsersCommand.RunAsync(request);
+
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(results
+            .Select(r => new OrganizationUserBulkResponseModel(r.Id,
+                r.Result.Match(
+                    error => error.Message,
+                    _ => string.Empty))));
     }
 
     private async Task RestoreOrRevokeUserAsync(
@@ -822,5 +922,70 @@ public class OrganizationUsersController : BaseAdminConsoleController
     {
         var usersOrganizationClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgId, userIds);
         return usersOrganizationClaimedStatus;
+    }
+
+    [HttpPost("/organizations/users/invite-link/accept")]
+    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
+    public async Task<IResult> AcceptInviteLink([FromBody] AcceptOrganizationInviteLinkRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _acceptOrganizationInviteLinkCommand.AcceptAsync(new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = model.OrganizationId,
+            Code = model.Code,
+            User = user,
+            ResetPasswordKey = model.ResetPasswordKey,
+        });
+
+        return Handle(result, _ => TypedResults.Ok());
+    }
+
+    [HttpPost("/organizations/users/invite-link/confirm")]
+    [RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
+    public async Task<IResult> ConfirmInviteLink([FromBody] ConfirmOrganizationInviteLinkRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _confirmOrganizationInviteLinkCommand.ConfirmAsync(new ConfirmOrganizationInviteLinkRequest
+        {
+            OrganizationId = model.OrganizationId,
+            Code = model.Code,
+            User = user,
+            OrgUserKey = model.OrgUserKey,
+            ResetPasswordKey = model.ResetPasswordKey,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
+        });
+
+        return Handle(result, _ => TypedResults.Ok());
+    }
+
+    [HttpPost("/organizations/users/invite-link/invite")]
+    [ProducesResponseType(typeof(OrganizationInviteResponseModel), (int)HttpStatusCode.OK)]
+    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
+    public async Task<IResult> GetInvite([FromBody] GetOrganizationInviteRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _getOrganizationInviteCommand.GetInviteAsync(new GetOrganizationInviteRequest
+        {
+            OrganizationId = model.OrganizationId,
+            Code = model.Code,
+            User = user,
+        });
+
+        return Handle(result, invite => TypedResults.Ok(new OrganizationInviteResponseModel(invite)));
     }
 }

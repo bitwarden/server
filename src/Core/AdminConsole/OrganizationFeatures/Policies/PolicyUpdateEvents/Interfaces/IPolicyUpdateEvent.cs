@@ -6,7 +6,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents
 /// Represents the policy to be upserted.
 /// </summary>
 /// <remarks>
-/// This is used for the VNextSavePolicyCommand. All policy handlers should implement this interface.
+/// This is used for the SavePolicyCommand. All policy handlers should implement this interface.
 /// </remarks>
 public interface IPolicyUpdateEvent
 {

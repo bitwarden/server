@@ -4,6 +4,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @UserIds [dbo].[GuidIdArray]
+
     -- Parse the JSON string
     DECLARE @OrganizationUserInput AS TABLE (
         [Id] UNIQUEIDENTIFIER,
@@ -18,7 +20,10 @@ BEGIN
         [RevisionDate] DATETIME2(7),
         [Permissions] NVARCHAR(MAX),
         [ResetPasswordKey] VARCHAR(MAX),
-        [AccessSecretsManager] BIT
+        [AccessSecretsManager] BIT,
+        [RevocationReason] TINYINT NULL,
+        [StatusNew] SMALLINT NULL,
+        [AccessPam] BIT
     )
 
     INSERT INTO @OrganizationUserInput
@@ -35,7 +40,10 @@ BEGIN
         [RevisionDate],
         [Permissions],
         [ResetPasswordKey],
-        [AccessSecretsManager]
+        [AccessSecretsManager],
+        [RevocationReason],
+        [StatusNew],
+        [AccessPam]
     FROM OPENJSON(@jsonData)
     WITH (
         [Id] UNIQUEIDENTIFIER '$.Id',
@@ -50,7 +58,10 @@ BEGIN
         [RevisionDate] DATETIME2(7) '$.RevisionDate',
         [Permissions] NVARCHAR (MAX) '$.Permissions',
         [ResetPasswordKey] VARCHAR (MAX) '$.ResetPasswordKey',
-        [AccessSecretsManager] BIT '$.AccessSecretsManager'
+        [AccessSecretsManager] BIT '$.AccessSecretsManager',
+        [RevocationReason] TINYINT '$.RevocationReason',
+        [StatusNew] SMALLINT '$.StatusNew',
+        [AccessPam] BIT '$.AccessPam'
     )
 
     -- Perform the update
@@ -68,16 +79,20 @@ BEGIN
         [RevisionDate] = OUI.[RevisionDate],
         [Permissions] = OUI.[Permissions],
         [ResetPasswordKey] = OUI.[ResetPasswordKey],
-        [AccessSecretsManager] = OUI.[AccessSecretsManager]
+        [AccessSecretsManager] = OUI.[AccessSecretsManager],
+        [RevocationReason] = OUI.[RevocationReason],
+        [StatusNew] = OUI.[StatusNew],
+        [AccessPam] = ISNULL(OUI.[AccessPam], 0)
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
         @OrganizationUserInput OUI ON OU.Id = OUI.Id
 
     -- Bump account revision dates
-    EXEC [dbo].[User_BumpManyAccountRevisionDates]
-    (
-        SELECT [UserId]
-        FROM @OrganizationUserInput
-    )
+    INSERT INTO @UserIds
+    SELECT [UserId]
+    FROM @OrganizationUserInput
+    WHERE [UserId] IS NOT NULL
+
+    EXEC [dbo].[User_BumpManyAccountRevisionDates] @UserIds
 END

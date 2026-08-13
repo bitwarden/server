@@ -5,12 +5,13 @@
 using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -34,15 +35,15 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly ISsoRequestValidator _ssoRequestValidator;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly ILogger _logger;
+    protected readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
+    private readonly IClientVersionValidator _clientVersionValidator;
+    protected readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
 
     protected ICurrentContext CurrentContext { get; }
-    protected IPolicyService PolicyService { get; }
     protected IFeatureService _featureService { get; }
     protected ISsoConfigRepository SsoConfigRepository { get; }
     protected IUserService _userService { get; }
@@ -57,19 +58,19 @@ public abstract class BaseRequestValidator<T> where T : class
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         ISsoRequestValidator ssoRequestValidator,
-        IOrganizationUserRepository organizationUserRepository,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator,
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand
     )
     {
         _userManager = userManager;
@@ -78,11 +79,9 @@ public abstract class BaseRequestValidator<T> where T : class
         _deviceValidator = deviceValidator;
         _twoFactorAuthenticationValidator = twoFactorAuthenticationValidator;
         _ssoRequestValidator = ssoRequestValidator;
-        _organizationUserRepository = organizationUserRepository;
         _logger = logger;
         CurrentContext = currentContext;
         _globalSettings = globalSettings;
-        PolicyService = policyService;
         _userRepository = userRepository;
         _featureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
@@ -91,8 +90,18 @@ public abstract class BaseRequestValidator<T> where T : class
         _authRequestRepository = authRequestRepository;
         _mailService = mailService;
         _accountKeysQuery = userAccountKeysQuery;
+        _clientVersionValidator = clientVersionValidator;
+        _updateDeviceLastActivityCommand = updateDeviceLastActivityCommand;
     }
 
+    // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
+    // evaluated from inside this validator without first populating CurrentContext.UserId /
+    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware only sees /connect/token
+    // headers, which do not carry either value. Prefer flag-gating in BuildSuccessResultAsync
+    // (where validation is complete and User/Device entities are available) and populate
+    // CurrentContext inline immediately before the flag check. Do not populate CurrentContext
+    // from raw form-body input before the grant-specific validator finishes — pre-validation
+    // client values would become visible to any downstream reader in the same request.
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
@@ -135,7 +144,13 @@ public abstract class BaseRequestValidator<T> where T : class
             // validation to perform the recovery as part of scheme validation based on the request.
             return
             [
-                () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateGrantSpecificContext(context, validatorContext),
+                // Now check the version number of the client. Do this after ValidateContextAsync so that
+                // we prevent account enumeration. If we were to do this before ValidateContextAsync, then attackers
+                // could use a known invalid client version and make a request for a user (before we know if they have
+                // demonstrated ownership of the account via correct credentials) and identify if they exist by getting
+                // an error response back from the validator saying the user is not compatible with the client.
+                () => ValidateClientVersionAsync(context, validatorContext),
                 () => ValidateTwoFactorAsync(context, request, validatorContext),
                 () => ValidateSsoAsync(context, request, validatorContext),
                 () => ValidateNewDeviceAsync(context, request, validatorContext),
@@ -148,7 +163,13 @@ public abstract class BaseRequestValidator<T> where T : class
             // The typical validation scenario.
             return
             [
-                () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateGrantSpecificContext(context, validatorContext),
+                // Now check the version number of the client. Do this after ValidateContextAsync so that
+                // we prevent account enumeration. If we were to do this before ValidateContextAsync, then attackers
+                // could use a known invalid client version and make a request for a user (before we know if they have
+                // demonstrated ownership of the account via correct credentials) and identify if they exist by getting
+                // an error response back from the validator saying the user is not compatible with the client.
+                () => ValidateClientVersionAsync(context, validatorContext),
                 () => ValidateSsoAsync(context, request, validatorContext),
                 () => ValidateTwoFactorAsync(context, request, validatorContext),
                 () => ValidateNewDeviceAsync(context, request, validatorContext),
@@ -201,12 +222,29 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// Validates the user's Master Password hash.
+    /// Validates whether the client version is compatible for the user attempting to authenticate.
+    /// </summary>
+    /// <returns>true if the scheme successfully passed validation, otherwise false.</returns>
+    private async Task<bool> ValidateClientVersionAsync(T context, CustomValidatorRequestContext validatorContext)
+    {
+        var ok = _clientVersionValidator.Validate(validatorContext.User, validatorContext);
+        if (ok)
+        {
+            return true;
+        }
+
+        SetValidationErrorResult(context, validatorContext);
+        await LogFailedLoginEvent(validatorContext.User, EventType.User_FailedLogIn);
+        return false;
+    }
+
+    /// <summary>
+    /// Validates the user's master password, webauthen, or custom token request via the appropriate context validator.
     /// </summary>
     /// <param name="context">The current request context.</param>
     /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
     /// <returns>true if the scheme successfully passed validation, otherwise false.</returns>
-    private async Task<bool> ValidateMasterPasswordAsync(T context, CustomValidatorRequestContext validatorContext)
+    private async Task<bool> ValidateGrantSpecificContext(T context, CustomValidatorRequestContext validatorContext)
     {
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
@@ -409,6 +447,29 @@ public abstract class BaseRequestValidator<T> where T : class
 
         await ResetFailedAuthDetailsAsync(user);
 
+        // Populate CurrentContext for the LD bucketing decision below. user.Id and
+        // device.Identifier are post-validation Bitwarden entities — not raw client input.
+        // TODO: PM-34091 - delete when cleaning up the feature flag; the bump call reads
+        // user.Id / device.Identifier directly.
+        CurrentContext.UserId ??= user.Id;
+        CurrentContext.DeviceIdentifier ??= device?.Identifier;
+
+        // TODO: PM-34091 - remove feature flag check when cleaning up
+        if (device != null && _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
+        {
+            try
+            {
+                var clientVersion = CurrentContext.ClientVersion?.ToString();
+                await _updateDeviceLastActivityCommand.UpdateAsync(device, clientVersion);
+            }
+            catch (Exception e)
+            {
+                // Log and swallow exceptions from this non-critical update, as we don't want to fail logins
+                // due to issues updating the device's last-activity state (LastActivityDate / ClientVersion).
+                _logger.LogWarning(e, "Failed to update device last activity for device {DeviceId}.", device.Id);
+            }
+        }
+
         // Once we've built the claims and custom response, we can set the success result.
         // We delegate this to the derived classes, as the implementation varies based on the grant type.
         await SetSuccessResult(context, user, claims, customResponse);
@@ -528,16 +589,8 @@ public abstract class BaseRequestValidator<T> where T : class
 
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
     {
-        // Check current context/cache to see if user is in any organizations, avoids extra DB call if not
-        var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
-            .ToList();
-
-        if (orgs.Count == 0)
-        {
-            return null;
-        }
-
-        return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
+        var masterPasswordPolicy = await PolicyRequirementQuery.GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id);
+        return new MasterPasswordPolicyResponseModel(masterPasswordPolicy.EnforcedOptions);
     }
 
     /// <summary>
@@ -592,7 +645,6 @@ public abstract class BaseRequestValidator<T> where T : class
 
         customResponse.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
         customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
-        customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
         customResponse.Add("Kdf", (byte)user.Kdf);
         customResponse.Add("KdfIterations", user.KdfIterations);
         customResponse.Add("KdfMemory", user.KdfMemory);

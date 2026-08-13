@@ -44,7 +44,12 @@ public record ResourcePassword(string Hash) : SendAuthenticationMethod;
 /// <summary>
 /// Create a send claim by requesting a one time password (OTP) confirmation code.
 /// </summary>
-/// <param name="EmailHashes">
-/// The list of email address **hashes**  permitted access to the send.
+/// <param name="emails">
+/// The list of email addresses permitted access to the send.
 /// </param>
-public record EmailOtp(string[] EmailHashes) : SendAuthenticationMethod;
+public record EmailOtp(string[] emails) : SendAuthenticationMethod;
+
+/// <summary>
+/// The send exists but cannot be accessed (expired, disabled, max access exceeded, or past deletion date).
+/// </summary>
+public record SendInaccessible : SendAuthenticationMethod;

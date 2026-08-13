@@ -62,7 +62,10 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             SsoEnabled = x.ss.Enabled,
             SsoConfig = x.ss.Data,
             UseDisableSMAdsForUsers = x.o.UseDisableSmAdsForUsers,
-            UsePhishingBlocker = x.o.UsePhishingBlocker
+            UsePhishingBlocker = x.o.UsePhishingBlocker,
+            UseMyItems = x.o.UseMyItems,
+            UseInviteLinks = x.o.UseInviteLinks,
+            UsePam = x.o.UsePam
         });
     }
 }

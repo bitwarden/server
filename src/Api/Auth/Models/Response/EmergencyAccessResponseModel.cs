@@ -112,6 +112,7 @@ public class EmergencyAccessTakeoverResponseModel : ResponseModel
         KdfIterations = grantor.KdfIterations;
         KdfMemory = grantor.KdfMemory;
         KdfParallelism = grantor.KdfParallelism;
+        Salt = grantor.GetMasterPasswordSalt();
     }
 
     public int KdfIterations { get; private set; }
@@ -119,6 +120,7 @@ public class EmergencyAccessTakeoverResponseModel : ResponseModel
     public int? KdfParallelism { get; private set; }
     public KdfType Kdf { get; private set; }
     public string KeyEncrypted { get; private set; }
+    public string Salt { get; private set; }
 }
 
 public class EmergencyAccessViewResponseModel : ResponseModel
@@ -135,7 +137,7 @@ public class EmergencyAccessViewResponseModel : ResponseModel
             new CipherResponseModel(
                 cipher,
                 user,
-                organizationAbilities: null, // Emergency access only retrieves personal ciphers so organizationAbilities is not needed
+                null, // Emergency access only retrieves personal ciphers so organizationAbility is not needed
                 globalSettings));
     }
 

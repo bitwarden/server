@@ -127,6 +127,27 @@ public class EventsController : Controller
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
+    [HttpGet("~/organizations/{orgId:guid}/sends/{id:guid}/events")]
+    public async Task<ListResponseModel<EventResponseModel>> GetSend(Guid orgId, Guid id,
+        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+    {
+        if (orgId == Guid.Empty || id == Guid.Empty)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!await _currentContext.AccessEventLogs(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var dateRange = ApiHelpers.GetDateRange(start, end);
+        var result = await _eventRepository.GetManyBySendAsync(orgId, id, dateRange.Item1, dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken });
+        var responses = result.Data.Select(e => new EventResponseModel(e));
+        return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
     [HttpGet("~/organization/{orgId}/secrets/{id}/events")]
     public async Task<ListResponseModel<EventResponseModel>> GetSecrets(
         Guid id, Guid orgId,
@@ -212,7 +233,7 @@ public class EventsController : Controller
         }
 
         var serviceAccount = await GetServiceAccount(id, orgId);
-        var org = _currentContext.GetOrganization(orgId);
+        var org = _currentContext.GetOrganization(serviceAccount.OrganizationId);
 
         if (org == null || !await _currentContext.AccessEventLogs(org.Id))
         {
@@ -249,12 +270,13 @@ public class EventsController : Controller
         return fallbackServiceAccount;
     }
 
-    [HttpGet("~/organizations/{orgId}/users/{id}/events")]
-    public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(string orgId, string id,
+    [HttpGet("~/organizations/{orgId:guid}/users/{id:guid}/events")]
+    public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(Guid orgId, Guid id,
         [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
     {
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (organizationUser == null || !organizationUser.UserId.HasValue ||
+            organizationUser.OrganizationId != orgId ||
             !await _currentContext.AccessEventLogs(organizationUser.OrganizationId))
         {
             throw new NotFoundException();
@@ -290,6 +312,7 @@ public class EventsController : Controller
     {
         var providerUser = await _providerUserRepository.GetByIdAsync(id);
         if (providerUser == null || !providerUser.UserId.HasValue ||
+            providerUser.ProviderId != providerId ||
             !_currentContext.ProviderAccessEventLogs(providerUser.ProviderId))
         {
             throw new NotFoundException();

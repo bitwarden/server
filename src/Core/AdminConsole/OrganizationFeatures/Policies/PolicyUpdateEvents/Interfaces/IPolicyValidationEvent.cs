@@ -7,7 +7,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents
 /// Represents all validations that need to be run to enable or disable the given policy.
 /// </summary>
 /// <remarks>
-/// This is used for the VNextSavePolicyCommand. This optional but should be implemented for all policies that have
+/// This is used for the SavePolicyCommand. This optional but should be implemented for all policies that have
 /// certain requirements for the given organization.
 /// </remarks>
 public interface IPolicyValidationEvent : IPolicyUpdateEvent

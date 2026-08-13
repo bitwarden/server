@@ -10,12 +10,15 @@ using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Entities;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -46,7 +49,9 @@ public class OrganizationsController(
     IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
     ISubscriberService subscriberService,
     IOrganizationInstallationRepository organizationInstallationRepository,
-    IPricingClient pricingClient)
+    IPricingClient pricingClient,
+    IReinstateSubscriptionCommand reinstateSubscriptionCommand,
+    IGetPendingAnnualUpgradeQuery getPendingAnnualUpgradeQuery)
     : Controller
 {
     [HttpGet("{id:guid}/subscription")]
@@ -85,7 +90,14 @@ public class OrganizationsController(
 
         var hideSensitiveData = !await currentContext.EditSubscription(id);
 
-        return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, plan, hideSensitiveData);
+        // A pending annual upgrade requires an attached subscription schedule, so skip the query when
+        // the already-fetched subscription has none.
+        var pendingAnnualUpgrade = string.IsNullOrEmpty(subscriptionInfo.Subscription?.ScheduleId)
+            ? null
+            : await getPendingAnnualUpgradeQuery.Run(organization);
+
+        return new OrganizationSubscriptionResponseModel(
+            organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade);
     }
 
     [HttpGet("{id:guid}/license")]
@@ -118,13 +130,13 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        var (success, paymentIntentClientSecret) = await upgradeOrganizationPlanCommand.UpgradePlanAsync(id, model.ToOrganizationUpgrade());
+        var userId = userService.GetProperUserId(User);
 
-        if (model.UseSecretsManager && success)
+        var (success, paymentIntentClientSecret) = await upgradeOrganizationPlanCommand.UpgradePlanAsync(id, model.ToOrganizationUpgrade(), userId);
+
+        if (model.UseSecretsManager && success && userId.HasValue)
         {
-            var userId = userService.GetProperUserId(User).Value;
-
-            await TryGrantOwnerAccessToSecretsManagerAsync(id, userId);
+            await TryGrantOwnerAccessToSecretsManagerAsync(id, userId.Value);
         }
 
         return new PaymentResponseModel { Success = success, PaymentIntentClientSecret = paymentIntentClientSecret };
@@ -188,7 +200,7 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        await addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSmSeats,
+        await addSecretsManagerSubscriptionCommand.RunAsync(organization, model.AdditionalSmSeats,
             model.AdditionalServiceAccounts);
 
         var userId = userService.GetProperUserId(User).Value;
@@ -227,13 +239,13 @@ public class OrganizationsController(
         }
 
         await subscriberService.CancelSubscription(organization,
+            organization.IsExpired(),
             new OffboardingSurveyResponse
             {
                 UserId = currentContext.UserId!.Value,
                 Reason = request.Reason,
                 Feedback = request.Feedback
-            },
-            organization.IsExpired());
+            });
     }
 
     [HttpPost("{id:guid}/reinstate")]
@@ -245,7 +257,13 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        await organizationService.ReinstateSubscriptionAsync(id);
+        var organization = await organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        (await reinstateSubscriptionCommand.Run(organization)).GetValueOrThrow();
     }
 
     /// <summary>

@@ -54,6 +54,9 @@
 
     <dt class="col-sm-4 col-lg-3">Limit collection deletion to administrators</dt>
     <dd id="pm-collection-deletion" class="col-sm-8 col-lg-9">@(Model.Organization.LimitCollectionDeletion ? "On" : "Off")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Limit item deletion to Manage collection permission</dt>
+    <dd id="pm-item-deletion" class="col-sm-8 col-lg-9">@(Model.Organization.LimitItemDeletion ? "On" : "Off")</dd>
 </dl>
 
 <h2>Secrets Manager</h2>

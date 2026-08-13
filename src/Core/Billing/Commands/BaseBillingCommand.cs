@@ -31,7 +31,7 @@ public abstract class BaseBillingCommand<T>(
         {
             return await function();
         }
-        catch (StripeException stripeException) when (ErrorCodes.Get().Contains(stripeException.StripeError.Code))
+        catch (StripeException stripeException) when (ErrorCodes.InputErrors().Contains(stripeException.StripeError.Code))
         {
             return stripeException.StripeError.Code switch
             {

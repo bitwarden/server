@@ -1,0 +1,172 @@
+@using Bit.Core.Billing.Enums
+@using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects
+@using Bit.Core.Enums
+@model Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts.CohortsPagedModel
+@{
+    ViewData["Title"] = "Cohorts";
+}
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col"><h1>Cohorts</h1></div>
+        <div class="col-auto">
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fa fa-plus"></i> Create cohort
+            </a>
+        </div>
+    </div>
+
+    <form method="get" asp-action="Index" class="row g-2 mb-3">
+        <div class="col-auto">
+            <input type="text" name="name" value="@Model.NameSearch" class="form-control" placeholder="Name" />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.NameSearch))
+        {
+            <div class="col-auto">
+                <a asp-action="Index" class="btn btn-link">Clear search</a>
+            </div>
+        }
+    </form>
+
+    @if (Model.Items.Any())
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Migration Path</th>
+                    <th>Proactive discount</th>
+                    <th>Churn discount</th>
+                    <th>Active</th>
+                    <th class="text-end">Pending</th>
+                    <th class="text-end">Scheduled</th>
+                    <th class="text-end">Migrated</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.Items)
+            {
+                <tr>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@row.Id">@row.Name</a>
+                        <a asp-action="Export" asp-route-id="@row.Id" class="ms-1" title="Export CSV">
+                            <i class="fa fa-download"></i>
+                        </a>
+                    </td>
+                    <td>
+                        @if (row.IsChurnOnly)
+                        {
+                            <span class="badge bg-secondary">Churn-only</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-primary">Migration</span>
+                        }
+                    </td>
+                    <td>
+                        @switch (row.CohortType)
+                        {
+                            case CohortType.ChurnOnly:
+                                <span>—</span>
+                                break;
+                            case CohortType.Migration migration:
+                                @($"{migration.Path.FromPlan.GetDisplayName()} → {migration.Path.ToPlan.GetDisplayName()}")
+                                break;
+                            case CohortType.UnresolvedMigration unresolved:
+                                <span class="text-warning">Unresolved migration #@unresolved.Id</span>
+                                break;
+                        }
+                    </td>
+                    <td>
+                        @if (string.IsNullOrEmpty(row.ProactiveDiscountCouponCode))
+                        {
+                            <span>—</span>
+                        }
+                        else
+                        {
+                            <code>@row.ProactiveDiscountCouponCode</code>
+                        }
+                    </td>
+                    <td>
+                        @if (string.IsNullOrEmpty(row.ChurnDiscountCouponCode))
+                        {
+                            <span>—</span>
+                        }
+                        else
+                        {
+                            <code>@row.ChurnDiscountCouponCode</code>
+                        }
+                    </td>
+                    <td>
+                        @if (row.IsActive)
+                        {
+                            <span class="badge bg-success"><i class="fa fa-check"></i> Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inactive</span>
+                        }
+                    </td>
+                    <td class="text-end">@row.Pending.ToString("N0")</td>
+                    <td class="text-end">
+                        @if (row.IsChurnOnly)
+                        {
+                            <span>—</span>
+                        }
+                        else
+                        {
+                            @row.Scheduled.ToString("N0")
+                        }
+                    </td>
+                    <td class="text-end">@row.Migrated.ToString("N0")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">No cohorts found.</div>
+    }
+
+    @if (Model.Page > 1 || Model.Items.Any())
+    {
+        <nav>
+            <ul class="pagination">
+                @if (Model.PreviousPage.HasValue)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-name="@Model.NameSearch"
+                           asp-route-page="@Model.PreviousPage.Value"
+                           asp-route-count="@Model.Count">Previous</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1">Previous</a></li>
+                }
+
+                <li class="page-item active"><span class="page-link">Page @Model.Page</span></li>
+
+                @if (Model.NextPage.HasValue)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-name="@Model.NameSearch"
+                           asp-route-page="@Model.NextPage.Value"
+                           asp-route-count="@Model.Count">Next</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1">Next</a></li>
+                }
+            </ul>
+        </nav>
+    }
+</div>

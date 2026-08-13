@@ -17,4 +17,21 @@ public class PublicKeyEncryptionKeyPairData
         PublicKey = publicKey ?? throw new ArgumentNullException(nameof(publicKey));
         SignedPublicKey = signedPublicKey;
     }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is not PublicKeyEncryptionKeyPairData other)
+        {
+            return false;
+        }
+
+        return WrappedPrivateKey == other.WrappedPrivateKey &&
+               SignedPublicKey == other.SignedPublicKey &&
+               PublicKey == other.PublicKey;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(WrappedPrivateKey, SignedPublicKey, PublicKey);
+    }
 }

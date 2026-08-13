@@ -4,8 +4,8 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -24,7 +24,7 @@ public class VerifyOrganizationDomainCommand(
     IEventService eventService,
     IGlobalSettings globalSettings,
     ICurrentContext currentContext,
-    IVNextSavePolicyCommand vNextSavePolicyCommand,
+    ISavePolicyCommand savePolicyCommand,
     IMailService mailService,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
@@ -95,7 +95,7 @@ public class VerifyOrganizationDomainCommand(
         if (domain.VerifiedDate is not null)
         {
             await organizationDomainRepository.ReplaceAsync(domain);
-            throw new ConflictException("Domain has already been verified.");
+            throw new ConflictException(new DomainAlreadyVerifiedError().Message);
         }
 
         var claimedDomain =
@@ -104,7 +104,7 @@ public class VerifyOrganizationDomainCommand(
         if (claimedDomain.Count > 0)
         {
             await organizationDomainRepository.ReplaceAsync(domain);
-            throw new ConflictException("The domain is not available to be claimed.");
+            throw new ConflictException(new DomainNotAvailableError().Message);
         }
 
         try
@@ -142,7 +142,7 @@ public class VerifyOrganizationDomainCommand(
         };
 
         var savePolicyModel = new SavePolicyModel(policyUpdate, actingUser);
-        await vNextSavePolicyCommand.SaveAsync(savePolicyModel);
+        await savePolicyCommand.SaveAsync(savePolicyModel);
     }
 
     private async Task SendVerifiedDomainUserEmailAsync(OrganizationDomain domain)
@@ -151,12 +151,11 @@ public class VerifyOrganizationDomainCommand(
 
         var domainUserEmails = orgUserUsers
             .Where(ou => ou.Email.ToLower().EndsWith($"@{domain.DomainName.ToLower()}") &&
-                         ou.Status != OrganizationUserStatusType.Revoked &&
-                         ou.Status != OrganizationUserStatusType.Invited)
+                         ou.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed)
             .Select(ou => ou.Email);
 
         var organization = await organizationRepository.GetByIdAsync(domain.OrganizationId);
 
-        await mailService.SendClaimedDomainUserEmailAsync(new ClaimedUserDomainClaimedEmails(domainUserEmails, organization));
+        await mailService.SendClaimedDomainUserEmailAsync(new ClaimedUserDomainClaimedEmails(domainUserEmails, organization, domain.DomainName));
     }
 }

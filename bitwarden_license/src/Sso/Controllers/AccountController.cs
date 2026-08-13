@@ -18,6 +18,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Bit.Sso.Exceptions;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using Duende.IdentityModel;
@@ -54,7 +55,6 @@ public class AccountController : Controller
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
-    private readonly IFeatureService _featureService;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -75,8 +75,7 @@ public class AccountController : Controller
         Core.Services.IEventService eventService,
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
-        IRegisterUserCommand registerUserCommand,
-        IFeatureService featureService)
+        IRegisterUserCommand registerUserCommand)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -97,7 +96,6 @@ public class AccountController : Controller
         _dataProtector = dataProtector;
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
-        _featureService = featureService;
     }
 
     [HttpGet]
@@ -266,27 +264,13 @@ public class AccountController : Controller
     [HttpGet]
     public async Task<IActionResult> ExternalCallback()
     {
-        // Feature flag (PM-24579): Prevent SSO on existing non-compliant users.
-        var preventOrgUserLoginIfStatusInvalid =
-            _featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers);
-
         // Read external identity from the temporary cookie
         var result = await HttpContext.AuthenticateAsync(
             AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
 
-        if (preventOrgUserLoginIfStatusInvalid)
+        if (!result.Succeeded)
         {
-            if (!result.Succeeded)
-            {
-                throw new Exception(_i18nService.T("ExternalAuthenticationError"));
-            }
-        }
-        else
-        {
-            if (result?.Succeeded != true)
-            {
-                throw new Exception(_i18nService.T("ExternalAuthenticationError"));
-            }
+            throw new Exception(_i18nService.T("ExternalAuthenticationError"));
         }
 
         // See if the user has logged in with this SSO provider before and has already been provisioned.
@@ -308,80 +292,81 @@ public class AccountController : Controller
                 ? result.Properties.Items["user_identifier"]
                 : null;
 
-            var (resolvedUser, foundOrganization, foundOrCreatedOrgUser) =
-                await CreateUserAndOrgUserConditionallyAsync(
-                    provider,
-                    providerUserId,
-                    claims,
-                    userIdentifier,
-                    ssoConfigData);
-#nullable restore
-
-            possibleSsoLinkedUser = resolvedUser;
-
-            if (preventOrgUserLoginIfStatusInvalid)
+            try
             {
+                var (resolvedUser, foundOrganization, foundOrCreatedOrgUser) =
+                    await CreateUserAndOrgUserConditionallyAsync(
+                        provider,
+                        providerUserId,
+                        claims,
+                        userIdentifier,
+                        ssoConfigData);
+
+                possibleSsoLinkedUser = resolvedUser;
                 organization = foundOrganization;
                 orgUser = foundOrCreatedOrgUser;
             }
-        }
-
-        if (preventOrgUserLoginIfStatusInvalid)
-        {
-            User resolvedSsoLinkedUser = possibleSsoLinkedUser
-                                                  ?? throw new Exception(_i18nService.T("UserShouldBeFound"));
-
-            await PreventOrgUserLoginIfStatusInvalidAsync(organization, provider, orgUser, resolvedSsoLinkedUser);
-
-            // This allows us to collect any additional claims or properties
-            // for the specific protocols used and store them in the local auth cookie.
-            // this is typically used to store data needed for signout from those protocols.
-            var additionalLocalClaims = new List<Claim>();
-            var localSignInProps = new AuthenticationProperties
+            catch (SsoAuthnRequiresInviteAcceptanceException ex)
             {
-                IsPersistent = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
-            };
-            ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
+                // Clean up external auth cookie so retry attempts start fresh.
+                // Mirrors the success path's cleanup at the end of ExternalCallback.
+                await HttpContext.SignOutAsync(
+                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
 
-            // Issue authentication cookie for user
-            await HttpContext.SignInAsync(
-                new IdentityServerUser(resolvedSsoLinkedUser.Id.ToString())
-                {
-                    DisplayName = resolvedSsoLinkedUser.Email,
-                    IdentityProvider = provider,
-                    AdditionalClaims = additionalLocalClaims.ToArray()
-                }, localSignInProps);
-        }
-        else
-        {
-            // PM-24579: remove this else block with feature flag removal.
-            // Either the user already authenticated with the SSO provider, or we've just provisioned them.
-            // Either way, we have associated the SSO login with a Bitwarden user.
-            // We will now sign the Bitwarden user in.
-            if (possibleSsoLinkedUser != null)
-            {
-                // This allows us to collect any additional claims or properties
-                // for the specific protocols used and store them in the local auth cookie.
-                // this is typically used to store data needed for signout from those protocols.
-                var additionalLocalClaims = new List<Claim>();
-                var localSignInProps = new AuthenticationProperties
-                {
-                    IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
-                };
-                ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
+                var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+                    _globalSettings.BaseServiceUri.VaultWithHash,
+                    ex.UserEmail,
+                    ex.OrganizationId,
+                    ex.OrganizationDisplayName,
+                    SsoRedirectUrlBuilder.ErrorCodes.InviteAcceptanceRequired);
 
-                // Issue authentication cookie for user
-                await HttpContext.SignInAsync(
-                    new IdentityServerUser(possibleSsoLinkedUser.Id.ToString())
-                    {
-                        DisplayName = possibleSsoLinkedUser.Email,
-                        IdentityProvider = provider,
-                        AdditionalClaims = additionalLocalClaims.ToArray()
-                    }, localSignInProps);
+                return Redirect(redirectUrl);
             }
+            catch (SsoAuthnRequiresOrgMembershipException ex)
+            {
+                // Same cleanup + redirect contract as the invite-acceptance catch above,
+                // but emits the OrgMembershipRequired errorCode so the client can dispatch
+                // its own match/no-match split (see SsoAuthnRequiresOrgMembershipException
+                // for the two scenarios that converge here).
+                await HttpContext.SignOutAsync(
+                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+
+                var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+                    _globalSettings.BaseServiceUri.VaultWithHash,
+                    ex.UserEmail,
+                    ex.OrganizationId,
+                    ex.OrganizationDisplayName,
+                    SsoRedirectUrlBuilder.ErrorCodes.OrgMembershipRequired);
+
+                return Redirect(redirectUrl);
+            }
+#nullable restore
         }
+
+        User resolvedSsoLinkedUser = possibleSsoLinkedUser
+                                              ?? throw new Exception(_i18nService.T("UserShouldBeFound"));
+
+        await PreventOrgUserLoginIfStatusInvalidAsync(organization, provider, orgUser, resolvedSsoLinkedUser);
+
+        // This allows us to collect any additional claims or properties
+        // for the specific protocols used and store them in the local auth cookie.
+        // this is typically used to store data needed for signout from those protocols.
+        var additionalLocalClaims = new List<Claim>();
+        var localSignInProps = new AuthenticationProperties
+        {
+            IsPersistent = true,
+            ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
+        };
+        ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
+
+        // Issue authentication cookie for user
+        await HttpContext.SignInAsync(
+            new IdentityServerUser(resolvedSsoLinkedUser.Id.ToString())
+            {
+                DisplayName = resolvedSsoLinkedUser.Email,
+                IdentityProvider = provider,
+                AdditionalClaims = additionalLocalClaims.ToArray()
+            }, localSignInProps);
 
         // Delete temporary cookie used during external authentication
         await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
@@ -583,15 +568,26 @@ public class AccountController : Controller
                 throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
             }
 
-            OrganizationUser guaranteedOrgUser = possibleOrgUser ?? throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
+            OrganizationUser guaranteedOrgUser = possibleOrgUser ?? throw new SsoAuthnRequiresOrgMembershipException(
+                organization.Id,
+                organization.DisplayName(),
+                guaranteedExistingUser.Email);
 
             /*
              * ----------------------------------------------------
              *              Critical Code Check Here
              *
              * We want to ensure a user is not in the invited state
-             * explicitly. User's in the invited state should not
-             * be able to authenticate via SSO.
+             * explicitly. Users in the invited state cannot complete
+             * SSO authentication. Instead of failing with a server
+             * error page, we throw a typed exception so the SSO
+             * callback can redirect the user back to the web client's
+             * /login with a toast prompting them to sign in with their
+             * master password and accept the invite first.
+             *
+             * The security-critical property is unchanged: no SsoUser
+             * row is written and no auth session is established for
+             * invited users.
              *
              * See internal doc called "Added Context for SSO Login
              * Flows" for further details.
@@ -599,9 +595,15 @@ public class AccountController : Controller
              */
             if (guaranteedOrgUser.Status == OrganizationUserStatusType.Invited)
             {
-                // Org User is invited – must accept via email first
-                throw new Exception(
-                    _i18nService.T("AcceptInviteBeforeUsingSSO", organization.DisplayName()));
+                // Org User is invited – must accept via email first.
+                // Use the existing User's email (non-nullable, canonical) rather than the
+                // OrganizationUser's invite-target email (nullable) — they refer to the
+                // same person in this scenario, and the existing user's email is what
+                // the redirected login form will pre-fill.
+                throw new SsoAuthnRequiresInviteAcceptanceException(
+                    organization.Id,
+                    organization.DisplayName(),
+                    guaranteedExistingUser.Email);
             }
 
             // If the user already exists in Bitwarden, we require that the user already be in the org,

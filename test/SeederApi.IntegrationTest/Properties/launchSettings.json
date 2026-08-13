@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "SeederApi.IntegrationTest": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:53205;http://localhost:53206"
+    }
+  }
+}

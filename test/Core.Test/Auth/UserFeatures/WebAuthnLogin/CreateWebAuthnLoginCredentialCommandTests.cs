@@ -27,7 +27,7 @@ public class CreateWebAuthnLoginCredentialCommandTests
         var result = await sutProvider.Sut.CreateWebAuthnLoginCredentialAsync(user, "name", options, response, false, null, null, null);
 
         // Assert
-        Assert.False(result);
+        Assert.Null(result);
         await sutProvider.GetDependency<IWebAuthnCredentialRepository>().DidNotReceive().CreateAsync(Arg.Any<WebAuthnCredential>());
     }
 
@@ -45,7 +45,7 @@ public class CreateWebAuthnLoginCredentialCommandTests
         var result = await sutProvider.Sut.CreateWebAuthnLoginCredentialAsync(user, "name", options, response, false, null, null, null);
 
         // Assert
-        Assert.True(result);
+        Assert.NotNull(result);
         await sutProvider.GetDependency<IWebAuthnCredentialRepository>().Received().CreateAsync(Arg.Any<WebAuthnCredential>());
     }
 

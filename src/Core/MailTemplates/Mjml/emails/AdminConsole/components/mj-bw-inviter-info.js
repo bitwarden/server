@@ -1,17 +1,16 @@
 const { BodyComponent } = require("mjml-core");
 
 class MjBwInviterInfo extends BodyComponent {
+  static dependencies = {
+    "mj-column": ["mj-bw-inviter-info"],
+    "mj-wrapper": ["mj-bw-inviter-info"],
+    "mj-bw-inviter-info": [],
+  };
 
-    static dependencies = {
-        "mj-column": ["mj-bw-inviter-info"],
-        "mj-wrapper": ["mj-bw-inviter-info"],
-        "mj-bw-inviter-info": [],
-    };
-
-    static allowedAttributes = {
+  static allowedAttributes = {
     "expiration-date": "string", // REQUIRED: Date to display
     "email-address": "string", // Optional: Email address to display
-    };
+  };
 
   render() {
     const emailAddressText = this.getAttribute("email-address")
@@ -27,7 +26,7 @@ class MjBwInviterInfo extends BodyComponent {
           </mj-text>
         </mj-column>
       </mj-section>
-      `
+      `,
     );
   }
 }
