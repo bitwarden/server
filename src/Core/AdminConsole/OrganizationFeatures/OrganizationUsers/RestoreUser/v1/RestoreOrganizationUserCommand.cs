@@ -2,11 +2,14 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -32,7 +35,8 @@ public class RestoreOrganizationUserCommand(
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
     IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
-    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand) : IRestoreOrganizationUserCommand
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
+    IOrganizationUserValidationService organizationUserValidationService) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
@@ -41,16 +45,18 @@ public class RestoreOrganizationUserCommand(
             throw new BadRequestException(new CannotRestoreYourself().Message);
         }
 
-        if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
-            !await currentContext.OrganizationOwner(organizationUser.OrganizationId))
+        if (restoringUserId.HasValue)
         {
-            throw new BadRequestException(new OnlyOwnersCanRestoreOwners().Message);
-        }
+            var actingOrganization = currentContext.GetOrganization(organizationUser.OrganizationId);
+            var actingUser = actingOrganization is null
+                ? null
+                : new OrganizationUserRole(actingOrganization.Type, organizationUser.OrganizationId, actingOrganization.Permissions);
 
-        if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
-            !await currentContext.OrganizationAdmin(organizationUser.OrganizationId))
-        {
-            throw new BadRequestException(new CustomUsersCannotRestoreAdmins().Message);
+            var error = await organizationUserValidationService.CanManageAsync(restoringUserId.Value, actingUser, organizationUser);
+            if (error is not null)
+            {
+                throw new BadRequestException(error.Message);
+            }
         }
 
         await RepositoryRestoreUserAsync(organizationUser, defaultCollectionName);
@@ -190,13 +196,7 @@ public class RestoreOrganizationUserCommand(
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
 
-        var restoringUserIsOwner = false;
-        var restoringUserIsAdminOrHigher = false;
-        if (restoringUserId.HasValue)
-        {
-            restoringUserIsOwner = await currentContext.OrganizationOwner(organizationId);
-            restoringUserIsAdminOrHigher = await currentContext.OrganizationAdmin(organizationId);
-        }
+        var manageErrorsByOrgUserId = await GetManageErrorsAsync(organizationId, restoringUserId, filteredUsers);
 
         // Query Two Factor Authentication status for all users in the organization
         // This is an optimization to avoid querying the Two Factor Authentication status for each user individually
@@ -221,16 +221,9 @@ public class RestoreOrganizationUserCommand(
                     throw new BadRequestException(new CannotRestoreYourself().Message);
                 }
 
-                if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
-                    !restoringUserIsOwner)
+                if (manageErrorsByOrgUserId.TryGetValue(organizationUser.Id, out var manageError) && manageError is not null)
                 {
-                    throw new BadRequestException(new OnlyOwnersCanRestoreOwners().Message);
-                }
-
-                if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
-                    !restoringUserIsAdminOrHigher)
-                {
-                    throw new BadRequestException(new CustomUsersCannotRestoreAdmins().Message);
+                    throw new BadRequestException(manageError.Message);
                 }
 
                 var twoFactorIsEnabled = organizationUser.UserId.HasValue
@@ -391,5 +384,33 @@ public class RestoreOrganizationUserCommand(
     {
         var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(userId);
         return requirement.IsTwoFactorRequiredForOrganization(organizationId);
+    }
+
+    /// <summary>
+    /// Resolves the "can the acting user manage this target's role" decision once for the whole batch via
+    /// <see cref="IOrganizationUserValidationService"/>, instead of precomputing the acting user's org-level status
+    /// and re-checking it per target.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<Guid, Error>> GetManageErrorsAsync(
+        Guid organizationId, Guid? restoringUserId, ICollection<OrganizationUser> targetUsers)
+    {
+        if (!restoringUserId.HasValue || targetUsers.Count == 0)
+        {
+            return new Dictionary<Guid, Error>();
+        }
+
+        var actingOrganization = currentContext.GetOrganization(organizationId);
+        var actingUser = actingOrganization is null
+            ? null
+            : new OrganizationUserRole(actingOrganization.Type, organizationId, actingOrganization.Permissions);
+
+        var targetsById = targetUsers.ToDictionary(u => u.Id, u => (IOrganizationUserRole)u);
+
+        var results = await organizationUserValidationService.CanManageAsync(
+            restoringUserId.Value, actingUser, organizationId, targetsById);
+
+        return results
+            .Where(kvp => kvp.Value is not null)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value!);
     }
 }
