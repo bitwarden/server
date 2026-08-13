@@ -120,7 +120,6 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         var reference = price?.Metadata?.GetValueOrDefault(StripeConstants.MetadataKeys.PurchasableReference);
         if (string.IsNullOrEmpty(reference))
         {
-            // No price-id fallback: that lookup is the coupling this contract removes.
             logger.LogError("Line has no purchasable reference; skipped. Price={PriceId}", price?.Id ?? "unknown");
             return null;
         }
