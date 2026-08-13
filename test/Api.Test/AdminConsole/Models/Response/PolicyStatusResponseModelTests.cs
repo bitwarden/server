@@ -8,20 +8,18 @@ namespace Bit.Api.Test.AdminConsole.Models.Response;
 
 public class PolicyStatusResponseModelTests
 {
-    // Note: only non-null/empty Data payloads are covered here. For null/empty Data, the legacy
-    // implementation had a bug where it defaulted to an empty dictionary ("data":{}) instead of
-    // null; that behavior is intentionally NOT preserved (see the SerializesDataAsNull test below).
     public static IEnumerable<object[]> PolicyDataByType => new List<object[]>
     {
         new object[] { PolicyType.MasterPassword, "{\"minComplexity\":3,\"minLength\":14,\"requireLower\":true,\"requireUpper\":true,\"requireNumbers\":false,\"requireSpecial\":false,\"enforceOnLogin\":true}" },
         new object[] { PolicyType.PasswordGenerator, "{\"defaultType\":\"password\",\"minLength\":16}" },
         new object[] { PolicyType.SendOptions, "{\"disableHideEmail\":true}" },
         new object[] { PolicyType.ResetPassword, "{\"autoEnrollEnabled\":true}" },
+        new object[] { PolicyType.SingleOrg, null },
     };
 
     [Theory]
     [MemberData(nameof(PolicyDataByType))]
-    public void Constructor_SerializesIdenticallyToLegacyDictionaryApproach(PolicyType type, string data)
+    public void Constructor_SerializesIdenticallyToLegacyDictionaryApproach(PolicyType type, string? data)
     {
         var organizationId = Guid.NewGuid();
         var policyStatus = new PolicyStatus(organizationId, type)
@@ -40,7 +38,7 @@ public class PolicyStatusResponseModelTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_NullOrWhitespaceData_SerializesDataAsNull_NotEmptyObject(string? data)
+    public void Constructor_NullOrWhitespaceData_SerializesDataAsEmptyObject(string? data)
     {
         var policyStatus = new PolicyStatus(Guid.NewGuid(), PolicyType.SingleOrg)
         {
@@ -51,15 +49,17 @@ public class PolicyStatusResponseModelTests
         var model = new PolicyStatusResponseModel(policyStatus);
         var json = JsonSerializer.Serialize(model);
 
-        Assert.Null(model.Data);
-        Assert.Contains("\"Data\":null", json);
-        Assert.DoesNotContain("\"Data\":{}", json);
+        // Preserves the legacy wire format for policies with no stored data. The admin console's
+        // BasePolicyEditComponent only runs policy-specific load logic when `data` is non-null, so
+        // switching this to `null` would silently break clients that rely on that behavior.
+        Assert.Equal("{}", model.Data);
+        Assert.Contains("\"Data\":{}", json);
     }
 
     /// <summary>
     /// Mirrors the pre-refactor implementation (Dictionary&lt;string, object&gt; deserialize/serialize round trip,
     /// defaulting to an empty dictionary) so we can prove the raw string pass-through produces byte-for-byte
-    /// identical JSON for non-null Data.
+    /// identical JSON, including for null/empty Data.
     /// </summary>
     private class LegacyPolicyStatusResponseModel
     {

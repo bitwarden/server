@@ -1,0 +1,47 @@
+﻿using System.Text.Json;
+using Bit.Core.Utilities;
+using Microsoft.OpenApi;
+using Swashbuckle.AspNetCore.SwaggerGen;
+
+namespace Bit.SharedWeb.Swagger;
+
+/// <summary>
+/// Rewrites properties decorated with <see cref="RawJsonConverter"/> from the reflected `string` schema
+/// to a free-form object schema. <see cref="RawJsonConverter"/> stores pre-serialized JSON in a string
+/// property to avoid a deserialize/re-serialize round trip, but the actual wire format is a JSON object
+/// (or null), not a string, so the generated spec and SDK bindings need to reflect that.
+/// </summary>
+public class RawJsonSchemaFilter : ISchemaFilter
+{
+    public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
+    {
+        if (context.Type == null || schema.Properties == null)
+        {
+            return;
+        }
+
+        foreach (var prop in context.Type.GetProperties())
+        {
+            if (prop.PropertyType != typeof(string))
+            {
+                continue;
+            }
+
+            var hasRawJsonConverter = prop
+                .GetCustomAttributes(typeof(System.Text.Json.Serialization.JsonConverterAttribute), true)
+                .OfType<System.Text.Json.Serialization.JsonConverterAttribute>()
+                .Any(a => a.ConverterType == typeof(RawJsonConverter));
+
+            if (!hasRawJsonConverter)
+            {
+                continue;
+            }
+
+            var jsonPropName = JsonNamingPolicy.CamelCase.ConvertName(prop.Name);
+            if (schema.Properties.TryGetValue(jsonPropName, out var value) && value is OpenApiSchema innerSchema)
+            {
+                innerSchema.Type = JsonSchemaType.Object;
+            }
+        }
+    }
+}

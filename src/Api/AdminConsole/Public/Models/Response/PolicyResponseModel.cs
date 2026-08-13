@@ -53,5 +53,5 @@ public class PolicyResponseModel : PolicyBaseModel, IResponseModel
     /// Data for the policy.
     /// </summary>
     [JsonConverter(typeof(RawJsonConverter))]
-    public new string Data { get; private set; }
+    public new string Data { get; set; }
 }
