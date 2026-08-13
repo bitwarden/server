@@ -1,11 +1,10 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Vault.Commands;
 using Bit.Core.Vault.Entities;
-using Bit.Core.Vault.Models;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
