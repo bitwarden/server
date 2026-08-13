@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Test.Vault.AutoFixture;
+using Bit.Api.Utilities;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;

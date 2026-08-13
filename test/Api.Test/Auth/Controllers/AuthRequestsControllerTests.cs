@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Response;
+using Bit.Api.Models.Response;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
@@ -8,7 +9,6 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;

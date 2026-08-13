@@ -61,7 +61,7 @@ public class CipherService : ICipherService
         GlobalSettings globalSettings,
         IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
         IPolicyRequirementQuery policyRequirementQuery,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IPricingClient pricingClient,
         ICipherLeaseGate cipherLeaseGate)
     {
@@ -454,6 +454,8 @@ public class CipherService : ICipherService
         {
             await _cipherLeaseGate.EnsureCanMutateAsync(deletingUserId, cipherDetails);
         }
+
+        var collectionIds = await GetCollectionIdsForPushAsync(cipherDetails);
 
         await _cipherRepository.DeleteAsync(cipherDetails);
         await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherDetails.Id);

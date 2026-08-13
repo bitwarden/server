@@ -4,21 +4,17 @@ using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Models.Conditions;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Commands;
 
-/// <summary>
-/// The validation these commands share lives in <see cref="AccessRuleWriteValidator"/> and is covered by
-/// AccessRuleWriteValidatorTests; these tests cover persistence, timestamps, and collection association wiring.
-/// </summary>
 [SutProviderCustomize]
 public class UpdateAccessRuleCommandTests
 {
@@ -32,7 +28,7 @@ public class UpdateAccessRuleCommandTests
         existing.CollectionIds = [];
         update.Name = "renamed";
         update.Description = "new description";
-        update.Conditions = """[{"kind":"human_approval"}]""";
+        update.Conditions = """{"kind":"human_approval"}""";
         update.SingleActiveLease = true;
         update.DefaultLeaseDurationSeconds = 3600;
         update.MaxLeaseDurationSeconds = 28800;
@@ -41,7 +37,12 @@ public class UpdateAccessRuleCommandTests
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
-        SetupValidator(sutProvider, orgId, existing.Id, []);
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(update.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(new List<AccessRule> { existing });
 
         var result = await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, []);
 
@@ -60,31 +61,71 @@ public class UpdateAccessRuleCommandTests
                 && r.SingleActiveLease
                 && r.DefaultLeaseDurationSeconds == 3600 && r.MaxLeaseDurationSeconds == 28800
                 && r.AllowsExtensions && r.MaxExtensionDurationSeconds == 7200));
-        // The rule under update is excluded from the validator's uniqueness and conflict checks by its own id.
-        await sutProvider.GetDependency<IAccessRuleWriteValidator>().Received(1)
-            .ValidateAsync(orgId, update, Arg.Any<IEnumerable<Guid>>(), existing.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_AllowsExtensionsWithoutMax_ThrowsBadRequest(AccessRule update)
+    {
+        var sutProvider = SetupSutProvider();
+        update.Name = "renamed";
+        update.AllowsExtensions = true;
+        update.MaxExtensionDurationSeconds = null;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateAsync(update.OrganizationId, update.Id, update, []));
+        Assert.Contains("maximum extension length", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory]
+    [BitAutoData(0)]
+    [BitAutoData(-1)]
+    public async Task UpdateAsync_AllowsExtensionsWithNonPositiveMax_ThrowsBadRequest(int maxExtensionDurationSeconds, AccessRule update)
+    {
+        var sutProvider = SetupSutProvider();
+        update.Name = "renamed";
+        update.AllowsExtensions = true;
+        update.MaxExtensionDurationSeconds = maxExtensionDurationSeconds;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateAsync(update.OrganizationId, update.Id, update, []));
+        Assert.Contains("maximum extension length", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_ReplacesCollections_AssignsNewAndClearsRemoved(AccessRuleDetails existing,
-        AccessRule update, Guid keptId, Guid addedId)
+        AccessRule update, Collection keep, Collection add)
     {
         var sutProvider = SetupSutProvider();
         var orgId = existing.OrganizationId;
         update.Name = "renamed";
-        var desired = new[] { keptId, addedId };
+        update.Conditions = """{"kind":"human_approval"}""";
+        keep.OrganizationId = orgId;
+        keep.AccessRuleId = existing.Id;   // already governed by this rule
+        add.OrganizationId = orgId;
+        add.AccessRuleId = null;
+        var desired = new[] { keep.Id, add.Id };
         var removedId = Guid.NewGuid();
-        existing.CollectionIds = [keptId, removedId];
+        existing.CollectionIds = [keep.Id, removedId];
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
-        SetupValidator(sutProvider, orgId, existing.Id, [.. desired]);
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(update.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(new List<AccessRule> { existing });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { keep, add });
 
         var result = await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, desired);
 
         Assert.Equal(desired, result.CollectionIds);
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
-            .SetAccessRuleAssociationsAsync(orgId, existing.Id,
+        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
+            .SetCollectionAssociationsAsync(orgId, existing.Id,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(desired.OrderBy(x => x))),
                 Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { removedId })));
     }
@@ -95,18 +136,24 @@ public class UpdateAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         var orgId = existing.OrganizationId;
         update.Name = "renamed";
+        update.Conditions = """{"kind":"human_approval"}""";
         var currentId = Guid.NewGuid();
         existing.CollectionIds = [currentId];
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
-        SetupValidator(sutProvider, orgId, existing.Id, []);
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(update.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(new List<AccessRule> { existing });
 
         var result = await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, []);
 
         Assert.Empty(result.CollectionIds);
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
-            .SetAccessRuleAssociationsAsync(orgId, existing.Id,
+        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
+            .SetCollectionAssociationsAsync(orgId, existing.Id,
                 Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()),
                 Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { currentId })));
     }
@@ -152,9 +199,6 @@ public class UpdateAccessRuleCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateAsync(Guid.NewGuid(), Guid.NewGuid(), update, []));
-        // A rule the caller cannot see is a 404 before anything about the payload is judged.
-        await sutProvider.GetDependency<IAccessRuleWriteValidator>().DidNotReceiveWithAnyArgs()
-            .ValidateAsync(default, default!, default!, default);
     }
 
     [Theory, BitAutoData]
@@ -168,34 +212,27 @@ public class UpdateAccessRuleCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateAsync(differentOrg, existing.Id, update, []));
-        await sutProvider.GetDependency<IAccessRuleWriteValidator>().DidNotReceiveWithAnyArgs()
-            .ValidateAsync(default, default!, default!, default);
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_ValidationFails_DoesNotPersist(AccessRuleDetails existing, AccessRule update)
+    public async Task UpdateAsync_InvalidRule_ThrowsBadRequest(AccessRuleDetails existing, AccessRule update)
     {
         var sutProvider = SetupSutProvider();
+        var orgId = existing.OrganizationId;
+        update.Name = "ok";
+        update.Conditions = """{"kind":"bogus"}""";
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
-        sutProvider.GetDependency<IAccessRuleWriteValidator>()
-            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>())
-            .ThrowsAsync(new BadRequestException("A rule with that name already exists."));
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(update.Conditions)
+            .Returns(AccessRuleValidationResult.Invalid("nope"));
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateAsync(existing.OrganizationId, existing.Id, update, []));
-        Assert.Equal("A rule with that name already exists.", ex.Message);
+            () => sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, []));
+        Assert.Equal("nope", ex.Message);
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
-            .SetAccessRuleAssociationsAsync(default, default, default!, default!);
     }
-
-    private static void SetupValidator(SutProvider<UpdateAccessRuleCommand> sutProvider, Guid organizationId,
-        Guid existingRuleId, List<Guid> validatedCollectionIds)
-        => sutProvider.GetDependency<IAccessRuleWriteValidator>()
-            .ValidateAsync(organizationId, Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>(), existingRuleId)
-            .Returns(validatedCollectionIds);
 
     private static SutProvider<UpdateAccessRuleCommand> SetupSutProvider()
     {

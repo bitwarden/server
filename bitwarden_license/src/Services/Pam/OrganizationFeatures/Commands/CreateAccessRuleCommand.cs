@@ -76,7 +76,7 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
 
         var created = await _repository.CreateAsync(rule);
 
-        await _collectionRepository.SetAccessRuleAssociationsAsync(
+        await _repository.SetCollectionAssociationsAsync(
             created.OrganizationId, created.Id, desiredCollectionIds, []);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome, AccessRuleId = created.Id });

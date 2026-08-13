@@ -14,6 +14,10 @@ CREATE PROCEDURE [dbo].[AccessRequest_CreateAutoApproved]
 AS
 BEGIN
     SET NOCOUNT ON
+    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
+    -- only the offending statement, execution falls through to the COMMIT, and the request would be persisted without
+    -- the decision that approved it.
+    SET XACT_ABORT ON
 
     -- Atomically record an auto-approved request and its automatic verdict. No lease is minted here: the requester
     -- activates the approved request later via [AccessLease_CreateFromApprovedRequest], exactly like the human path

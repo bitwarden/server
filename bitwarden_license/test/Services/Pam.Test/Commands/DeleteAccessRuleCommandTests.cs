@@ -23,7 +23,7 @@ public class DeleteAccessRuleCommandTests
             .GetByIdAsync(existing.Id)
             .Returns(existing);
 
-        await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id);
+        await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id, deletedBy);
 
         await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
             .DeleteAsync(existing);
@@ -57,7 +57,7 @@ public class DeleteAccessRuleCommandTests
             .Returns((AccessRule?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), Guid.NewGuid()));
+            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
         await sutProvider.GetDependency<IAccessRuleRepository>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }
@@ -71,7 +71,7 @@ public class DeleteAccessRuleCommandTests
             .Returns(existing);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), existing.Id));
+            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), existing.Id, Guid.NewGuid()));
         await sutProvider.GetDependency<IAccessRuleRepository>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }

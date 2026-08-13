@@ -5,16 +5,24 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// A single decision on a <see cref="AccessRequest"/>. In v0 there is exactly one decision per request: an automated
+/// A single decision on a <see cref="AccessRequest"/>. A request can accumulate several: the approval itself (an
 /// <see cref="AccessDeciderKind.Automatic"/> verdict for auto-approval, or a <see cref="AccessDeciderKind.Human"/>
-/// verdict once approver endpoints land.
+/// verdict once approver endpoints land), plus the human audit decision recorded when the produced lease is later
+/// revoked or cancelled (<see cref="Repositories.IAccessLeaseRepository.RevokeAsync"/>) or an unactivated request is
+/// retracted (<see cref="Repositories.IAccessRequestRepository.CancelWithDecisionAsync"/>).
 /// </summary>
 public class AccessDecision : ITableObject<Guid>
 {
     public Guid Id { get; set; }
 
+    /// <summary>
+    /// The request this decision was made on.
+    /// </summary>
     public Guid AccessRequestId { get; set; }
 
+    /// <summary>
+    /// Discriminates the decision: determines whether <see cref="ApproverId"/> or <see cref="ConditionKind"/> is populated.
+    /// </summary>
     public AccessDeciderKind DeciderKind { get; set; }
 
     /// <summary>
@@ -28,6 +36,9 @@ public class AccessDecision : ITableObject<Guid>
     /// </summary>
     public AccessConditionKind? ConditionKind { get; set; }
 
+    /// <summary>
+    /// The approve-or-deny outcome recorded by this decision.
+    /// </summary>
     public AccessDecisionVerdict Verdict { get; set; }
 
     /// <summary>
@@ -40,6 +51,9 @@ public class AccessDecision : ITableObject<Guid>
     /// </summary>
     public string? EvaluationContext { get; set; }
 
+    /// <summary>
+    /// When the decision was recorded, stamped in UTC at construction.
+    /// </summary>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     public void SetNewId()

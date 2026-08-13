@@ -25,7 +25,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

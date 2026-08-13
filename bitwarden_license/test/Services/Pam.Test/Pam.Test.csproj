@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Bit.Services.Pam.Test</RootNamespace>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -21,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Services\Pam\Pam.csproj" />
     <ProjectReference Include="..\..\..\..\test\Core.Test\Core.Test.csproj" />
+    <ProjectReference Include="..\..\..\..\test\Api.Test\Api.Test.csproj" />
   </ItemGroup>
 
 </Project>

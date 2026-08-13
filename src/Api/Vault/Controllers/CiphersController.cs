@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
@@ -15,7 +16,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
@@ -424,7 +424,7 @@ public class CiphersController : Controller
 
         var cipherList = ciphers.ToList();
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var organizationAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
 
         // Member read: leasing-gated ciphers (reachable only through leasing-enabled collections) are
         // delivered partial here too, computed in-memory from the user's collections and each cipher's

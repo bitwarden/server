@@ -128,12 +128,15 @@ public class AccessRuleEndpointsHandlerTests
     /// </summary>
     [Theory, BitAutoData]
     public async Task Delete_DeletesWithinTheRouteOrganization(
-        Guid organizationId, Guid id, SutProvider<AccessRuleEndpointsHandler> sutProvider)
+        Guid organizationId, Guid id, Guid userId, SutProvider<AccessRuleEndpointsHandler> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
         await sutProvider.Sut.Delete(organizationId, id);
 
+        // The caller is passed through as the actor so the delete lands on the audit trail.
         await sutProvider.GetDependency<IDeleteAccessRuleCommand>().Received(1)
-            .DeleteAsync(organizationId, id);
+            .DeleteAsync(organizationId, id, userId);
     }
 
     private static AccessRuleRequestModel RequestModel() => new()

@@ -4,9 +4,9 @@
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;

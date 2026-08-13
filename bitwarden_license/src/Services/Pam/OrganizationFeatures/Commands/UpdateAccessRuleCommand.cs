@@ -35,6 +35,16 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
     public async Task<AccessRuleDetails> UpdateAsync(Guid organizationId, Guid id, AccessRule update,
         IEnumerable<Guid> collectionIds)
     {
+        if (string.IsNullOrWhiteSpace(update.Name))
+        {
+            throw new BadRequestException("Name is required.");
+        }
+
+        if (update.AllowsExtensions && update.MaxExtensionDurationSeconds is not > 0)
+        {
+            throw new BadRequestException("A maximum extension length is required when extensions are allowed.");
+        }
+
         var existing = await _repository.GetDetailsByIdAsync(id);
         if (existing is null || existing.OrganizationId != organizationId)
         {
@@ -90,7 +100,7 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
         await _repository.ReplaceAsync(toPersist);
 
         var toClear = existing.CollectionIds.Except(desiredCollectionIds).ToList();
-        await _collectionRepository.SetAccessRuleAssociationsAsync(organizationId, id, desiredCollectionIds, toClear);
+        await _repository.SetCollectionAssociationsAsync(organizationId, id, desiredCollectionIds, toClear);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 

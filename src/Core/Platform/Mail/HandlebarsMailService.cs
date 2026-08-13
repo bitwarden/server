@@ -355,13 +355,13 @@ public class HandlebarsMailService : IMailService
             // encrypted vault data and are intentionally never passed to, or shown by, this email. The requester
             // controls their name, email, and reason, so each is anti-phishing sanitized to neutralize links and
             // spoofed addresses smuggled into the notice.
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
             RequesterName = CoreHelpers.SanitizeForEmail(
-                string.IsNullOrWhiteSpace(requesterName) ? requesterEmail : requesterName, false),
-            RequesterEmail = CoreHelpers.SanitizeForEmail(requesterEmail, false),
+                string.IsNullOrWhiteSpace(requesterName) ? requesterEmail : requesterName),
+            RequesterEmail = CoreHelpers.SanitizeForEmail(requesterEmail),
             NotBefore = notBefore.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture) + " " + _utcTimeZoneDisplay,
             NotAfter = notAfter.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture) + " " + _utcTimeZoneDisplay,
-            Reason = CoreHelpers.SanitizeForEmail(string.IsNullOrWhiteSpace(reason) ? "(no reason provided)" : reason, false),
+            Reason = CoreHelpers.SanitizeForEmail(string.IsNullOrWhiteSpace(reason) ? "(no reason provided)" : reason),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
         };

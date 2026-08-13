@@ -24,6 +24,8 @@
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
+    <ProjectReference Include="..\HttpExtensions\HttpExtensions.csproj" />
+    <ProjectReference Include="..\Libraries\OrganizationAuthorization\OrganizationAuthorization.csproj" />
   </ItemGroup>
 
   <Choose>
@@ -31,7 +33,7 @@
       <ItemGroup>
         <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
         <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Infrastructure.EntityFramework\Commercial.Infrastructure.EntityFramework.csproj" />
-        <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Pam\Commercial.Pam.csproj" />
+        <ProjectReference Include="..\..\bitwarden_license\src\Services\Pam\Pam.csproj" />
       </ItemGroup>
     </When>
     <Otherwise>

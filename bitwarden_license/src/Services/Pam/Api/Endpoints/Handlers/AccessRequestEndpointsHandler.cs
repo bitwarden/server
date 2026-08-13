@@ -1,7 +1,10 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Services;
 using Bit.HttpExtensions;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
@@ -9,31 +12,64 @@ namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 /// Handler for the <c>access-requests</c> resource. The Minimal API endpoints (see <c>AccessRequestEndpoints</c>)
 /// resolve this handler from DI.
 /// </summary>
-/// <remarks>
-/// Scaffold only: the method signatures define the wire contract (request/response models, status codes) that the
-/// generated OpenAPI spec and client bindings are built from. The bodies are intentionally unimplemented — the
-/// behavior lands with the rest of the PAM feature.
-/// </remarks>
-public class AccessRequestEndpointsHandler
+public class AccessRequestEndpointsHandler(
+    IUserService userService,
+    IListInboxRequestsQuery listInboxRequestsQuery,
+    IListInboxHistoryQuery listInboxHistoryQuery,
+    IDecideAccessRequestCommand decideAccessRequestCommand,
+    IListMyAccessRequestsQuery listMyAccessRequestsQuery,
+    IActivateAccessRequestCommand activateAccessRequestCommand,
+    ICancelAccessRequestCommand cancelAccessRequestCommand,
+    IGetAccessRequestDetailsQuery getAccessRequestDetailsQuery)
 {
-    public Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetInbox(ClaimsPrincipal user)
-        => throw new NotImplementedException();
+    public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetInbox(ClaimsPrincipal user)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var requests = await listInboxRequestsQuery.GetPendingAsync(userId);
+        return new ListResponseModel<AccessRequestDetailsResponseModel>(
+            requests.Select(r => new AccessRequestDetailsResponseModel(r)));
+    }
 
-    public Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetHistory(ClaimsPrincipal user)
-        => throw new NotImplementedException();
+    public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetHistory(ClaimsPrincipal user)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var history = await listInboxHistoryQuery.GetHistoryAsync(userId);
+        return new ListResponseModel<AccessRequestDetailsResponseModel>(
+            history.Select(r => new AccessRequestDetailsResponseModel(r)));
+    }
 
-    public Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetMine(ClaimsPrincipal user)
-        => throw new NotImplementedException();
+    public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetMine(ClaimsPrincipal user)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var requests = await listMyAccessRequestsQuery.GetMineAsync(userId);
+        return new ListResponseModel<AccessRequestDetailsResponseModel>(
+            requests.Select(r => new AccessRequestDetailsResponseModel(r)));
+    }
 
-    public Task<AccessRequestDetailsResponseModel> GetDetails(ClaimsPrincipal user, Guid id)
-        => throw new NotImplementedException();
+    public async Task<AccessRequestDetailsResponseModel> GetDetails(ClaimsPrincipal user, Guid id)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var details = await getAccessRequestDetailsQuery.GetDetailsAsync(userId, id);
+        return new AccessRequestDetailsResponseModel(details);
+    }
 
-    public Task<AccessRequestDetailsResponseModel> Decide(ClaimsPrincipal user, Guid id, AccessDecisionRequestModel model)
-        => throw new NotImplementedException();
+    public async Task<AccessRequestDetailsResponseModel> Decide(ClaimsPrincipal user, Guid id, AccessDecisionRequestModel model)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var result = await decideAccessRequestCommand.DecideAsync(userId, id, model.ToSubmission());
+        return new AccessRequestDetailsResponseModel(result);
+    }
 
-    public Task<AccessLeaseResponseModel> Activate(ClaimsPrincipal user, Guid id)
-        => throw new NotImplementedException();
+    public async Task<AccessLeaseResponseModel> Activate(ClaimsPrincipal user, Guid id)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var lease = await activateAccessRequestCommand.ActivateAsync(userId, id);
+        return new AccessLeaseResponseModel(lease);
+    }
 
-    public Task Revoke(ClaimsPrincipal user, Guid id)
-        => throw new NotImplementedException();
+    public async Task Revoke(ClaimsPrincipal user, Guid id)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        await cancelAccessRequestCommand.CancelAsync(userId, id);
+    }
 }

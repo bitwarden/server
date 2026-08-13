@@ -3,21 +3,17 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Models.Conditions;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Commands;
 
-/// <summary>
-/// The validation these commands share lives in <see cref="AccessRuleWriteValidator"/> and is covered by
-/// AccessRuleWriteValidatorTests; these tests cover persistence, timestamps, and collection association wiring.
-/// </summary>
 [SutProviderCustomize]
 public class CreateAccessRuleCommandTests
 {
@@ -28,10 +24,15 @@ public class CreateAccessRuleCommandTests
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "VPN + business hours";
-        rule.Conditions = """[{"kind":"human_approval"}]""";
+        rule.Conditions = """{"kind":"human_approval"}""";
         rule.DefaultLeaseDurationSeconds = 3600;
         rule.MaxLeaseDurationSeconds = 28800;
-        SetupValidator(sutProvider, rule.OrganizationId, []);
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(rule.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(rule.OrganizationId)
+            .Returns(new List<AccessRule>());
         sutProvider.GetDependency<IAccessRuleRepository>()
             .CreateAsync(rule)
             .Returns(rule);
@@ -45,9 +46,6 @@ public class CreateAccessRuleCommandTests
         await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
             .CreateAsync(Arg.Is<AccessRule>(r =>
                 r.DefaultLeaseDurationSeconds == 3600 && r.MaxLeaseDurationSeconds == 28800));
-        // A create has no existing rule to exclude from the validator's uniqueness and conflict checks.
-        await sutProvider.GetDependency<IAccessRuleWriteValidator>().Received(1)
-            .ValidateAsync(rule.OrganizationId, rule, Arg.Any<IEnumerable<Guid>>(), null);
     }
 
     [Theory, BitAutoData]
@@ -56,18 +54,29 @@ public class CreateAccessRuleCommandTests
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "VPN + business hours";
-        rule.Conditions = """[{"kind":"human_approval"}]""";
+        rule.Conditions = """{"kind":"human_approval"}""";
+        collectionA.OrganizationId = rule.OrganizationId;
+        collectionA.AccessRuleId = null;
+        collectionB.OrganizationId = rule.OrganizationId;
+        collectionB.AccessRuleId = null;
         var collectionIds = new[] { collectionA.Id, collectionB.Id };
-        SetupValidator(sutProvider, rule.OrganizationId, [.. collectionIds]);
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(rule.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(rule.OrganizationId)
+            .Returns(new List<AccessRule>());
         sutProvider.GetDependency<IAccessRuleRepository>()
             .CreateAsync(rule)
             .Returns(rule);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(collectionIds.OrderBy(x => x))))
+            .Returns(new List<Collection> { collectionA, collectionB });
 
-        var result = await sutProvider.Sut.CreateAsync(rule, collectionIds);
+        await sutProvider.Sut.CreateAsync(rule, collectionIds);
 
-        Assert.Equal(collectionIds, result.CollectionIds);
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
-            .SetAccessRuleAssociationsAsync(rule.OrganizationId, rule.Id,
+        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
+            .SetCollectionAssociationsAsync(rule.OrganizationId, rule.Id,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(collectionIds.OrderBy(x => x))),
                 Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()));
     }
@@ -223,10 +232,15 @@ public class CreateAccessRuleCommandTests
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "extendable";
-        rule.Conditions = """[{"kind":"human_approval"}]""";
+        rule.Conditions = """{"kind":"human_approval"}""";
         rule.AllowsExtensions = true;
         rule.MaxExtensionDurationSeconds = 3600;
-        SetupValidator(sutProvider, rule.OrganizationId, []);
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(rule.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(rule.OrganizationId)
+            .Returns(new List<AccessRule>());
         sutProvider.GetDependency<IAccessRuleRepository>()
             .CreateAsync(rule)
             .Returns(rule);
@@ -238,27 +252,6 @@ public class CreateAccessRuleCommandTests
         await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
             .CreateAsync(Arg.Is<AccessRule>(r => r.AllowsExtensions && r.MaxExtensionDurationSeconds == 3600));
     }
-
-    [Theory, BitAutoData]
-    public async Task CreateAsync_ValidationFails_DoesNotPersist(AccessRule rule)
-    {
-        var sutProvider = SetupSutProvider();
-        sutProvider.GetDependency<IAccessRuleWriteValidator>()
-            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>())
-            .ThrowsAsync(new BadRequestException("Name is required."));
-
-        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
-        Assert.Equal("Name is required.", ex.Message);
-        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
-            .SetAccessRuleAssociationsAsync(default, default, default!, default!);
-    }
-
-    private static void SetupValidator(SutProvider<CreateAccessRuleCommand> sutProvider, Guid organizationId,
-        List<Guid> validatedCollectionIds)
-        => sutProvider.GetDependency<IAccessRuleWriteValidator>()
-            .ValidateAsync(organizationId, Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>())
-            .Returns(validatedCollectionIds);
 
     private static SutProvider<CreateAccessRuleCommand> SetupSutProvider()
     {

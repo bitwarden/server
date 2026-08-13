@@ -52,16 +52,6 @@ public static class CoreHelpers
     public static Guid GenerateComb()
         => CombGuid.Generate();
 
-    /// <summary>
-    /// Implementation of <see cref="GenerateComb()" /> with input parameters to remove randomness.
-    /// This should NOT be used outside of testing.
-    /// </summary>
-    /// <remarks>
-    /// You probably don't want to use this method and instead want to use <see cref="GenerateComb()" /> with no parameters
-    /// </remarks>
-    internal static Guid GenerateComb(Guid startingGuid, DateTime time)
-        => CombGuid.Generate(startingGuid, time);
-
     internal static DateTime DateFromComb(Guid combGuid)
     {
         var guidArray = combGuid.ToByteArray();

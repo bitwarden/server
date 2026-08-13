@@ -23,7 +23,3 @@ CREATE NONCLUSTERED INDEX [IX_Collection_AccessRuleId]
     ON [dbo].[Collection]([AccessRuleId] ASC);
 GO
 
-CREATE NONCLUSTERED INDEX [IX_Collection_AccessRuleId]
-    ON [dbo].[Collection]([AccessRuleId] ASC);
-GO
-

@@ -4,6 +4,7 @@
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
@@ -11,7 +12,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;

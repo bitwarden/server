@@ -7,7 +7,8 @@ BEGIN
     -- A single access request projected for the dedicated request page, returned as two result sets so the caller can
     -- attach the request's full decision list without an N+1:
     --   1) the request row with the denormalized requester identity. A row that produced a lease carries
-    --      ProducedLeaseId/ProducedLeaseStatus so the client can show (and gate) lease actions.
+    --      ProducedLeaseId/ProducedLeaseStatus so the client can show (and gate) lease actions; a request produces at
+    --      most one lease ([IX_AccessLease_AccessRequestId] is unique), so that join adds at most one row.
     --   2) every decision (human or automatic) for the request, keyed by AccessRequestId and ordered oldest-first;
     --      DeciderKind says which, and a human decision's identity is denormalized from [User].
     -- Authorization (requester or managing approver) is enforced by the caller, not this read.
@@ -31,12 +32,7 @@ BEGIN
         U.[Email] AS [RequesterEmail]
     FROM [dbo].[AccessRequest] LR
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
-    OUTER APPLY (
-        SELECT TOP 1 L.[Id], L.[Status]
-        FROM [dbo].[AccessLease] L
-        WHERE L.[AccessRequestId] = LR.[Id]
-        ORDER BY L.[CreationDate] DESC
-    ) PL
+    LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = LR.[Id]
     WHERE LR.[Id] = @Id
 
     SELECT

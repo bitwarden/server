@@ -27,6 +27,7 @@ public class LeaseEndpointsTests
         // (not an inferred request body) — the same registration AddPamServices performs in the app.
         // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
         builder.Services.AddScoped<LeaseEndpointsHandler>();
+        builder.Services.AddScoped<AuditEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
         builder.Services.AddScoped<CipherLeaseEndpointsHandler>();

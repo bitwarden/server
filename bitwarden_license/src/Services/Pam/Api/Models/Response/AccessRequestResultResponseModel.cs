@@ -1,16 +1,18 @@
-﻿using Bit.HttpExtensions;
-using Bit.Services.Pam.Enums;
+﻿using Bit.Services.Pam.Enums;
+using Bit.Services.Pam.Models;
+using Bit.HttpExtensions;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
-/// <summary>
-/// The envelope returned when a cipher-lease request is submitted.
-/// </summary>
 public class AccessRequestResultResponseModel : ResponseModel
 {
-    public AccessRequestResultResponseModel()
+    public AccessRequestResultResponseModel(AccessRequestResult result)
         : base("accessRequestResult")
     {
+        ArgumentNullException.ThrowIfNull(result);
+
+        ApprovalMode = result.ApprovalMode;
+        Request = new AccessRequestResponseModel(result.Request);
     }
 
     /// <summary>
@@ -18,15 +20,7 @@ public class AccessRequestResultResponseModel : ResponseModel
     /// to activate (the client shows "Start lease"), <see cref="AccessApprovalMode.Human"/> when it is pending an
     /// approver. No lease is minted at submit on either path; the requester activates the request to start the lease.
     /// </summary>
-    public AccessApprovalMode ApprovalMode { get; set; }
+    public AccessApprovalMode ApprovalMode { get; }
 
-    /// <summary>
-    /// The submitted request. Fields that only a resolved or leased request carries are null here:
-    /// <see cref="AccessRequestDetailsResponseModel.ProducedLeaseId"/> and
-    /// <see cref="AccessRequestDetailsResponseModel.ProducedLeaseStatus"/> are always null at submit (no lease is
-    /// minted on either path), and <see cref="AccessRequestDetailsResponseModel.Decisions"/> is empty unless
-    /// <see cref="ApprovalMode"/> is <see cref="AccessApprovalMode.Automatic"/>, in which case it carries the
-    /// single automatic decision.
-    /// </summary>
-    public AccessRequestDetailsResponseModel Request { get; set; } = null!;
+    public AccessRequestResponseModel Request { get; }
 }

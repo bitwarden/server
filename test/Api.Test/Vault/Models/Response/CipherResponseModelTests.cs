@@ -355,7 +355,7 @@ public class CipherResponseModelTests
     [Fact]
     public void Constructor_Partial_BlobEncryptedData_WithholdsData()
     {
-        const string opaque = "2.iv|ct|mac";
+        const string opaque = "{\"format_version\":1,\"wrapped_cek\":\"abc\",\"envelope\":\"def\"}";
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),
@@ -501,5 +501,25 @@ public class CipherResponseModelTests
         var attachment = Assert.Single(response.Attachments);
         Assert.Equal("attachment-id", attachment.Id);
         Assert.Equal("2.attachmentKey|encrypted", attachment.Key);
+    }
+
+    [Fact]
+    public void Serialize_NullPartialData_OmitsTheProperty()
+    {
+        var cipher = new Cipher
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData { Name = "2.name|encrypted" }),
+            RevisionDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+        };
+
+        var json = JsonSerializer.Serialize(
+            new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false));
+
+        // Null-suppressed, so a full response is byte-identical to one from before the property existed. Only the
+        // leasing-gated (partial) shape populates it — see Constructor_Partial_Login_KeepsNameAndUrisAndStripsSecrets.
+        Assert.DoesNotContain("partialData", json, StringComparison.OrdinalIgnoreCase);
     }
 }

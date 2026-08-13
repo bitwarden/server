@@ -26,13 +26,6 @@ public class AccessRequest : ITableObject<Guid>
     public Guid RequesterId { get; set; }
 
     /// <summary>
-    /// The access rule that governed this request, resolved once at submit (oldest wins) and pinned here so every
-    /// downstream operation reads the same rule rather than re-resolving. Null for requests created before pinning
-    /// existed, or when the cipher was not leasing-gated through a stored rule.
-    /// </summary>
-    public Guid? RuleId { get; set; }
-
-    /// <summary>
     /// The requested access window. For automatic approval this is <c>now</c>; for human approval it is the
     /// requester-supplied start.
     /// </summary>
@@ -49,13 +42,28 @@ public class AccessRequest : ITableObject<Guid>
     /// </summary>
     public string? Reason { get; set; }
 
+    /// <summary>
+    /// The request's position in its lifecycle. Created <see cref="AccessRequestStatus.Pending"/> for human approval or
+    /// already <see cref="AccessRequestStatus.Approved"/> for automatic approval, then settling in one terminal state.
+    /// </summary>
     public AccessRequestStatus Status { get; set; }
+
+    /// <summary>
+    /// When the request was submitted, stamped in UTC at construction.
+    /// </summary>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     /// Set when the request leaves <see cref="AccessRequestStatus.Pending"/>.
     /// </summary>
     public DateTime? ResolvedDate { get; set; }
+
+    /// <summary>
+    /// The access rule that governed this request, resolved once at submit (oldest wins) and pinned here so every
+    /// downstream operation reads the same rule rather than re-resolving. Null for requests created before pinning
+    /// existed, or when the cipher was not leasing-gated through a stored rule.
+    /// </summary>
+    public Guid? RuleId { get; set; }
 
     public void SetNewId()
     {

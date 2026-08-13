@@ -7,7 +7,8 @@ BEGIN
     -- The approver inbox: pending requests for the supplied (caller-manageable) collections, joined with the
     -- denormalized requester identity the client needs so it avoids an N+1. A pending request has not been decided by
     -- anyone yet, so it carries no approvers (the caller leaves the request's approvers list empty); only the resolved
-    -- reads return a second decision result set.
+    -- reads return a second decision result set. ProducedLease is joined for shape parity with the other request
+    -- projections (and the EF read) -- a lease is only ever minted from an Approved request, so it is always NULL here.
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -29,11 +30,6 @@ BEGIN
     FROM [dbo].[AccessRequest] LR
     INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
-    OUTER APPLY (
-        SELECT TOP 1 L.[Id], L.[Status]
-        FROM [dbo].[AccessLease] L
-        WHERE L.[AccessRequestId] = LR.[Id]
-        ORDER BY L.[CreationDate] DESC
-    ) PL
+    LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = LR.[Id]
     WHERE LR.[Status] = 0 -- Pending
 END
