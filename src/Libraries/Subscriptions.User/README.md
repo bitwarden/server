@@ -23,7 +23,7 @@ types to pass data across that surface is fine — calling Stripe from here is n
 
 ## Core debt
 
-This library depends on `Core` as a TL-approved interim deviation:
+This library depends on `Core` as a documented deviation from the rule restricting Libraries from referencing Core, per ADR-0032:
 
 | From Core | Used for |
 | --- | --- |
