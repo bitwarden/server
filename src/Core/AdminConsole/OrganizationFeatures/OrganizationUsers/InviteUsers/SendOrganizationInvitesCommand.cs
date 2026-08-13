@@ -46,10 +46,10 @@ public class SendOrganizationInvitesCommand(
     /// Self-heals invited org users missing their email, then returns the users and emails that can be invited.
     /// </summary>
     /// <remarks>
-    /// SSO JIT provisioning can leave a corrupt invited row (Email null, UserId populated). The email must be
-    /// persisted, not just patched in memory, because the invite token is re-validated against the stored email at
-    /// accept time. When the row has a UserId we recover the email from that user, null the UserId to restore the
-    /// canonical invited shape, and persist the repair. Rows that cannot be repaired are logged and dropped.
+    /// SSO JIT provisioning can leave a corrupt invited row (Email null, UserId populated). If any invalid invited organization
+    /// users ane encountered, the record will be "healed". This is done by setting the Email on the OrgUser record so that
+    /// the token can validate when being sent back. UserId is retained and the orgUser is still technically invalid. However,
+    /// this will work for the SSO login flow.
     /// </remarks>
     private async Task<(List<OrganizationUser> OrgUsers, List<string> Emails)> RepairAndFilterUsersWithoutEmailAsync(
         OrganizationUser[] requestedOrgUsers)
