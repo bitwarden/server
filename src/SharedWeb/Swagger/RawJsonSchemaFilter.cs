@@ -40,7 +40,10 @@ public class RawJsonSchemaFilter : ISchemaFilter
             var jsonPropName = JsonNamingPolicy.CamelCase.ConvertName(prop.Name);
             if (schema.Properties.TryGetValue(jsonPropName, out var value) && value is OpenApiSchema innerSchema)
             {
-                innerSchema.Type = JsonSchemaType.Object;
+                var isNullable = (innerSchema.Type & JsonSchemaType.Null) == JsonSchemaType.Null;
+                innerSchema.Type = isNullable
+                    ? JsonSchemaType.Object | JsonSchemaType.Null
+                    : JsonSchemaType.Object;
             }
         }
     }

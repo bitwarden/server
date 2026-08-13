@@ -19,13 +19,29 @@ public class RawJsonSchemaFilterTest
     }
 
     [Fact]
-    public void RawJsonConverterPropertyBecomesObjectSchema()
+    public void RawJsonConverterPropertyBecomesNullableObjectSchema()
     {
         var schema = new OpenApiSchema
         {
             Properties = new Dictionary<string, IOpenApiSchema>
             {
                 { "data", new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null } },
+            },
+        };
+        var context = new SchemaFilterContext(typeof(TestClass), null, null, null);
+        var filter = new RawJsonSchemaFilter();
+        filter.Apply(schema, context);
+        Assert.Equal(JsonSchemaType.Object | JsonSchemaType.Null, schema.Properties["data"].Type);
+    }
+
+    [Fact]
+    public void RawJsonConverterPropertyWithoutNullFlagBecomesObjectSchema()
+    {
+        var schema = new OpenApiSchema
+        {
+            Properties = new Dictionary<string, IOpenApiSchema>
+            {
+                { "data", new OpenApiSchema { Type = JsonSchemaType.String } },
             },
         };
         var context = new SchemaFilterContext(typeof(TestClass), null, null, null);
