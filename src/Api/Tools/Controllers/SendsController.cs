@@ -132,12 +132,12 @@ public class SendsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<SendResponseModel>> GetAll()
     {
-        var sends = await _sendOwnerQuery.GetOwned(User);
-        var responses = sends.Select(s => new SendResponseModel(s));
+        var sends = (await _sendOwnerQuery.GetOwned(User)).AsEnumerable();
         if (!_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
         {
-            responses = responses.Where(s => s.Type != SendType.Item);
+            sends = sends.Where(s => s.Type != SendType.Item);
         }
+        var responses = sends.Select(s => new SendResponseModel(s));
         var result = new ListResponseModel<SendResponseModel>(responses);
         return result;
     }
@@ -378,6 +378,10 @@ public class SendsController : Controller
         if (send == null || send.UserId != userId)
         {
             throw new NotFoundException();
+        }
+        if (send.Type != model.Type)
+        {
+            throw new BadRequestException("Cannot change a Send's type");
         }
 
         await _nonAnonymousSendCommand.SaveSendAsync(model.UpdateSend(send, _sendAuthorizationService));

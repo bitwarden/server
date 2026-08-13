@@ -458,6 +458,32 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
+    public async Task Put_ChangingSendType_ThrowsBadRequestException(Guid sendId, Guid userId)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(true);
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Old", "Old notes", "Old text", false))
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+        var request = new SendRequestModel
+        {
+            Type = SendType.Item,
+            Key = "key",
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var error = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Put(sendId.ToString(), request));
+        Assert.Equal("Cannot change a Send's type", error.Message);
+    }
+
+    [Theory, AutoData]
     public async Task PutRemovePassword_WithValidSend_RemovesPasswordAndSetsAuthTypeNone(Guid userId, Guid sendId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
