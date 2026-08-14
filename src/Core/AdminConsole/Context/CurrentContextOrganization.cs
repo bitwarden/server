@@ -27,4 +27,6 @@ public class CurrentContextOrganization
     public Permissions Permissions { get; set; } = new();
     public bool AccessSecretsManager { get; set; }
     public bool AccessPam { get; set; }
+
+    public bool IsAdminOrOwner => Type is OrganizationUserType.Owner or OrganizationUserType.Admin;
 }
