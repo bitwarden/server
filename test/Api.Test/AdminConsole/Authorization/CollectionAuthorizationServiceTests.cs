@@ -16,7 +16,7 @@ namespace Bit.Api.Test.AdminConsole.Authorization;
 public class CollectionAuthorizationServiceTests
 {
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_CollectionNotFound_Unauthorized(
+    public async Task AuthorizeUpdateAsync_WhenCollectionNotFound_NoSuccess(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Guid organizationId,
         Guid collectionId)
@@ -31,7 +31,7 @@ public class CollectionAuthorizationServiceTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_CollectionBelongsToDifferentOrganization_Unauthorized(
+    public async Task AuthorizeUpdateAsync_WhenCollectionBelongsToDifferentOrganization_NoSuccess(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -47,7 +47,7 @@ public class CollectionAuthorizationServiceTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_MissingUserId_Unauthorized(
+    public async Task AuthorizeUpdateAsync_WhenMissingUserId_NoSuccess(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails)
@@ -63,7 +63,7 @@ public class CollectionAuthorizationServiceTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_WithEditAnyCollectionPermission_Authorized(
+    public async Task AuthorizeUpdateAsync_WithEditAnyCollectionPermission_Success(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -80,10 +80,11 @@ public class CollectionAuthorizationServiceTests
         var result = await sutProvider.Sut.AuthorizeUpdateAsync(collection.OrganizationId, collection.Id);
 
         Assert.True(result);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByUserIdAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_WhenMissingPermissions_Unauthorized(
+    public async Task AuthorizeUpdateAsync_WhenMissingPermissions_NoSuccess(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -106,7 +107,7 @@ public class CollectionAuthorizationServiceTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_WhenProviderUser_Authorized(
+    public async Task AuthorizeUpdateAsync_WhenProviderUser_Success(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -125,7 +126,7 @@ public class CollectionAuthorizationServiceTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_ManageUsersPermission_AllowAdminAccessTrue_StaysUnauthorized(
+    public async Task AuthorizeUpdateAsync_WithManageUsersPermission_WhenAllowAdminAccessTrue_NoSuccess(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -150,7 +151,7 @@ public class CollectionAuthorizationServiceTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_WhenCallerManagesCollection_Authorized(
+    public async Task AuthorizeUpdateAsync_WhenCallerManagesCollection_Success(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,

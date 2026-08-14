@@ -20,8 +20,6 @@ public static class AuthorizationHandlerCollectionExtensions
             ServiceDescriptor.Scoped<IAuthorizationHandler, RecoverAccountAuthorizationHandler>(),
         ]);
 
-        // Fine-grained, relationship-dependent authorization for collection access is handled by plain injected
-        // services rather than IAuthorizationHandler - see ICollectionAuthorizationService.
         services.TryAddScoped<ICollectionAuthorizationService, CollectionAuthorizationService>();
     }
 }
