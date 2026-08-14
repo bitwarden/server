@@ -161,7 +161,7 @@ public static class ServiceCollectionExtensions
         // overrides this default by registering the real gate after AddBaseServices, where the last
         // registration wins — the shape AddOosServices uses for IProviderService. That override must
         // be a plain Add*; a TryAdd* would no-op against this default and leave leasing ungated.
-        services.AddScoped<ICipherLeaseGate, NoopCipherLeaseGate>();
+        services.AddScoped<ICipherLeaseGate, UnrestrictedCipherLeaseGate>();
         services.AddUserServices(globalSettings);
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
