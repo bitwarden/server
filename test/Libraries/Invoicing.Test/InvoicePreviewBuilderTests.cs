@@ -320,4 +320,53 @@ public class InvoicePreviewBuilderTests
 
         Assert.Throws<InvalidOperationException>(() => builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly));
     }
+
+    [Fact]
+    public void BuildFromSubscription_UnplaceableItem_CountsTowardTotalButIsSkipped()
+    {
+        var subscription = DeserializeSubscription("""
+        {
+          "id": "sub_test",
+          "items": { "data": [
+            { "id": "si_1", "quantity": 5, "price": { "id": "price_pm_seat", "unit_amount": 2558, "metadata": { "purchasable_reference": "pm-seat" } } },
+            { "id": "si_2", "quantity": 2, "price": { "id": "price_mystery", "unit_amount": 500, "metadata": {} } }
+          ] }
+        }
+        """);
+
+        var builder = Builder(out var logger);
+        var preview = builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly);
+
+        // Only the resolvable line is placed...
+        Assert.Equal("pm-seat", preview.PasswordManager.Seats.Reference);
+        Assert.Null(preview.PasswordManager.AdditionalStorage);
+        // ...but the unplaceable line still counts toward the total, so it is never understated (127.90 + 10.00).
+        Assert.Equal(137.90m, preview.Total);
+        Assert.Equal(137.90m, preview.AmountDue);
+        Assert.Contains(logger.Errors, e => e.Contains("price_mystery"));
+    }
+
+    [Fact]
+    public void BuildFromSubscription_DuplicateReference_KeepsFirstItemAndLogs()
+    {
+        var subscription = DeserializeSubscription("""
+        {
+          "id": "sub_test",
+          "items": { "data": [
+            { "id": "si_1", "quantity": 5, "price": { "id": "price_pm_seat_1", "unit_amount": 2558, "metadata": { "purchasable_reference": "pm-seat" } } },
+            { "id": "si_2", "quantity": 9, "price": { "id": "price_pm_seat_2", "unit_amount": 100, "metadata": { "purchasable_reference": "pm-seat" } } }
+          ] }
+        }
+        """);
+
+        var builder = Builder(out var logger);
+        var preview = builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly);
+
+        // The first item wins the reference...
+        Assert.Equal(5, preview.PasswordManager.Seats.Quantity);
+        Assert.Equal(127.90m, preview.PasswordManager.Seats.Cost);
+        // ...yet both items still count toward the total (127.90 + 9.00).
+        Assert.Equal(136.90m, preview.Total);
+        Assert.Contains(logger.Errors, e => e.Contains("pm-seat"));
+    }
 }

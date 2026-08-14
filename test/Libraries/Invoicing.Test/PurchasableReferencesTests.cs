@@ -30,4 +30,8 @@ public class PurchasableReferencesTests
     [InlineData(StripeConstants.PurchasableReferences.SecretsManagerServiceAccount, ProductType.SecretsManager)]
     public void ProductOf_MapsReferenceToProduct(string reference, ProductType expected)
         => Assert.Equal(expected, PurchasableReferences.ProductOf(reference));
+
+    [Fact]
+    public void ProductOf_UnknownReference_ReturnsNull()
+        => Assert.Null(PurchasableReferences.ProductOf("fake-reference"));
 }

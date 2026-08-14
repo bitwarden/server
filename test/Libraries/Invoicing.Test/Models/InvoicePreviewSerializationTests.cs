@@ -50,4 +50,31 @@ public class InvoicePreviewSerializationTests
         Assert.Contains("\"discounts\":null", json);
         Assert.Contains("\"startingBalance\":null", json);
     }
+
+    private static SubscriptionPreview SampleSubscriptionPreview() => new()
+    {
+        Status = "active",
+        InvoicePreview = Sample(),
+        Storage = new Storage { Available = 10, Used = 2.5, ReadableUsed = "2.5 GB" },
+        CancelAt = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        Canceled = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+        Suspension = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+        GracePeriod = 7,
+        PendingChange = new PendingSubscriptionChange
+        {
+            InvoicePreview = Sample(),
+            EffectiveDate = new DateTime(2027, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+        },
+    };
+
+    [Fact]
+    public void SubscriptionPreview_SerializesEnvelopeFields()
+    {
+        var json = JsonSerializer.Serialize(SampleSubscriptionPreview(), Options);
+        Assert.Contains("\"status\":\"active\"", json);
+        Assert.Contains("\"gracePeriod\":7", json);
+        Assert.Contains("\"available\":10", json);
+        Assert.Contains("\"pendingChange\":{", json);
+        Assert.Contains("\"effectiveDate\":", json);
+    }
 }
