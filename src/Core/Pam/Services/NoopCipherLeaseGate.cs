@@ -3,7 +3,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
 
-namespace Bit.Pam.Services;
+namespace Bit.Core.Pam.Services;
 
 /// <summary>
 /// Open-source fallback for <see cref="ICipherLeaseGate"/>. PAM credential leasing is a commercial
