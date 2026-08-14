@@ -27,6 +27,9 @@ public enum DenyReason
     /// <summary>The caller's IP was absent, the allowlist was empty, or the IP fell outside every listed CIDR.</summary>
     NotWithinIpRange,
 
+    /// <summary>The request instant fell outside every configured time-of-day window (or the window's timezone could not be resolved).</summary>
+    NotWithinTimeWindow,
+
     /// <summary>
     /// A condition entry could not be evaluated — in practice a null entry from a malformed stored document — so it
     /// fails closed. A genuinely unknown <c>kind</c> cannot reach here: the JSON layer rejects unknown kinds and the
