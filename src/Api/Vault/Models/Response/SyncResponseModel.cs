@@ -57,13 +57,9 @@ public class SyncResponseModel() : ResponseModel("sync")
         Folders = folders.Select(f => new FolderResponseModel(f));
         // A leasing-gated cipher (one the witness does not authorize) is delivered partial; when no
         // witness is supplied every cipher falls back to the partial shape, keeping sync fail-closed.
-        Ciphers = ciphers.Select(cipher =>
-        {
-            var organizationAbility = GetOrganizationAbility(cipher, organizationAbilities);
-            return fullCipherAccess is not null && fullCipherAccess.Authorizes(cipher.Id)
-                ? new FullCipherDetailsResponseModel(fullCipherAccess, cipher, user, organizationAbility, globalSettings, collectionCiphersDict)
-                : (CipherDetailsResponseModel)new PartialCipherDetailsResponseModel(cipher, user, organizationAbility, collectionCiphersDict);
-        });
+        Ciphers = ciphers.Select(cipher => CipherDetailsResponseModel.From(
+            fullCipherAccess, cipher, user, GetOrganizationAbility(cipher, organizationAbilities), globalSettings,
+            collectionCiphersDict));
         Collections = collections?.Select(
             c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);

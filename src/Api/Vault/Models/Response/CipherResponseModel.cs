@@ -44,6 +44,21 @@ public abstract class CipherMiniResponseModel : ResponseModel
     }
 
     /// <summary>
+    /// Builds the shape <paramref name="access"/> permits: full when it authorizes this cipher, reduced
+    /// otherwise — including when there is no witness at all.
+    /// </summary>
+    /// <remarks>
+    /// This is the only place the authorization test is written for a response shape. Use it wherever the
+    /// shape depends on the witness; a path authorized out of band constructs its <c>Full*</c> directly,
+    /// which keeps that decision visible at the call site.
+    /// </remarks>
+    public static CipherMiniResponseModel From(FullCipherAccess access, Cipher cipher,
+        IGlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMini") =>
+        access?.Authorizes(cipher.Id) == true
+            ? new FullCipherMiniResponseModel(access, cipher, globalSettings, orgUseTotp, obj)
+            : new PartialCipherMiniResponseModel(cipher, orgUseTotp, obj);
+
+    /// <summary>
     /// Populates the reduced data blob for a <c>Partial*</c> response. Attachment metadata is left unset:
     /// it carries each attachment's encryption key, and the leasing gate also blocks the attachment
     /// download, so nothing about a withheld attachment is exposed.
@@ -242,6 +257,13 @@ public abstract class CipherResponseModel : CipherMiniResponseModel
         Permissions = new CipherPermissionsResponseModel(user, cipher, organizationAbility);
     }
 
+    /// <inheritdoc cref="CipherMiniResponseModel.From(FullCipherAccess, Cipher, IGlobalSettings, bool, string)"/>
+    public static CipherResponseModel From(FullCipherAccess access, CipherDetails cipher, User user,
+        OrganizationAbility? organizationAbility, IGlobalSettings globalSettings, string obj = "cipher") =>
+        access?.Authorizes(cipher.Id) == true
+            ? new FullCipherResponseModel(access, cipher, user, organizationAbility, globalSettings, obj)
+            : new PartialCipherResponseModel(cipher, user, organizationAbility, obj);
+
     public Guid? FolderId { get; set; }
     public bool Favorite { get; set; }
     public bool Edit { get; set; }
@@ -315,6 +337,31 @@ public abstract class CipherDetailsResponseModel : CipherResponseModel
     {
         CollectionIds = cipher.CollectionIds ?? [];
     }
+
+    /// <inheritdoc cref="CipherMiniResponseModel.From(FullCipherAccess, Cipher, IGlobalSettings, bool, string)"/>
+    public static CipherDetailsResponseModel From(FullCipherAccess access, CipherDetails cipher, User user,
+        OrganizationAbility? organizationAbility, GlobalSettings globalSettings,
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers,
+        string obj = "cipherDetails") =>
+        access?.Authorizes(cipher.Id) == true
+            ? new FullCipherDetailsResponseModel(access, cipher, user, organizationAbility, globalSettings, collectionCiphers, obj)
+            : new PartialCipherDetailsResponseModel(cipher, user, organizationAbility, collectionCiphers, obj);
+
+    /// <inheritdoc cref="CipherMiniResponseModel.From(FullCipherAccess, Cipher, IGlobalSettings, bool, string)"/>
+    public static CipherDetailsResponseModel From(FullCipherAccess access, CipherDetails cipher, User user,
+        OrganizationAbility? organizationAbility, GlobalSettings globalSettings,
+        IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails") =>
+        access?.Authorizes(cipher.Id) == true
+            ? new FullCipherDetailsResponseModel(access, cipher, user, organizationAbility, globalSettings, collectionCiphers, obj)
+            : new PartialCipherDetailsResponseModel(cipher, user, organizationAbility, collectionCiphers, obj);
+
+    /// <inheritdoc cref="CipherMiniResponseModel.From(FullCipherAccess, Cipher, IGlobalSettings, bool, string)"/>
+    public static CipherDetailsResponseModel From(FullCipherAccess access, CipherDetailsWithCollections cipher,
+        User user, OrganizationAbility? organizationAbility, GlobalSettings globalSettings,
+        string obj = "cipherDetails") =>
+        access?.Authorizes(cipher.Id) == true
+            ? new FullCipherDetailsResponseModel(access, cipher, user, organizationAbility, globalSettings, obj)
+            : new PartialCipherDetailsResponseModel(cipher, user, organizationAbility, obj);
 
     public IEnumerable<Guid> CollectionIds { get; set; }
 }
