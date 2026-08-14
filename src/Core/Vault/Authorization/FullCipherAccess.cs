@@ -7,6 +7,14 @@
 /// makes emitting full secret data a deliberate, type-checked act: the default (partial) response
 /// shapes need no witness, so a path that forgets to obtain one fails closed.
 /// </summary>
+/// <remarks>
+/// The division of labour this witness exists to enforce: the <em>controller</em> makes the authorization
+/// decision, by asking the leasing gate and obtaining (or not obtaining) a witness. A response model
+/// never decides anything — it only shapes what the witness already permits, whether that means emitting
+/// reduced data for one cipher or, for an aggregate response such as an export, dropping the ciphers the
+/// witness does not cover. Reading a response model is therefore never enough to know whether a caller is
+/// authorized; the controller that minted the witness is.
+/// </remarks>
 public sealed class FullCipherAccess
 {
     private readonly bool _unrestricted;
