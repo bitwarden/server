@@ -3,9 +3,7 @@
 namespace Bit.Api.AdminConsole.Authorization.Groups;
 
 /// <summary>
-/// The outcome of an <see cref="IGroupsAuthorizationService"/> check. <see cref="UnauthorizedPostedCollectionIds"/>
-/// rejects the whole request; <see cref="ReadonlyCurrentCollectionIds"/> identifies the group's existing
-/// collection access the caller can't edit, so it can be preserved instead of overwritten.
+/// The outcome of an <see cref="IGroupsAuthorizationService"/> check.
 /// </summary>
 public record GroupsAuthorizationResult(
     bool CanAddSelfToGroup,

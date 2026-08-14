@@ -3,8 +3,7 @@
 namespace Bit.Api.AdminConsole.Authorization.Groups;
 
 /// <summary>
-/// Decides whether the caller may update a single group - its member list and its collection access - in one
-/// call. Backs <c>GroupsController</c>'s single-group-scoped Update operation.
+/// Decides whether the caller may update a group's member list and collection access.
 /// </summary>
 public interface IGroupsAuthorizationService
 {

@@ -227,8 +227,7 @@ public class GroupsController : Controller
     }
 
     /// <summary>
-    /// Behaves exactly like <see cref="Put"/>, but authorizes via <see cref="IGroupsAuthorizationService"/>
-    /// instead of the ASP.NET IAuthorizationHandler pipeline.
+    /// Behaves like <see cref="Put"/>, but authorizes via <see cref="IGroupsAuthorizationService"/>.
     /// </summary>
     [HttpPatch("{id}")]
     [Authorize<ManageGroupsRequirement>]
