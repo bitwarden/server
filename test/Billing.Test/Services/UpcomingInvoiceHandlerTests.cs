@@ -112,6 +112,7 @@ public class UpcomingInvoiceHandlerTests
         await _stripeAdapter.DidNotReceive()
             .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
     }
+
     [Fact]
     public async Task HandleAsync_WhenOrganizationHasSponsorship_SendsEmail()
     {
@@ -155,6 +156,8 @@ public class UpcomingInvoiceHandlerTests
         _stripeAdapter
             .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
 
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
@@ -244,6 +247,8 @@ public class UpcomingInvoiceHandlerTests
         _stripeAdapter
             .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
 
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
@@ -338,6 +343,8 @@ public class UpcomingInvoiceHandlerTests
         _stripeAdapter
             .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
 
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
@@ -378,7 +385,6 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
             Arg.Is<bool>(b => b == true));
     }
-
     [Fact]
     public async Task HandleAsync_WhenOrganizationCustomerIsExempt_DoesNotUpdateTaxExemption()
     {
@@ -410,6 +416,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
@@ -464,6 +472,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
 
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
@@ -493,7 +503,6 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<bool>(b => b == true),
             Arg.Is<string>(s => s == $"{paymentMethod.Brand} ending in {paymentMethod.Last4}"));
     }
-
     [Fact]
     public async Task HandleAsync_WhenProviderCustomerIsExempt_DoesNotUpdateTaxExemption()
     {
@@ -531,6 +540,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, null, _providerId));
@@ -545,7 +556,6 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<string>(),
             Arg.Any<CustomerUpdateOptions>());
     }
-
     [Fact]
     public async Task HandleAsync_WhenOrganizationNotFound_DoesNothing()
     {
@@ -580,6 +590,8 @@ public class UpcomingInvoiceHandlerTests
         _stripeAdapter
             .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
 
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
@@ -638,6 +650,8 @@ public class UpcomingInvoiceHandlerTests
         _stripeAdapter
             .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
 
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
@@ -694,6 +708,8 @@ public class UpcomingInvoiceHandlerTests
         _stripeAdapter
             .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
 
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
@@ -753,6 +769,8 @@ public class UpcomingInvoiceHandlerTests
         _stripeAdapter
             .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
 
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
@@ -829,6 +847,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
@@ -903,6 +923,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
@@ -978,6 +1000,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
@@ -993,7 +1016,6 @@ public class UpcomingInvoiceHandlerTests
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
-
     [Fact]
     public async Task HandleAsync_Families_CallsScheduler()
     {
@@ -1039,6 +1061,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -1085,6 +1109,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -1161,7 +1187,7 @@ public class UpcomingInvoiceHandlerTests
             Customer = new Customer
             {
                 Id = "cus_123",
-                Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+                Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
             }
         };
         var customer = new Customer
@@ -1178,6 +1204,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -1257,6 +1285,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -1351,6 +1380,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -1433,6 +1463,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -1520,6 +1551,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -1569,6 +1602,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
@@ -1650,6 +1685,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
@@ -1700,6 +1737,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
@@ -1781,6 +1820,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
@@ -1819,6 +1860,8 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, null, _providerId));
@@ -1857,6 +1900,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(new Invoice { CustomerId = "cus_123" });
         _stripeAdapter.GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -1896,6 +1940,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(new Invoice { CustomerId = "cus_123" });
         _stripeAdapter.GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -1949,6 +1994,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -1998,6 +2044,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -2054,6 +2101,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -2095,6 +2143,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(new Invoice { CustomerId = "cus_123" });
         _stripeAdapter.GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -2138,6 +2187,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(new Invoice { CustomerId = "cus_123" });
         _stripeAdapter.GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
@@ -2178,6 +2228,7 @@ public class UpcomingInvoiceHandlerTests
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(new Invoice { CustomerId = "cus_123" });
         _stripeAdapter.GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);

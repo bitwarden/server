@@ -114,18 +114,6 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? V2UpgradeToken { get; set; }
     [MaxLength(256)]
     public string? MasterPasswordSalt { get; set; }
-
-    public KeyId? GetUserKeyId()
-    {
-        // Todo: Database Implementation in follow-up PR
-        return null;
-    }
-
-    public void SetUserKeyId(KeyId keyId)
-    {
-        return; // Todo: Database Implementation in follow-up PR
-    }
-
     public DateTime? LastApiKeyRotationDate { get; set; }
     /// <summary>
     /// A hex-endcoded key-id of the user's current user-key.
@@ -137,7 +125,16 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     /// A key rotation will set a new key id. Account registrations will carry a key id.
     /// </summary>
     [MaxLength(32)]
+    [KeyId]
     public string? UserKeyId { get; set; }
+
+    public void SetUserKeyId(KeyId? userKeyId)
+    {
+        UserKeyId = userKeyId?.ToString();
+    }
+
+    public KeyId? GetUserKeyId() =>
+        KeyId.FromHexEncodedString(string.IsNullOrEmpty(UserKeyId) ? null : UserKeyId);
 
     public string GetMasterPasswordSalt()
     {

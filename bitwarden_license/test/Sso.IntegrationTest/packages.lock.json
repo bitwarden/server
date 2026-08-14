@@ -1171,11 +1171,11 @@
       },
       "Stripe.net": {
         "type": "Transitive",
-        "resolved": "48.5.0",
-        "contentHash": "wOAZYR0EnrLMok/ScfVOpTxjci+n3vFP0A7w/BE63yJdkRSDwZVCJIhlOjeJvgyQnMX8ZbwDAHMaxaiDa0Z5TA==",
+        "resolved": "52.1.0",
+        "contentHash": "xzYOMenSrhR2UIgk+zBOjfzADSFe9NnCuhffs2FMpWSJst4M19m6QS7GAxq4cLeBdWvUoUo3RuHNc5uzI5eOFg==",
         "dependencies": {
           "Newtonsoft.Json": "13.0.3",
-          "System.Configuration.ConfigurationManager": "8.0.0"
+          "System.Configuration.ConfigurationManager": "9.0.0"
         }
       },
       "Sustainsys.Saml2": {
@@ -1396,7 +1396,7 @@
           "SendGrid": "[9.29.3, 9.29.3]",
           "SerilogFileLogging": "[0.0.1, )",
           "SsrfProtection": "[0.0.1, )",
-          "Stripe.net": "[48.5.0, 48.5.0]",
+          "Stripe.net": "[52.1.0, 52.1.0]",
           "YubicoDotNetClient": "[1.2.0, 1.2.0]",
           "ZiggyCreatures.FusionCache": "[2.0.2, 2.0.2]",
           "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.0.2, 2.0.2]",
@@ -1436,7 +1436,8 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.8.0, )",
-          "Dapper": "[2.1.66, 2.1.66]"
+          "Dapper": "[2.1.66, 2.1.66]",
+          "Pam.Domain": "[2026.8.0, )"
         }
       },
       "infrastructure.entityframework": {
@@ -1448,6 +1449,7 @@
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.4, 8.0.4]",
+          "Pam.Domain": "[2026.8.0, )",
           "Pomelo.EntityFrameworkCore.MySql": "[8.0.2, 8.0.2]",
           "linq2db": "[5.4.1, 5.4.1]",
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
@@ -1469,6 +1471,12 @@
           "Core": "[2026.8.0, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
+        }
+      },
+      "pam.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Data": "[0.0.1, )"
         }
       },
       "rustsdk": {

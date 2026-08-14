@@ -48,6 +48,33 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task PostUserKeyIdAsync_UserNull_Throws(SutProvider<AccountsKeyManagementController> sutProvider,
+        SetUserKeyIdRequestModel data)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostUserKeyIdAsync(data));
+
+        await sutProvider.GetDependency<ISetUserKeyIdCommand>().ReceivedWithAnyArgs(0)
+            .SetUserKeyIdAsync(Arg.Any<User>(), Arg.Any<KeyId>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostUserKeyIdAsync_Success_CallsCommandWithParsedKeyId(
+        SutProvider<AccountsKeyManagementController> sutProvider, User user)
+    {
+        var data = new SetUserKeyIdRequestModel { UserKeyId = _mockKeyId };
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        await sutProvider.Sut.PostUserKeyIdAsync(data);
+
+        await sutProvider.GetDependency<ISetUserKeyIdCommand>().Received(1)
+            .SetUserKeyIdAsync(user, KeyId.FromHexEncodedString(_mockKeyId)!);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task RegenerateKeysAsync_UserNull_Throws(SutProvider<AccountsKeyManagementController> sutProvider,
         KeyRegenerationRequestModel data)
     {
@@ -259,7 +286,7 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PasswordChangeAndRotateUserAccountKeysAsync_WithV2UpgradeToken_PassesTokenToCommand(
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_WithV2UpgradeToken_PassesNullToCommand(
         SutProvider<AccountsKeyManagementController> sutProvider,
         RotateUserAccountKeysAndDataRequestModel data,
         User user)
@@ -280,12 +307,10 @@ public class AccountsKeyManagementControllerTests
         // Act
         await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(data);
 
-        // Assert
+        // Assert - A manual rotation always logs out, so a submitted token is ignored
         await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
             .PasswordChangeAndRotateUserAccountKeysAsync(Arg.Is(user), Arg.Is<PasswordChangeAndRotateUserAccountKeysData>(d =>
-                d.BaseData.V2UpgradeToken != null &&
-                d.BaseData.V2UpgradeToken.WrappedUserKey1 == _mockEncryptedType7String &&
-                d.BaseData.V2UpgradeToken.WrappedUserKey2 == _mockEncryptedType2String));
+                d.BaseData.V2UpgradeToken == null));
     }
 
     [Theory]
