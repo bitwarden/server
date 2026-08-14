@@ -112,7 +112,6 @@ public class SyncController : Controller
 
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
         var allCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: hasEnabledOrgs);
-        var ciphers = FilterUnsupportedCipherTypes(allCiphers);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;
@@ -129,8 +128,8 @@ public class SyncController : Controller
         // PAM credential leasing: ciphers reachable only through leasing-enabled collections are delivered
         // with reduced data during the passive sync. The active GET /ciphers/{id} path is unchanged. The
         // witness authorizes the non-gated subset; gated ciphers fall through to the partial shape.
-        var fullCipherAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers, collections, collectionCiphersGroupDict);
-        ciphers = FilterGatedCiphersForUnsupportedClients(ciphers, fullCipherAccess);
+        var fullCipherAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, allCiphers, collections, collectionCiphersGroupDict);
+        var ciphers = FilterCiphersUnsupportedByClient(allCiphers, fullCipherAccess);
 
         var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
@@ -176,25 +175,17 @@ public class SyncController : Controller
     }
 
     /// <summary>
-    /// Drops leasing-gated ciphers for clients that cannot render the partial shape. Sibling of
-    /// <see cref="FilterUnsupportedCipherTypes"/>: same idea, applied to a response shape rather than a
-    /// cipher type. Sending a partial cipher to a client that does not understand it would show an item
-    /// with no credentials as though it were empty, and saving it back would overwrite the withheld
-    /// fields. Omitting it is the lesser harm — the item stays visible in the web vault, where the user
-    /// can request access.
+    /// Drops every cipher the calling client cannot render: types it does not know yet, and — when it
+    /// cannot render the reduced partial shape — leasing-gated ciphers.
     /// </summary>
-    private ICollection<CipherDetails> FilterGatedCiphersForUnsupportedClients(
+    /// <remarks>
+    /// Sending a partial cipher to a client that does not understand the shape would show an item with no
+    /// credentials as though it were empty, and saving it back would overwrite the withheld fields.
+    /// Omitting it is the lesser harm — the item stays visible in the web vault, where the user can
+    /// request access.
+    /// </remarks>
+    private ICollection<CipherDetails> FilterCiphersUnsupportedByClient(
         ICollection<CipherDetails> ciphers, FullCipherAccess fullCipherAccess)
-    {
-        if (PartialCipherSupport.IsSupportedBy(_currentContext.DeviceType))
-        {
-            return ciphers;
-        }
-
-        return ciphers.Where(c => fullCipherAccess.Authorizes(c.Id)).ToList();
-    }
-
-    private ICollection<CipherDetails> FilterUnsupportedCipherTypes(ICollection<CipherDetails> ciphers)
     {
         var unsupportedTypes = new List<Core.Vault.Enums.CipherType>();
 
@@ -213,8 +204,15 @@ public class SyncController : Controller
             unsupportedTypes.Add(Core.Vault.Enums.CipherType.Passport);
         }
 
-        return unsupportedTypes.Count == 0
-            ? ciphers
-            : ciphers.Where(c => !unsupportedTypes.Contains(c.Type)).ToList();
+        var supportsPartial = PartialCipherSupport.IsSupportedBy(_currentContext.DeviceType);
+        if (unsupportedTypes.Count == 0 && supportsPartial)
+        {
+            return ciphers;
+        }
+
+        return ciphers
+            .Where(c => !unsupportedTypes.Contains(c.Type))
+            .Where(c => supportsPartial || fullCipherAccess.Authorizes(c.Id))
+            .ToList();
     }
 }
