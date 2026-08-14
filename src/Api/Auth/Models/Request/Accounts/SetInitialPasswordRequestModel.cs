@@ -80,17 +80,31 @@ public class SetInitialPasswordRequestModel : IValidatableObject
                 [nameof(AccountKeys), nameof(Keys)]);
         }
 
-        // The password/KDF fields must be one shape or the other — modern (MPAD/MPUD) or legacy (hash/key/kdf) — never both.
+        // Shape guards: MPAD and MPUD must be provided together, and the modern (MPAD/MPUD) and
+        // legacy (hash/key/kdf) shapes cannot be mixed. Both guards yield break to prevent
+        // misleading deep-validation errors from cascading on a structurally invalid request.
         var hasModern = MasterPasswordAuthentication != null || MasterPasswordUnlock != null;
         var hasLegacy = MasterPasswordHash != null || Key != null || Kdf != null;
+
+        if (hasModern && !HasAuthAndUnlockData())
+        {
+            yield return new ValidationResult(
+                $"Must provide both {nameof(MasterPasswordAuthentication)} and {nameof(MasterPasswordUnlock)} together. Cannot provide one without the other.",
+                [nameof(MasterPasswordAuthentication), nameof(MasterPasswordUnlock)]);
+            
+            yield break;
+        }
 
         if (hasModern && hasLegacy)
         {
             yield return new ValidationResult(
                 "Cannot mix modern (MasterPasswordAuthentication/MasterPasswordUnlock) and legacy (MasterPasswordHash/Key/Kdf) fields. Provide one shape or the other.",
                 [nameof(MasterPasswordAuthentication), nameof(MasterPasswordUnlock), nameof(MasterPasswordHash), nameof(Key), nameof(Kdf)]);
+            
+            yield break;
         }
 
+        // If both MPAD and MPUD are present and the shape is clean — validate their content.
         if (HasAuthAndUnlockData())
         {
             // Validate KDF equality, salt equality, and KDF settings on the new-shape MPAD/MPUD fields

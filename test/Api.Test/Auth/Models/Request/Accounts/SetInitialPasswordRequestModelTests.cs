@@ -385,6 +385,73 @@ public class SetInitialPasswordRequestModelTests
             r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.Keys)));
     }
 
+    // MPAD and MPUD must be provided together — one without the other is rejected.
+    // The yield break after this error prevents misleading legacy required-field errors
+    // from cascading into the result set.
+    [Theory]
+    [BitAutoData]
+    public void Validate_WithMpadOnlyAndNoMpud_ReturnsMutualPresenceError(string orgIdentifier)
+    {
+        // Arrange — only MasterPasswordAuthentication provided, MasterPasswordUnlock omitted
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 },
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt"
+            }
+        };
+
+        // Act
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert — mutual-presence error is returned...
+        Assert.Contains(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("Must provide both") &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.MasterPasswordAuthentication)) &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.MasterPasswordUnlock)));
+
+        // ...and legacy required-field errors do NOT bleed through (yield break fired)
+        Assert.DoesNotContain(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("MasterPasswordHash must be supplied"));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Validate_WithMpudOnlyAndNoMpad_ReturnsMutualPresenceError(string orgIdentifier)
+    {
+        // Arrange — only MasterPasswordUnlock provided, MasterPasswordAuthentication omitted
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 },
+                MasterKeyWrappedUserKey = "wrappedKey",
+                Salt = "salt"
+            }
+        };
+
+        // Act
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert — mutual-presence error is returned...
+        Assert.Contains(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("Must provide both") &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.MasterPasswordAuthentication)) &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.MasterPasswordUnlock)));
+
+        // ...and legacy required-field errors do NOT bleed through (yield break fired)
+        Assert.DoesNotContain(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("MasterPasswordHash must be supplied"));
+    }
+
     // Modern (MPAD/MPUD) and legacy (MasterPasswordHash/Key/Kdf) fields are mutually exclusive.
     // Mixing them is rejected.
     [Theory]
