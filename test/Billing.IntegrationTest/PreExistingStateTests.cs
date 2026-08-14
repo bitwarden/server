@@ -19,6 +19,44 @@ public class PreExistingStateTests(StripeTestsFixture fixture) : IClassFixture<S
     }
 
     [BillingFact]
+    public async Task RemoveOrganizationFromProvider_WhenCustomerHasActiveDiscount_DeletesTheDiscount()
+    {
+        // Adopt a Stripe-enabled org (own subscription, non-Managed status) into a reseller provider so
+        // removal takes the `else if (organization.IsStripeEnabled())` branch. That branch reads
+        // subscription.Customer.Discount.Source.Coupon and deletes it — requiring
+        // `customer.discount.source.coupon` in the fetch expand (the 2025-09-30.clover Source.Coupon
+        // refactor). With only `customer` expanded, Coupon is a null stub and the deletion no-ops.
+        var (_, _, organizationId, _) =
+            await fixture.PrepareOrganizationOwnerAsync("remove-org-discount@example.com");
+        var customerId = await fixture.GetOrganizationGatewayCustomerIdAsync(organizationId);
+        var providerId = await fixture.AdoptOrganizationIntoResellerProviderAsync(organizationId);
+
+        await fixture.SeedAndAttachCustomerCouponAsync(customerId, $"rm_prov_{Guid.NewGuid():N}", percentOff: 20);
+        Assert.True(await fixture.CustomerHasDiscountAsync(customerId), "precondition: coupon should be attached");
+
+        await fixture.RemoveAnyOrganizationFromProviderAsync(providerId);
+
+        Assert.False(await fixture.CustomerHasDiscountAsync(customerId));
+    }
+
+    [BillingFact]
+    public async Task RemoveOrganizationFromProvider_CreatesStandaloneSubscriptionWithClassicBillingMode()
+    {
+        // Removing a Managed org from a billable (business-unit) provider takes the create-standalone
+        // branch of RemoveOrganizationFromProviderCommand, which creates a fresh subscription for the
+        // org with BillingMode = classic. Verifies that mode lands on the created Stripe subscription.
+        var (_, providerId) = await fixture.PrepareProviderAdminAsync("remove-org-billing-mode@example.com");
+        var organizationId = await fixture.GetFirstProviderOrganizationIdAsync(providerId);
+
+        await fixture.RemoveAnyOrganizationFromProviderAsync(providerId);
+
+        // After removal the org has a fresh standalone subscription.
+        var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+        var billingModeType = await fixture.GetSubscriptionBillingModeTypeAsync(subscriptionId);
+        Assert.Equal("classic", billingModeType);
+    }
+
+    [BillingFact]
     public async Task ProviderPaymentSource_WhenCustomerHasNoDefaultPM_ListsSetupIntentsWithPaymentMethodExpand()
     {
         var (client, providerId) = await fixture.PrepareProviderAdminAsync(

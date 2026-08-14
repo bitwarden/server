@@ -406,7 +406,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task PasswordChangeAndRotateUserAccountKeysAsync_WithV2UpgradeToken_NoLogout(
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_WithV2UpgradeToken_IgnoresTokenAndLogsOut(
         SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, PasswordChangeAndRotateUserAccountKeysData model)
     {
         // Arrange
@@ -428,17 +428,15 @@ public class RotateUserAccountKeysCommandTests
         // Act
         await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model);
 
-        // Assert - Security stamp is not updated
-        Assert.Equal(originalSecurityStamp, user.SecurityStamp);
+        // Assert - A manual rotation always logs out, so the token is never stored
+        Assert.Null(user.V2UpgradeToken);
 
-        // Assert - Token is stored on user
-        Assert.NotNull(user.V2UpgradeToken);
-        Assert.Contains(_mockEncryptedType7String, user.V2UpgradeToken);
-        Assert.Contains(_mockEncryptedType2String, user.V2UpgradeToken);
+        // Assert - Security stamp is updated
+        Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
 
-        // Assert - Push notification sent with KeyRotation reason
+        // Assert - Standard logout push, not KeyRotation reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == Enums.PushNotificationLogOutReason.KeyRotation));
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -513,7 +511,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task PasswordChangeAndRotateUserAccountKeysAsync_WithExistingToken_WithNewToken_UpdatesToken(
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_WithExistingToken_WithNewToken_ClearsToken(
         SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, PasswordChangeAndRotateUserAccountKeysData model)
     {
         // Arrange
@@ -524,13 +522,12 @@ public class RotateUserAccountKeysCommandTests
 
         var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
 
-        // User has existing token from previous rotation
-        var oldToken = new V2UpgradeTokenData
+        // User has existing token from a previous upgrade rotation
+        user.V2UpgradeToken = new V2UpgradeTokenData
         {
             WrappedUserKey1 = _mockEncryptedType7String,
             WrappedUserKey2 = _mockEncryptedType2String
-        };
-        user.V2UpgradeToken = oldToken.ToJson();
+        }.ToJson();
 
         // Model provides NEW token
         model.BaseData.V2UpgradeToken = new V2UpgradeTokenData
@@ -545,21 +542,15 @@ public class RotateUserAccountKeysCommandTests
         // Act
         await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model);
 
-        // Assert - Security stamp is not updated (no logout)
-        Assert.Equal(originalSecurityStamp, user.SecurityStamp);
+        // Assert - Neither the old nor the new token survives a manual rotation
+        Assert.Null(user.V2UpgradeToken);
 
-        // Assert - Token contains new wrapped keys
-        Assert.NotNull(user.V2UpgradeToken);
-        Assert.Contains(_mockEncryptedType7String2, user.V2UpgradeToken);
-        Assert.Contains(_mockEncryptedType2String2, user.V2UpgradeToken);
+        // Assert - Security stamp is updated
+        Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
 
-        // Assert - Token does NOT contain old wrapped keys
-        Assert.DoesNotContain(oldToken.WrappedUserKey1, user.V2UpgradeToken);
-        Assert.DoesNotContain(oldToken.WrappedUserKey2, user.V2UpgradeToken);
-
-        // Assert - Push notification sent with KeyRotation reason (no logout)
+        // Assert - Standard logout push, not KeyRotation reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == Enums.PushNotificationLogOutReason.KeyRotation));
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -805,6 +796,139 @@ public class RotateUserAccountKeysCommandTests
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
             .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_V1UserWithV2UpgradeToken_SetsTokenOnOrganizationUsers(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        // Arrange
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model.BaseData);
+
+        var token = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+        model.BaseData.V2UpgradeToken = token;
+
+        var organizationUser = CreateOrganizationUserEnrolledInAccountRecovery();
+        model.BaseData.OrganizationUsers = [organizationUser];
+
+        // Act
+        await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
+
+        // Assert - The organization admin receives the same token the user stored
+        Assert.Equal(token.ToJson(), organizationUser.V2UpgradeToken);
+        Assert.Equal(user.V2UpgradeToken, organizationUser.V2UpgradeToken);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .UpdateForKeyRotation(user.Id, Arg.Is<IEnumerable<OrganizationUser>>(organizationUsers =>
+                HasSingleOrganizationUserWithToken(organizationUsers, organizationUser.Id, token.ToJson())));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_V1UserWithoutV2UpgradeToken_ClearsTokenOnOrganizationUsers(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        // Arrange
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model.BaseData);
+
+        model.BaseData.V2UpgradeToken = null;
+
+        // Membership carries a stale token from an earlier upgrade rotation
+        var organizationUser = CreateOrganizationUserEnrolledInAccountRecovery();
+        organizationUser.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        }.ToJson();
+        model.BaseData.OrganizationUsers = [organizationUser];
+
+        // Act
+        await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
+
+        // Assert - Stale token cleared, so no admin can act on an outdated user key
+        Assert.Null(organizationUser.V2UpgradeToken);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .UpdateForKeyRotation(user.Id, Arg.Is<IEnumerable<OrganizationUser>>(organizationUsers =>
+                HasSingleOrganizationUserWithToken(organizationUsers, organizationUser.Id, null)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_V2UserWithV2UpgradeToken_ClearsTokenOnOrganizationUsers(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        // Arrange
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+
+        model.BaseData.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+
+        var organizationUser = CreateOrganizationUserEnrolledInAccountRecovery();
+        model.BaseData.OrganizationUsers = [organizationUser];
+
+        // Act
+        await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
+
+        // Assert - The token is meaningless for a user who is already V2
+        Assert.Null(organizationUser.V2UpgradeToken);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .UpdateForKeyRotation(user.Id, Arg.Is<IEnumerable<OrganizationUser>>(organizationUsers =>
+                HasSingleOrganizationUserWithToken(organizationUsers, organizationUser.Id, null)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_V1UserNotEnrolledInAccountRecovery_DoesNotSetTokenOnOrganizationUser(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        // Arrange
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model.BaseData);
+
+        model.BaseData.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+
+        var organizationUser = CreateOrganizationUserNotEnrolledInAccountRecovery();
+        model.BaseData.OrganizationUsers = [organizationUser];
+
+        // Act
+        await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
+
+        // Assert - The user keeps the token, but the membership does not get a copy
+        Assert.NotNull(user.V2UpgradeToken);
+        Assert.Null(organizationUser.V2UpgradeToken);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .UpdateForKeyRotation(user.Id, Arg.Is<IEnumerable<OrganizationUser>>(organizationUsers =>
+                HasSingleOrganizationUserWithToken(organizationUsers, organizationUser.Id, null)));
     }
 
     [Theory]
@@ -1270,5 +1394,34 @@ public class RotateUserAccountKeysCommandTests
         user.Key = _mockEncryptedType2String;
         user.MasterPassword = null;
         user.UsesKeyConnector = true;
+    }
+
+    private static bool HasSingleOrganizationUserWithToken(
+        IEnumerable<OrganizationUser> organizationUsers, Guid expectedId, string? expectedToken)
+    {
+        var updated = organizationUsers.ToList();
+        return updated.Count == 1
+            && updated[0].Id == expectedId
+            && updated[0].V2UpgradeToken == expectedToken;
+    }
+
+    private static OrganizationUser CreateOrganizationUserEnrolledInAccountRecovery()
+    {
+        return new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            ResetPasswordKey = _mockEncryptedType2String,
+        };
+    }
+
+    private static OrganizationUser CreateOrganizationUserNotEnrolledInAccountRecovery()
+    {
+        return new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            ResetPasswordKey = null,
+        };
     }
 }
