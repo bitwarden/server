@@ -1,8 +1,11 @@
 ﻿using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
+using Bit.Core.Billing.Organizations.PlanMigration.Services;
 using Bit.Core.Billing.Organizations.PlanMigration.Utilities;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
@@ -36,6 +39,8 @@ public static class ServiceCollectionExtensions
         services.AddLicenseOperations();
         services.AddPricingClient();
         services.AddTransient<IPriceIncreaseScheduler, PriceIncreaseScheduler>();
+        services.AddTransient<IBusinessPlanRenewalNotificationService, BusinessPlanRenewalNotificationService>();
+        services.AddTransient<IBusinessPlanMigrationCoordinator, BusinessPlanMigrationCoordinator>();
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddPremiumCommands();
@@ -53,6 +58,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
         services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
         services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
+        services.AddTransient<IGetChurnOfferCohortMembershipQuery, GetChurnOfferCohortMembershipQuery>();
+        services.AddTransient<IGetAnnualUpgradeOfferQuery, GetAnnualUpgradeOfferQuery>();
+        services.AddTransient<IGetPendingAnnualUpgradeQuery, GetPendingAnnualUpgradeQuery>();
+        services.AddTransient<IRedeemAnnualUpgradeOfferCommand, RedeemAnnualUpgradeOfferCommand>();
         services.AddTransient<IGetChurnMitigationOfferQuery, GetChurnMitigationOfferQuery>();
         services.AddTransient<IRedeemChurnMitigationOfferCommand, RedeemChurnMitigationOfferCommand>();
         services.AddScoped<ICohortBulkAssignmentCsvParser, CohortBulkAssignmentCsvParser>();

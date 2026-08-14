@@ -28,6 +28,7 @@ public class OrganizationUserResponseModel : ResponseModel
         Status = organizationUser.Status;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
+        AccessPam = organizationUser.AccessPam;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
     }
@@ -47,6 +48,7 @@ public class OrganizationUserResponseModel : ResponseModel
         Status = organizationUser.Status;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
+        AccessPam = organizationUser.AccessPam;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
@@ -59,6 +61,7 @@ public class OrganizationUserResponseModel : ResponseModel
     public OrganizationUserStatusType Status { get; set; }
     public string ExternalId { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool AccessPam { get; set; }
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public bool UsesKeyConnector { get; set; }

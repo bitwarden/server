@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="Bitwarden.Server.Sdk" />
+
+  <PropertyGroup>
+    <!-- Only the Environment package is needed; disable Features which defaults to on. -->
+    <BitIncludeFeatures>false</BitIncludeFeatures>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

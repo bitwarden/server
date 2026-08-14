@@ -89,7 +89,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                         Parallelism = user.KdfParallelism
                     },
                     MasterKeyEncryptedUserKey = user.Key!,
-                    Salt = user.GetMasterPasswordSalt()
+                    Salt = user.GetMasterPasswordSalt(),
+                    ContainedKeyId = user.GetUserKeyId()?.ToString()
                 }
                 : null,
             WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null,
@@ -99,7 +100,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                     WrappedUserKey1 = tokenData.WrappedUserKey1,
                     WrappedUserKey2 = tokenData.WrappedUserKey2
                 }
-                : null
+                : null,
+            UserKeyId = user.GetUserKeyId()?.ToString()
         };
     }
 

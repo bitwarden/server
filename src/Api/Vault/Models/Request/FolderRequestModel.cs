@@ -29,6 +29,12 @@ public class FolderRequestModel
     }
 }
 
+public class FolderBulkDeleteRequestModel
+{
+    [Required]
+    public required IEnumerable<Guid> Ids { get; set; }
+}
+
 public class FolderWithIdRequestModel : FolderRequestModel
 {
     public Guid? Id { get; set; }

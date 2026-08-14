@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
 using Bit.Core.Billing.Organizations.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -93,7 +94,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     public async Task HandleAsync(Event parsedEvent)
     {
-        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer.discount", "discounts", "latest_invoice", "test_clock"]);
+        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer.discount.source.coupon", "discounts.source.coupon", "latest_invoice", "test_clock"]);
         SubscriberId subscriberId = subscription;
 
         var subscriber = await GetSubscriberAsync(subscriberId);
@@ -147,6 +148,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
 
                     await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
+                    await HandleScheduleTriggeredAnnualUpgradeOfferAsync(parsedEvent, subscription, organization.Id);
 
                     await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
 
@@ -419,10 +421,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var customerHasSecretsManagerTrial = subscription.Customer
             ?.Discount
-            ?.Coupon
+            ?.Source?.Coupon
             ?.Id == "sm-standalone";
 
-        var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Coupon.Id)
+        var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Source?.Coupon?.Id)
             .Contains(CouponIDs.SecretsManagerStandalone);
 
         if (customerHasSecretsManagerTrial)
@@ -730,6 +732,75 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 exception,
                 "Failed to handle schedule-triggered business migration for organization ({OrganizationId})",
                 organizationId);
+        }
+    }
+
+    private async Task HandleScheduleTriggeredAnnualUpgradeOfferAsync(
+        Event parsedEvent,
+        Subscription subscription,
+        Guid organizationId)
+    {
+        // Not flag-gated: schedules redeemed before the flag is turned off must still be honored.
+        // The monthly to annual price swap is expected on a single event, so any failure here has
+        // to surface as a non-200 for Stripe to redeliver it. Replaying is a no-op: once PlanType
+        // is annual, ResolveAnnualLatestPlanType returns null and the handler returns early.
+        try
+        {
+            if (subscription.ScheduleId == null)
+            {
+                return;
+            }
+
+            var previousSubscription = parsedEvent.Data.PreviousAttributes?.ToObject<Subscription>() as Subscription;
+            if (previousSubscription?.Items?.Data == null)
+            {
+                return;
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization is null)
+            {
+                return;
+            }
+
+            // Still the monthly plan at this point.
+            var targetPlanType = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(organization.PlanType);
+            if (targetPlanType is null)
+            {
+                return;
+            }
+
+            var sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+            var sourcePriceId = sourcePlan.PasswordManager.StripeSeatPlanId;
+            if (string.IsNullOrEmpty(sourcePriceId) ||
+                !previousSubscription.Items.Data.Any(item => item.Price?.Id == sourcePriceId))
+            {
+                return;
+            }
+
+            var targetPlan = await _pricingClient.GetPlanOrThrow(targetPlanType.Value);
+            var targetPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
+            if (string.IsNullOrEmpty(targetPriceId) ||
+                !subscription.Items.Any(item => item.Price?.Id == targetPriceId))
+            {
+                return;
+            }
+
+            organization.ChangePlan(targetPlan);
+            await _organizationRepository.ReplaceAsync(organization);
+
+            _logger.LogInformation(
+                "Schedule-triggered annual upgrade applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}",
+                organizationId,
+                sourcePlan.Type,
+                targetPlan.Type);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception,
+                "Failed to handle schedule-triggered annual upgrade for organization ({OrganizationId})",
+                organizationId);
+            throw;
         }
     }
 

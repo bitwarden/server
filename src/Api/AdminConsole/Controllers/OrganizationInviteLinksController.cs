@@ -5,6 +5,7 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -23,7 +24,7 @@ public class OrganizationInviteLinksController(
     IUpdateInviteSupportConfirmCommand updateInviteSupportConfirmCommand,
     IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
     IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand,
-    IValidateOrganizationInviteLinkEmailDomainQuery validateOrganizationInviteLinkEmailDomainQuery,
+    IValidateOrganizationInviteLinkQuery validateOrganizationInviteLinkQuery,
     IGetOrganizationInviteLinkPoliciesQuery getOrganizationInviteLinkPoliciesQuery)
     : BaseAdminConsoleController
 {
@@ -62,10 +63,17 @@ public class OrganizationInviteLinksController(
     public async Task<IResult> ValidateEmailDomain(
         [FromBody] OrganizationInviteLinkValidateEmailDomainRequestModel model)
     {
-        var result = await validateOrganizationInviteLinkEmailDomainQuery.ValidateAsync(model.OrganizationId, model.Code, model.Email);
+        var result = await validateOrganizationInviteLinkQuery.ValidateAsync(model.OrganizationId, model.Code, model.Email);
 
-        return Handle(result, isAllowed =>
-            TypedResults.Ok(new OrganizationInviteLinkValidateEmailDomainResponseModel(isAllowed)));
+        // Preserve the existing client contract: report the domain check as an IsAllowed boolean
+        // rather than surfacing a disallowed domain as an error status.
+        if (result is { IsError: true, AsError: EmailDomainNotAllowed })
+        {
+            return TypedResults.Ok(new OrganizationInviteLinkValidateEmailDomainResponseModel(false));
+        }
+
+        return Handle(result, _ =>
+            TypedResults.Ok(new OrganizationInviteLinkValidateEmailDomainResponseModel(true)));
     }
 
     [HttpGet("")]

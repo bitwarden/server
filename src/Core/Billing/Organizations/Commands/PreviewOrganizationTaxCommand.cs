@@ -8,6 +8,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Microsoft.Extensions.Logging;
@@ -39,7 +40,8 @@ public class PreviewOrganizationTaxCommand(
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
-    ISubscriptionDiscountService subscriptionDiscountService)
+    ISubscriptionDiscountService subscriptionDiscountService,
+    ITaxService taxService)
     : BaseBillingCommand<PreviewOrganizationTaxCommand>(logger), IPreviewOrganizationTaxCommand
 {
     private readonly ILogger<PreviewOrganizationTaxCommand> _logger = logger;
@@ -153,7 +155,11 @@ public class PreviewOrganizationTaxCommand(
                     break;
             }
 
-            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic },
+                Items = items
+            };
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
@@ -193,7 +199,11 @@ public class PreviewOrganizationTaxCommand(
                     });
                 }
 
-                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                    Items = items
+                };
 
                 var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
@@ -212,10 +222,12 @@ public class PreviewOrganizationTaxCommand(
                 var options = GetBaseOptions(billingAddress, planChange.Tier != ProductTierType.Families);
 
                 var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                    new SubscriptionGetOptions
-                    {
-                        Expand = ["customer", "discounts.coupon.applies_to"]
-                    });
+                    // `customer.discount.source.coupon` is 4 levels — Stripe's cap. Needed
+                    // because `Discount.source` is expandable, not inline, after the
+                    // 2025-09-30.clover Discount refactor; without it, the read below
+                    // NREs on `Discount.Source`. `discounts.source.coupon` materializes the
+                    // subscription-level discounts too; without it they come back as null list entries.
+                    new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon", "discounts.source.coupon"] });
 
                 // Genuine org coupons (complimentary PM, SM-standalone) attach at the subscription level, not the
                 // customer. The migration coupon lives on the schedule, not the live subscription, so it's excluded.
@@ -225,7 +237,7 @@ public class PreviewOrganizationTaxCommand(
                 {
                     options.Discounts =
                     [
-                        new InvoiceDiscountOptions { Coupon = discount.Coupon.Id }
+                        new InvoiceDiscountOptions { Coupon = discount.Source?.Coupon?.Id }
                     ];
                 }
 
@@ -239,11 +251,12 @@ public class PreviewOrganizationTaxCommand(
 
                 long quantity;
 
-                if (currentPlan.HasNonSeatBasedPasswordManagerPlan() && !newPlan.HasNonSeatBasedPasswordManagerPlan())
+                if (!string.IsNullOrEmpty(currentPlan.PasswordManager.StripePlanId) && !newPlan.HasNonSeatBasedPasswordManagerPlan())
                 {
-                    // The current plan doesn't have a per-seat subscription item to read a quantity from
-                    // (e.g. upgrading from a flat-rate plan like Teams Starter), so fall back to the
-                    // organization's occupied seat count instead of looking it up on the subscription.
+                    // Bill the new seat-based plan at the org's occupied seats rather than reading a
+                    // quantity off the subscription: the current plan either has no per-seat item (flat
+                    // plans like Teams Starter) or a packaged overage line that holds only the seats past
+                    // the base (Teams 2019), so the subscription quantity would be missing or an undercount.
                     quantity = (long)organization.Seats!;
                 }
                 else
@@ -325,7 +338,11 @@ public class PreviewOrganizationTaxCommand(
                     }
                 }
 
-                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                    Items = items
+                };
 
                 var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
@@ -347,10 +364,12 @@ public class PreviewOrganizationTaxCommand(
             }
 
             var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions
-                {
-                    Expand = ["customer.tax_ids", "discounts.coupon.applies_to"]
-                });
+                // `customer.discount.source.coupon` is 4 levels — Stripe's cap. Needed
+                // because `Discount.source` is expandable, not inline, after the
+                // 2025-09-30.clover Discount refactor; without it, the read below
+                // NREs on `Discount.Source`. `discounts.source.coupon` materializes the
+                // subscription-level discounts too; without it they come back as null list entries.
+                new SubscriptionGetOptions { Expand = ["customer.tax_ids", "customer.discount.source.coupon", "discounts.source.coupon"] });
 
             var options = GetBaseOptions(subscription.Customer,
                 organization.GetProductUsageType() == ProductUsageType.Business);
@@ -362,7 +381,7 @@ public class PreviewOrganizationTaxCommand(
             {
                 options.Discounts =
                 [
-                    new InvoiceDiscountOptions { Coupon = discount.Coupon.Id }
+                    new InvoiceDiscountOptions { Coupon = discount.Source?.Coupon?.Id }
                 ];
             }
 
@@ -408,7 +427,11 @@ public class PreviewOrganizationTaxCommand(
                 }
             }
 
-            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                Items = items
+            };
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
@@ -454,12 +477,23 @@ public class PreviewOrganizationTaxCommand(
             return options;
         }
 
+        var derivedTaxIdCode = taxService.GetStripeTaxCode(country, taxId.Value);
+
+        if (derivedTaxIdCode == null)
+        {
+            _logger.LogWarning(
+                "Could not derive Stripe tax ID type for country {Country}; falling back to client-supplied type {TaxIdType}",
+                country, taxId.Code);
+        }
+
+        var taxIdCode = derivedTaxIdCode ?? taxId.Code;
+
         options.CustomerDetails.TaxIds =
         [
-            new InvoiceCustomerDetailsTaxIdOptions { Type = taxId.Code, Value = taxId.Value }
+            new InvoiceCustomerDetailsTaxIdOptions { Type = taxIdCode, Value = taxId.Value }
         ];
 
-        if (taxId.Code == TaxIdType.SpanishNIF)
+        if (taxIdCode == TaxIdType.SpanishNIF)
         {
             options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
             {

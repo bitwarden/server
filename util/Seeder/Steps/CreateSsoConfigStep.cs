@@ -18,11 +18,11 @@ namespace Bit.Seeder.Steps;
 internal sealed class CreateSsoConfigStep(
     string identifier,
     string? provider,
-    MemberDecryptionType memberDecryptionType) : IStep
+    MemberDecryptionType memberDecryptionType) : IAsyncStep
 {
     private static readonly XNamespace _ds = "http://www.w3.org/2000/09/xmldsig#";
 
-    public void Execute(SeederContext context)
+    public async Task ExecuteAsync(SeederContext context)
     {
         if (!string.Equals(provider ?? "saml", "saml", StringComparison.OrdinalIgnoreCase))
         {
@@ -40,11 +40,15 @@ internal sealed class CreateSsoConfigStep(
         organization.Identifier = context.GetMangler().Mangle(identifier);
         context.SsoIdentifier = organization.Identifier;
 
-        var ssoConfig = SsoConfigSeeder.CreateSaml2(
+        // Fetched after the two mutations above, matching where the inline call used to sit in the
+        // argument list: an unreachable IdP must still throw with the identifier already applied.
+        var signingCertificate = await FetchIdpSigningCertificateAsync(LocalSamlIdp.EntityId);
+
+        var ssoConfig = SsoConfigSeeder.Create(
             organization.Id,
             LocalSamlIdp.EntityId,
             LocalSamlIdp.SingleSignOnServiceUrl,
-            FetchIdpSigningCertificate(LocalSamlIdp.EntityId),
+            signingCertificate,
             memberDecryptionType);
 
         context.SsoConfigs.Add(ssoConfig);
@@ -55,13 +59,13 @@ internal sealed class CreateSsoConfigStep(
     /// (public, image-specific) cert out of source so nothing trips secret/SAST scanners, and tracks the
     /// running image automatically. Requires the local <c>idp</c> container to be running.
     /// </summary>
-    private static string FetchIdpSigningCertificate(string metadataUrl)
+    private static async Task<string> FetchIdpSigningCertificateAsync(string metadataUrl)
     {
         string metadataXml;
         try
         {
             using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            metadataXml = client.GetStringAsync(metadataUrl).GetAwaiter().GetResult();
+            metadataXml = await client.GetStringAsync(metadataUrl);
         }
         catch (Exception ex)
         {
