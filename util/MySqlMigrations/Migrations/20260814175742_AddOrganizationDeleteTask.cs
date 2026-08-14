@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -33,6 +34,11 @@ public partial class AddOrganizationDeleteTask : Migration
             .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateIndex(
+            name: "IX_Event_OrganizationId",
+            table: "Event",
+            column: "OrganizationId");
+
+        migrationBuilder.CreateIndex(
             name: "IX_OrganizationDeleteTask_CompletedDate_CreationDate",
             table: "OrganizationDeleteTask",
             columns: new[] { "CompletedDate", "CreationDate" });
@@ -48,5 +54,9 @@ public partial class AddOrganizationDeleteTask : Migration
     {
         migrationBuilder.DropTable(
             name: "OrganizationDeleteTask");
+
+        migrationBuilder.DropIndex(
+            name: "IX_Event_OrganizationId",
+            table: "Event");
     }
 }
