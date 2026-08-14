@@ -3,7 +3,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
 
-namespace Bit.Pam.Services;
+namespace Bit.Core.Pam.Services;
 
 /// <summary>
 /// The read decision point for PAM credential leasing in Vault code. A cipher reachable only through
