@@ -115,13 +115,18 @@ public class CiphersController : Controller
     /// Builds a cipher response for a personal/member read or write-return, honouring credential leasing:
     /// a leasing-gated cipher with no valid active lease yields the partial shape, otherwise the full one.
     /// </summary>
+    /// <remarks>
+    /// The write paths return through here too, so a mutation's response can in principle be partial.
+    /// It cannot happen in practice: once write-path gating lands a gated cipher cannot be mutated at
+    /// all, so no successful write ever reaches this with a gated cipher.
+    /// </remarks>
     private async Task<CipherResponseModel> BuildCipherResponseAsync(CipherDetails cipher, User user)
     {
         var organizationAbility = await GetOrganizationAbilityAsync(cipher);
         var access = await AuthorizeReadOrThrowAsync(user.Id, cipher);
         return access is null
-            ? new CipherResponseModel(cipher, user, organizationAbility, _globalSettings)
-            : new FullCipherResponseModel(access, cipher, user, organizationAbility, _globalSettings);
+            ? new PartialCipherResponseModel(cipher, user, organizationAbility)
+            : (CipherResponseModel)new FullCipherResponseModel(access, cipher, user, organizationAbility, _globalSettings);
     }
 
     /// <summary>Details variant of <see cref="BuildCipherResponseAsync"/>.</summary>
@@ -131,8 +136,8 @@ public class CiphersController : Controller
         var organizationAbility = await GetOrganizationAbilityAsync(cipher);
         var access = await AuthorizeReadOrThrowAsync(user.Id, cipher);
         return access is null
-            ? new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings, collectionCiphers)
-            : new FullCipherDetailsResponseModel(access, cipher, user, organizationAbility, _globalSettings, collectionCiphers);
+            ? new PartialCipherDetailsResponseModel(cipher, user, organizationAbility, collectionCiphers)
+            : (CipherDetailsResponseModel)new FullCipherDetailsResponseModel(access, cipher, user, organizationAbility, _globalSettings, collectionCiphers);
     }
 
     /// <summary>
@@ -145,17 +150,34 @@ public class CiphersController : Controller
         IDictionary<Guid, OrganizationAbility> organizationAbilities)
     {
         var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers);
-        var supportsPartial = ClientSupportsPartialCiphers;
-        return ciphers
-            .Where(cipher => supportsPartial || fullAccess.Authorizes(cipher.Id))
+        return VisibleToClient(ciphers, fullAccess)
             .Select(cipher =>
             {
                 var organizationAbility = GetOrganizationAbility(cipher, organizationAbilities);
                 return fullAccess.Authorizes(cipher.Id)
                     ? new FullCipherResponseModel(fullAccess, cipher, user, organizationAbility, _globalSettings)
-                    : new CipherResponseModel(cipher, user, organizationAbility, _globalSettings);
+                    : (CipherResponseModel)new PartialCipherResponseModel(cipher, user, organizationAbility);
             });
     }
+
+    /// <summary>
+    /// Drops the ciphers the calling client must not be sent. A client that cannot render the partial
+    /// shape has leasing-gated ciphers withheld entirely rather than reduced: it would show the item as
+    /// though it were empty, and saving it back would clobber the withheld fields.
+    /// </summary>
+    private IEnumerable<T> VisibleToClient<T>(IEnumerable<T> ciphers, FullCipherAccess fullAccess)
+        where T : Cipher =>
+        ClientSupportsPartialCiphers ? ciphers : ciphers.Where(cipher => fullAccess.Authorizes(cipher.Id));
+
+    /// <summary>
+    /// Builds the mini shape for one cipher: full when <paramref name="fullAccess"/> authorizes it,
+    /// reduced when the witness is absent or does not cover it.
+    /// </summary>
+    private CipherMiniResponseModel BuildCipherMiniResponse(FullCipherAccess fullAccess, Cipher cipher,
+        bool orgUseTotp) =>
+        fullAccess?.Authorizes(cipher.Id) == true
+            ? new FullCipherMiniResponseModel(fullAccess, cipher, _globalSettings, orgUseTotp)
+            : new PartialCipherMiniResponseModel(cipher, orgUseTotp);
 
     [HttpGet("{id}")]
     public async Task<CipherResponseModel> Get(Guid id)
@@ -225,19 +247,19 @@ public class CiphersController : Controller
         }
         var organizationAbilities = await GetOrganizationAbilitiesAsync(ciphers);
 
-        // Bulk reads strip every leasing-gated cipher regardless of lease state; secrets are only ever
-        // released through the single-cipher GET above. The self-loading overload is used deliberately
-        // so nothing extra is queried while the flag is off.
+        // The bulk witness authorizes only the ciphers that are not leasing-gated: lease state is
+        // deliberately not consulted here, so a gated cipher yields the partial shape on a list read even
+        // when the caller holds a valid lease. Secrets are only released through the single-cipher GET
+        // above. The self-loading overload is used deliberately so nothing extra is queried while the
+        // flag is off.
         var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers);
-        var supportsPartial = ClientSupportsPartialCiphers;
-        var responses = ciphers
-            .Where(cipher => supportsPartial || fullAccess.Authorizes(cipher.Id))
+        var responses = VisibleToClient(ciphers, fullAccess)
             .Select(cipher =>
             {
                 var organizationAbility = GetOrganizationAbility(cipher, organizationAbilities);
                 return fullAccess.Authorizes(cipher.Id)
                     ? new FullCipherDetailsResponseModel(fullAccess, cipher, user, organizationAbility, _globalSettings, collectionCiphersGroupDict)
-                    : new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings, collectionCiphersGroupDict);
+                    : (CipherDetailsResponseModel)new PartialCipherDetailsResponseModel(cipher, user, organizationAbility, collectionCiphersGroupDict);
             }).ToArray();
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
     }
@@ -425,13 +447,11 @@ public class CiphersController : Controller
         // self-loading overload is used deliberately so nothing extra is queried while the flag is off.
         var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, cipherList);
 
-        var supportsPartial = ClientSupportsPartialCiphers;
-        var responses = cipherList
-            .Where(cipher => supportsPartial || fullAccess.Authorizes(cipher.Id))
+        var responses = VisibleToClient(cipherList, fullAccess)
             .Select(cipher =>
                 fullAccess.Authorizes(cipher.Id)
                     ? new FullCipherDetailsResponseModel(fullAccess, cipher, user, organizationAbility, _globalSettings)
-                    : new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings));
+                    : (CipherDetailsResponseModel)new PartialCipherDetailsResponseModel(cipher, user, organizationAbility));
 
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
     }
@@ -1221,12 +1241,8 @@ public class CiphersController : Controller
 
         var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId);
         var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(userId, restoredCiphers);
-        var supportsPartial = ClientSupportsPartialCiphers;
-        var responses = restoredCiphers
-            .Where(c => supportsPartial || fullAccess.Authorizes(c.Id))
-            .Select(c => fullAccess.Authorizes(c.Id)
-                ? new FullCipherMiniResponseModel(fullAccess, c, _globalSettings, c.OrganizationUseTotp)
-                : new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        var responses = VisibleToClient(restoredCiphers, fullAccess)
+            .Select(c => BuildCipherMiniResponse(fullAccess, c, c.OrganizationUseTotp));
         return new ListResponseModel<CipherMiniResponseModel>(responses);
     }
 
@@ -1320,12 +1336,8 @@ public class CiphersController : Controller
         );
 
         var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(userId, updated);
-        var supportsPartial = ClientSupportsPartialCiphers;
-        var response = updated
-            .Where(c => supportsPartial || fullAccess.Authorizes(c.Id))
-            .Select(c => fullAccess.Authorizes(c.Id)
-                ? new FullCipherMiniResponseModel(fullAccess, c, _globalSettings, c.OrganizationUseTotp)
-                : new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        var response = VisibleToClient(updated, fullAccess)
+            .Select(c => BuildCipherMiniResponse(fullAccess, c, c.OrganizationUseTotp));
         return new ListResponseModel<CipherMiniResponseModel>(response);
     }
 
@@ -1626,7 +1638,13 @@ public class CiphersController : Controller
         }
 
         var result = await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
-        return new DeleteAttachmentResponseModel(result, _globalSettings);
+
+        // Write-return for a cipher the caller just mutated. A leasing-gated cipher with no valid active
+        // lease is reduced rather than dropped: the caller holds the item either way, and dropping it
+        // from a mutation's own response would read as though the delete had failed.
+        var access = await _cipherLeaseGate.AuthorizeReadAsync(userId, result.Cipher);
+        return new DeleteAttachmentResponseModel(
+            BuildCipherMiniResponse(access, result.Cipher, orgUseTotp: false));
     }
 
     [HttpPost("{id}/attachment/{attachmentId}/delete")]
@@ -1648,7 +1666,10 @@ public class CiphersController : Controller
         }
 
         var result = await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
-        return new DeleteAttachmentResponseModel(result, _globalSettings);
+
+        // Admin delete through org-wide permissions; the cipher is not leasing-gated for this caller.
+        return new DeleteAttachmentResponseModel(BuildCipherMiniResponse(
+            _cipherLeaseGate.Unrestricted(), result.Cipher, orgUseTotp: false));
     }
 
     [HttpPost("{id}/attachment/{attachmentId}/delete-admin")]

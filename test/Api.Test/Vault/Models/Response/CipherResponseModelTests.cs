@@ -332,7 +332,7 @@ public class CipherResponseModelTests
             Uris = [new CipherLoginData.CipherLoginUriData { Uri = "2.uri|encrypted" }],
         }));
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new PartialCipherMiniResponseModel(cipher, false);
 
         Assert.Null(response.Data);
         Assert.NotNull(response.PartialData);
@@ -371,7 +371,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new PartialCipherMiniResponseModel(cipher, false);
 
         Assert.Null(response.Data);
         Assert.Contains("2.name|encrypted", response.PartialData);
@@ -384,7 +384,7 @@ public class CipherResponseModelTests
         // An opaque SDK-encrypted blob can't be reshaped without decrypting, so nothing is returned.
         var cipher = LoginCipher("""{"format_version":1,"wrapped_cek":"abc","envelope":"def"}""");
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new PartialCipherMiniResponseModel(cipher, false);
 
         Assert.Null(response.Data);
         Assert.Null(response.PartialData);
@@ -396,7 +396,7 @@ public class CipherResponseModelTests
         var cipher = LoginCipher(JsonSerializer.Serialize(new CipherLoginData { Name = "2.name|encrypted" }));
         cipher.Attachments = """{"id":{"Key":"2.attachmentkey|encrypted","FileName":"2.f|encrypted","Size":"1"}}""";
 
-        var partial = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var partial = new PartialCipherMiniResponseModel(cipher, false);
         var full = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         // Attachment metadata carries each attachment's encryption key, so it is withheld too.

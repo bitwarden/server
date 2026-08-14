@@ -62,7 +62,7 @@ public class SyncResponseModel() : ResponseModel("sync")
             var organizationAbility = GetOrganizationAbility(cipher, organizationAbilities);
             return fullCipherAccess is not null && fullCipherAccess.Authorizes(cipher.Id)
                 ? new FullCipherDetailsResponseModel(fullCipherAccess, cipher, user, organizationAbility, globalSettings, collectionCiphersDict)
-                : new CipherDetailsResponseModel(cipher, user, organizationAbility, globalSettings, collectionCiphersDict);
+                : (CipherDetailsResponseModel)new PartialCipherDetailsResponseModel(cipher, user, organizationAbility, collectionCiphersDict);
         });
         Collections = collections?.Select(
             c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();

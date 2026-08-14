@@ -54,19 +54,43 @@ public class CipherLeaseFilterEnforcementTests
     }
 
     /// <summary>
-    /// Each <c>Full*</c> model must derive from its partial counterpart, so a list typed to the partial
-    /// type can hold a polymorphic mix and the wire contract stays unchanged.
+    /// Each shared base must stay abstract. A concrete base would let a call site emit a response without
+    /// stating whether it carries secret data — the silent default this design exists to remove.
     /// </summary>
     [Theory]
-    [InlineData(typeof(CipherMiniResponseModel), typeof(FullCipherMiniResponseModel))]
-    [InlineData(typeof(CipherResponseModel), typeof(FullCipherResponseModel))]
-    [InlineData(typeof(CipherDetailsResponseModel), typeof(FullCipherDetailsResponseModel))]
-    [InlineData(typeof(CipherMiniDetailsResponseModel), typeof(FullCipherMiniDetailsResponseModel))]
-    public void FullModel_DerivesFromItsPartialCounterpart(Type partialType, Type fullType)
+    [InlineData(typeof(CipherMiniResponseModel))]
+    [InlineData(typeof(CipherResponseModel))]
+    [InlineData(typeof(CipherDetailsResponseModel))]
+    [InlineData(typeof(CipherMiniDetailsResponseModel))]
+    public void BaseModel_IsAbstract(Type baseType)
     {
         Assert.True(
-            partialType.IsAssignableFrom(fullType),
-            $"{fullType.Name} must derive from {partialType.Name}.");
+            baseType.IsAbstract,
+            $"{baseType.Name} must stay abstract so every call site picks the partial or the full shape.");
+    }
+
+    /// <summary>
+    /// Every constructible cipher response must be a <c>Partial*</c> or a <c>Full*</c>, and sealed, so the
+    /// shape a response carries is legible from its type and cannot be extended into a third meaning.
+    /// A list typed to the shared base still holds a polymorphic mix of the two.
+    /// </summary>
+    [Fact]
+    public void ConcreteModels_AreSealedAndNameTheirShape()
+    {
+        var concreteModels = typeof(CipherMiniResponseModel).Assembly
+            .GetTypes()
+            .Where(t => typeof(CipherMiniResponseModel).IsAssignableFrom(t) && !t.IsAbstract)
+            .ToList();
+
+        Assert.NotEmpty(concreteModels);
+        Assert.All(concreteModels, type =>
+        {
+            Assert.True(
+                type.Name.StartsWith("Partial") || type.Name.StartsWith("Full"),
+                $"{type.Name} must be named Partial* or Full*: a cipher response has to say whether it " +
+                "carries the cipher's secret data.");
+            Assert.True(type.IsSealed, $"{type.Name} must be sealed.");
+        });
     }
 
     /// <summary>
@@ -85,5 +109,22 @@ public class CipherLeaseFilterEnforcementTests
         Assert.NotEmpty(constructors);
         Assert.All(constructors, ctor =>
             Assert.Contains(ctor.GetParameters(), p => p.ParameterType == typeof(FullCipherAccess)));
+    }
+
+    /// <summary>
+    /// No <c>Partial*</c> model may accept a witness. Taking one would suggest it can emit full data, and
+    /// the only way to emit full data must remain the <c>Full*</c> types.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(PartialCipherMiniResponseModel))]
+    [InlineData(typeof(PartialCipherResponseModel))]
+    [InlineData(typeof(PartialCipherDetailsResponseModel))]
+    public void PartialModel_NoConstructor_TakesAWitness(Type partialType)
+    {
+        var constructors = partialType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+
+        Assert.NotEmpty(constructors);
+        Assert.All(constructors, ctor =>
+            Assert.DoesNotContain(ctor.GetParameters(), p => p.ParameterType == typeof(FullCipherAccess)));
     }
 }
