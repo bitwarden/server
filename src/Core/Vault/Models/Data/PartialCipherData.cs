@@ -8,18 +8,26 @@ using Bit.Core.Vault.Enums;
 namespace Bit.Core.Vault.Models.Data;
 
 /// <summary>
-/// Produces a "partial" version of a cipher's encrypted <c>Data</c> blob for PAM credential leasing.
-/// When a user can only reach a cipher through leasing-enabled collections, they receive this reduced
-/// blob instead of the full one.
+/// The "partial" version of a cipher's encrypted <c>Data</c> blob for PAM credential leasing. When a user
+/// can only reach a cipher through leasing-enabled collections, they receive this reduced blob instead of
+/// the full one. The properties declared here are the entire allowlist: everything else in the cipher's
+/// data is dropped.
 /// </summary>
 /// <remarks>
 /// Zero-knowledge is preserved: nothing is ever decrypted. This only reshapes the plaintext JSON
 /// envelope, keeping the encrypted title (and, for logins, the encrypted URIs) and dropping every other
 /// encrypted field (username, password, TOTP, notes, custom fields, etc.). The retained values remain
 /// individually-encrypted <c>EncString</c>s.
+///
+/// Deliberately not a reduced <see cref="CipherLoginData"/>: that would carry its base-class fields and
+/// its legacy computed singular <c>Uri</c> getter into the envelope.
 /// </remarks>
-public static class PartialCipherData
+public class PartialCipherData
 {
+    public string Name { get; set; }
+
+    public IEnumerable<CipherLoginData.CipherLoginUriData> Uris { get; set; }
+
     /// <summary>
     /// Reduces a cipher's JSON <c>Data</c> blob to the fields allowed under credential leasing.
     /// Logins keep <c>Name</c> and <c>Uris</c>; all other types keep only <c>Name</c>.
@@ -28,7 +36,7 @@ public static class PartialCipherData
     /// <param name="data">The full, encrypted JSON data blob. Must be JSON (not an SDK-encrypted blob).</param>
     /// <returns>
     /// A reduced JSON data blob, or the input unchanged when it is null/empty. The output is a
-    /// purpose-built <b>camelCase</b> envelope (<c>name</c>, and for logins <c>uris</c>: <c>uri</c>,
+    /// <b>camelCase</b> envelope (<c>name</c>, and for logins <c>uris</c>: <c>uri</c>,
     /// <c>uriChecksum</c>, <c>match</c>) — the shape the SDK's restricted decrypt path consumes,
     /// matching how it deserializes a full login's URIs. Input is parsed case-insensitively so the
     /// stored PascalCase blob and an already-stripped camelCase blob both round-trip (idempotent).
@@ -40,32 +48,15 @@ public static class PartialCipherData
             return data;
         }
 
-        if (type == CipherType.Login)
+        var partial = JsonSerializer.Deserialize<PartialCipherData>(data, JsonHelpers.IgnoreCase);
+
+        if (type != CipherType.Login)
         {
-            var login = JsonSerializer.Deserialize<CipherLoginData>(data, JsonHelpers.IgnoreCase);
-            // A dedicated DTO — not a reduced CipherLoginData — so the legacy computed `Uri`
-            // getter and the base-class fields never leak into the envelope.
-            var partial = new PartialLoginData
-            {
-                Name = login.Name,
-                Uris = login.Uris,
-            };
-            return JsonSerializer.Serialize(partial, JsonHelpers.IgnoreWritingNullAndCamelCase);
+            // Not conditional on the input containing URIs: a strip must not depend on the shape of the
+            // blob it is handed.
+            partial.Uris = null;
         }
 
-        var nameOnly = JsonSerializer.Deserialize<NameOnlyData>(data, JsonHelpers.IgnoreCase);
-        return JsonSerializer.Serialize(
-            new NameOnlyData { Name = nameOnly.Name }, JsonHelpers.IgnoreWritingNullAndCamelCase);
-    }
-
-    private class NameOnlyData
-    {
-        public string Name { get; set; }
-    }
-
-    private class PartialLoginData
-    {
-        public string Name { get; set; }
-        public IEnumerable<CipherLoginData.CipherLoginUriData> Uris { get; set; }
+        return JsonSerializer.Serialize(partial, JsonHelpers.IgnoreWritingNullAndCamelCase);
     }
 }
