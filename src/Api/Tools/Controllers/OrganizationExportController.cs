@@ -72,9 +72,11 @@ public class OrganizationExportController : Controller
             var managedCiphers = await _organizationCiphersQuery.GetOrganizationCiphersByCollectionIds(organizationId,
                 managedOrgCollections.Select(c => c.Id));
 
-            // Leasing-gated ciphers the exporter holds no valid lease for are excluded from the export.
+            // Leasing-gated ciphers the exporter holds no valid lease for are left out of the export
+            // entirely: a partially-stripped export is not a usable backup.
             var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(userId, managedCiphers);
-            return Ok(new OrganizationExportResponseModel(managedCiphers, managedOrgCollections, _globalSettings, fullAccess));
+            var exportableCiphers = managedCiphers.Where(c => fullAccess.Authorizes(c.Id));
+            return Ok(new OrganizationExportResponseModel(exportableCiphers, managedOrgCollections, _globalSettings, fullAccess));
         }
 
         // Unauthorized
