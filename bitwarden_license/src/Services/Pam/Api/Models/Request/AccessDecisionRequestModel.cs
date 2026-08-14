@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Services.Pam.Models;
+using Bit.Pam.Enums;
 
 namespace Bit.Services.Pam.Api.Models.Request;
 
@@ -21,10 +21,4 @@ public class AccessDecisionRequestModel
     /// An optional note recorded with the decision — for example the reason for a denial. Surfaced to the requester.
     /// </summary>
     public string? Comment { get; set; }
-
-    public AccessDecisionSubmission ToSubmission() => new()
-    {
-        Verdict = Verdict!.Value.ToDomainVerdict(),
-        Comment = Comment,
-    };
 }

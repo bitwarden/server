@@ -11,6 +11,7 @@ using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -218,15 +219,8 @@ public class CiphersController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
-        // Validate the model was encrypted for the posting user
-        if (model.EncryptedFor != null)
-        {
-            if (model.EncryptedFor != user.Id)
-            {
-                _logger.LogError("Cipher was not encrypted for the current user. CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", user.Id, model.EncryptedFor);
-                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
-            }
-        }
+        // Validate the model was encrypted by the posting user
+        ValidateCipherEncryptedByUser(model, user);
 
         var cipher = model.ToCipherDetails(user.Id);
         if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
@@ -243,15 +237,8 @@ public class CiphersController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
-        // Validate the model was encrypted for the posting user
-        if (model.Cipher.EncryptedFor != null)
-        {
-            if (model.Cipher.EncryptedFor != user.Id)
-            {
-                _logger.LogError("Cipher was not encrypted for the current user. CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", user.Id, model.Cipher.EncryptedFor);
-                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
-            }
-        }
+        // Validate the model was encrypted by the posting user
+        ValidateCipherEncryptedByUser(model.Cipher, user);
 
         var cipher = model.Cipher.ToCipherDetails(user.Id);
         if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
@@ -277,14 +264,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
 
         // Validate the model was encrypted for the posting user
-        if (model.Cipher.EncryptedFor != null)
-        {
-            if (model.Cipher.EncryptedFor != userId)
-            {
-                _logger.LogError("Cipher was not encrypted for the current user. CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", userId, model.Cipher.EncryptedFor);
-                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
-            }
-        }
+        ValidateCipherEncryptedForUser(model.Cipher, userId);
 
         await _cipherService.SaveAsync(cipher, userId, model.Cipher.LastKnownRevisionDate, model.CollectionIds, true, false);
 
@@ -302,15 +282,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Validate the model was encrypted for the posting user
-        if (model.EncryptedFor != null)
-        {
-            if (model.EncryptedFor != user.Id)
-            {
-                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", id, user.Id, model.EncryptedFor);
-                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
-            }
-        }
+        // Validate the model was encrypted by the posting user
+        ValidateCipherEncryptedByUser(model, user, id);
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
@@ -342,14 +315,7 @@ public class CiphersController : Controller
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
 
         // Validate the model was encrypted for the posting user
-        if (model.EncryptedFor != null)
-        {
-            if (model.EncryptedFor != userId)
-            {
-                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", id, userId, model.EncryptedFor);
-                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
-            }
-        }
+        ValidateCipherEncryptedForUser(model, userId, id);
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
@@ -799,15 +765,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Validate the model was encrypted for the posting user
-        if (model.Cipher.EncryptedFor != null)
-        {
-            if (model.Cipher.EncryptedFor != user.Id)
-            {
-                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId} CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", id, user.Id, model.Cipher.EncryptedFor);
-                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
-            }
-        }
+        // Validate the model was encrypted by the posting user
+        ValidateCipherEncryptedByUser(model.Cipher, user, id);
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
@@ -1304,14 +1263,10 @@ public class CiphersController : Controller
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
         var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
-        // Validate the model was encrypted for the posting user
+        // Validate the models were encrypted for the posting user
         foreach (var cipher in model.Ciphers)
         {
-            if (cipher.EncryptedFor.HasValue && cipher.EncryptedFor.Value != userId)
-            {
-                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", cipher.Id, userId, cipher.EncryptedFor);
-                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
-            }
+            ValidateCipherEncryptedForUser(cipher, userId, cipher.Id);
         }
 
         var shareCiphers = new List<(CipherDetails, DateTime?)>();
@@ -1369,7 +1324,7 @@ public class CiphersController : Controller
             // Check if the user is claimed by any organization.
             if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
             {
-                throw new BadRequestException("Cannot purge accounts owned by an organization. Contact your organization administrator for additional details.");
+                throw new BadRequestException(new CannotPurgeClaimedAccountError().Message);
             }
             await _cipherRepository.DeleteByUserIdAsync(user.Id);
         }
@@ -1730,6 +1685,58 @@ public class CiphersController : Controller
             {
                 throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
             }
+        }
+    }
+
+    /// <summary>
+    /// Validates that the cipher in <paramref name="model"/> was encrypted by the acting user.
+    /// <para>
+    /// Deprecated in favor of <see cref="ValidateCipherEncryptedByUser"/>, which identifies the key
+    /// rather than the user. Only checked when the client sends the field.
+    /// </para>
+    /// </summary>
+    private void ValidateCipherEncryptedForUser(CipherRequestModel model, Guid userId, Guid? cipherId = null)
+    {
+#pragma warning disable CS0618 // EncryptedFor is deprecated, but is still honored for clients that send it.
+        var encryptedFor = model.EncryptedFor;
+#pragma warning restore CS0618
+
+        if (encryptedFor != null && encryptedFor != userId)
+        {
+            _logger.LogError(
+                "Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}",
+                cipherId, userId, encryptedFor);
+            throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+        }
+    }
+
+    /// <summary>
+    /// Validates that the cipher in <paramref name="model"/> was encrypted by the acting user, with that
+    /// user's current user key.
+    /// <para>
+    /// The key id is only compared when both sides are present: the client may predate the field, and the
+    /// user may not have a key id recorded yet. This mirrors
+    /// <see cref="Core.KeyManagement.Models.Data.MasterPasswordUnlockData.ValidateKeyIdUnchangedForUser"/>.
+    /// </para>
+    /// </summary>
+    private void ValidateCipherEncryptedByUser(CipherRequestModel model, User user, Guid? cipherId = null)
+    {
+        ValidateCipherEncryptedForUser(model, user.Id, cipherId);
+
+        var currentUserKeyId = user.GetUserKeyId();
+        var encryptedByKeyId = model.GetEncryptedByKeyId();
+        if (currentUserKeyId is null || encryptedByKeyId is null)
+        {
+            // Either the user has no key id recorded yet, or the client predates the field; nothing to compare.
+            return;
+        }
+
+        if (!currentUserKeyId.Equals(encryptedByKeyId))
+        {
+            _logger.LogError(
+                "Cipher was not encrypted with the current user key. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedByKeyId: {EncryptedByKeyId}",
+                cipherId, user.Id, encryptedByKeyId);
+            throw new BadRequestException("Cipher was not encrypted with the current user key. Please try again.");
         }
     }
 

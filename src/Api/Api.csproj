@@ -25,6 +25,7 @@
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
     <ProjectReference Include="..\HttpExtensions\HttpExtensions.csproj" />
+    <ProjectReference Include="..\Libraries\OrganizationAuthorization\OrganizationAuthorization.csproj" />
   </ItemGroup>
 
   <Choose>

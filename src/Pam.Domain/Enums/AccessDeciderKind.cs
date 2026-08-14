@@ -5,15 +5,9 @@
 /// </summary>
 public enum AccessDeciderKind : byte
 {
+    /// <summary>A condition on the governing access rule decided automatically, with no human approver.</summary>
     Automatic = 0,
-    Human = 1,
-}
 
-/// <summary>
-/// The verdict recorded on a <see cref="Entities.AccessDecision"/>.
-/// </summary>
-public enum AccessDecisionVerdict : byte
-{
-    Deny = 0,
-    Approve = 1,
+    /// <summary>A human approver made the decision.</summary>
+    Human = 1,
 }

@@ -9,7 +9,8 @@ BEGIN
     -- without an N+1:
     --   1) the resolved requests (anything no longer Pending) created on or after @Since, for the supplied
     --      (caller-manageable) collections, with the denormalized requester identity. Rows that produced a lease carry
-    --      ProducedLeaseId/ProducedLeaseStatus so the client can target (and gate) the Revoke action.
+    --      ProducedLeaseId/ProducedLeaseStatus so the client can target (and gate) the Revoke action; a request
+    --      produces at most one lease ([IX_AccessLease_AccessRequestId] is unique), so that join adds at most one row.
     --   2) every decision (human or automatic) for those requests, keyed by AccessRequestId and ordered oldest-first;
     --      DeciderKind says which, and a human decision's identity is denormalized from [User].
     SELECT
@@ -33,12 +34,7 @@ BEGIN
     FROM [dbo].[AccessRequest] LR
     INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
-    OUTER APPLY (
-        SELECT TOP 1 L.[Id], L.[Status]
-        FROM [dbo].[AccessLease] L
-        WHERE L.[AccessRequestId] = LR.[Id]
-        ORDER BY L.[CreationDate] DESC
-    ) PL
+    LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = LR.[Id]
     WHERE LR.[Status] <> 0 -- not Pending
         AND LR.[CreationDate] >= @Since
 

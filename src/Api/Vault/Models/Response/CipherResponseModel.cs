@@ -144,6 +144,19 @@ public class CipherMiniResponseModel : ResponseModel
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string PartialData { get; set; }
 
+    /// <summary>
+    /// The reduced data blob returned in place of <see cref="Data"/> when the caller can only reach this
+    /// cipher through leasing-enabled collections (PAM credential leasing). Contains the encrypted title
+    /// and, for logins, the encrypted URIs — never the dropped secrets. Null for full responses.
+    /// </summary>
+    /// <remarks>
+    /// Declared ahead of the behavior that populates it, so the wire contract and the generated client
+    /// bindings exist first. Nothing sets it yet: every response is still full, and because the property
+    /// is omitted when null the serialized output is unchanged.
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string PartialData { get; set; }
+
     [Obsolete("Use Data instead.")]
     public string Name { get; protected set; }
 

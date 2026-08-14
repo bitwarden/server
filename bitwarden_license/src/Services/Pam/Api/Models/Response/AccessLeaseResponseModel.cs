@@ -1,5 +1,5 @@
 ﻿using Bit.HttpExtensions;
-using Bit.Pam.Entities;
+using Bit.Pam.Enums;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -11,60 +11,47 @@ namespace Bit.Services.Pam.Api.Models.Response;
 /// </summary>
 public class AccessLeaseResponseModel : ResponseModel
 {
-    public AccessLeaseResponseModel(AccessLease lease)
+    public AccessLeaseResponseModel()
         : base("accessLease")
     {
-        ArgumentNullException.ThrowIfNull(lease);
-
-        Id = lease.Id;
-        RequestId = lease.AccessRequestId;
-        CipherId = lease.CipherId;
-        CollectionId = lease.CollectionId;
-        OrganizationId = lease.OrganizationId;
-        RequesterId = lease.RequesterId;
-        Status = lease.Status.ToApiStatus();
-        NotBefore = lease.NotBefore.AsUtc();
-        NotAfter = lease.NotAfter.AsUtc();
-        RevokedAt = lease.RevokedDate.AsUtc();
-        RevokedByUserId = lease.RevokedBy;
     }
 
     /// <summary>The lease's unique identifier.</summary>
-    public Guid Id { get; }
+    public Guid Id { get; set; }
 
     /// <summary>The request this lease was born from.</summary>
-    public Guid RequestId { get; }
+    public Guid RequestId { get; set; }
 
     /// <summary>The cipher the lease grants access to.</summary>
-    public Guid CipherId { get; }
+    public Guid CipherId { get; set; }
 
     /// <summary>The collection the cipher belongs to.</summary>
-    public Guid CollectionId { get; }
+    public Guid CollectionId { get; set; }
 
     /// <summary>The access rule that gated the cipher at grant time. Not tracked in v1.</summary>
-    public string? RuleId => null;
+    public string? RuleId { get; set; }
 
     /// <summary>The organization that owns the cipher.</summary>
-    public Guid OrganizationId { get; }
+    public Guid OrganizationId { get; set; }
 
     /// <summary>The user the lease was granted to (the original requester).</summary>
-    public Guid RequesterId { get; }
+    public Guid RequesterId { get; set; }
 
     /// <summary>The lease's lifecycle state.</summary>
-    public AccessLeaseStatus Status { get; }
+    public AccessLeaseStatus Status { get; set; }
 
     /// <summary>When the lease's access window opens (UTC).</summary>
-    public DateTime NotBefore { get; }
+    public DateTime NotBefore { get; set; }
 
     /// <summary>When the lease's access window closes (UTC).</summary>
-    public DateTime NotAfter { get; }
+    public DateTime NotAfter { get; set; }
 
     /// <summary>When the lease was revoked early (UTC); null unless it was revoked before expiry.</summary>
-    public DateTime? RevokedAt { get; }
+    public DateTime? RevokedAt { get; set; }
 
     /// <summary>The user who revoked the lease; null unless it was revoked early.</summary>
-    public Guid? RevokedByUserId { get; }
+    public Guid? RevokedByUserId { get; set; }
 
     /// <summary>The reason captured on early revocation. Recorded on the audit decision, not surfaced here in v1.</summary>
-    public string? RevocationReason => null;
+    public string? RevocationReason { get; set; }
 }

@@ -17,6 +17,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddPamServices(this IServiceCollection services)
     {
         services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
+        // Productionized access-rule write validator (main): the productionized AccessRule commands depend on it.
+        services.AddScoped<IAccessRuleWriteValidator, AccessRuleWriteValidator>();
         services.AddScoped<ICreateAccessRuleCommand, CreateAccessRuleCommand>();
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();

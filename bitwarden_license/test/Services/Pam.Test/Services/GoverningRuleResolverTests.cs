@@ -21,11 +21,10 @@ public class GoverningRuleResolverTests
     private static readonly IAccessRuleEngine _engine = new AccessRuleEngine();
 
     // An in-range IP for the 10.0.0.0/8 allowlists below; out-of-range for the 192.168/172.16 allowlists, which
-    // therefore deny. No time-of-day conditions are used, so the timestamp is arbitrary.
+    // therefore deny.
     private static readonly AccessSignals _signals = new()
     {
         IpAddress = IPAddress.Parse("10.0.0.5"),
-        Timestamp = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero),
     };
 
     [Theory, BitAutoData]
@@ -123,6 +122,60 @@ public class GoverningRuleResolverTests
         Assert.True(result!.RequiresHumanApproval);
         // An unparseable rule fails safe to human approval rather than surfacing a rule the engine cannot evaluate.
         Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_ConditionMissingItsKind_FailsSafeToHumanApproval(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // A stored condition with no discriminator cannot be mapped to a kind, and the polymorphic reader reports that
+        // as NotSupportedException rather than JsonException. Unless both are caught it escapes ResolveAsync instead of
+        // taking the fail-safe below, so a document the server cannot interpret would surface as an unhandled
+        // exception rather than routing to an approver.
+        rule.Conditions = """[{"cidrs":["10.0.0.0/8"]}]""";
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.True(result!.RequiresHumanApproval);
+        Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_ConditionWithKindLast_ParsesTheCondition(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // Property order is meaningless in JSON, so a stored document that writes "kind" after the properties it
+        // discriminates has to read back as the condition it names — not fail safe to human approval, which would
+        // route a caller the allowlist auto-approves to an approver instead.
+        rule.Conditions = """[{"cidrs":["10.0.0.0/8"],"kind":"ip_allowlist"}]""";
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.False(result!.RequiresHumanApproval);
+        var ip = Assert.IsType<IpAllowlistCondition>(Assert.Single(result.Conditions));
+        Assert.Equal("10.0.0.0/8", Assert.Single(ip.Cidrs));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_ConditionWithNullCidrs_StillGoverns(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // "cidrs": null parses, so this never reaches Parse's fail-safe: the condition itself has to survive the null
+        // and deny, or the NullReferenceException escapes from inside the engine. The rule still governs — an
+        // allowlist that matches nothing denies, which the auto path surfaces downstream, and a denial is not the
+        // same thing as requiring approval.
+        rule.Conditions = """[{"kind":"ip_allowlist","cidrs":null}]""";
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.False(result!.RequiresHumanApproval);
+        Assert.Empty(Assert.IsType<IpAllowlistCondition>(Assert.Single(result.Conditions)).Cidrs);
     }
 
     [Theory, BitAutoData]
@@ -239,6 +292,79 @@ public class GoverningRuleResolverTests
         Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
     }
 
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_GovernedRuleDeleted_ReturnsNull(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // The collection still points at a rule id, but the rule no longer loads (deleted after the collection was
+        // read). It is dropped from the candidates, leaving nothing to govern — GetByIdAsync is left unstubbed so it
+        // returns null.
+        collection.AccessRuleId = rule.Id;
+        SetupReachableCollections(sutProvider, userId, cipherId, collection);
+
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_OldestGovernedRuleDeleted_NextRuleGoverns(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
+    {
+        // The oldest governing rule was deleted after the collection was read, so it is skipped and the surviving
+        // newer rule governs — a deleted rule stops governing even when it would otherwise have won on age.
+        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.Conditions = """[{"kind":"human_approval"}]""";
+        newerRule.Enabled = true;
+        olderCollection.AccessRuleId = olderRule.Id;
+        newerCollection.AccessRuleId = newerRule.Id;
+        SetupReachableCollections(sutProvider, userId, cipherId, olderCollection, newerCollection);
+        // Only the newer rule loads; GetByIdAsync(olderRule.Id) is left unstubbed so the deleted oldest returns null.
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(newerRule.Id).Returns(newerRule);
+        DriveRealEngine(sutProvider);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.Equal(newerCollection.Id, result!.CollectionId);
+        Assert.Equal(newerRule.Id, result.RuleId);
+        Assert.True(result.RequiresHumanApproval);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_DisabledRule_NotGoverned(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // A disabled rule is inactive and does not gate access, so a cipher reached only through it is ungoverned.
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+        rule.Enabled = false;
+
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_OldestRuleDisabled_NewerEnabledRuleGoverns(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
+    {
+        // The oldest rule is disabled and auto-granting; the newer rule is enabled and needs human approval. A disabled
+        // rule must not shadow a newer active one, so the newer rule governs — access is not silently auto-granted.
+        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        olderRule.Conditions = "[]";
+        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.Conditions = """[{"kind":"human_approval"}]""";
+        SetupGovernedCollections(sutProvider, userId, cipherId,
+            (olderCollection, olderRule), (newerCollection, newerRule));
+        olderRule.Enabled = false;
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.Equal(newerCollection.Id, result!.CollectionId);
+        Assert.Equal(newerRule.Id, result.RuleId);
+        Assert.True(result.RequiresHumanApproval);
+    }
+
     private static void SetupReachableCollections(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, params Collection[] collections)
     {
@@ -261,6 +387,8 @@ public class GoverningRuleResolverTests
         foreach (var (collection, rule) in pairs)
         {
             collection.AccessRuleId = rule.Id;
+            // A governing rule must be enabled; pin it so the outcome does not depend on AutoFixture's bool sequence.
+            rule.Enabled = true;
         }
 
         SetupReachableCollections(sutProvider, userId, cipherId, pairs.Select(p => p.collection).ToArray());
@@ -270,6 +398,11 @@ public class GoverningRuleResolverTests
             sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
         }
 
+        DriveRealEngine(sutProvider);
+    }
+
+    private static void DriveRealEngine(SutProvider<GoverningRuleResolver> sutProvider)
+    {
         // Drive the real engine through the substitute so resolution exercises true IP/time evaluation.
         sutProvider.GetDependency<IAccessRuleEngine>()
             .Evaluate(Arg.Any<IReadOnlyList<AccessCondition>>(), Arg.Any<AccessSignals>())

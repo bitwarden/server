@@ -83,56 +83,29 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Clear the collection links first (the FK Collection.AccessRuleId -> AccessRule is ON DELETE NO ACTION), then
-        // remove the rule. A cleared collection is simply ungoverned; the RuleDeleted audit event already carries the
-        // rule's name, so the row need not survive.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        // Clear the collection links before deleting the rule: the FK Collection.AccessRuleId -> AccessRule does
+        // not cascade (RESTRICT here, NO ACTION on SQL Server), so the delete fails while any collection still
+        // points at it.
         await dbContext.Collections
             .Where(c => c.AccessRuleId == accessRule.Id)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(c => c.AccessRuleId, (Guid?)null)
                 .SetProperty(c => c.RevisionDate, DateTime.UtcNow));
 
+        // Detach the requests that pinned this rule for the same reason: FK_AccessRequest_AccessRule does not
+        // cascade either, so a request recording this rule as its governing rule would block the delete. RuleId is
+        // provenance rather than authority, and is already nullable for requests never gated through a stored rule.
+        await dbContext.AccessRequests
+            .Where(r => r.RuleId == accessRule.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.RuleId, (Guid?)null));
+
         await dbContext.AccessRules
             .Where(r => r.Id == accessRule.Id)
             .ExecuteDeleteAsync();
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(accessRule.OrganizationId);
-        await dbContext.SaveChangesAsync();
-    }
-
-    public async Task SetCollectionAssociationsAsync(Guid organizationId, Guid accessRuleId,
-        IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear)
-    {
-        var assignIds = collectionIdsToAssign.ToList();
-        var clearIds = collectionIdsToClear.ToList();
-
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        var now = DateTime.UtcNow;
-
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
-
-        if (clearIds.Count > 0)
-        {
-            await dbContext.Collections
-                .Where(c => c.OrganizationId == organizationId
-                    && c.AccessRuleId == accessRuleId
-                    && clearIds.Contains(c.Id))
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(c => c.AccessRuleId, (Guid?)null)
-                    .SetProperty(c => c.RevisionDate, now));
-        }
-
-        if (assignIds.Count > 0)
-        {
-            await dbContext.Collections
-                .Where(c => c.OrganizationId == organizationId && assignIds.Contains(c.Id))
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(c => c.AccessRuleId, accessRuleId)
-                    .SetProperty(c => c.RevisionDate, now));
-        }
-
-        await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
     }

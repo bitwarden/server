@@ -11,12 +11,6 @@ namespace Bit.Services.Pam.Services;
 
 public class GoverningRuleResolver : IGoverningRuleResolver
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAccessRuleRepository _accessRuleRepository;
@@ -49,13 +43,15 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             .Where(c => collectionIds.Contains(c.Id) && c.AccessRuleId.HasValue);
 
         // Load every rule on the collections through which the caller reaches the cipher, keeping each paired with
-        // the collection it gates. A rule that no longer loads (deleted after the collection was read — deletes clear
-        // the link, so this is only a race) is skipped, so a deleted rule stops governing.
+        // the collection it gates. A rule is dropped — so it stops governing — when it is disabled (Enabled is false;
+        // the admin has switched it off, and a disabled rule does not gate access) or no longer loads (deleted after
+        // the collection was read; deletes clear the link, so a missing rule is only a race). Dropping a disabled rule
+        // also stops it shadowing a newer active rule under the oldest-wins selection below.
         var candidates = new List<(Collection Collection, AccessRule Rule)>();
         foreach (var collection in governedCollections)
         {
             var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId!.Value);
-            if (accessRule is not null)
+            if (accessRule is { Enabled: true })
             {
                 candidates.Add((collection, accessRule));
             }
@@ -102,9 +98,13 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     {
         try
         {
-            return JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, _jsonOptions) ?? FailSafe();
+            return JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options) ?? FailSafe();
         }
-        catch (JsonException)
+        // NotSupportedException alongside JsonException: the polymorphic reader reports a missing or unreadable
+        // "kind" that way, and it is not a JsonException. Left uncaught it would escape ResolveAsync entirely,
+        // breaking the fail-safe this method exists to provide — a stored document the server cannot interpret has
+        // to route to an approver, not surface as an unhandled exception.
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
             return FailSafe();
         }

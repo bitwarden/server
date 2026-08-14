@@ -56,7 +56,6 @@
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="[10.0.8]" />
     <PackageReference Include="OneOf" Version="[3.0.271]" />
     <PackageReference Include="SendGrid" Version="[9.29.3]" />
-    <PackageReference Include="Serilog.Extensions.Logging.File" Version="[3.0.0]" />
     <PackageReference Include="Duende.IdentityServer" Version="[7.4.6]" />
     <PackageReference Include="Newtonsoft.Json" Version="[13.0.3]" />
     <PackageReference Include="AspNetCoreRateLimit" Version="[5.0.0]" />
@@ -79,6 +78,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Libraries\Data\Data.csproj" />
+    <ProjectReference Include="..\Libraries\ExceptionHandling\ExceptionHandling.csproj" />
+    <ProjectReference Include="..\Libraries\SerilogFileLogging\SerilogFileLogging.csproj" />
     <ProjectReference Include="..\Libraries\SsrfProtection\SsrfProtection.csproj" />
     <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
   </ItemGroup>

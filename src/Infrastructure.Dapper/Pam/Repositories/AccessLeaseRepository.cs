@@ -124,7 +124,6 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
             new
             {
                 AccessLeaseId = lease.Id,
-                AccessRequestId = lease.AccessRequestId,
                 Status = (byte)endStatus,
                 RevokedBy = auditDecision.ApproverId,
                 AccessDecisionId = auditDecision.Id,

@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(EnableNgrokCommunityPlugin)' == 'true'">
-    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ngrok" Version="[13.3.0]" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ngrok" Version="[13.4.0]" />
   </ItemGroup>
 
   <ItemGroup>

@@ -55,14 +55,14 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Products</label>
-            <span asp-validation-for="Products" class="text-danger"></span>
+            <label class="form-label">Product</label>
+            <span asp-validation-for="Product" class="text-danger"></span>
             @foreach (var product in Enum.GetValues<ProductType>())
             {
                 <div class="form-check">
-                    <input type="checkbox" name="Products" value="@product" id="product-@product" class="form-check-input"
-                           checked="@(Model.Products != null && Model.Products.Contains(product))" />
-                    <label for="product-@product" class="form-check-label">@product</label>
+                    <input type="radio" name="Product" value="@product" id="product-@product" class="form-check-input"
+                           checked="@(Model.Product == product)" />
+                    <label for="product-@product" class="form-check-label">@(product.GetDisplayAttribute()?.GetName() ?? product.ToString())</label>
                 </div>
             }
         </div>

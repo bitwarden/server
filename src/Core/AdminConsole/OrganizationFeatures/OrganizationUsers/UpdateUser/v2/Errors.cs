@@ -12,6 +12,7 @@ public record ManageMutuallyExclusive() : BadRequestError("The Manage property i
 public record CustomPermissionsNotEnabled() : BadRequestError("To enable custom permissions the organization must be on an Enterprise plan.");
 public record CannotAssignDefaultCollection() : BadRequestError("Default collections cannot be assigned to a member.");
 public record CannotAutoscaleSecretsManagerSeatsOnSelfHost() : BadRequestError("Cannot autoscale on a self-hosted instance.");
+public record PamNotEnabled() : BadRequestError("To grant PAM access the organization must have PAM enabled.");
 public record CouldNotIncreaseSeatsOfSecretManager(string Message) : BadRequestError(Message);
 
 public abstract record EmailValidationError(string Message, string Type) : BadRequestError(Message), IValidationError
@@ -27,8 +28,12 @@ public record NewEmailDomainNotClaimedError()
     : EmailValidationError("The new email address must be on a domain claimed by the organization.", "new_email_domain_not_claimed");
 public record EmailAlreadyInUseError()
     : EmailValidationError("Email already in use.", "email_already_in_use");
+public record EmailAlreadyInUseByAnotherMemberError()
+    : EmailValidationError("Email already in use by another organization member.", "email_taken_by_organization_member");
+public record EmailTakenOutsideOrganizationError()
+    : EmailValidationError("Email is already in use outside organization.", "email_taken_outside_organization");
 public record EmailClaimedByAnotherOrganizationError()
-    : EmailValidationError("This email address is claimed by an organization using Bitwarden.", "email_claimed_by_another_organization");
+    : EmailValidationError("This email domain is claimed by an organization using Bitwarden.", "email_claimed_by_another_organization");
 public record EmailChangeFailedError(string Message)
     : EmailValidationError(Message, "email_change_failed");
 

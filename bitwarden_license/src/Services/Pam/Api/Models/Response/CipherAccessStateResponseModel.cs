@@ -1,5 +1,4 @@
-﻿using Bit.Services.Pam.Models;
-using Bit.HttpExtensions;
+﻿using Bit.HttpExtensions;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -10,33 +9,25 @@ namespace Bit.Services.Pam.Api.Models.Response;
 /// </summary>
 public class CipherAccessStateResponseModel : ResponseModel
 {
-    public CipherAccessStateResponseModel(CipherAccessState state)
+    public CipherAccessStateResponseModel()
         : base("cipherAccessState")
     {
-        ArgumentNullException.ThrowIfNull(state);
-
-        CipherId = state.CipherId;
-        ActiveLease = state.ActiveLease is null ? null : new AccessLeaseResponseModel(state.ActiveLease);
-        PendingRequest = state.PendingRequest is null ? null : new AccessRequestDetailsResponseModel(state.PendingRequest);
-        ApprovedRequest = state.ApprovedRequest is null ? null : new AccessRequestDetailsResponseModel(state.ApprovedRequest);
-        ExtensionsAllowed = state.ExtensionsAllowed;
-        MaxExtensionDurationSeconds = state.MaxExtensionDurationSeconds;
     }
 
-    public Guid CipherId { get; }
+    public Guid CipherId { get; set; }
 
-    public AccessLeaseResponseModel? ActiveLease { get; }
-    public AccessRequestDetailsResponseModel? PendingRequest { get; }
+    public AccessLeaseResponseModel? ActiveLease { get; set; }
+    public AccessRequestDetailsResponseModel? PendingRequest { get; set; }
 
     /// <summary>
     /// An approved request awaiting activation, with a window that can still produce access. The caller activates it
     /// to mint the lease; lapsed approvals are never surfaced here.
     /// </summary>
-    public AccessRequestDetailsResponseModel? ApprovedRequest { get; }
+    public AccessRequestDetailsResponseModel? ApprovedRequest { get; set; }
 
     /// <summary>Whether the active lease can still be extended (the rule opts in and it has not been extended yet).</summary>
-    public bool ExtensionsAllowed { get; }
+    public bool ExtensionsAllowed { get; set; }
 
     /// <summary>The longest a single extension of the active lease may run, in seconds; null when there is no cap or no active lease.</summary>
-    public int? MaxExtensionDurationSeconds { get; }
+    public int? MaxExtensionDurationSeconds { get; set; }
 }

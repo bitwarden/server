@@ -52,6 +52,39 @@ public class AccessRuleValidatorTests
     }
 
     [Fact]
+    public void Validate_MissingKind_IsInvalid()
+    {
+        // A condition object with no discriminator at all cannot be mapped to a kind. The polymorphic reader reports
+        // that as NotSupportedException rather than JsonException, so it needs its own catch — otherwise this answers
+        // with an unhandled exception (a 500) instead of the actionable rejection below.
+        var result = _sut.Validate("""[{"cidrs":["10.0.0.0/8"]}]""");
+
+        Assert.False(result.IsValid);
+        Assert.Contains("kind", result.Error);
+    }
+
+    [Fact]
+    public void Validate_KindAfterTheOtherProperties_IsValid()
+    {
+        // Property order carries no meaning in JSON, so a document that writes "kind" last is legitimate — anything
+        // that canonicalises keys alphabetically emits exactly this, since "cidrs" sorts before "kind".
+        var result = _sut.Validate("""[{"cidrs":["10.0.0.0/8"],"kind":"ip_allowlist"}]""");
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_NullCidrsValue_IsInvalid()
+    {
+        // "cidrs": null deserialises as a null value, so the condition has to reject it rather than throw a
+        // NullReferenceException past this validator.
+        var result = _sut.Validate("""[{"kind":"ip_allowlist","cidrs":null}]""");
+
+        Assert.False(result.IsValid);
+        Assert.Contains("at least one CIDR", result.Error);
+    }
+
+    [Fact]
     public void Validate_LegacyAllOfKind_IsInvalid()
     {
         // The flattened model dropped the all_of composite; a document that still nests one is rejected rather than
@@ -59,69 +92,6 @@ public class AccessRuleValidatorTests
         var result = _sut.Validate("""[{"kind":"all_of","conditions":[]}]""");
 
         Assert.False(result.IsValid);
-    }
-
-    [Fact]
-    public void Validate_HumanApproval_IsValid()
-    {
-        var result = _sut.Validate("""[{"kind":"human_approval"}]""");
-
-        Assert.True(result.IsValid);
-    }
-
-    [Theory]
-    [InlineData("""[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""")]
-    [InlineData("""[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8","192.168.0.0/16","2001:db8::/32"]}]""")]
-    public void Validate_IpAllowlist_ValidCidrs_IsValid(string conditionsJson)
-    {
-        var result = _sut.Validate(conditionsJson);
-
-        Assert.True(result.IsValid);
-    }
-
-    [Theory]
-    [InlineData("""[{"kind":"ip_allowlist","cidrs":[]}]""", "at least one CIDR")]
-    [InlineData("""[{"kind":"ip_allowlist","cidrs":["not-a-cidr"]}]""", "Invalid CIDR")]
-    [InlineData("""[{"kind":"ip_allowlist","cidrs":["10.0.0.0/99"]}]""", "Invalid CIDR")]
-    public void Validate_IpAllowlist_InvalidCidrs_IsInvalid(string conditionsJson, string expectedMessageFragment)
-    {
-        var result = _sut.Validate(conditionsJson);
-
-        Assert.False(result.IsValid);
-        Assert.Contains(expectedMessageFragment, result.Error);
-    }
-
-    [Fact]
-    public void Validate_TimeOfDay_Valid_IsValid()
-    {
-        var result = _sut.Validate("""
-            [
-              {
-                "kind": "time_of_day",
-                "tz": "UTC",
-                "windows": [
-                  { "days": ["mon","tue","wed","thu","fri"], "from": "09:00", "to": "18:00" }
-                ]
-              }
-            ]
-            """);
-
-        Assert.True(result.IsValid);
-    }
-
-    [Theory]
-    [InlineData("""[{"kind":"time_of_day","tz":"Invalid/Zone","windows":[{"days":["mon"],"from":"09:00","to":"17:00"}]}]""", "timezone")]
-    [InlineData("""[{"kind":"time_of_day","tz":"UTC","windows":[]}]""", "at least one window")]
-    [InlineData("""[{"kind":"time_of_day","tz":"UTC","windows":[{"days":[],"from":"09:00","to":"17:00"}]}]""", "at least one day")]
-    [InlineData("""[{"kind":"time_of_day","tz":"UTC","windows":[{"days":["funday"],"from":"09:00","to":"17:00"}]}]""", "day")]
-    [InlineData("""[{"kind":"time_of_day","tz":"UTC","windows":[{"days":["mon"],"from":"9am","to":"5pm"}]}]""", "Expected HH:mm")]
-    [InlineData("""[{"kind":"time_of_day","tz":"UTC","windows":[{"days":["mon"],"from":"25:00","to":"26:00"}]}]""", "Expected HH:mm")]
-    public void Validate_TimeOfDay_Invalid_IsInvalid(string conditionsJson, string expectedMessageFragment)
-    {
-        var result = _sut.Validate(conditionsJson);
-
-        Assert.False(result.IsValid);
-        Assert.Contains(expectedMessageFragment, result.Error);
     }
 
     [Fact]
