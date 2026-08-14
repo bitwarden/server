@@ -200,8 +200,6 @@ public class HandlebarsMailServiceTests
             { ("familyOrgName", typeof(string)), "Test Org Name" },
             // Swap existingAccount to true or false to generate different versions of the SendFamiliesForEnterpriseOfferEmailAsync emails.
             { ("existingAccount", typeof(bool)), false },
-            // Swap vfo1FoundationEnabled to true or false to generate the updated vs. original copy for the SendFamiliesForEnterpriseOfferEmailAsync emails.
-            { ("vfo1FoundationEnabled", typeof(bool)), false },
             { ("sponsorshipEndDate", typeof(DateTime)), DateTime.UtcNow.AddDays(1)},
             { ("sponsorOrgName", typeof(string)), "Sponsor Test Org Name" },
             { ("expirationDate", typeof(DateTime)), DateTime.Now.AddDays(3) },

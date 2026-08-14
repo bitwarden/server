@@ -9,12 +9,6 @@ public class FamiliesForEnterpriseOfferViewModel : BaseMailModel
     public string SponsoredEmail { get; set; }
     public string SponsorshipToken { get; set; }
     public bool ExistingAccount { get; set; }
-    /// <summary>
-    /// Gates the updated "Sponsored Families Plan" copy behind the
-    /// <see cref="FeatureFlagKeys.VFO1Foundation"/> feature flag. When <c>false</c>, the template falls
-    /// back to the original copy.
-    /// </summary>
-    public bool VFO1FoundationEnabled { get; set; }
     public string Url => string.Concat(
         WebVaultUrl,
         "/accept-families-for-enterprise",

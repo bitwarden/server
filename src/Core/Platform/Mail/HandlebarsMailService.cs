@@ -1422,16 +1422,14 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token, bool vfo1FoundationEnabled = false) =>
-        await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsorOrgName, new[] { (email, existingAccount, token) }, vfo1FoundationEnabled);
+    public async Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token) =>
+        await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsorOrgName, new[] { (email, existingAccount, token) });
 
-    public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites, bool vfo1FoundationEnabled = false)
+    public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
     {
-        var subject = vfo1FoundationEnabled ? "Accept your Sponsored Families Plan" : "Accept Your Free Families Subscription";
-
         MailQueueMessage CreateMessage((string Email, bool ExistingAccount, string Token) invite)
         {
-            var message = CreateDefaultMessage(subject, invite.Email);
+            var message = CreateDefaultMessage("Accept your Sponsored Families Plan", invite.Email);
             message.Category = "FamiliesForEnterpriseOffer";
             var model = new FamiliesForEnterpriseOfferViewModel
             {
@@ -1441,7 +1439,6 @@ public class HandlebarsMailService : IMailService
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
                 SponsorshipToken = invite.Token,
-                VFO1FoundationEnabled = vfo1FoundationEnabled,
             };
             var templateName = invite.ExistingAccount ?
                 "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount" :
