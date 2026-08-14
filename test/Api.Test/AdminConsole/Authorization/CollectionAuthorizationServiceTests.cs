@@ -80,6 +80,7 @@ public class CollectionAuthorizationServiceTests
         var result = await sutProvider.Sut.AuthorizeUpdateAsync(collection.OrganizationId, collection.Id);
 
         Assert.True(result);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByUserIdAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData, CollectionCustomization]
