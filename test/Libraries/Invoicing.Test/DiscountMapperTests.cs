@@ -310,4 +310,34 @@ public class DiscountMapperTests
         Assert.Contains("di_seat", error);
         Assert.Contains("SEATS10", error);
     }
+
+    [Fact]
+    public void Partition_LineCarriesCartWideDiscountId_StaysCartLevel_NotAttachedToItem()
+    {
+        // Stripe echoes a cart-wide coupon (no applies_to) onto the line's discount_amounts.
+        // It must remain cart-level; the line loop must not pull it down to item-level.
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 11982,
+          "total_discount_amounts": [
+            { "amount": 1279, "discount": { "id": "di_cart", "source": { "coupon": { "id": "cp_cart", "name": "WELCOME10", "percent_off": 10 } } } }
+          ],
+          "lines": {
+            "data": [
+              {
+                "amount": 12790,
+                "pricing": { "price_details": { "price": { "id": "price_pm", "metadata": { "purchasable_reference": "pm-seat" } } } },
+                "discount_amounts": [ { "amount": 1279, "discount": "di_cart" } ]
+              }
+            ]
+          }
+        }
+        """);
+
+        var result = DiscountMapper.Partition(invoice, new RecordingLogger<DiscountMapperTests>());
+
+        Assert.Equal(12.79m, Assert.Single(result.CartLevel).Amount);
+        Assert.Empty(result.ItemLevel);
+    }
 }

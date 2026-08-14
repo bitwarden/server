@@ -9,7 +9,7 @@ public record PurchasableProration
     /// <summary>Sum of the positive line amounts.</summary>
     public required decimal Charge { get; init; }
 
-    /// <summary>This bucket's proportional share of the invoice tax total.</summary>
+    /// <summary>Sum of Stripe's per-line tax on this bucket's proration lines.</summary>
     public required decimal Tax { get; init; }
 
     /// <summary>Net of charge against credit.</summary>
