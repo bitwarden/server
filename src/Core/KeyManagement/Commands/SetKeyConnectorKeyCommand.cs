@@ -46,11 +46,18 @@ public class SetKeyConnectorKeyCommand : ISetKeyConnectorKeyCommand
             throw new BadRequestException("Cannot use Key Connector");
         }
 
-        var setKeyConnectorUserKeyTask =
-            _userRepository.SetKeyConnectorUserKey(user.Id, keyConnectorKeysData.KeyConnectorKeyWrappedUserKey);
+        var updateUserDataTasks = new List<UpdateUserData>
+        {
+            _userRepository.SetKeyConnectorUserKey(user.Id, keyConnectorKeysData.KeyConnectorKeyWrappedUserKey)
+        };
+
+        if (keyConnectorKeysData.ContainedKeyId is not null)
+        {
+            updateUserDataTasks.Add(_userRepository.SetUserKeyId(user.Id, keyConnectorKeysData.ContainedKeyId));
+        }
 
         await _userRepository.SetV2AccountCryptographicStateAsync(user.Id,
-            keyConnectorKeysData.AccountKeys.ToAccountKeysData(), [setKeyConnectorUserKeyTask]);
+            keyConnectorKeysData.AccountKeys.ToAccountKeysData(), updateUserDataTasks);
 
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
