@@ -23,6 +23,14 @@ BEGIN
         [RevisionDate] = SYSUTCDATETIME()
     WHERE [AccessRuleId] = @Id
 
+    -- Detach the requests that pinned this rule, for the same reason: FK_AccessRequest_AccessRule is ON DELETE
+    -- NO ACTION, so any request that recorded this rule as its governing rule would block the delete outright. RuleId
+    -- is provenance rather than authority -- the request's own window and decision log are what was actually granted,
+    -- and the column is already nullable for requests that were never gated through a stored rule.
+    UPDATE [dbo].[AccessRequest]
+    SET [RuleId] = NULL
+    WHERE [RuleId] = @Id
+
     DELETE FROM [dbo].[AccessRule]
     WHERE [Id] = @Id
 
