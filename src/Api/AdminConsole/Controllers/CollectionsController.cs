@@ -251,8 +251,8 @@ public class CollectionsController : BaseAdminConsoleController
     [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.PM12473CollectionUserAccessEndpoint)]
     public async Task<IResult> PatchWithDelta(Guid orgId, Guid id, [FromBody] UpdateCollectionWithDeltaRequestModel model)
     {
-        var authorizationResult = await _collectionAuthorizationService.AuthorizeUpdateAsync(orgId, id);
-        if (!authorizationResult.IsSuccess)
+        var authorized = await _collectionAuthorizationService.AuthorizeUpdateAsync(orgId, id);
+        if (!authorized)
         {
             throw new NotFoundException();
         }

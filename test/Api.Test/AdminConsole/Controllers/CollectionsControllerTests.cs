@@ -867,7 +867,7 @@ public class CollectionsControllerTests
     {
         sutProvider.GetDependency<ICollectionAuthorizationService>()
             .AuthorizeUpdateAsync(orgId, collectionId)
-            .Returns(new CollectionAuthorizationResult(true, true, true));
+            .Returns(true);
     }
 
     private static CollectionAccessDetails MakeAccessDetails() => new()
@@ -883,7 +883,7 @@ public class CollectionsControllerTests
     {
         sutProvider.GetDependency<ICollectionAuthorizationService>()
             .AuthorizeUpdateAsync(orgId, collectionId)
-            .Returns(new CollectionAuthorizationResult(false, true, true));
+            .Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.PatchWithDelta(orgId, collectionId, model));
