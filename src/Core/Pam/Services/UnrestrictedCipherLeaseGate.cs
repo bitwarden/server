@@ -11,10 +11,6 @@ namespace Bit.Core.Pam.Services;
 /// fully accessible, matching the behaviour when the PAM feature flag is off. The real gating logic
 /// lives in the commercial Pam library.
 /// </summary>
-/// <remarks>
-/// Named for what it does rather than for doing nothing: it authorizes full data for every cipher, which
-/// for a security control is worth stating outright.
-/// </remarks>
 public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
 {
     public Task<FullCipherAccess?> AuthorizeReadAsync(Guid userId, Cipher cipher)
