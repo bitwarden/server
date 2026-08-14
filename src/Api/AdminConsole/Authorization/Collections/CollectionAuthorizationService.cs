@@ -10,7 +10,19 @@ public class CollectionAuthorizationService(
     ICollectionRepository collectionRepository,
     IOrganizationAbilityCacheService organizationAbilityCacheService) : ICollectionAuthorizationService
 {
-    public async Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId)
+    public Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId) =>
+        AuthorizeAsync(organizationId, collectionId, CollectionRules.CanUpdate);
+
+    public Task<bool> AuthorizeModifyUserAccessAsync(Guid organizationId, Guid collectionId) =>
+        AuthorizeAsync(organizationId, collectionId, CollectionRules.CanModifyUserAccess);
+
+    public Task<bool> AuthorizeModifyGroupAccessAsync(Guid organizationId, Guid collectionId) =>
+        AuthorizeAsync(organizationId, collectionId, CollectionRules.CanModifyGroupAccess);
+
+    private async Task<bool> AuthorizeAsync(
+        Guid organizationId,
+        Guid collectionId,
+        Func<CollectionAccessDetails, CurrentContextOrganization?, bool, bool, bool> isAuthorized)
     {
         var (collection, accessDetails) = await collectionRepository.GetByIdWithAccessAsync(collectionId);
         if (collection is null || collection.OrganizationId != organizationId)
@@ -27,31 +39,20 @@ public class CollectionAuthorizationService(
         var organizationAbility = await organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
         var allowAdminAccessToAllCollectionItems = organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
 
-        // Check if the caller can update the collection without directly managing it.
+        // Check if the caller is authorized without directly managing the collection.
         // Checking direct access is deferred because it's more expensive to check.
-        if (IsAuthorized(accessDetails, organization, allowAdminAccessToAllCollectionItems, callerManagesCollection: false))
+        if (isAuthorized(accessDetails, organization, allowAdminAccessToAllCollectionItems, false))
         {
             return true;
         }
 
         var callerManagesCollection = await CallerManagesCollectionAsync(currentContext.UserId.Value, collectionId);
-        if (IsAuthorized(accessDetails, organization, allowAdminAccessToAllCollectionItems, callerManagesCollection))
+        if (isAuthorized(accessDetails, organization, allowAdminAccessToAllCollectionItems, callerManagesCollection))
         {
             return true;
         }
 
         return await currentContext.ProviderUserForOrgAsync(organizationId);
-    }
-
-    private static bool IsAuthorized(
-        CollectionAccessDetails accessDetails,
-        CurrentContextOrganization? organization,
-        bool allowAdminAccessToAllCollectionItems,
-        bool callerManagesCollection)
-    {
-        return CollectionRules.CanUpdate(accessDetails, organization, allowAdminAccessToAllCollectionItems, callerManagesCollection)
-            && CollectionRules.CanModifyUserAccess(accessDetails, organization, allowAdminAccessToAllCollectionItems, callerManagesCollection)
-            && CollectionRules.CanModifyGroupAccess(accessDetails, organization, allowAdminAccessToAllCollectionItems, callerManagesCollection);
     }
 
     private async Task<bool> CallerManagesCollectionAsync(Guid userId, Guid collectionId)
