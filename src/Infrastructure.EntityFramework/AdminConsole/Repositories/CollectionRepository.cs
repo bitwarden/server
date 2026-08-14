@@ -115,6 +115,202 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    public async Task ModifyUserAccessAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> upserts, IEnumerable<Guid> removeOrganizationUserIds,
+        DateTime revisionDate)
+    {
+        collectionIds = collectionIds.ToList();
+        upserts = upserts.ToList();
+        removeOrganizationUserIds = removeOrganizationUserIds.ToList();
+
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+            try
+            {
+                if (removeOrganizationUserIds.Any())
+                {
+                    var toRemove = await dbContext.CollectionUsers
+                        .Where(cu => collectionIds.Contains(cu.CollectionId) &&
+                            removeOrganizationUserIds.Contains(cu.OrganizationUserId))
+                        .ToListAsync();
+                    dbContext.RemoveRange(toRemove);
+                    await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(removeOrganizationUserIds);
+                    await dbContext.SaveChangesAsync();
+                }
+
+                if (upserts.Any())
+                {
+                    var upsertIds = upserts.Select(u => u.Id).ToList();
+                    var validOrganizationUserIds = (await dbContext.OrganizationUsers
+                        .Where(ou => ou.OrganizationId == organizationId && upsertIds.Contains(ou.Id))
+                        .Select(ou => ou.Id)
+                        .ToListAsync()).ToHashSet();
+
+                    var existingCollectionUsers = await dbContext.CollectionUsers
+                        .Where(cu => collectionIds.Contains(cu.CollectionId))
+                        .ToDictionaryAsync(x => (x.CollectionId, x.OrganizationUserId));
+
+                    // Skip ids that aren't in this organization, same as the SQL version's join does.
+                    var validUpserts = upserts.Where(u => validOrganizationUserIds.Contains(u.Id)).ToList();
+                    foreach (var collectionId in collectionIds)
+                    {
+                        foreach (var requestedUser in validUpserts)
+                        {
+                            if (!existingCollectionUsers.TryGetValue(
+                                (collectionId, requestedUser.Id), out var existingCollectionUser))
+                            {
+                                // This is a brand new entry
+                                dbContext.CollectionUsers.Add(new CollectionUser
+                                {
+                                    CollectionId = collectionId,
+                                    OrganizationUserId = requestedUser.Id,
+                                    HidePasswords = requestedUser.HidePasswords,
+                                    ReadOnly = requestedUser.ReadOnly,
+                                    Manage = requestedUser.Manage
+                                });
+                                continue;
+                            }
+
+                            // It already exists, update it
+                            existingCollectionUser.HidePasswords = requestedUser.HidePasswords;
+                            existingCollectionUser.ReadOnly = requestedUser.ReadOnly;
+                            existingCollectionUser.Manage = requestedUser.Manage;
+                            dbContext.CollectionUsers.Update(existingCollectionUser);
+                        }
+                    }
+
+                    await dbContext.SaveChangesAsync();
+                }
+
+                var collections = await dbContext.Collections
+                    .Where(c => collectionIds.Contains(c.Id))
+                    .ToListAsync();
+                foreach (var collection in collections)
+                {
+                    collection.RevisionDate = revisionDate;
+                }
+
+                // Bump everyone with access to a target collection now that the changes above are saved.
+                // Same order as CreateOrUpdateAccessForManyAsync.
+                await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(collectionIds, organizationId);
+                await dbContext.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+    }
+
+    public async Task ModifyGroupAccessAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> upserts, IEnumerable<Guid> removeGroupIds,
+        DateTime revisionDate)
+    {
+        collectionIds = collectionIds.ToList();
+        upserts = upserts.ToList();
+        removeGroupIds = removeGroupIds.ToList();
+
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+            try
+            {
+                if (removeGroupIds.Any())
+                {
+                    var toRemove = await dbContext.CollectionGroups
+                        .Where(cu => collectionIds.Contains(cu.CollectionId) &&
+                            removeGroupIds.Contains(cu.GroupId))
+                        .ToListAsync();
+                    dbContext.RemoveRange(toRemove);
+
+                    // Bump the revision date of the affected groups inline - there is no
+                    // Group_BumpRevisionDateByIds sproc, so we mirror the SQL version's behavior here.
+                    var removedGroups = await dbContext.Groups
+                        .Where(g => removeGroupIds.Contains(g.Id))
+                        .ToListAsync();
+                    foreach (var g in removedGroups)
+                    {
+                        g.RevisionDate = DateTime.UtcNow;
+                    }
+
+                    await dbContext.SaveChangesAsync();
+                }
+
+                if (upserts.Any())
+                {
+                    var upsertIds = upserts.Select(u => u.Id).ToList();
+                    var validGroupIds = (await dbContext.Groups
+                        .Where(g => g.OrganizationId == organizationId && upsertIds.Contains(g.Id))
+                        .Select(g => g.Id)
+                        .ToListAsync()).ToHashSet();
+
+                    var existingCollectionGroups = await dbContext.CollectionGroups
+                        .Where(cg => collectionIds.Contains(cg.CollectionId))
+                        .ToDictionaryAsync(x => (x.CollectionId, x.GroupId));
+
+                    // Skip ids that aren't in this organization, same as the SQL version's join does.
+                    var validUpserts = upserts.Where(u => validGroupIds.Contains(u.Id)).ToList();
+                    foreach (var collectionId in collectionIds)
+                    {
+                        foreach (var requestedGroup in validUpserts)
+                        {
+                            if (!existingCollectionGroups.TryGetValue(
+                                (collectionId, requestedGroup.Id), out var existingCollectionGroup))
+                            {
+                                // This is a brand new entry
+                                dbContext.CollectionGroups.Add(new CollectionGroup
+                                {
+                                    CollectionId = collectionId,
+                                    GroupId = requestedGroup.Id,
+                                    HidePasswords = requestedGroup.HidePasswords,
+                                    ReadOnly = requestedGroup.ReadOnly,
+                                    Manage = requestedGroup.Manage
+                                });
+                                continue;
+                            }
+
+                            // It already exists, update it
+                            existingCollectionGroup.HidePasswords = requestedGroup.HidePasswords;
+                            existingCollectionGroup.ReadOnly = requestedGroup.ReadOnly;
+                            existingCollectionGroup.Manage = requestedGroup.Manage;
+                            dbContext.CollectionGroups.Update(existingCollectionGroup);
+                        }
+                    }
+
+                    await dbContext.SaveChangesAsync();
+                }
+
+                var collections = await dbContext.Collections
+                    .Where(c => collectionIds.Contains(c.Id))
+                    .ToListAsync();
+                foreach (var collection in collections)
+                {
+                    collection.RevisionDate = revisionDate;
+                }
+
+                // Bump everyone with access to a target collection now that the changes above are saved.
+                // Same order as CreateOrUpdateAccessForManyAsync.
+                await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(collectionIds, organizationId);
+                await dbContext.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+    }
+
     public async Task<Tuple<Core.Entities.Collection?, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id)
     {
         var collection = await base.GetByIdAsync(id);
