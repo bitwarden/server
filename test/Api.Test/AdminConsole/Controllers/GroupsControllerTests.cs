@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.Groups;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Core.AdminConsole.AbilitiesCache;
@@ -286,5 +287,86 @@ public class GroupsControllerTests
 
         await sutProvider.GetDependency<ICreateGroupCommand>().DidNotReceiveWithAnyArgs()
             .CreateGroupAsync(default, default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_GroupNotFound_ThrowsNotFound(Guid orgId, Guid id, GroupRequestModel model,
+        SutProvider<GroupsController> sutProvider)
+    {
+        sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(id)
+            .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(null, new List<CollectionAccessSelection>()));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchWithNewAuthorization(orgId, id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_OrgIdMismatch_ThrowsNotFound(Guid orgId, Group group, GroupRequestModel model,
+        SutProvider<GroupsController> sutProvider)
+    {
+        sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(group.Id)
+            .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, new List<CollectionAccessSelection>()));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchWithNewAuthorization(orgId, group.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_CannotAddSelfToGroup_ThrowsBadRequest(Group group, GroupRequestModel model,
+        SutProvider<GroupsController> sutProvider)
+    {
+        sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(group.Id)
+            .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, new List<CollectionAccessSelection>()));
+        sutProvider.GetDependency<IGroupsAuthorizationService>()
+            .AuthorizeUpdateAsync(group.OrganizationId, group.Id, Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(new GroupsAuthorizationResult(false, new HashSet<Guid>(), new HashSet<Guid>()));
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PatchWithNewAuthorization(group.OrganizationId, group.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_UnauthorizedPostedCollection_ThrowsNotFound(Group group, GroupRequestModel model,
+        SutProvider<GroupsController> sutProvider)
+    {
+        sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(group.Id)
+            .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, new List<CollectionAccessSelection>()));
+        sutProvider.GetDependency<IGroupsAuthorizationService>()
+            .AuthorizeUpdateAsync(group.OrganizationId, group.Id, Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(new GroupsAuthorizationResult(true, new HashSet<Guid> { Guid.NewGuid() }, new HashSet<Guid>()));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchWithNewAuthorization(group.OrganizationId, group.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchWithNewAuthorization_Success_MergesReadonlyCollectionsAndSaves(Group group, Organization organization,
+        GroupRequestModel model, SutProvider<GroupsController> sutProvider)
+    {
+        var readonlyCollectionAccess = new CollectionAccessSelection { Id = Guid.NewGuid(), ReadOnly = true };
+        var currentAccess = new List<CollectionAccessSelection> { readonlyCollectionAccess };
+        organization.Id = group.OrganizationId;
+
+        sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(group.Id)
+            .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, currentAccess));
+        sutProvider.GetDependency<IGroupsAuthorizationService>()
+            .AuthorizeUpdateAsync(group.OrganizationId, group.Id, Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(new GroupsAuthorizationResult(true, new HashSet<Guid>(), new HashSet<Guid> { readonlyCollectionAccess.Id }));
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(group.OrganizationId).Returns(organization);
+
+        var response = await sutProvider.Sut.PatchWithNewAuthorization(group.OrganizationId, group.Id, model);
+
+        var postedCollectionIds = model.Collections.Select(c => c.Id).ToHashSet();
+
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
+            Arg.Is<Group>(g => g.Id == group.Id && g.Name == model.Name),
+            organization,
+            Arg.Is<ICollection<CollectionAccessSelection>>(access =>
+                access.Any(a => a.Id == readonlyCollectionAccess.Id) &&
+                postedCollectionIds.All(id => access.Any(a => a.Id == id))),
+            model.Users);
+
+        Assert.Equal(group.Id, response.Id);
     }
 }
