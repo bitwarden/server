@@ -18,14 +18,15 @@ public class OrganizationExportResponseModel : ResponseModel
     {
     }
 
+    /// <remarks>
+    /// Expects ciphers already reduced to those the witness authorizes. An export carries full data or
+    /// nothing, so a cipher the witness does not cover throws here rather than being quietly reshaped or
+    /// dropped.
+    /// </remarks>
     public OrganizationExportResponseModel(IEnumerable<CipherOrganizationDetailsWithCollections> ciphers,
         IEnumerable<Collection> collections, GlobalSettings globalSettings, FullCipherAccess fullCipherAccess) : this()
     {
-        // Under PAM credential leasing, a leasing-gated cipher the exporter cannot fully access is
-        // excluded from the export entirely — a partially-stripped export is not a usable backup.
-        Ciphers = ciphers
-            .Where(c => fullCipherAccess.Authorizes(c.Id))
-            .Select(c => new FullCipherMiniDetailsResponseModel(fullCipherAccess, c, globalSettings));
+        Ciphers = ciphers.Select(c => new FullCipherMiniDetailsResponseModel(fullCipherAccess, c, globalSettings));
         Collections = collections.Select(c => new CollectionResponseModel(c));
     }
 
