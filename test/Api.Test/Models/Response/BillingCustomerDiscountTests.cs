@@ -15,12 +15,15 @@ public class BillingCustomerDiscountTests
         var domainDiscount = new SubscriptionInfo.BillingCustomerDiscount(new Discount
         {
             End = end,
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "churn_15_repeating",
-                PercentOff = 10m,
-                Duration = "repeating",
-                DurationInMonths = 12
+                Coupon = new Coupon
+                {
+                    Id = "churn_15_repeating",
+                    PercentOff = 10m,
+                    Duration = "repeating",
+                    DurationInMonths = 12
+                }
             }
         });
 
@@ -44,11 +47,14 @@ public class BillingCustomerDiscountTests
         var domainDiscount = new SubscriptionInfo.BillingCustomerDiscount(new Discount
         {
             End = null,
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "perpetual_10",
-                PercentOff = 10m,
-                Duration = "forever"
+                Coupon = new Coupon
+                {
+                    Id = "perpetual_10",
+                    PercentOff = 10m,
+                    Duration = "forever"
+                }
             }
         });
 
