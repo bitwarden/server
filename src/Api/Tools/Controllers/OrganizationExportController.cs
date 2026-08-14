@@ -29,7 +29,6 @@ public class OrganizationExportController : Controller
         IAuthorizationService authorizationService,
         IOrganizationCiphersQuery organizationCiphersQuery,
         ICollectionRepository collectionRepository,
-        IFeatureService featureService,
         ICipherLeaseGate cipherLeaseGate)
     {
         _userService = userService;
