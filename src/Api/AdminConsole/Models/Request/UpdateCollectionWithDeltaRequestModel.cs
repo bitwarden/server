@@ -5,8 +5,7 @@ using Bit.Core.Utilities;
 namespace Bit.Api.AdminConsole.Models.Request;
 
 /// <summary>
-/// Request body for the unified <c>PATCH organizations/{orgId}/collections/{id}</c> endpoint:
-/// updates a collection's metadata alongside add/update/remove deltas for its user and group access.
+/// Updates a collection's metadata alongside add/update/remove deltas for its user and group access.
 /// </summary>
 public class UpdateCollectionWithDeltaRequestModel
 {

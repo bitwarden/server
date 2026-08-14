@@ -245,8 +245,7 @@ public class CollectionsController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Updates a collection's metadata alongside add/update/remove deltas for its access, rather than
-    /// the full-list-replace semantics of <see cref="Put"/>.
+    /// Like <see cref="Put"/>, but takes add/update/remove deltas for access instead of a full replace list.
     /// </summary>
     [HttpPatch("{id}")]
     [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.PM12473CollectionUserAccessEndpoint)]
@@ -258,8 +257,7 @@ public class CollectionsController : BaseAdminConsoleController
             throw new NotFoundException();
         }
 
-        // The authorization service's fetch is internal to it; persistence needs its own copy of the
-        // collection's current access details to build the delta commands below.
+        // Persistence needs its own copy of the collection's current access details for the delta commands below.
         var (collection, accessDetails) = await _collectionRepository.GetByIdWithAccessAsync(id);
         if (collection is null || collection.OrganizationId != orgId)
         {

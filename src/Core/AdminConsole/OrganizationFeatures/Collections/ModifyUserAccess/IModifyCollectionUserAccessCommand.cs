@@ -2,13 +2,10 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Collections.ModifyUserAccess;
 
-/// <summary>
-/// Applies an add/update/remove delta to one or more collections' user access.
-/// </summary>
 public interface IModifyCollectionUserAccessCommand
 {
     /// <summary>
-    /// Validates and persists the delta.
+    /// Validates and applies an add/update/remove delta to one or more collections' user access.
     /// </summary>
     Task<CommandResult> ModifyAsync(ModifyCollectionUserAccessRequest request);
 }
