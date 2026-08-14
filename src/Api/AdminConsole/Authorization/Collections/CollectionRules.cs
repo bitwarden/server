@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 

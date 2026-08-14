@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.AdminConsole.AbilitiesCache;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 
