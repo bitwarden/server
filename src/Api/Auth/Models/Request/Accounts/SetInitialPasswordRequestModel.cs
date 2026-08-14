@@ -91,7 +91,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
             yield return new ValidationResult(
                 $"Must provide both {nameof(MasterPasswordAuthentication)} and {nameof(MasterPasswordUnlock)} together. Cannot provide one without the other.",
                 [nameof(MasterPasswordAuthentication), nameof(MasterPasswordUnlock)]);
-            
+
             yield break;
         }
 
@@ -100,7 +100,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
             yield return new ValidationResult(
                 "Cannot mix modern (MasterPasswordAuthentication/MasterPasswordUnlock) and legacy (MasterPasswordHash/Key/Kdf) fields. Provide one shape or the other.",
                 [nameof(MasterPasswordAuthentication), nameof(MasterPasswordUnlock), nameof(MasterPasswordHash), nameof(Key), nameof(Kdf)]);
-            
+
             yield break;
         }
 
