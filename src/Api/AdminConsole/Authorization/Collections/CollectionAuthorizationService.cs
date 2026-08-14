@@ -10,17 +10,17 @@ public class CollectionAuthorizationService(
     ICollectionRepository collectionRepository,
     IOrganizationAbilityCacheService organizationAbilityCacheService) : ICollectionAuthorizationService
 {
-    public async Task<CollectionAuthorizationResult> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId)
+    public async Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId)
     {
         var (collection, accessDetails) = await collectionRepository.GetByIdWithAccessAsync(collectionId);
         if (collection is null || collection.OrganizationId != organizationId)
         {
-            return new CollectionAuthorizationResult(false, false, false);
+            return false;
         }
 
         if (!currentContext.UserId.HasValue)
         {
-            return new CollectionAuthorizationResult(false, false, false);
+            return false;
         }
 
         var organization = currentContext.GetOrganization(organizationId);
@@ -33,13 +33,12 @@ public class CollectionAuthorizationService(
         var canModifyUserAccess = CollectionRules.CanModifyUserAccess(accessDetails, organization, allowAdminAccessToAllCollectionItems, callerManagesCollection);
         var canModifyGroupAccess = CollectionRules.CanModifyGroupAccess(accessDetails, organization, allowAdminAccessToAllCollectionItems, callerManagesCollection);
 
-        if (!(canUpdate && canModifyUserAccess && canModifyGroupAccess)
-            && await currentContext.ProviderUserForOrgAsync(organizationId))
+        if (canUpdate && canModifyUserAccess && canModifyGroupAccess)
         {
-            return new CollectionAuthorizationResult(true, true, true);
+            return true;
         }
 
-        return new CollectionAuthorizationResult(canUpdate, canModifyUserAccess, canModifyGroupAccess);
+        return await currentContext.ProviderUserForOrgAsync(organizationId);
     }
 
     private async Task<bool> CallerManagesCollectionAsync(Guid userId, Guid collectionId)

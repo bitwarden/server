@@ -7,5 +7,5 @@ namespace Bit.Api.AdminConsole.Authorization.Collections;
 /// </summary>
 public interface ICollectionAuthorizationService
 {
-    Task<CollectionAuthorizationResult> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId);
+    Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId);
 }

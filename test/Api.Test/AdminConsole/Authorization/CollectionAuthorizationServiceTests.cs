@@ -16,7 +16,7 @@ namespace Bit.Api.Test.AdminConsole.Authorization;
 public class CollectionAuthorizationServiceTests
 {
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_CollectionNotFound_AllUnauthorized(
+    public async Task AuthorizeUpdateAsync_CollectionNotFound_Unauthorized(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Guid organizationId,
         Guid collectionId)
@@ -27,11 +27,11 @@ public class CollectionAuthorizationServiceTests
 
         var result = await sutProvider.Sut.AuthorizeUpdateAsync(organizationId, collectionId);
 
-        Assert.False(result.IsSuccess);
+        Assert.False(result);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_CollectionBelongsToDifferentOrganization_AllUnauthorized(
+    public async Task AuthorizeUpdateAsync_CollectionBelongsToDifferentOrganization_Unauthorized(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -43,11 +43,11 @@ public class CollectionAuthorizationServiceTests
 
         var result = await sutProvider.Sut.AuthorizeUpdateAsync(organizationId, collection.Id);
 
-        Assert.False(result.IsSuccess);
+        Assert.False(result);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_MissingUserId_AllUnauthorized(
+    public async Task AuthorizeUpdateAsync_MissingUserId_Unauthorized(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails)
@@ -59,11 +59,11 @@ public class CollectionAuthorizationServiceTests
 
         var result = await sutProvider.Sut.AuthorizeUpdateAsync(collection.OrganizationId, collection.Id);
 
-        Assert.False(result.IsSuccess);
+        Assert.False(result);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_WithEditAnyCollectionPermission_FullyAuthorized(
+    public async Task AuthorizeUpdateAsync_WithEditAnyCollectionPermission_Authorized(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -79,14 +79,11 @@ public class CollectionAuthorizationServiceTests
 
         var result = await sutProvider.Sut.AuthorizeUpdateAsync(collection.OrganizationId, collection.Id);
 
-        Assert.True(result.IsSuccess);
-        Assert.True(result.CanUpdateCollection);
-        Assert.True(result.CanModifyUserAccess);
-        Assert.True(result.CanModifyGroupAccess);
+        Assert.True(result);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_WhenMissingPermissions_AllUnauthorized(
+    public async Task AuthorizeUpdateAsync_WhenMissingPermissions_Unauthorized(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -105,11 +102,11 @@ public class CollectionAuthorizationServiceTests
 
         var result = await sutProvider.Sut.AuthorizeUpdateAsync(collection.OrganizationId, collection.Id);
 
-        Assert.False(result.IsSuccess);
+        Assert.False(result);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_WhenProviderUser_FullyAuthorized(
+    public async Task AuthorizeUpdateAsync_WhenProviderUser_Authorized(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -124,11 +121,11 @@ public class CollectionAuthorizationServiceTests
 
         var result = await sutProvider.Sut.AuthorizeUpdateAsync(collection.OrganizationId, collection.Id);
 
-        Assert.True(result.IsSuccess);
+        Assert.True(result);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_ManageUsersPermission_AllowAdminAccessTrue_UpdateStaysUnauthorized(
+    public async Task AuthorizeUpdateAsync_ManageUsersPermission_AllowAdminAccessTrue_StaysUnauthorized(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -149,12 +146,11 @@ public class CollectionAuthorizationServiceTests
 
         var result = await sutProvider.Sut.AuthorizeUpdateAsync(collection.OrganizationId, collection.Id);
 
-        Assert.False(result.CanUpdateCollection);
-        Assert.False(result.IsSuccess);
+        Assert.False(result);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AuthorizeUpdateAsync_WhenCallerManagesCollection_FullyAuthorized(
+    public async Task AuthorizeUpdateAsync_WhenCallerManagesCollection_Authorized(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
         CollectionAccessDetails accessDetails,
@@ -174,6 +170,6 @@ public class CollectionAuthorizationServiceTests
 
         var result = await sutProvider.Sut.AuthorizeUpdateAsync(collection.OrganizationId, collection.Id);
 
-        Assert.True(result.IsSuccess);
+        Assert.True(result);
     }
 }
