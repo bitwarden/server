@@ -442,7 +442,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -580,7 +580,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -621,7 +621,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version("2025.1.0"));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -662,7 +662,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns((Version?)null);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -705,7 +705,7 @@ public class SyncControllerTests
             .ClientVersion.Returns((Version?)null);
 
         // QA override disabled
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride).Returns(false);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -795,7 +795,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -835,7 +835,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -875,7 +875,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version("2025.1.0"));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -915,7 +915,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns((Version?)null);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -956,7 +956,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -996,7 +996,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -1036,7 +1036,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version("2025.1.0"));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -1076,7 +1076,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns((Version?)null);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()

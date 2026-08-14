@@ -47,7 +47,7 @@ public class SyncController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
     private readonly Version _pm32009NewItemTypeMinimumVersion = new(Constants.PM32009NewItemTypeMinimumVersion);
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
@@ -66,7 +66,7 @@ public class SyncController : Controller
         ISendRepository sendRepository,
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IWebAuthnCredentialRepository webAuthnCredentialRepository,
