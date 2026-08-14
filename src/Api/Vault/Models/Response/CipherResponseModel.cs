@@ -15,21 +15,16 @@ namespace Bit.Api.Vault.Models.Response;
 // FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-public class CipherMiniResponseModel : ResponseModel
+/// <summary>
+/// The shape shared by every cipher response. Abstract because a response has to say which data it
+/// carries: a <c>Partial*</c> subclass emits the reduced <see cref="PartialData"/> envelope for a
+/// leasing-gated cipher, and a <c>Full*</c> subclass emits the secret <see cref="Data"/> blob and can
+/// only be constructed with a <see cref="FullCipherAccess"/> witness. Both properties are declared here
+/// so either shape serializes to the same contract.
+/// </summary>
+public abstract class CipherMiniResponseModel : ResponseModel
 {
-    // PARTIAL/safe constructor. Under PAM credential leasing the secret Data blob is never emitted from
-    // here — only the reduced PartialData. Any path that uses this type without a FullCipherAccess
-    // witness therefore fails closed: a missed migration returns partial data (a visible bug), never a
-    // leak.
-    public CipherMiniResponseModel(Cipher cipher, IGlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMini")
-        : this(cipher, globalSettings, orgUseTotp, obj, partial: true)
-    {
-    }
-
-    // Shared construction. When partial is false the secret Data is left null for a derived Full* type
-    // to populate via PopulateFullData; this constructor never emits secret data on its own.
-    protected CipherMiniResponseModel(Cipher cipher, IGlobalSettings globalSettings, bool orgUseTotp,
-        string obj, bool partial)
+    protected CipherMiniResponseModel(Cipher cipher, bool orgUseTotp, string obj)
         : base(obj)
     {
         if (cipher == null)
@@ -41,35 +36,46 @@ public class CipherMiniResponseModel : ResponseModel
         Type = cipher.Type;
         RevisionDate = cipher.RevisionDate;
         OrganizationId = cipher.OrganizationId;
-        // Attachment metadata (including each attachment's encryption Key) is withheld from the partial
-        // shape: it is only ever a leasing-gated cipher's response, and the gate also blocks the
-        // attachment download, so nothing is decryptable.
-        Attachments = partial ? null : AttachmentResponseModel.FromCipher(cipher, globalSettings);
         OrganizationUseTotp = orgUseTotp;
         CreationDate = cipher.CreationDate;
         DeletedDate = cipher.DeletedDate;
         Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
         Key = cipher.Key;
-
-        if (partial && !cipher.IsDataBlobEncrypted())
-        {
-            // The reduced blob signals the cipher is leasing-gated; the client decrypts PartialData
-            // itself. An opaque (SDK-encrypted) blob can't be reshaped without decrypting, so nothing
-            // is returned for one.
-            PartialData = PartialCipherData.Strip(cipher.Type, cipher.Data);
-        }
     }
 
     /// <summary>
-    /// Populates the full secret data blob (and the obsolete typed fields) for a <c>Full*</c> response.
-    /// Requires a <see cref="FullCipherAccess"/> witness authorizing this cipher, so full secret data
-    /// cannot be emitted without first passing through the leasing gate that mints the witness.
+    /// Populates the reduced data blob for a <c>Partial*</c> response. Attachment metadata is left unset:
+    /// it carries each attachment's encryption key, and the leasing gate also blocks the attachment
+    /// download, so nothing about a withheld attachment is exposed.
     /// </summary>
-    protected void PopulateFullData(FullCipherAccess access, Cipher cipher)
+    /// <remarks>
+    /// An opaque (SDK-encrypted) blob cannot be reshaped without decrypting it, so nothing is returned
+    /// for one. That combination is unreachable: only a cipher reached through leasing-enabled
+    /// collections is gated, which makes it organization-owned, and organization items are never blob
+    /// encrypted.
+    /// </remarks>
+    protected void PopulatePartialData(Cipher cipher)
+    {
+        if (cipher.IsDataBlobEncrypted())
+        {
+            return;
+        }
+
+        PartialData = PartialCipherData.Strip(cipher.Type, cipher.Data);
+    }
+
+    /// <summary>
+    /// Populates the full secret data blob, the attachment metadata, and the obsolete typed fields for a
+    /// <c>Full*</c> response. Requires a <see cref="FullCipherAccess"/> witness authorizing this cipher,
+    /// so full secret data cannot be emitted without first passing through the leasing gate that mints
+    /// the witness.
+    /// </summary>
+    protected void PopulateFullData(FullCipherAccess access, Cipher cipher, IGlobalSettings globalSettings)
     {
         ArgumentNullException.ThrowIfNull(access);
         access.Require(cipher.Id);
 
+        Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
         Data = cipher.Data;
 
         if (cipher.IsDataBlobEncrypted())
@@ -144,7 +150,7 @@ public class CipherMiniResponseModel : ResponseModel
     /// and, for logins, the encrypted URIs — never the dropped secrets. Null for full responses.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string PartialData { get; set; }
+    public string PartialData { get; protected set; }
 
     [Obsolete("Use Data instead.")]
     public string Name { get; protected set; }
@@ -189,27 +195,44 @@ public class CipherMiniResponseModel : ResponseModel
     public CipherRepromptType Reprompt { get; set; }
     public string Key { get; set; }
 }
-#nullable enable
-public class CipherResponseModel : CipherMiniResponseModel
-{
-    public CipherResponseModel(
-        CipherDetails cipher,
-        User user,
-        OrganizationAbility? organizationAbility,
-        IGlobalSettings globalSettings,
-        string obj = "cipher")
-        : this(cipher, user, organizationAbility, globalSettings, obj, partial: true)
-    {
-    }
 
+/// <summary>
+/// A <see cref="CipherMiniResponseModel"/> carrying only the reduced <c>PartialData</c> envelope, for a
+/// leasing-gated cipher the caller holds no valid active lease for. Takes no global settings because a
+/// partial response emits no attachment metadata.
+/// </summary>
+public sealed class PartialCipherMiniResponseModel : CipherMiniResponseModel
+{
+    public PartialCipherMiniResponseModel(Cipher cipher, bool orgUseTotp, string obj = "cipherMini")
+        : base(cipher, orgUseTotp, obj)
+    {
+        PopulatePartialData(cipher);
+    }
+}
+
+/// <summary>
+/// A <see cref="CipherMiniResponseModel"/> carrying the cipher's full secret data. Constructing one
+/// requires a <see cref="FullCipherAccess"/> witness authorizing the cipher, so secret data can only be
+/// emitted by a path that has passed through the leasing gate.
+/// </summary>
+public sealed class FullCipherMiniResponseModel : CipherMiniResponseModel
+{
+    public FullCipherMiniResponseModel(FullCipherAccess access, Cipher cipher,
+        IGlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMini")
+        : base(cipher, orgUseTotp, obj)
+    {
+        PopulateFullData(access, cipher, globalSettings);
+    }
+}
+#nullable enable
+public abstract class CipherResponseModel : CipherMiniResponseModel
+{
     protected CipherResponseModel(
         CipherDetails cipher,
         User user,
         OrganizationAbility? organizationAbility,
-        IGlobalSettings globalSettings,
-        string obj,
-        bool partial)
-        : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj, partial)
+        string obj)
+        : base(cipher, cipher.OrganizationUseTotp, obj)
     {
         FolderId = cipher.FolderId;
         Favorite = cipher.Favorite;
@@ -227,27 +250,40 @@ public class CipherResponseModel : CipherMiniResponseModel
     public CipherPermissionsResponseModel Permissions { get; set; }
 }
 
-public class CipherDetailsResponseModel : CipherResponseModel
+/// <summary>The reduced-data counterpart of <see cref="CipherResponseModel"/>.</summary>
+public sealed class PartialCipherResponseModel : CipherResponseModel
 {
-    public CipherDetailsResponseModel(
+    public PartialCipherResponseModel(
         CipherDetails cipher,
         User user,
         OrganizationAbility? organizationAbility,
-        GlobalSettings globalSettings,
-        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
-        : this(cipher, user, organizationAbility, globalSettings, collectionCiphers, obj, partial: true)
+        string obj = "cipher")
+        : base(cipher, user, organizationAbility, obj)
     {
+        PopulatePartialData(cipher);
     }
+}
 
+/// <summary>The full-data counterpart of <see cref="CipherResponseModel"/>.</summary>
+public sealed class FullCipherResponseModel : CipherResponseModel
+{
+    public FullCipherResponseModel(FullCipherAccess access, CipherDetails cipher, User user,
+        OrganizationAbility? organizationAbility, IGlobalSettings globalSettings, string obj = "cipher")
+        : base(cipher, user, organizationAbility, obj)
+    {
+        PopulateFullData(access, cipher, globalSettings);
+    }
+}
+
+public abstract class CipherDetailsResponseModel : CipherResponseModel
+{
     protected CipherDetailsResponseModel(
         CipherDetails cipher,
         User user,
         OrganizationAbility? organizationAbility,
-        GlobalSettings globalSettings,
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers,
-        string obj,
-        bool partial)
-        : base(cipher, user, organizationAbility, globalSettings, obj, partial)
+        string obj)
+        : base(cipher, user, organizationAbility, obj)
     {
         if (collectionCiphers?.TryGetValue(cipher.Id, out var collectionCipher) ?? false)
         {
@@ -259,47 +295,23 @@ public class CipherDetailsResponseModel : CipherResponseModel
         }
     }
 
-    public CipherDetailsResponseModel(
-        CipherDetails cipher,
-        User user,
-        OrganizationAbility? organizationAbility,
-        GlobalSettings globalSettings,
-        IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails")
-        : this(cipher, user, organizationAbility, globalSettings, collectionCiphers, obj, partial: true)
-    {
-    }
-
     protected CipherDetailsResponseModel(
         CipherDetails cipher,
         User user,
         OrganizationAbility? organizationAbility,
-        GlobalSettings globalSettings,
         IEnumerable<CollectionCipher> collectionCiphers,
-        string obj,
-        bool partial)
-        : base(cipher, user, organizationAbility, globalSettings, obj, partial)
+        string obj)
+        : base(cipher, user, organizationAbility, obj)
     {
         CollectionIds = collectionCiphers?.Select(c => c.CollectionId) ?? [];
     }
 
-    public CipherDetailsResponseModel(
-        CipherDetailsWithCollections cipher,
-        User user,
-        OrganizationAbility? organizationAbility,
-        GlobalSettings globalSettings,
-        string obj = "cipherDetails")
-        : this(cipher, user, organizationAbility, globalSettings, obj, partial: true)
-    {
-    }
-
     protected CipherDetailsResponseModel(
         CipherDetailsWithCollections cipher,
         User user,
         OrganizationAbility? organizationAbility,
-        GlobalSettings globalSettings,
-        string obj,
-        bool partial)
-        : base(cipher, user, organizationAbility, globalSettings, obj, partial)
+        string obj)
+        : base(cipher, user, organizationAbility, obj)
     {
         CollectionIds = cipher.CollectionIds ?? [];
     }
@@ -307,18 +319,76 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public IEnumerable<Guid> CollectionIds { get; set; }
 }
 
-public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
+/// <summary>The reduced-data counterpart of <see cref="CipherDetailsResponseModel"/>.</summary>
+public sealed class PartialCipherDetailsResponseModel : CipherDetailsResponseModel
 {
-    public CipherMiniDetailsResponseModel(Cipher cipher, GlobalSettings globalSettings,
-        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, bool orgUseTotp, string obj = "cipherMiniDetails")
-        : this(cipher, globalSettings, collectionCiphers, orgUseTotp, obj, partial: true)
+    public PartialCipherDetailsResponseModel(
+        CipherDetails cipher,
+        User user,
+        OrganizationAbility? organizationAbility,
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers,
+        string obj = "cipherDetails")
+        : base(cipher, user, organizationAbility, collectionCiphers, obj)
     {
+        PopulatePartialData(cipher);
     }
 
-    protected CipherMiniDetailsResponseModel(Cipher cipher, GlobalSettings globalSettings,
-        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, bool orgUseTotp,
-        string obj, bool partial)
-        : base(cipher, globalSettings, orgUseTotp, obj, partial)
+    public PartialCipherDetailsResponseModel(
+        CipherDetails cipher,
+        User user,
+        OrganizationAbility? organizationAbility,
+        IEnumerable<CollectionCipher> collectionCiphers,
+        string obj = "cipherDetails")
+        : base(cipher, user, organizationAbility, collectionCiphers, obj)
+    {
+        PopulatePartialData(cipher);
+    }
+
+    public PartialCipherDetailsResponseModel(
+        CipherDetailsWithCollections cipher,
+        User user,
+        OrganizationAbility? organizationAbility,
+        string obj = "cipherDetails")
+        : base(cipher, user, organizationAbility, obj)
+    {
+        PopulatePartialData(cipher);
+    }
+}
+
+/// <summary>The full-data counterpart of <see cref="CipherDetailsResponseModel"/>.</summary>
+public sealed class FullCipherDetailsResponseModel : CipherDetailsResponseModel
+{
+    public FullCipherDetailsResponseModel(FullCipherAccess access, CipherDetails cipher, User user,
+        OrganizationAbility? organizationAbility, GlobalSettings globalSettings,
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers,
+        string obj = "cipherDetails")
+        : base(cipher, user, organizationAbility, collectionCiphers, obj)
+    {
+        PopulateFullData(access, cipher, globalSettings);
+    }
+
+    public FullCipherDetailsResponseModel(FullCipherAccess access, CipherDetails cipher, User user,
+        OrganizationAbility? organizationAbility, GlobalSettings globalSettings,
+        IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails")
+        : base(cipher, user, organizationAbility, collectionCiphers, obj)
+    {
+        PopulateFullData(access, cipher, globalSettings);
+    }
+
+    public FullCipherDetailsResponseModel(FullCipherAccess access, CipherDetailsWithCollections cipher,
+        User user, OrganizationAbility? organizationAbility, GlobalSettings globalSettings,
+        string obj = "cipherDetails")
+        : base(cipher, user, organizationAbility, obj)
+    {
+        PopulateFullData(access, cipher, globalSettings);
+    }
+}
+
+public abstract class CipherMiniDetailsResponseModel : CipherMiniResponseModel
+{
+    protected CipherMiniDetailsResponseModel(Cipher cipher,
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, bool orgUseTotp, string obj)
+        : base(cipher, orgUseTotp, obj)
     {
         if (collectionCiphers?.TryGetValue(cipher.Id, out var collectionCipher) ?? false)
         {
@@ -330,109 +400,45 @@ public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         }
     }
 
-    public CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
-        GlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMiniDetails")
-        : this(cipher, globalSettings, orgUseTotp, obj, partial: true)
-    {
-    }
-
     protected CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
-        GlobalSettings globalSettings, bool orgUseTotp, string obj, bool partial)
-        : base(cipher, globalSettings, orgUseTotp, obj, partial)
+        bool orgUseTotp, string obj)
+        : base(cipher, orgUseTotp, obj)
     {
         CollectionIds = cipher.CollectionIds ?? [];
-    }
-
-    public CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
-        GlobalSettings globalSettings, string obj = "cipherMiniDetails")
-        : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj)
-    {
-        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
     }
 
     public IEnumerable<Guid> CollectionIds { get; set; }
 }
 
 /// <summary>
-/// The full-data counterpart of <see cref="CipherMiniResponseModel"/>. Constructing one requires a
-/// <see cref="FullCipherAccess"/> witness authorizing the cipher, so secret data can only be emitted by
-/// a path that has passed through the leasing gate.
+/// The full-data counterpart of <see cref="CipherMiniDetailsResponseModel"/>. There is no reduced
+/// counterpart: every path that builds the mini-details shape is authorized through organization-wide
+/// permissions rather than collection membership, so nothing reaching it is leasing-gated.
 /// </summary>
-public class FullCipherMiniResponseModel : CipherMiniResponseModel
-{
-    public FullCipherMiniResponseModel(FullCipherAccess access, Cipher cipher,
-        IGlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMini")
-        : base(cipher, globalSettings, orgUseTotp, obj, partial: false)
-    {
-        PopulateFullData(access, cipher);
-    }
-}
-
-/// <summary>The full-data counterpart of <see cref="CipherResponseModel"/>.</summary>
-public class FullCipherResponseModel : CipherResponseModel
-{
-    public FullCipherResponseModel(FullCipherAccess access, CipherDetails cipher, User user,
-        OrganizationAbility? organizationAbility, IGlobalSettings globalSettings, string obj = "cipher")
-        : base(cipher, user, organizationAbility, globalSettings, obj, partial: false)
-    {
-        PopulateFullData(access, cipher);
-    }
-}
-
-/// <summary>The full-data counterpart of <see cref="CipherDetailsResponseModel"/>.</summary>
-public class FullCipherDetailsResponseModel : CipherDetailsResponseModel
-{
-    public FullCipherDetailsResponseModel(FullCipherAccess access, CipherDetails cipher, User user,
-        OrganizationAbility? organizationAbility, GlobalSettings globalSettings,
-        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers,
-        string obj = "cipherDetails")
-        : base(cipher, user, organizationAbility, globalSettings, collectionCiphers, obj, partial: false)
-    {
-        PopulateFullData(access, cipher);
-    }
-
-    public FullCipherDetailsResponseModel(FullCipherAccess access, CipherDetails cipher, User user,
-        OrganizationAbility? organizationAbility, GlobalSettings globalSettings,
-        IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails")
-        : base(cipher, user, organizationAbility, globalSettings, collectionCiphers, obj, partial: false)
-    {
-        PopulateFullData(access, cipher);
-    }
-
-    public FullCipherDetailsResponseModel(FullCipherAccess access, CipherDetailsWithCollections cipher,
-        User user, OrganizationAbility? organizationAbility, GlobalSettings globalSettings,
-        string obj = "cipherDetails")
-        : base(cipher, user, organizationAbility, globalSettings, obj, partial: false)
-    {
-        PopulateFullData(access, cipher);
-    }
-}
-
-/// <summary>The full-data counterpart of <see cref="CipherMiniDetailsResponseModel"/>.</summary>
-public class FullCipherMiniDetailsResponseModel : CipherMiniDetailsResponseModel
+public sealed class FullCipherMiniDetailsResponseModel : CipherMiniDetailsResponseModel
 {
     public FullCipherMiniDetailsResponseModel(FullCipherAccess access, Cipher cipher,
         GlobalSettings globalSettings,
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, bool orgUseTotp,
         string obj = "cipherMiniDetails")
-        : base(cipher, globalSettings, collectionCiphers, orgUseTotp, obj, partial: false)
+        : base(cipher, collectionCiphers, orgUseTotp, obj)
     {
-        PopulateFullData(access, cipher);
+        PopulateFullData(access, cipher, globalSettings);
     }
 
     public FullCipherMiniDetailsResponseModel(FullCipherAccess access,
         CipherOrganizationDetailsWithCollections cipher, GlobalSettings globalSettings,
         bool orgUseTotp, string obj = "cipherMiniDetails")
-        : base(cipher, globalSettings, orgUseTotp, obj, partial: false)
+        : base(cipher, orgUseTotp, obj)
     {
-        PopulateFullData(access, cipher);
+        PopulateFullData(access, cipher, globalSettings);
     }
 
     public FullCipherMiniDetailsResponseModel(FullCipherAccess access,
         CipherOrganizationDetailsWithCollections cipher, GlobalSettings globalSettings,
         string obj = "cipherMiniDetails")
-        : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj, partial: false)
+        : base(cipher, cipher.OrganizationUseTotp, obj)
     {
-        PopulateFullData(access, cipher);
+        PopulateFullData(access, cipher, globalSettings);
     }
 }
