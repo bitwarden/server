@@ -3,11 +3,8 @@
 namespace Bit.Api.AdminConsole.Authorization.OrganizationUsers;
 
 /// <summary>
-/// The outcome of an <see cref="IOrganizationUserAuthorizationService"/> check. <see cref="UnauthorizedPostedCollectionIds"/>
-/// rejects the whole request; <see cref="ReadonlyCurrentCollectionIds"/> identifies the target's existing
-/// collection access the caller can't edit, so it can be preserved instead of overwritten.
-/// <see cref="CanEditOwnGroups"/> is not part of <see cref="IsSuccess"/> - unlike the collection checks, it
-/// doesn't reject the request, it tells the caller whether to drop the posted group changes silently.
+/// The outcome of an <see cref="IOrganizationUserAuthorizationService"/> check. <see cref="CanEditOwnGroups"/> is
+/// deliberately not part of <see cref="IsSuccess"/> - it tells the caller whether to drop the posted group changes.
 /// </summary>
 public record OrganizationUserAuthorizationResult(
     bool CanAddSelfToCollection,

@@ -35,8 +35,7 @@ public class OrganizationUserAuthorizationService(
         var editingSelf = currentContext.UserId == organizationUser.UserId;
         var currentAccessIds = currentAccess.Select(c => c.Id).ToHashSet();
 
-        // A self-editing user can't add themselves to collections they don't already have access to,
-        // unless admins can access all collections.
+        // A self-editing user can't add themselves to collections they don't already have access to.
         var canAddSelfToCollection = !editingSelf
             || allowAdminAccessToAllCollectionItems
             || postedCollectionIds.All(currentAccessIds.Contains);

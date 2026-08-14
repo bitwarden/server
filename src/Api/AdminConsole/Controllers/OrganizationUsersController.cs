@@ -471,8 +471,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Behaves exactly like <see cref="Put"/>, but authorizes collection and group access via
-    /// <see cref="IOrganizationUserAuthorizationService"/> instead of the inline ASP.NET IAuthorizationHandler checks.
+    /// Behaves like <see cref="Put"/>, but authorizes via <see cref="IOrganizationUserAuthorizationService"/>.
     /// </summary>
     [HttpPatch("{id}")]
     [Authorize<ManageUsersRequirement>]
@@ -538,8 +537,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Merges the posted collection access with the target's preserved (readonly) current collection access, and
-    /// excludes default user collections, which are managed separately.
+    /// Merges the posted collection access with preserved readonly access, excluding default user collections.
     /// </summary>
     private async Task<List<CollectionAccessSelection>> BuildCollectionAccessToSaveAsync(
         OrganizationUserUpdateRequestModel model, ICollection<CollectionAccessSelection> currentAccess, IReadOnlySet<Guid> readonlyCollectionIds)

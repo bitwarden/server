@@ -3,9 +3,7 @@
 namespace Bit.Api.AdminConsole.Authorization.OrganizationUsers;
 
 /// <summary>
-/// Decides whether the caller may update a single organization user - their collection access and, separately,
-/// their group memberships - in one call. Backs <c>OrganizationUsersController</c>'s single-user-scoped Update
-/// operation.
+/// Decides whether the caller may update an organization user's collection access and group memberships.
 /// </summary>
 public interface IOrganizationUserAuthorizationService
 {
