@@ -5,7 +5,11 @@ using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
+using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.ModifyGroupAccess;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.ModifyUserAccess;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -21,7 +25,7 @@ namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{orgId}/collections")]
 [Authorize("Application")]
-public class CollectionsController : Controller
+public class CollectionsController : BaseAdminConsoleController
 {
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICreateCollectionCommand _createCollectionCommand;
@@ -32,6 +36,11 @@ public class CollectionsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
     private readonly IProviderService _providerService;
+    private readonly ICollectionAuthorizationService _collectionAuthorizationService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IModifyCollectionUserAccessCommand _modifyCollectionUserAccessCommand;
+    private readonly IModifyCollectionGroupAccessCommand _modifyCollectionGroupAccessCommand;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
@@ -42,7 +51,12 @@ public class CollectionsController : Controller
         IAuthorizationService authorizationService,
         ICurrentContext currentContext,
         IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand,
-        IProviderService providerService)
+        IProviderService providerService,
+        ICollectionAuthorizationService collectionAuthorizationService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
+        IOrganizationUserRepository organizationUserRepository,
+        IModifyCollectionUserAccessCommand modifyCollectionUserAccessCommand,
+        IModifyCollectionGroupAccessCommand modifyCollectionGroupAccessCommand)
     {
         _collectionRepository = collectionRepository;
         _createCollectionCommand = createCollectionCommand;
@@ -53,6 +67,11 @@ public class CollectionsController : Controller
         _currentContext = currentContext;
         _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
         _providerService = providerService;
+        _collectionAuthorizationService = collectionAuthorizationService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
+        _organizationUserRepository = organizationUserRepository;
+        _modifyCollectionUserAccessCommand = modifyCollectionUserAccessCommand;
+        _modifyCollectionGroupAccessCommand = modifyCollectionGroupAccessCommand;
     }
 
     [HttpGet("{id}")]
@@ -223,6 +242,73 @@ public class CollectionsController : Controller
     public async Task<CollectionResponseModel> PostPut(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
         return await Put(orgId, id, model);
+    }
+
+    /// <summary>
+    /// Updates a collection's metadata alongside add/update/remove deltas for its access, rather than
+    /// the full-list-replace semantics of <see cref="Put"/>.
+    /// </summary>
+    [HttpPatch("{id}")]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.PM12473CollectionUserAccessEndpoint)]
+    public async Task<IResult> PatchWithDelta(Guid orgId, Guid id, [FromBody] UpdateCollectionWithDeltaRequestModel model)
+    {
+        var authorizationResult = await _collectionAuthorizationService.AuthorizeUpdateAsync(orgId, id);
+        if (!authorizationResult.IsSuccess)
+        {
+            throw new NotFoundException();
+        }
+
+        // The authorization service's fetch is internal to it; persistence needs its own copy of the
+        // collection's current access details to build the delta commands below.
+        var (collection, accessDetails) = await _collectionRepository.GetByIdWithAccessAsync(id);
+        if (collection is null || collection.OrganizationId != orgId)
+        {
+            throw new NotFoundException();
+        }
+
+        var userTargets = new[] { new CollectionUserAccessTarget(collection, accessDetails) };
+        var groupTargets = new[] { new CollectionGroupAccessTarget(collection, accessDetails) };
+
+        var organizationAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId);
+        var allowAdminAccessToAllCollectionItems =
+            organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
+
+        var callerOrganizationUser = _currentContext.UserId.HasValue
+            ? await _organizationUserRepository.GetByOrganizationAsync(orgId, _currentContext.UserId.Value)
+            : null;
+
+        if (string.IsNullOrEmpty(collection.DefaultUserCollectionEmail) && !string.IsNullOrWhiteSpace(model.Name))
+        {
+            collection.Name = model.Name;
+        }
+        collection.ExternalId = model.ExternalId;
+
+        await _updateCollectionCommand.UpdateAsync(collection);
+
+        var userRequest = new ModifyCollectionUserAccessRequest(
+            userTargets,
+            model.Users.Add.Select(u => u.ToSelectionReadOnly()).ToList(),
+            model.Users.Update.Select(u => u.ToSelectionReadOnly()).ToList(),
+            model.Users.Remove.ToList(),
+            callerOrganizationUser?.Id,
+            allowAdminAccessToAllCollectionItems);
+
+        var userResult = await _modifyCollectionUserAccessCommand.ModifyAsync(userRequest);
+        if (userResult.IsError)
+        {
+            return Handle(userResult, _ => TypedResults.NoContent());
+        }
+
+        var groupRequest = new ModifyCollectionGroupAccessRequest(
+            groupTargets,
+            model.Groups.Add.Select(g => g.ToSelectionReadOnly()).ToList(),
+            model.Groups.Update.Select(g => g.ToSelectionReadOnly()).ToList(),
+            model.Groups.Remove.ToList(),
+            callerOrganizationUser?.Id,
+            allowAdminAccessToAllCollectionItems);
+
+        var groupResult = await _modifyCollectionGroupAccessCommand.ModifyAsync(groupRequest);
+        return Handle(groupResult);
     }
 
     [HttpPost("bulk-access")]

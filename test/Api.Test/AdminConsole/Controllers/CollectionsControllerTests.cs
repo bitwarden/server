@@ -6,7 +6,10 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.ModifyGroupAccess;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.ModifyUserAccess;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -858,5 +861,132 @@ public class CollectionsControllerTests
         await sutProvider.GetDependency<IProviderService>()
             .DidNotReceive()
             .LogProviderAccessToOrganizationAsync(Arg.Any<Guid>());
+    }
+
+    private static void AllowPatchWithDeltaAuthorization(SutProvider<CollectionsController> sutProvider, Guid orgId, Guid collectionId)
+    {
+        sutProvider.GetDependency<ICollectionAuthorizationService>()
+            .AuthorizeUpdateAsync(orgId, collectionId)
+            .Returns(new CollectionAuthorizationResult(true, true, true));
+    }
+
+    private static CollectionAccessDetails MakeAccessDetails() => new()
+    {
+        Users = new List<CollectionAccessSelection>(),
+        Groups = new List<CollectionAccessSelection>()
+    };
+
+    [Theory, BitAutoData]
+    public async Task PatchWithDelta_AuthorizationFails_ThrowsNotFound(
+        Guid orgId, Guid collectionId, UpdateCollectionWithDeltaRequestModel model,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICollectionAuthorizationService>()
+            .AuthorizeUpdateAsync(orgId, collectionId)
+            .Returns(new CollectionAuthorizationResult(false, true, true));
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.PatchWithDelta(orgId, collectionId, model));
+
+        await sutProvider.GetDependency<IUpdateCollectionCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(default);
+        await sutProvider.GetDependency<IModifyCollectionUserAccessCommand>().DidNotReceiveWithAnyArgs()
+            .ModifyAsync(default);
+        await sutProvider.GetDependency<IModifyCollectionGroupAccessCommand>().DidNotReceiveWithAnyArgs()
+            .ModifyAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PatchWithDelta_AuthorizedButCollectionNotFound_ThrowsNotFound(
+        Guid orgId, Guid collectionId, UpdateCollectionWithDeltaRequestModel model,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        // Defensive guard: the authorization service already fetched the collection and returned
+        // authorized, but the persistence-side fetch comes up empty (e.g. a delete raced in between).
+        AllowPatchWithDeltaAuthorization(sutProvider, orgId, collectionId);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdWithAccessAsync(collectionId)
+            .Returns(new Tuple<Collection, CollectionAccessDetails>(null, MakeAccessDetails()));
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.PatchWithDelta(orgId, collectionId, model));
+
+        await sutProvider.GetDependency<IUpdateCollectionCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PatchWithDelta_AllChecksSucceed_UpdatesMetadataAndBothDeltas(
+        Guid orgId, Guid collectionId, Guid addUserId, Guid addGroupId,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        var collection = new Collection
+        {
+            Id = collectionId,
+            OrganizationId = orgId,
+            Name = "original-name",
+            ExternalId = "original-external"
+        };
+        var accessDetails = MakeAccessDetails();
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdWithAccessAsync(collectionId)
+            .Returns(new Tuple<Collection, CollectionAccessDetails>(collection, accessDetails));
+
+        AllowPatchWithDeltaAuthorization(sutProvider, orgId, collectionId);
+
+        sutProvider.GetDependency<IModifyCollectionUserAccessCommand>()
+            .ModifyAsync(Arg.Any<ModifyCollectionUserAccessRequest>())
+            .Returns(new CommandResult(new OneOf.Types.None()));
+        sutProvider.GetDependency<IModifyCollectionGroupAccessCommand>()
+            .ModifyAsync(Arg.Any<ModifyCollectionGroupAccessRequest>())
+            .Returns(new CommandResult(new OneOf.Types.None()));
+
+        var model = new UpdateCollectionWithDeltaRequestModel
+        {
+            ExternalId = "updated-external",
+            Users = new CollectionUserAccessDeltaRequestModel
+            {
+                Add = [new SelectionReadOnlyRequestModel { Id = addUserId, Manage = true }]
+            },
+            Groups = new CollectionGroupAccessDeltaRequestModel
+            {
+                Add = [new SelectionReadOnlyRequestModel { Id = addGroupId, Manage = true }]
+            }
+        };
+
+        var result = await sutProvider.Sut.PatchWithDelta(orgId, collectionId, model);
+
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NoContent>(result);
+        await sutProvider.GetDependency<IUpdateCollectionCommand>().Received(1)
+            .UpdateAsync(Arg.Is<Collection>(c => c.ExternalId == "updated-external"));
+        await sutProvider.GetDependency<IModifyCollectionUserAccessCommand>().Received(1)
+            .ModifyAsync(Arg.Is<ModifyCollectionUserAccessRequest>(r => r.Add.Any(s => s.Id == addUserId)));
+        await sutProvider.GetDependency<IModifyCollectionGroupAccessCommand>().Received(1)
+            .ModifyAsync(Arg.Is<ModifyCollectionGroupAccessRequest>(r => r.Add.Any(s => s.Id == addGroupId)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PatchWithDelta_UserDeltaCommandFails_SkipsGroupDelta(
+        Guid orgId, Guid collectionId, UpdateCollectionWithDeltaRequestModel model,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        var collection = new Collection { Id = collectionId, OrganizationId = orgId };
+        var accessDetails = MakeAccessDetails();
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdWithAccessAsync(collectionId)
+            .Returns(new Tuple<Collection, CollectionAccessDetails>(collection, accessDetails));
+
+        AllowPatchWithDeltaAuthorization(sutProvider, orgId, collectionId);
+        sutProvider.GetDependency<IModifyCollectionUserAccessCommand>()
+            .ModifyAsync(Arg.Any<ModifyCollectionUserAccessRequest>())
+            .Returns(new CommandResult(new DuplicateOrganizationUserId()));
+
+        var result = await sutProvider.Sut.PatchWithDelta(orgId, collectionId, model);
+
+        var badRequest = Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.BadRequest<Bit.Core.Models.Api.ErrorResponseModel>>(result);
+        Assert.Equal(new DuplicateOrganizationUserId().Message, badRequest.Value!.Message);
+
+        await sutProvider.GetDependency<IModifyCollectionGroupAccessCommand>().DidNotReceiveWithAnyArgs()
+            .ModifyAsync(default);
     }
 }
