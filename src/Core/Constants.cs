@@ -147,6 +147,7 @@ public static partial class FeatureFlagKeys
     public const string PM34423StagedStatus = "pm-34423-staged-status";
     public const string PM12473CollectionUserAccessEndpoint = "pm-12473-collection-user-access-endpoint";
     public const string GroupsAuthorizationServiceEndpoint = "groups-authorization-service-endpoint";
+    public const string OrganizationUserAuthorizationServiceEndpoint = "organization-user-authorization-service-endpoint";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";

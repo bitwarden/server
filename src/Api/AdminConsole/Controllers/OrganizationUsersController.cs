@@ -6,6 +6,7 @@ using System.Net;
 using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.OrganizationUsers;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -97,6 +98,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommandVNext;
     private readonly IGlobalSettings _globalSettings;
+    private readonly IOrganizationUserAuthorizationService _organizationUserAuthorizationService;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -135,7 +137,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IGetOrganizationInviteCommand getOrganizationInviteCommand,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        IOrganizationUserAuthorizationService organizationUserAuthorizationService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -175,6 +178,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _featureService = featureService;
         _updateOrganizationUserCommandVNext = updateOrganizationUserCommandVNext;
         _globalSettings = globalSettings;
+        _organizationUserAuthorizationService = organizationUserAuthorizationService;
     }
 
     [HttpGet("{id}")]
@@ -464,6 +468,96 @@ public class OrganizationUsersController : BaseAdminConsoleController
             collectionAccessToSave, groupsToSave, model.DefaultUserCollectionName);
 
         return TypedResults.Ok();
+    }
+
+    /// <summary>
+    /// Behaves like <see cref="Put"/>, but authorizes via <see cref="IOrganizationUserAuthorizationService"/>.
+    /// </summary>
+    [HttpPatch("{id}")]
+    [Authorize<ManageUsersRequirement>]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.OrganizationUserAuthorizationServiceEndpoint)]
+    public async Task<IResult> PatchWithNewAuthorization([BindOrganization] Organization organization, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
+    {
+        var (organizationUser, currentAccess) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
+
+        if (organizationUser == null || organizationUser.OrganizationId != organization.Id)
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var existingUserType = organizationUser.Type;
+
+        var postedCollectionIds = model.Collections.Select(c => c.Id).ToList();
+        var authorizationResult = await _organizationUserAuthorizationService.AuthorizeUpdateAsync(organization.Id, id, postedCollectionIds);
+
+        if (!authorizationResult.CanAddSelfToCollection)
+        {
+            throw new BadRequestException("You cannot add yourself to a collection.");
+        }
+
+        if (authorizationResult.UnauthorizedPostedCollectionIds.Count > 0)
+        {
+            throw new NotFoundException();
+        }
+
+        var groupsToSave = authorizationResult.CanEditOwnGroups ? model.Groups : null;
+        var collectionAccessToSave = await BuildCollectionAccessToSaveAsync(model, currentAccess, authorizationResult.ReadonlyCurrentCollectionIds);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp))
+        {
+            var actingContext = _currentContext.GetOrganization(organization.Id);
+
+            var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
+                organizationUser,
+                organization,
+                model.Type.Value,
+                model.Permissions,
+                model.AccessSecretsManager,
+                model.AccessPam,
+                collectionAccessToSave,
+                groupsToSave,
+                model.Email,
+                model.Name,
+                model.DefaultUserCollectionName,
+                new StandardUser(
+                    userId,
+                    await _currentContext.OrganizationOwner(organization.Id),
+                    actingContext?.Type,
+                    actingContext?.Permissions));
+
+            var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
+            return Handle(result);
+        }
+
+        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
+            collectionAccessToSave, groupsToSave, model.DefaultUserCollectionName);
+
+        return TypedResults.Ok();
+    }
+
+    /// <summary>
+    /// Merges the posted collection access with preserved readonly access, excluding default user collections.
+    /// </summary>
+    private async Task<List<CollectionAccessSelection>> BuildCollectionAccessToSaveAsync(
+        OrganizationUserUpdateRequestModel model, ICollection<CollectionAccessSelection> currentAccess, IReadOnlySet<Guid> readonlyCollectionIds)
+    {
+        var postedCollections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
+        var currentCollections = await _collectionRepository.GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
+
+        var defaultCollectionIds = postedCollections
+            .Concat(currentCollections)
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToHashSet();
+
+        var editedCollectionAccess = model.Collections.Select(c => c.ToSelectionReadOnly());
+        var readonlyCollectionAccess = currentAccess.Where(ca => readonlyCollectionIds.Contains(ca.Id));
+
+        return editedCollectionAccess
+            .Concat(readonlyCollectionAccess)
+            .Where(ac => !defaultCollectionIds.Contains(ac.Id))
+            .ToList();
     }
 
     /// <summary>
