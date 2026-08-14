@@ -3,8 +3,7 @@
 namespace Bit.Api.AdminConsole.Authorization.Collections;
 
 /// <summary>
-/// Decides whether the caller may update a single collection - its own metadata, its user access, and its
-/// group access - in one call. Backs <c>CollectionsController</c>'s single-collection-scoped Update operation.
+/// Decides whether the caller may update a collection's metadata, user access, and group access.
 /// </summary>
 public interface ICollectionAuthorizationService
 {
