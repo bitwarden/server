@@ -7,7 +7,7 @@ namespace Bit.Core.Test.Billing.Extensions;
 public class DiscountExtensionsTests
 {
     private static Discount CustomerDiscount(string couponId, bool valid = true) =>
-        new() { Coupon = new Coupon { Id = couponId, Valid = valid } };
+        new() { Source = new DiscountSource { Coupon = new Coupon { Id = couponId, Valid = valid } } };
 
     [Fact]
     public void MergeDiscountCouponIds_CustomerDiscountOnly_ReturnsCustomerCoupon()
@@ -75,7 +75,7 @@ public class DiscountExtensionsTests
     [Fact]
     public void MergeDiscountCouponIds_CustomerDiscountWithNullCoupon_NoThrow_NoEntry()
     {
-        var result = DiscountExtensions.MergeDiscountCouponIds(new Discount { Coupon = null }, ["a"]);
+        var result = DiscountExtensions.MergeDiscountCouponIds(new Discount { Source = null }, ["a"]);
 
         Assert.Equal(["a"], result);
     }
@@ -84,7 +84,7 @@ public class DiscountExtensionsTests
     public void MergeDiscountCouponIds_CustomerCouponWithNullId_NoThrow_NoEntry()
     {
         var result = DiscountExtensions.MergeDiscountCouponIds(
-            new Discount { Coupon = new Coupon { Id = null } }, ["a"]);
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = null } } }, ["a"]);
 
         Assert.Equal(["a"], result);
     }

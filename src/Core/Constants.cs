@@ -111,6 +111,7 @@ public static class Constants
     public static class BrowserExtensions
     {
         public const string ChromeId = "chrome-extension://nngceckbapebfimnlniiiahkandclblb/";
+        public const string ChromeBetaId = "chrome-extension://hccnnhgbibccigepcmlgppchkpfdophk/";
         public const string EdgeId = "chrome-extension://jbkfoedolllekgbhcbcoahefnbanhhlh/";
         public const string OperaId = "chrome-extension://ccnckbpmaceehanjmeomladnmlffdjgn/";
     }
@@ -175,6 +176,7 @@ public static partial class FeatureFlagKeys
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
     public const string EnableAutofillTriage = "enable-autofill-triage";
     public const string PM39071_DefaultPasswordManagerPrompt = "pm-39071-default-password-manager-prompt";
+    public const string LitInlineMenuComponents = "lit-inline-menu-components";
 
     /* Desktop Native Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
