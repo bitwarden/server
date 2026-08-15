@@ -640,6 +640,7 @@ public static class ServiceCollectionExtensions
                 options.Origins = new HashSet<string> {
                     globalSettings.BaseServiceUri.Vault,
                     Constants.BrowserExtensions.ChromeId,
+                    Constants.BrowserExtensions.ChromeBetaId,
                     Constants.BrowserExtensions.EdgeId,
                     Constants.BrowserExtensions.OperaId
                  };
