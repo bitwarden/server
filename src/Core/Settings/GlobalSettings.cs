@@ -577,10 +577,29 @@ public class GlobalSettings : IGlobalSettings
 
         public CertificateInfo[] UnprotectCertificates { get; set; } = [];
 
+        /// <summary>
+        /// Stages a new protection certificate so its secret (Password) can be deployed before
+        /// the non-secret (FileName) without causing a startup failure. When Enabled is false the
+        /// entry is completely ignored. When Enabled is true the pending cert becomes the active
+        /// protection certificate and BlobName/CertificatePassword are ignored entirely, which
+        /// means they can be updated to match the new cert at any time without coordination.
+        /// The old protection certificate must be added to UnprotectCertificates explicitly
+        /// before activating PendingProtection to keep existing keys readable.
+        /// </summary>
+        public PendingProtectionSettings? PendingProtection { get; set; }
+
         public class CertificateInfo
         {
             public required string FileName { get; set; }
             public required string Password { get; set; }
+            public bool Enabled { get; set; } = true;
+        }
+
+        public class PendingProtectionSettings
+        {
+            public string? FileName { get; set; }
+            public string? Password { get; set; }
+            public bool Enabled { get; set; }
         }
     }
 #nullable disable

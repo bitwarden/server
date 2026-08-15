@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -15,7 +16,16 @@ public class CipherRequestModel
     /// <summary>
     /// The Id of the user that encrypted the cipher. It should always represent a UserId.
     /// </summary>
+    [Obsolete("Use EncryptedByKeyId instead, which identifies the key the cipher was encrypted with.")]
     public Guid? EncryptedFor { get; set; }
+
+    /// <summary>
+    /// Hex-encoded key id of the user key the client held when it encrypted this cipher. Absent for
+    /// clients that predate the field. When present, it must match the acting user's current user key id.
+    /// </summary>
+    [KeyId]
+    public string EncryptedByKeyId { get; set; }
+
     public CipherType Type { get; set; }
 
     [StringLength(36)]
@@ -66,6 +76,12 @@ public class CipherRequestModel
     public string Data { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
     public DateTime? ArchivedDate { get; set; }
+
+    /// <summary>
+    /// The key the client encrypted this cipher with, or null when it did not supply one.
+    /// </summary>
+    public KeyId GetEncryptedByKeyId() =>
+        KeyId.FromHexEncodedString(string.IsNullOrEmpty(EncryptedByKeyId) ? null : EncryptedByKeyId);
 
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
     {

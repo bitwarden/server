@@ -175,6 +175,7 @@ public static partial class FeatureFlagKeys
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
     public const string EnableAutofillTriage = "enable-autofill-triage";
     public const string PM39071_DefaultPasswordManagerPrompt = "pm-39071-default-password-manager-prompt";
+    public const string LitInlineMenuComponents = "lit-inline-menu-components";
 
     /* Desktop Native Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
@@ -192,6 +193,8 @@ public static partial class FeatureFlagKeys
     public const string PM34515_BrowserDesktopCheckout = "pm-34515-browser-desktop-checkout";
     public const string DebugDisableSelfHostPremiumCheck = "debug-disable-self-host-premium-check";
     public const string PM35215_BusinessPlanPriceMigration = "pm-35215-business-plan-price-migration";
+    public const string PM38333_AnnualBillingSavings = "pm-38333-annual-billing-savings";
+    public const string PM38728_SendInvoicePriceMigration = "pm-38728-send-invoice-price-migration";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";

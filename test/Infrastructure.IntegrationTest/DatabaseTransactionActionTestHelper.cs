@@ -21,28 +21,23 @@ public static class DatabaseTransactionActionTestHelper
         IServiceProvider serviceProvider)
     {
         var isDapper = database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf;
-        var connection = isDapper
-            ? new SqlConnection(database.ConnectionString)
-            : serviceProvider.GetRequiredService<DatabaseContext>().Database.GetDbConnection();
 
-        try
+        // The scope owns the Entity Framework connection and closes it.
+        // A DatabaseContext from the root provider keeps the connection open until the test ends.
+        await using var dapperConnection = isDapper ? new SqlConnection(database.ConnectionString) : null;
+        await using var scope = serviceProvider.CreateAsyncScope();
+
+        var connection = dapperConnection
+            ?? scope.ServiceProvider.GetRequiredService<DatabaseContext>().Database.GetDbConnection();
+
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        foreach (var action in actions)
         {
-            await connection.OpenAsync();
-            await using var transaction = await connection.BeginTransactionAsync();
-
-            foreach (var action in actions)
-            {
-                await action(connection, transaction);
-            }
-
-            await transaction.CommitAsync();
+            await action(connection, transaction);
         }
-        finally
-        {
-            if (isDapper)
-            {
-                await connection.DisposeAsync();
-            }
-        }
+
+        await transaction.CommitAsync();
     }
 }

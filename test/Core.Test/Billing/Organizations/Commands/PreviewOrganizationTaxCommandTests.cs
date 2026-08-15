@@ -5,6 +5,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
@@ -21,13 +22,15 @@ public class PreviewOrganizationTaxCommandTests
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ISubscriptionDiscountService _subscriptionDiscountService = Substitute.For<ISubscriptionDiscountService>();
+    private readonly ITaxService _taxService = Substitute.For<ITaxService>();
     private readonly PreviewOrganizationTaxCommand _command;
     private readonly User _user;
 
     public PreviewOrganizationTaxCommandTests()
     {
         _user = new User { Id = Guid.NewGuid(), Email = "test@example.com" };
-        _command = new PreviewOrganizationTaxCommand(_logger, _pricingClient, _stripeAdapter, _subscriptionDiscountService);
+        _command = new PreviewOrganizationTaxCommand(_logger, _pricingClient, _stripeAdapter,
+            _subscriptionDiscountService, _taxService);
     }
 
     #region Subscription Purchase
@@ -169,8 +172,10 @@ public class PreviewOrganizationTaxCommandTests
         {
             Country = "GB",
             PostalCode = "SW1A 1AA",
-            TaxId = new TaxID("gb_vat", "123456789")
+            TaxId = new TaxID(TaxIdType.EUVAT, "123456789")
         };
+
+        _taxService.GetStripeTaxCode("GB", "123456789").Returns("gb_vat");
 
         var plan = new EnterprisePlan(true);
         _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
@@ -281,8 +286,10 @@ public class PreviewOrganizationTaxCommandTests
         {
             Country = "ES",
             PostalCode = "28001",
-            TaxId = new TaxID(TaxIdType.SpanishNIF, "12345678Z")
+            TaxId = new TaxID(TaxIdType.EUVAT, "A12345678")
         };
+
+        _taxService.GetStripeTaxCode("ES", "A12345678").Returns(TaxIdType.SpanishNIF);
 
         var plan = new EnterprisePlan(false);
         _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
@@ -309,12 +316,108 @@ public class PreviewOrganizationTaxCommandTests
             options.CustomerDetails.Address.Country == "ES" &&
             options.CustomerDetails.Address.PostalCode == "28001" &&
             options.CustomerDetails.TaxIds.Count == 2 &&
-            options.CustomerDetails.TaxIds.Any(t => t.Type == TaxIdType.SpanishNIF && t.Value == "12345678Z") &&
-            options.CustomerDetails.TaxIds.Any(t => t.Type == TaxIdType.EUVAT && t.Value == "ES12345678Z") &&
+            options.CustomerDetails.TaxIds.Any(t => t.Type == TaxIdType.SpanishNIF && t.Value == "A12345678") &&
+            options.CustomerDetails.TaxIds.Any(t => t.Type == TaxIdType.EUVAT && t.Value == "ESA12345678") &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-enterprise-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 15 &&
             options.Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_UKTaxIdSentAsEUVAT_UsesGBVAT()
+    {
+        var billingAddress = new BillingAddress
+        {
+            Country = "GB",
+            PostalCode = "SW1A 1AA",
+            TaxId = new TaxID(TaxIdType.EUVAT, "GB123456789")
+        };
+
+        _taxService.GetStripeTaxCode("GB", "GB123456789").Returns("gb_vat");
+
+        await RunEnterpriseMonthlyPurchase(billingAddress);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxIds.Count == 1 &&
+            options.CustomerDetails.TaxIds[0].Type == "gb_vat" &&
+            options.CustomerDetails.TaxIds[0].Value == "GB123456789"));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_NorthernIrelandTaxId_UsesEUVAT()
+    {
+        var billingAddress = new BillingAddress
+        {
+            Country = "GB",
+            PostalCode = "BT1 5GS",
+            TaxId = new TaxID("gb_vat", "XI123456789")
+        };
+
+        _taxService.GetStripeTaxCode("GB", "XI123456789").Returns(TaxIdType.EUVAT);
+
+        await RunEnterpriseMonthlyPurchase(billingAddress);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxIds.Count == 1 &&
+            options.CustomerDetails.TaxIds[0].Type == TaxIdType.EUVAT &&
+            options.CustomerDetails.TaxIds[0].Value == "XI123456789"));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_UnderivableTaxId_FallsBackToClientCodeAndWarns()
+    {
+        var billingAddress = new BillingAddress
+        {
+            Country = "MK",
+            PostalCode = "1000",
+            TaxId = new TaxID(TaxIdType.EUVAT, "MK1234567890123")
+        };
+
+        _taxService.GetStripeTaxCode("MK", "MK1234567890123").Returns((string?)null);
+
+        await RunEnterpriseMonthlyPurchase(billingAddress);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxIds.Count == 1 &&
+            options.CustomerDetails.TaxIds[0].Type == TaxIdType.EUVAT &&
+            options.CustomerDetails.TaxIds[0].Value == "MK1234567890123"));
+
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains("MK") &&
+                                    state.ToString()!.Contains(TaxIdType.EUVAT) &&
+                                    !state.ToString()!.Contains("MK1234567890123")),
+            null,
+            Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    private async Task RunEnterpriseMonthlyPurchase(BillingAddress billingAddress)
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 15,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(new EnterprisePlan(false));
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 2100 }],
+            Total = 12100
+        });
+
+        var result = await _command.Run(_user, purchase, billingAddress);
+
+        Assert.True(result.IsT0);
     }
 
     [Fact]
@@ -1607,7 +1710,7 @@ public class PreviewOrganizationTaxCommandTests
             {
                 Discount = new Discount
                 {
-                    Coupon = new Coupon { Id = "EXISTING_DISCOUNT_50" }
+                    Source = new DiscountSource { Coupon = new Coupon { Id = "EXISTING_DISCOUNT_50" } }
                 }
             }
         };
@@ -1685,7 +1788,7 @@ public class PreviewOrganizationTaxCommandTests
             Id = "sub_test123",
             Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
             Customer = new Customer { Discount = null },
-            Discounts = [new Discount { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } }]
+            Discounts = [new Discount { Source = new DiscountSource() { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } } }]
         };
 
         _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
@@ -2393,6 +2496,8 @@ public class PreviewOrganizationTaxCommandTests
             }
         };
 
+        _taxService.GetStripeTaxCode("GB", "GB123456789").Returns("gb_vat");
+
         var subscription = new Subscription
         {
             Customer = customer
@@ -2465,13 +2570,15 @@ public class PreviewOrganizationTaxCommandTests
             Address = new Address { Country = "ES", PostalCode = "28001" },
             Discount = new Discount
             {
-                Coupon = new Coupon { Id = "ENTERPRISE_DISCOUNT_20" }
+                Source = new DiscountSource { Coupon = new Coupon { Id = "ENTERPRISE_DISCOUNT_20" } }
             },
             TaxIds = new StripeList<TaxId>
             {
                 Data = [new TaxId { Type = TaxIdType.SpanishNIF, Value = "12345678Z" }]
             }
         };
+
+        _taxService.GetStripeTaxCode("ES", "12345678Z").Returns((string?)null);
 
         var subscription = new Subscription
         {
@@ -2518,6 +2625,57 @@ public class PreviewOrganizationTaxCommandTests
             options.Discounts[0].Coupon == "ENTERPRISE_DISCOUNT_20"));
     }
 
+    // The stored Stripe tax ID may already be corrupt (a GB-prefixed eu_vat). Deriving from the stored
+    // country and value corrects the preview without waiting on data remediation.
+    [Fact]
+    public async Task Run_OrganizationSubscriptionUpdate_StoredTaxIdTypedAsEUVAT_UsesGBVAT()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.EnterpriseMonthly,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123"
+        };
+
+        var update = new OrganizationSubscriptionUpdate
+        {
+            PasswordManager = new OrganizationSubscriptionUpdate.PasswordManagerSelections { Seats = 10 }
+        };
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new EnterprisePlan(false));
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "GB", PostalCode = "SW1A 1AA" },
+            Discount = null,
+            TaxIds = new StripeList<TaxId>
+            {
+                Data = [new TaxId { Type = TaxIdType.EUVAT, Value = "GB123456789" }]
+            }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Customer = customer });
+
+        _taxService.GetStripeTaxCode("GB", "GB123456789").Returns("gb_vat");
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
+            Total = 10000
+        });
+
+        var result = await _command.Run(organization, update);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxIds.Count == 1 &&
+            options.CustomerDetails.TaxIds[0].Type == "gb_vat" &&
+            options.CustomerDetails.TaxIds[0].Value == "GB123456789"));
+    }
+
     // PM-40440: the update-overload preview must also read subscription-level discounts, not just the customer
     // discount — same over-quote bug as the plan-change path (the fix is applied to both overloads).
     [Fact]
@@ -2550,7 +2708,7 @@ public class PreviewOrganizationTaxCommandTests
                 Address = new Address { Country = "US", PostalCode = "90210" },
                 Discount = null
             },
-            Discounts = [new Discount { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } }]
+            Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } } }]
         };
 
         _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);

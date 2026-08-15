@@ -125,7 +125,16 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     /// A key rotation will set a new key id. Account registrations will carry a key id.
     /// </summary>
     [MaxLength(32)]
+    [KeyId]
     public string? UserKeyId { get; set; }
+
+    public void SetUserKeyId(KeyId? userKeyId)
+    {
+        UserKeyId = userKeyId?.ToString();
+    }
+
+    public KeyId? GetUserKeyId() =>
+        KeyId.FromHexEncodedString(string.IsNullOrEmpty(UserKeyId) ? null : UserKeyId);
 
     public string GetMasterPasswordSalt()
     {
@@ -239,7 +248,10 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return HasV2KeyShape() && IsSecurityVersionTwo();
     }
 
-    private bool HasV2KeyShape()
+    /// <summary>
+    /// Whether the private key is wrapped with V2 encryption.
+    /// </summary>
+    public bool HasV2KeyShape()
     {
         if (string.IsNullOrEmpty(PrivateKey))
         {

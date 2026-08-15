@@ -8,6 +8,7 @@ public class Program
     {
         Host
             .CreateDefaultBuilder(args)
+            .UseBitwardenSdk()
             .ConfigureCustomAppConfiguration(args)
             .ConfigureWebHostDefaults(webBuilder =>
             {

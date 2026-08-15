@@ -90,7 +90,11 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         model.ValidateForUser(user);
 
         List<DatabaseTransactionAction> saveEncryptedDataActions = [];
-        var shouldPersistV2UpgradeToken = await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
+
+        // A manual key rotation always logs the user out, so a V2 upgrade token is never needed here.
+        // Discard anything the client submitted, which also clears a token left over from an earlier upgrade.
+        model.BaseData.V2UpgradeToken = null;
+        await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
 
         // Delegate the master password mutation (hash, wrapped user key, hint, time markers) to
         // MasterPasswordService.
@@ -113,7 +117,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
 
-        await HandlePushNotificationAsync(shouldPersistV2UpgradeToken, user);
+        await HandlePushNotificationAsync(shouldPersistV2UpgradeToken: false, user);
         return IdentityResult.Success;
     }
 
@@ -189,7 +193,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     {
         ValidatePublicKeyEncryptionKeyPairUnchanged(model, user);
 
-        if (IsV2EncryptionUser(user))
+        if (user.HasV2KeyShape())
         {
             await RotateV2AccountKeysAsync(model, user, saveEncryptedDataActions);
         }
@@ -233,14 +237,6 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             var sendsWithUpdatedDate = model.Sends.ToList().Select(s => { s.RevisionDate = now; return s; });
             saveEncryptedDataActions.Add(_sendRepository.UpdateForKeyRotation(user.Id, sendsWithUpdatedDate));
         }
-    }
-
-    private static bool IsV2EncryptionUser(User user)
-    {
-        // Returns whether the user is a V2 user based on the private key's encryption type.
-        ArgumentNullException.ThrowIfNull(user);
-        var isPrivateKeyEncryptionV2 = EncryptionParsing.GetEncryptionType(user.PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
-        return isPrivateKeyEncryptionV2;
     }
 
     private async Task ValidateVerifyingKeyUnchangedAsync(BaseRotateUserAccountKeysData model, User user)
@@ -319,10 +315,11 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         var now = DateTime.UtcNow;
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastKeyRotationDate = now;
+        user.SetUserKeyId(baseModel.NewUserKeyId);
 
         // V2UpgradeToken is only valid for V1 users transitioning to V2.
         // For V2 users the token is semantically invalid — discard it and perform a full logout.
-        var shouldPersistV2UpgradeToken = baseModel.V2UpgradeToken != null && !IsV2EncryptionUser(user);
+        var shouldPersistV2UpgradeToken = baseModel.V2UpgradeToken != null && !user.HasV2KeyShape();
         if (shouldPersistV2UpgradeToken)
         {
             user.V2UpgradeToken = baseModel.V2UpgradeToken!.ToJson();
@@ -331,6 +328,17 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         {
             user.V2UpgradeToken = null;
             user.SecurityStamp = Guid.NewGuid().ToString();
+        }
+
+        // Each membership enrolled in account recovery gets a copy of the token. Account recovery gives the admin
+        // the V1 user key, so the admin can unwrap the V2 user key from the token. The admin then re-wraps the
+        // account recovery key with it, and the member sees no prompt. Without an account recovery key the token
+        // is of no use.
+        foreach (var organizationUser in baseModel.OrganizationUsers)
+        {
+            organizationUser.V2UpgradeToken = organizationUser.IsEnrolledInAccountRecovery()
+                ? user.V2UpgradeToken
+                : null;
         }
 
         await UpdateAccountKeysAsync(baseModel, user, saveEncryptedDataActions);
