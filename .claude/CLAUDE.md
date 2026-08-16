@@ -17,6 +17,7 @@
 - **ALWAYS** encrypt sensitive data: All vault data must be encrypted at rest, in transit, and in use
 - **ALWAYS** prioritize cryptographic integrity and data protection
 - **ALWAYS** add unit tests (with mocking) for any new feature development
+- **CRITICAL**: PowerShell is the only allowed scripting language in this repo. Write all scripts intended for persistence in this repo in PowerShell. Do not introduce Bash, Python, Ruby, Node, or any other scripting language, even for something that would be shorter or more idiomatic in that language. Personal or model preference is not a valid reason to diverge from this standard. If an existing script is in another language, flag this discrepancy to the engineer and offer to rewrite in our standard scripting language. A change introducing a new scripting language should be flagged for close scrutiny.
 
 ## Project Structure
 
