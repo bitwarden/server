@@ -28,10 +28,16 @@
 
 ## Scripting
 
-New scripts in this repo are written in PowerShell (`.ps1`). Do not add new `.sh`, `.py`, `.rb`, `.js`, or other-language
-scripts, and do not add new per-platform pairs (`.sh` + `.ps1`) to accomplish the same task. This applies to standalone
-script files only, not inline command steps in other tools' config (Dockerfile `RUN`, GHA `run:`, `package.json`
-`"scripts"`). This rule does not retroactively apply to existing scripts.
+New scripts in this repo are written in PowerShell (`.ps1`) — `pwsh` is already the toolchain for `dev/migrate.ps1` and
+other developer scripts and runs cross-platform for contributors. Do not add new `.sh`, `.py`, `.rb`, `.js`, or
+other-language scripts, and do not add new per-platform pairs (`.sh` + `.ps1`) to accomplish the same task.
+
+**Exception**: container and devcontainer scripts invoked by image or lifecycle config (`entrypoint.sh`, `build.sh`,
+`.devcontainer/**/*Command.sh`) stay in POSIX shell script, because the runtime images do not ship PowerShell.
+
+This applies to standalone script files only, not inline command steps in other tools' config (Dockerfile `RUN`, GHA
+`run:`, `package.json` `"scripts"`). Existing scripts stay as they are, including when modified. The rule governs newly
+created files only.
 
 ## Security Requirements
 
