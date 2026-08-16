@@ -26,6 +26,13 @@
 - **Dev Tools**: `/dev/` - Local development helpers
 - **Configuration**: `appsettings.{Environment}.json`, `/dev/secrets.json` for local development
 
+## Scripting
+
+New scripts in this repo are written in PowerShell (`.ps1`). Do not add new `.sh`, `.py`, `.rb`, `.js`, or other-language
+scripts, and do not add new per-platform pairs (`.sh` + `.ps1`) to accomplish the same task. This applies to standalone
+script files only, not inline command steps in other tools' config (Dockerfile `RUN`, GHA `run:`, `package.json`
+`"scripts"`). This rule does not retroactively apply to existing scripts.
+
 ## Security Requirements
 
 - **Compliance**: SOC 2 Type II, SOC 3, HIPAA, ISO 27001, GDPR, CCPA
