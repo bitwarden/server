@@ -32,8 +32,13 @@ New scripts in this repo are written in PowerShell (`.ps1`) — `pwsh` is alread
 other developer scripts and runs cross-platform for contributors. Do not add new `.sh`, `.py`, `.rb`, `.js`, or
 other-language scripts, and do not add new per-platform pairs (`.sh` + `.ps1`) to accomplish the same task.
 
-**Exception**: container and devcontainer scripts invoked by image or lifecycle config (`entrypoint.sh`, `build.sh`,
-`.devcontainer/**/*Command.sh`) stay in POSIX shell script, because the runtime images do not ship PowerShell.
+**Exceptions**:
+
+- Scripts that execute inside a runtime image or devcontainer lifecycle (for example `entrypoint.sh`, `build.sh`,
+  `util/Nginx/*.sh`, `util/MsSql/*.sh`, `.devcontainer/**/*Command.sh`) stay in POSIX shell — the runtime images do not
+  ship PowerShell.
+- Scripts executed by a JavaScript-only runtime (k6 scenarios under `perf/load/`, Node build tooling and MJML components
+  under `src/Core/MailTemplates/Mjml/`) stay in JavaScript — the toolchain will not execute anything else.
 
 This applies to standalone script files only, not inline command steps in other tools' config (Dockerfile `RUN`, GHA
 `run:`, `package.json` `"scripts"`). Existing scripts stay as they are, including when modified. The rule governs newly
