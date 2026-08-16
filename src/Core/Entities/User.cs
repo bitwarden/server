@@ -248,7 +248,10 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return HasV2KeyShape() && IsSecurityVersionTwo();
     }
 
-    private bool HasV2KeyShape()
+    /// <summary>
+    /// Whether the private key is wrapped with V2 encryption.
+    /// </summary>
+    public bool HasV2KeyShape()
     {
         if (string.IsNullOrEmpty(PrivateKey))
         {
