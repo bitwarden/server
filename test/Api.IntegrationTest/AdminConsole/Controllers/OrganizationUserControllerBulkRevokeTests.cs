@@ -185,7 +185,7 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
         Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
         Assert.NotNull(content);
         Assert.Single(content.Data);
-        Assert.Contains(content.Data, r => r.Id == ownerOrgUser.Id && r.Error == "Only owners can revoke other owners.");
+        Assert.Contains(content.Data, r => r.Id == ownerOrgUser.Id && r.Error == "Only an Owner can manage another Owner's account.");
 
         var actualUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(ownerOrgUser.Id);
         Assert.NotNull(actualUser);
