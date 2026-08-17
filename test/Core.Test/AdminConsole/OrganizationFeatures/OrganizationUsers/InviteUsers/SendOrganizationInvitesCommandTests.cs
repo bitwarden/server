@@ -320,7 +320,8 @@ public class SendOrganizationInvitesCommandTests
             .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users =>
                 users.Count() == 1 &&
                 users.Single().Id == inviteWithoutEmail.Id &&
-                users.Single().Email == linkedUser.Email));
+                users.Single().Email == linkedUser.Email &&
+                users.Single().UserId == null));
 
         // Assert - both invites are sent, and the repaired user carries the recovered email
         await sutProvider.GetDependency<IMailService>().Received(1)

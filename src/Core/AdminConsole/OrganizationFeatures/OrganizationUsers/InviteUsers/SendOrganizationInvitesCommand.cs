@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -20,7 +17,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public class SendOrganizationInvitesCommand(
     IUserRepository userRepository,
-    IOrganizationUserRepository organizationUserRepository,
     ISsoConfigRepository ssoConfigurationRepository,
     IPolicyQuery policyQuery,
     IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
@@ -30,66 +26,54 @@ public class SendOrganizationInvitesCommand(
 {
     public async Task SendInvitesAsync(SendInvitesRequest request)
     {
-        var (orgUsers, orgUserEmails) = await RepairAndFilterUsersWithoutEmailAsync(request.Users);
+        var orgUsers = await ValidateAndRepairInvitedUsersAsync(request.Users);
         if (orgUsers.Count == 0)
         {
             return;
         }
 
         var inviterEmail = await GetInviterEmailAsync(request.InvitingUserId);
-        var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(
-            orgUsers, orgUserEmails, request.Organization, request.InitOrganization, inviterEmail);
+        var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(orgUsers, request.Organization, request.InitOrganization, inviterEmail);
         await mailService.SendUpdatedOrganizationInviteEmailsAsync(orgInvitesInfo);
     }
 
     /// <summary>
-    /// Self-heals invited org users missing their email, then returns the users and emails that can be invited.
+    /// Validates the list of invited organization users. If the user does not have an email address (invalid state), this
+    /// attempts to retrieve the email from an existing User record based on the UserId if it exists. If no userId is
+    /// populated, the invalid organization user is logged.
     /// </summary>
     /// <remarks>
-    /// SSO JIT provisioning can leave a corrupt invited row (Email null, UserId populated). If any invalid invited organization
-    /// users ane encountered, the record will be "healed". This is done by setting the Email on the OrgUser record so that
-    /// the token can validate when being sent back. UserId is retained and the orgUser is still technically invalid. However,
-    /// this will work for the SSO login flow.
+    /// SSO JIT provisioning can leave an invalid invited row (Email null, UserId populated). If any invalid invited organization
+    /// users are encountered, the record will be corrected. The email will be set using the existing tie to the user
+    /// (via UserId), and the UserId will be set to null. This will put the organization user into the normal invite flow.
     /// </remarks>
-    private async Task<(List<OrganizationUser> OrgUsers, List<string> Emails)> RepairAndFilterUsersWithoutEmailAsync(
-        OrganizationUser[] requestedOrgUsers)
+    private async Task<List<OrganizationUser>> ValidateAndRepairInvitedUsersAsync(OrganizationUser[] requestedOrgUsers)
     {
-        var missingEmail = requestedOrgUsers.Where(ou => string.IsNullOrWhiteSpace(ou.Email)).ToList();
+        var missingEmailUserIds = requestedOrgUsers
+            .Where(ou => string.IsNullOrWhiteSpace(ou.Email) && ou.UserId.HasValue)
+            .Select(ou => ou.UserId!.Value)
+            .ToList();
 
-        if (missingEmail.Count == 0)
-        {
-            return (requestedOrgUsers.ToList(), requestedOrgUsers.Select(ou => ou.Email).ToList());
-        }
+        var linkedUsersById = missingEmailUserIds.Count == 0
+            ? new Dictionary<Guid, User>()
+            : (await userRepository.GetManyAsync(missingEmailUserIds)).ToDictionary(user => user.Id);
 
-        var linkedUsersById = (await userRepository.GetManyAsync(
-                missingEmail.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId.Value)))
-            .ToDictionary(user => user.Id);
-
+        var invitable = new List<OrganizationUser>();
         var repaired = new List<OrganizationUser>();
-        var orgUsers = new List<OrganizationUser>();
-        var emails = new List<string>();
 
         foreach (var orgUser in requestedOrgUsers)
         {
-            if (!string.IsNullOrWhiteSpace(orgUser.Email))
+            if (ResolveEmail(orgUser, linkedUsersById) is not { } resolved)
             {
-                orgUsers.Add(orgUser);
-                emails.Add(orgUser.Email);
+                logger.LogUserInviteStateDiagnostics(orgUser);
                 continue;
             }
 
-            if (orgUser.UserId.HasValue &&
-                linkedUsersById.TryGetValue(orgUser.UserId.Value, out var linkedUser) &&
-                !string.IsNullOrWhiteSpace(linkedUser.Email))
+            invitable.Add(resolved.OrganizationUser);
+            if (resolved.ToUpdate)
             {
-                orgUser.Email = linkedUser.Email;
-                repaired.Add(orgUser);
-                orgUsers.Add(orgUser);
-                emails.Add(orgUser.Email);
-                continue;
+                repaired.Add(resolved.OrganizationUser);
             }
-
-            logger.LogUserInviteStateDiagnostics(orgUser);
         }
 
         if (repaired.Count != 0)
@@ -97,15 +81,42 @@ public class SendOrganizationInvitesCommand(
             await organizationUserRepository.ReplaceManyAsync(repaired);
         }
 
-        return (orgUsers, emails);
+        return invitable;
     }
 
-    private async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(List<OrganizationUser> orgUsers,
-        List<string> orgUserEmails, Organization organization, bool initOrganization, string inviterEmail)
+    /// <summary>
+    /// Resolves an organization user's email, repairing it from its linked user when possible.
+    /// </summary>
+    /// <returns>
+    /// An <see cref="OrganizationUserToSendInvite"/> with <c>ToUpdate</c> set when the email was repaired
+    /// (Email set, UserId cleared), or null when the org user has no usable email.
+    /// </returns>
+    private static OrganizationUserToSendInvite? ResolveEmail(OrganizationUser orgUser, Dictionary<Guid, User> linkedUsersById)
+    {
+        if (!string.IsNullOrWhiteSpace(orgUser.Email))
+        {
+            return new OrganizationUserToSendInvite(orgUser, ToUpdate: false);
+        }
+
+        if (orgUser.UserId.HasValue && linkedUsersById.TryGetValue(orgUser.UserId.Value, out var linkedUser) &&
+            !string.IsNullOrWhiteSpace(linkedUser.Email))
+        {
+            orgUser.Email = linkedUser.Email;
+            return new OrganizationUserToSendInvite(orgUser, ToUpdate: true);
+        }
+
+        return null;
+    }
+
+    private readonly record struct OrganizationUserToSendInvite(OrganizationUser OrganizationUser, bool ToUpdate);
+
+    private async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(List<OrganizationUser> orgUsers, Organization organization, bool initOrganization, string? inviterEmail)
     {
         // Email links must include information about the org and user for us to make routing decisions client side
         // Given an org user, determine if existing BW user exists
-        var existingUsers = await userRepository.GetManyByEmailsAsync(orgUserEmails);
+        var existingUsers = await userRepository.GetManyByEmailsAsync([
+            .. orgUsers.Where(ou => !string.IsNullOrWhiteSpace(ou.Email)).Select(ou => ou.Email!)
+        ]);
 
         // hash existing users emails list for O(1) lookups
         var existingUserEmailsHashSet = new HashSet<string>(existingUsers.Select(u => u.Email),
@@ -114,7 +125,7 @@ public class SendOrganizationInvitesCommand(
         // Create a dictionary of org user guids and bools for whether they have an existing BW user
         var orgUserHasExistingUserDict = orgUsers.ToDictionary(
             ou => ou.Id,
-            ou => existingUserEmailsHashSet.Contains(ou.Email)
+            ou => existingUserEmailsHashSet.Contains(ou.Email!)
         );
 
         // Determine if org has SSO enabled and if user is required to log in with SSO
@@ -149,7 +160,7 @@ public class SendOrganizationInvitesCommand(
         );
     }
 
-    private async Task<string> GetInviterEmailAsync(Guid? invitingUserId)
+    private async Task<string?> GetInviterEmailAsync(Guid? invitingUserId)
     {
         if (!invitingUserId.HasValue || invitingUserId.Value == Guid.Empty)
         {
