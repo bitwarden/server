@@ -119,6 +119,13 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
     /// System users (SCIM, Public API) skip the check entirely, as do policy-enforcement revocations (see
     /// <see cref="IsPolicyEnforcementRevocation"/>).
     /// </summary>
+    /// <remarks>
+    /// As of this writing every production call site passes either a <see cref="SystemUser"/> or a
+    /// policy-enforcement <see cref="RevocationReason"/>, so the <see cref="StandardUser"/> branch below
+    /// is not yet exercised in production. It is intentionally kept in place for an anticipated
+    /// <see cref="RevocationReason.Manual"/> caller (admin-initiated bulk revoke) that will reach this
+    /// path. Do not assume the role hierarchy check is currently enforced end-to-end.
+    /// </remarks>
     private async Task<IReadOnlyDictionary<Guid, ManageAuthorizationResult>> GetManageErrorsAsync(RevokeOrganizationUsersRequest request)
     {
         var targetsById = request.OrganizationUsers.ToDictionary(u => u.Id, u => (IOrganizationUserRole)u);
