@@ -75,12 +75,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
 
-        // Side channels the commands emit through. All three are deliberately inert in this slice: the push types the
-        // notifiers would send do not exist yet, and the audit store the emitter would write to is separate work.
-        // Registering them is not optional — every command above takes all three, so dropping one turns each PAM
-        // request into a DI resolution failure at runtime rather than a compile error.
-        services.AddScoped<IApproverInboxNotifier, NoopApproverInboxNotifier>();
-        services.AddScoped<IRequesterNotifier, NoopRequesterNotifier>();
+        // Side channels the commands emit through. The two notifiers send the RefreshApproverInbox and
+        // RefreshAccessRequest pushes; the audit emitter stays inert because the audit store it would write to is
+        // separate work. Registering them is not optional — every command above takes all three, so dropping one
+        // turns each PAM request into a DI resolution failure at runtime rather than a compile error.
+        services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
+        services.AddScoped<IRequesterNotifier, RequesterNotifier>();
         services.AddScoped<IAccessAuditEventEmitter, NoopAccessAuditEventEmitter>();
 
         services.AddPamOpenApiEndpointDataSource();

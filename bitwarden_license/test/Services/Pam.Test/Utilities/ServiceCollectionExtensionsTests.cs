@@ -84,13 +84,13 @@ public class ServiceCollectionExtensionsTests
     }
 
     /// <summary>
-    /// The audit emitter and the two notifiers are inert in this slice, which makes them easy to drop by mistake — but
-    /// every PAM command takes all three, so an unregistered one is a resolution failure on every PAM request.
+    /// The audit emitter is still inert and the two notifiers are easy to drop by mistake — but every PAM command
+    /// takes all three, so an unregistered one is a resolution failure on every PAM request.
     /// </summary>
     [Theory]
     [InlineData(typeof(IAccessAuditEventEmitter), typeof(NoopAccessAuditEventEmitter))]
-    [InlineData(typeof(IApproverInboxNotifier), typeof(NoopApproverInboxNotifier))]
-    [InlineData(typeof(IRequesterNotifier), typeof(NoopRequesterNotifier))]
+    [InlineData(typeof(IApproverInboxNotifier), typeof(ApproverInboxNotifier))]
+    [InlineData(typeof(IRequesterNotifier), typeof(RequesterNotifier))]
     public void AddPamServices_RegistersInertSeam(Type serviceType, Type expectedImplementation)
     {
         var services = new ServiceCollection().AddPamServices();
