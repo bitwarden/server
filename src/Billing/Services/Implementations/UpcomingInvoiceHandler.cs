@@ -57,20 +57,24 @@ public class UpcomingInvoiceHandler(
                     Expand =
                     [
                         "subscriptions",
-                        "subscriptions.data.customer",
-                        "subscriptions.data.discounts.coupon",
-                        "subscriptions.data.test_clock",
                         "tax",
                         "tax_ids"
                     ]
                 });
 
-        var subscription = customer.Subscriptions.FirstOrDefault();
+        var subscriptionId = customer.Subscriptions?.FirstOrDefault()?.Id;
 
-        if (subscription == null)
+        if (subscriptionId == null)
         {
             return;
         }
+
+        var subscription =
+            await stripeAdapter.GetSubscriptionAsync(subscriptionId,
+                new SubscriptionGetOptions
+                {
+                    Expand = ["customer.discount.source.coupon", "discounts.source.coupon", "test_clock"]
+                });
 
         var (organizationId, userId, providerId) = stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
 

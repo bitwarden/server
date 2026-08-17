@@ -61,7 +61,7 @@ public class UpdateBillingAddressCommand(
                         City = billingAddress.City,
                         State = billingAddress.State
                     },
-                    Expand = ["subscriptions", "subscriptions.data.test_clock"]
+                    Expand = ["subscriptions", "subscriptions.data.test_clock", "discount.source.coupon"]
                 });
 
         await EnableAutomaticTaxAsync(subscriber, customer);
@@ -84,7 +84,7 @@ public class UpdateBillingAddressCommand(
                 City = billingAddress.City,
                 State = billingAddress.State
             },
-            Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids"]
+            Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids", "discount.source.coupon"]
         };
 
         var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId, updateOptions);

@@ -682,6 +682,7 @@ public class ProviderBillingService(
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
+            BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
             CollectionMethod =
                 usePaymentMethod
                     ? CollectionMethod.ChargeAutomatically

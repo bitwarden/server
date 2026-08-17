@@ -263,6 +263,8 @@ public class GlobalSettings : IGlobalSettings
         public bool SkipDatabasePreparation { get; set; }
         public bool DisableDatabaseMaintenanceJobs { get; set; }
 
+        public int? MigrationExecutionTimeoutSeconds { get; set; }
+
         public string ConnectionString
         {
             get => _connectionString;
