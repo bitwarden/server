@@ -3,13 +3,15 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// An <see cref="Entities.AccessRequest"/> as reads return it: derived statuses, the produced lease, the decision log,
-/// and the requester's denormalized identity.
+/// A lease request projected for the approver inbox: every <see cref="Entities.AccessRequest"/> field plus the
+/// denormalized requester identity the client needs, the lease the request produced (if any), and the human resolver's
+/// identity/comment. Populated by a single join in the read procedures so the client avoids an N+1.
 /// </summary>
 public class AccessRequestDetails
 {
     public Guid Id { get; set; }
 
+    /// <summary>The parent lease for an extension request; null for original requests.</summary>
     public Guid? ExtensionOfLeaseId { get; set; }
 
     public Guid OrganizationId { get; set; }
@@ -17,6 +19,7 @@ public class AccessRequestDetails
     public Guid CipherId { get; set; }
     public Guid RequesterId { get; set; }
 
+    /// <summary>The access rule pinned on the request at submit, or null for requests created before pinning.</summary>
     public Guid? RuleId { get; set; }
 
     /// <inheritdoc cref="Entities.AccessRequest.NotBefore"/>
@@ -28,77 +31,39 @@ public class AccessRequestDetails
     /// <inheritdoc cref="Entities.AccessRequest.Reason"/>
     public string? Reason { get; set; }
 
-    /// <summary>
-    /// Derived against the read's clock and stamped at the repository boundary; the stored action is never exposed
-    /// on a read model.
-    /// </summary>
+    /// <inheritdoc cref="Entities.AccessRequest.Status"/>
     public AccessRequestStatus Status { get; set; }
 
     /// <inheritdoc cref="Entities.AccessRequest.CreationDate"/>
     public DateTime CreationDate { get; set; }
 
-    /// <summary>Null while no action is recorded, including on derived-Expired rows.</summary>
-    public DateTime? ActionDate { get; set; }
+    /// <inheritdoc cref="Entities.AccessRequest.ResolvedDate"/>
+    public DateTime? ResolvedDate { get; set; }
 
+    /// <summary>The lease this request produced once activated, or null if it has not produced a lease.</summary>
     public Guid? ProducedLeaseId { get; set; }
 
     /// <summary>
-    /// Derived from the lease's own action and <c>NotAfter</c>, which an extension pushes out, so the inbox offers
-    /// revocation only for a live lease.
+    /// The produced lease's current status (Active/Expired/Revoked/Cancelled), or null when the request has not
+    /// produced a lease. Lets the inbox distinguish a still-live lease from one that has ended, so an ended lease is
+    /// not offered for revocation.
     /// </summary>
     public AccessLeaseStatus? ProducedLeaseStatus { get; set; }
 
     /// <summary>
-    /// Differs from <see cref="NotAfter"/> once an extension pushes the lease's end out, since the originating
-    /// request is never restamped.
+    /// Every decision recorded against this request, oldest first — one element per
+    /// <see cref="Entities.AccessDecision"/> row (human or automatic; identity denormalized from the User join for
+    /// human decisions). Empty while pending, and for the terminal states that record no verdict: a requester
+    /// cancellation (<c>IAccessRequestRepository.CancelAsync</c>) and
+    /// <see cref="AccessRequestStatus.Expired"/>. The resolved reads return the decisions as a second result
+    /// set that the repository groups onto this list; the constructed reads (decision result, cipher access-state
+    /// snapshot) set it directly.
     /// </summary>
-    public DateTime? ProducedLeaseNotAfter { get; set; }
-
-    /// <summary>Oldest first. A requester cancellation and an expiry record no decision of their own.</summary>
     public List<AccessRequestDecision> Decisions { get; set; } = new();
 
-    /// <summary>Null when unset or the user could not be resolved.</summary>
+    /// <summary>The requester's display name, denormalized from the User join; null when unset or the user could not be resolved.</summary>
     public string? RequesterName { get; set; }
 
-    /// <summary>The fallback display when <see cref="RequesterName"/> is unset.</summary>
+    /// <summary>The requester's email, the fallback display when <see cref="RequesterName"/> is unset.</summary>
     public string? RequesterEmail { get; set; }
-
-    /// <summary>
-    /// Projects a request the caller just wrote, or read scoped to itself, deriving <see cref="Status"/> as the
-    /// repository reads do. The lease fields stay null, since no produced lease can exist at these call sites.
-    /// </summary>
-    public static AccessRequestDetails From(Entities.AccessRequest request, DateTime now)
-    {
-        var details = new AccessRequestDetails
-        {
-            Id = request.Id,
-            ExtensionOfLeaseId = request.ExtensionOfLeaseId,
-            OrganizationId = request.OrganizationId,
-            CollectionId = request.CollectionId,
-            CipherId = request.CipherId,
-            RequesterId = request.RequesterId,
-            RuleId = request.RuleId,
-            NotBefore = request.NotBefore,
-            NotAfter = request.NotAfter,
-            Reason = request.Reason,
-            CreationDate = request.CreationDate,
-            ActionDate = request.ActionDate,
-        };
-        details.StampDerivedStatuses(request.Action, producedLease: null, now);
-        return details;
-    }
-
-    /// <summary><see cref="NotAfter"/> and <see cref="ExtensionOfLeaseId"/> must already be set.</summary>
-    public void StampDerivedStatuses(AccessRequestAction action,
-        (Guid Id, AccessLeaseAction Action, DateTime NotAfter)? producedLease, DateTime now)
-    {
-        Status = AccessStatusDerivation.ComputeStatus(
-            action, hasLease: producedLease is not null, isExtension: ExtensionOfLeaseId is not null,
-            NotAfter, now);
-        ProducedLeaseId = producedLease?.Id;
-        ProducedLeaseNotAfter = producedLease?.NotAfter;
-        ProducedLeaseStatus = producedLease is { } lease
-            ? AccessStatusDerivation.ComputeLeaseStatus(lease.Action, lease.NotAfter, now)
-            : null;
-    }
 }
