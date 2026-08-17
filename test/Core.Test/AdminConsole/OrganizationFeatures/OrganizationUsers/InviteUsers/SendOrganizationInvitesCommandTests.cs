@@ -294,7 +294,7 @@ public class SendOrganizationInvitesCommandTests
     [BitAutoData((string)null)]
     [BitAutoData("")]
     [BitAutoData("   ")]
-    public async Task SendInvitesAsync_WhenAnOrgUserHasNoEmailButALinkedUser_RepairsAndSendsBothInvites(
+    public async Task SendInvitesAsync_WhenAnOrgUserHasNoEmailButALinkedUser_ResolvesAndSendsBothInvites(
         string blankEmail,
         Organization organization,
         OrganizationUser invite,
@@ -304,7 +304,7 @@ public class SendOrganizationInvitesCommandTests
     {
         SetupSutProviderWithNoExistingUsers(sutProvider);
 
-        // Arrange - corrupt invited row (no email, linked to a user) is healed from the linked user
+        // Arrange - corrupt invited row (no email, linked to a user) has its email resolved from the linked user
         inviteWithoutEmail.Email = blankEmail;
         inviteWithoutEmail.UserId = linkedUser.Id;
 
@@ -315,15 +315,7 @@ public class SendOrganizationInvitesCommandTests
         // Act
         await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite, inviteWithoutEmail], organization));
 
-        // Assert - repaired row persisted with the recovered email
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
-            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users =>
-                users.Count() == 1 &&
-                users.Single().Id == inviteWithoutEmail.Id &&
-                users.Single().Email == linkedUser.Email &&
-                users.Single().UserId == null));
-
-        // Assert - both invites are sent, and the repaired user carries the recovered email
+        // Assert - both invites are sent, and the resolved user carries the recovered email
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.OrgUserTokenPairs.Count() == 2 &&
@@ -430,23 +422,23 @@ public class SendOrganizationInvitesCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendInvitesAsync_MixedBatch_RepairsInOneRoundTripAndDropsUnrepairable(
+    public async Task SendInvitesAsync_MixedBatch_ResolvesAndDropsUnresolvable(
         Organization organization,
         OrganizationUser canonicalInvite,
-        OrganizationUser repairableInvite,
-        OrganizationUser unrepairableInvite,
+        OrganizationUser resolvableInvite,
+        OrganizationUser unresolvableInvite,
         User linkedUser,
         SutProvider<SendOrganizationInvitesCommand> sutProvider)
     {
         SetupSutProviderWithNoExistingUsers(sutProvider);
 
-        // Arrange - one healthy invite, one that can be self-healed from its linked user, and one that cannot
-        repairableInvite.Email = null;
-        repairableInvite.UserId = linkedUser.Id;
+        // Arrange - one healthy invite, one whose email resolves from its linked user, and one that cannot
+        resolvableInvite.Email = null;
+        resolvableInvite.UserId = linkedUser.Id;
 
-        unrepairableInvite.Email = null;
-        unrepairableInvite.UserId = null;
-        unrepairableInvite.Status = OrganizationUserStatusType.Invited;
+        unresolvableInvite.Email = null;
+        unresolvableInvite.UserId = null;
+        unresolvableInvite.Status = OrganizationUserStatusType.Invited;
 
         sutProvider.GetDependency<IUserRepository>()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
@@ -454,32 +446,27 @@ public class SendOrganizationInvitesCommandTests
 
         // Act
         await sutProvider.Sut.SendInvitesAsync(
-            new SendInvitesRequest([canonicalInvite, repairableInvite, unrepairableInvite], organization));
+            new SendInvitesRequest([canonicalInvite, resolvableInvite, unresolvableInvite], organization));
 
-        // Assert - only the repaired row is persisted, in a single call
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
-            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users =>
-                users.Count() == 1 && users.Single().Id == repairableInvite.Id));
-
-        // Assert - the unrepairable row is logged
+        // Assert - the unresolvable row is logged
         sutProvider.GetDependency<ILogger<SendOrganizationInvitesCommand>>().Received(1).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Is<object>(state => state.ToString().Contains(unrepairableInvite.Id.ToString())),
+            Arg.Is<object>(state => state.ToString().Contains(unresolvableInvite.Id.ToString())),
             null,
             Arg.Any<Func<object, Exception, string>>());
 
-        // Assert - the healthy and repaired invites are sent, the unrepairable one is not
+        // Assert - the healthy and resolved invites are sent, the unresolvable one is not
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.OrgUserTokenPairs.Count() == 2 &&
                 info.OrgUserTokenPairs.Any(p => p.OrgUser.Id == canonicalInvite.Id) &&
-                info.OrgUserTokenPairs.Any(p => p.OrgUser.Id == repairableInvite.Id) &&
-                info.OrgUserTokenPairs.All(p => p.OrgUser.Id != unrepairableInvite.Id)));
+                info.OrgUserTokenPairs.Any(p => p.OrgUser.Id == resolvableInvite.Id) &&
+                info.OrgUserTokenPairs.All(p => p.OrgUser.Id != unresolvableInvite.Id)));
     }
 
     [Theory, BitAutoData]
-    public async Task SendInvitesAsync_OrgUserWithNoEmailAndNoUserId_DropsWithoutPersisting(
+    public async Task SendInvitesAsync_OrgUserWithNoEmailAndNoUserId_Drops(
         Organization organization,
         OrganizationUser invite,
         OrganizationUser inviteWithoutEmail,
@@ -487,7 +474,7 @@ public class SendOrganizationInvitesCommandTests
     {
         SetupSutProviderWithNoExistingUsers(sutProvider);
 
-        // Arrange - no email and no linked user means the row cannot be repaired
+        // Arrange - no email and no linked user means the row cannot be resolved
         inviteWithoutEmail.Email = null;
         inviteWithoutEmail.UserId = null;
 
@@ -495,9 +482,6 @@ public class SendOrganizationInvitesCommandTests
         await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite, inviteWithoutEmail], organization));
 
         // Assert
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
-            .ReplaceManyAsync(Arg.Any<IEnumerable<OrganizationUser>>());
-
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.OrgUserTokenPairs.Count() == 1 &&
@@ -505,7 +489,7 @@ public class SendOrganizationInvitesCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendInvitesAsync_OrgUserWithNoEmailAndDanglingUserId_DropsWithoutPersisting(
+    public async Task SendInvitesAsync_OrgUserWithNoEmailAndDanglingUserId_Drops(
         Organization organization,
         OrganizationUser invite,
         OrganizationUser inviteWithoutEmail,
@@ -526,9 +510,6 @@ public class SendOrganizationInvitesCommandTests
         await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite, inviteWithoutEmail], organization));
 
         // Assert
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
-            .ReplaceManyAsync(Arg.Any<IEnumerable<OrganizationUser>>());
-
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.OrgUserTokenPairs.Count() == 1 &&
@@ -536,7 +517,7 @@ public class SendOrganizationInvitesCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendInvitesAsync_LinkedUserHasBlankEmail_DropsWithoutPersisting(
+    public async Task SendInvitesAsync_LinkedUserHasBlankEmail_Drops(
         Organization organization,
         OrganizationUser invite,
         OrganizationUser inviteWithoutEmail,
@@ -545,7 +526,7 @@ public class SendOrganizationInvitesCommandTests
     {
         SetupSutProviderWithNoExistingUsers(sutProvider);
 
-        // Arrange - the linked user resolves, but has no email to recover, so the row cannot be repaired
+        // Arrange - the linked user resolves, but has no email to recover, so the row cannot be resolved
         inviteWithoutEmail.Email = null;
         inviteWithoutEmail.UserId = linkedUser.Id;
         linkedUser.Email = "";
@@ -558,9 +539,6 @@ public class SendOrganizationInvitesCommandTests
         await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite, inviteWithoutEmail], organization));
 
         // Assert
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
-            .ReplaceManyAsync(Arg.Any<IEnumerable<OrganizationUser>>());
-
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.OrgUserTokenPairs.Count() == 1 &&
@@ -568,7 +546,7 @@ public class SendOrganizationInvitesCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendInvitesAsync_AllOrgUsersHaveEmail_SkipsRepairEntirely(
+    public async Task SendInvitesAsync_AllOrgUsersHaveEmail_SkipsEmailResolutionEntirely(
         Organization organization,
         OrganizationUser firstInvite,
         OrganizationUser secondInvite,
@@ -579,11 +557,9 @@ public class SendOrganizationInvitesCommandTests
         // Act
         await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([firstInvite, secondInvite], organization));
 
-        // Assert - the repair fast path takes no extra dependencies
+        // Assert - the fast path takes no extra dependencies
         await sutProvider.GetDependency<IUserRepository>().DidNotReceive()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>());
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
-            .ReplaceManyAsync(Arg.Any<IEnumerable<OrganizationUser>>());
 
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
