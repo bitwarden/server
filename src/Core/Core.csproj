@@ -90,5 +90,11 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Infrastructure.IntegrationTest" />
+    <!-- The commercial PAM library, and the only non-test assembly on this list. It implements
+         ICipherLeaseGate, which is the sole minter of FullCipherAccess — whose factories are internal
+         precisely so that application code cannot fabricate an authorization witness. Granting the gate's
+         own assembly access keeps that restriction meaningful rather than removing it: widen this list only
+         for another ICipherLeaseGate implementation. -->
+    <InternalsVisibleTo Include="Pam" />
   </ItemGroup>
 </Project>
