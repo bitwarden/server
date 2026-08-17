@@ -4,6 +4,8 @@ using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.OrganizationFeatures.Queries;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Services.Pam.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -32,6 +34,39 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICreateAccessRuleCommand, CreateAccessRuleCommand>();
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
+
+        // Read models behind the approver inbox, the caller's own requests, the lease surfaces, and the per-cipher
+        // pre-check and access-state snapshot.
+        services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
+        services.AddScoped<IGetCipherAccessStateQuery, GetCipherAccessStateQuery>();
+        services.AddScoped<IGetAccessRequestDetailsQuery, GetAccessRequestDetailsQuery>();
+        services.AddScoped<IListInboxRequestsQuery, ListInboxRequestsQuery>();
+        services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
+        services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
+        services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
+        services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
+        services.AddScoped<IListMyActiveAccessLeasesQuery, ListMyActiveAccessLeasesQuery>();
+
+        // Access-request and lease write path.
+        services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
+        services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();
+        services.AddScoped<IActivateAccessRequestCommand, ActivateAccessRequestCommand>();
+        services.AddScoped<ICancelAccessRequestCommand, CancelAccessRequestCommand>();
+        services.AddScoped<IRequestLeaseExtensionCommand, RequestLeaseExtensionCommand>();
+        services.AddScoped<IRevokeAccessLeaseCommand, RevokeAccessLeaseCommand>();
+
+        // Supporting reads for the write path: who may approve for a collection, and the per-cipher
+        // single-active-lease guard applied at activation.
+        services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
+        services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
+
+        // Side channels the commands emit through. All three are deliberately inert in this slice: the push types the
+        // notifiers would send do not exist yet, and the audit store the emitter would write to is separate work.
+        // Registering them is not optional — every command above takes all three, so dropping one turns each PAM
+        // request into a DI resolution failure at runtime rather than a compile error.
+        services.AddScoped<IApproverInboxNotifier, NoopApproverInboxNotifier>();
+        services.AddScoped<IRequesterNotifier, NoopRequesterNotifier>();
+        services.AddScoped<IAccessAuditEventEmitter, NoopAccessAuditEventEmitter>();
 
         services.AddPamOpenApiEndpointDataSource();
 

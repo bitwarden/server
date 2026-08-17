@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Request;
 
@@ -21,4 +22,11 @@ public class AccessLeaseExtensionRequestModel
     /// </summary>
     [Required]
     public string? Reason { get; set; }
+
+    public AccessLeaseExtensionSubmission ToSubmission(Guid leaseId) => new()
+    {
+        LeaseId = leaseId,
+        DurationSeconds = DurationSeconds,
+        Reason = Reason,
+    };
 }
