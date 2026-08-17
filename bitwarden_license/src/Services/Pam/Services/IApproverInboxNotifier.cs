@@ -5,6 +5,10 @@
 /// re-fetch the approver inbox. Fired whenever something the inbox renders changes (a new pending request, a request
 /// leaving pending, a lease being revoked).
 /// </summary>
+/// <remarks>
+/// The only implementation today is <see cref="NoopApproverInboxNotifier"/>: the push type does not exist yet, so
+/// nothing is actually sent.
+/// </remarks>
 public interface IApproverInboxNotifier
 {
     Task NotifyCollectionApproversAsync(Guid collectionId);

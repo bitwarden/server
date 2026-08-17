@@ -1,5 +1,5 @@
 ﻿using Bit.HttpExtensions;
-using Bit.Pam.Enums;
+using Bit.Pam.Entities;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -14,6 +14,24 @@ public class AccessLeaseResponseModel : ResponseModel
     public AccessLeaseResponseModel()
         : base("accessLease")
     {
+    }
+
+    public AccessLeaseResponseModel(AccessLease lease)
+        : base("accessLease")
+    {
+        ArgumentNullException.ThrowIfNull(lease);
+
+        Id = lease.Id;
+        RequestId = lease.AccessRequestId;
+        CipherId = lease.CipherId;
+        CollectionId = lease.CollectionId;
+        OrganizationId = lease.OrganizationId;
+        RequesterId = lease.RequesterId;
+        Status = lease.Status.ToApiStatus();
+        NotBefore = lease.NotBefore.AsUtc();
+        NotAfter = lease.NotAfter.AsUtc();
+        RevokedAt = lease.RevokedDate.AsUtc();
+        RevokedByUserId = lease.RevokedBy;
     }
 
     /// <summary>The lease's unique identifier.</summary>

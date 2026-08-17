@@ -55,7 +55,7 @@ public class AccessRequestDetails
     /// <see cref="Entities.AccessDecision"/> row (human or automatic; identity denormalized from the User join for
     /// human decisions). Empty while pending, and for the terminal states that record no verdict: a requester
     /// cancellation (<c>IAccessRequestRepository.CancelAsync</c>) and
-    /// <see cref="AccessRequestStatus.ExpiredUnanswered"/>. The resolved reads return the decisions as a second result
+    /// <see cref="AccessRequestStatus.Expired"/>. The resolved reads return the decisions as a second result
     /// set that the repository groups onto this list; the constructed reads (decision result, cipher access-state
     /// snapshot) set it directly.
     /// </summary>

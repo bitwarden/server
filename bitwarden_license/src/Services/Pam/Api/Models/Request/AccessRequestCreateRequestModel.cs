@@ -1,4 +1,5 @@
-﻿namespace Bit.Services.Pam.Api.Models.Request;
+﻿using Bit.Services.Pam.Models;
+namespace Bit.Services.Pam.Api.Models.Request;
 
 /// <summary>
 /// A request to lease a cipher. Supply <see cref="DurationSeconds"/> for the automatic path, or
@@ -14,4 +15,12 @@ public class AccessRequestCreateRequestModel
     public DateTime? End { get; set; }
 
     public string? Reason { get; set; }
+
+    public AccessRequestSubmission ToSubmission() => new()
+    {
+        DurationSeconds = DurationSeconds,
+        Start = Start,
+        End = End,
+        Reason = Reason,
+    };
 }

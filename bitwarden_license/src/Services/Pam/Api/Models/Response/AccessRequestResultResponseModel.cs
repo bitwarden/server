@@ -1,5 +1,8 @@
 ﻿using Bit.HttpExtensions;
+using Bit.Pam.Entities;
+using Bit.Pam.Models;
 using Bit.Services.Pam.Enums;
+using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -11,6 +14,15 @@ public class AccessRequestResultResponseModel : ResponseModel
     public AccessRequestResultResponseModel()
         : base("accessRequestResult")
     {
+    }
+
+    public AccessRequestResultResponseModel(AccessRequestResult result)
+        : base("accessRequestResult")
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        ApprovalMode = result.ApprovalMode;
+        Request = new AccessRequestDetailsResponseModel(ToDetails(result.Request, result.Decision));
     }
 
     /// <summary>
@@ -29,4 +41,40 @@ public class AccessRequestResultResponseModel : ResponseModel
     /// single automatic decision.
     /// </summary>
     public AccessRequestDetailsResponseModel Request { get; set; } = null!;
+
+    /// <summary>
+    /// Projects the just-written request onto the read model the response is shaped from. Submission returns the
+    /// entity it created rather than re-reading it, so the fields that only a join supplies are absent: the requester's
+    /// name and email are left null (the client already knows who submitted), and no lease exists yet. The automatic
+    /// verdict is the one decision that can exist at submit, and it is written in the same operation, so it is mapped
+    /// straight from the command's own decision.
+    /// </summary>
+    private static AccessRequestDetails ToDetails(AccessRequest request, AccessDecision? decision) => new()
+    {
+        Id = request.Id,
+        ExtensionOfLeaseId = request.ExtensionOfLeaseId,
+        OrganizationId = request.OrganizationId,
+        CollectionId = request.CollectionId,
+        CipherId = request.CipherId,
+        RequesterId = request.RequesterId,
+        RuleId = request.RuleId,
+        NotBefore = request.NotBefore,
+        NotAfter = request.NotAfter,
+        Reason = request.Reason,
+        Status = request.Status,
+        CreationDate = request.CreationDate,
+        ResolvedDate = request.ResolvedDate,
+        Decisions = decision is null
+            ? []
+            : [
+                new AccessRequestDecision
+                {
+                    DeciderKind = decision.DeciderKind,
+                    ApproverId = decision.ApproverId,
+                    Comment = decision.Comment,
+                    Verdict = decision.Verdict,
+                    DecidedAt = decision.CreationDate,
+                },
+            ],
+    };
 }

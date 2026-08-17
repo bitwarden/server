@@ -1,4 +1,7 @@
-﻿using Bit.Pam.Enums;
+﻿// The decider kind is the one wire enum that keeps its domain type: the published bindings generate it as
+// `DeciderKind` while the domain calls it `AccessDeciderKind`, and renaming either side would move the generated
+// schema. The two carry identical values, so the wire bytes are the same whichever type declares the property.
+using AccessDeciderKind = Bit.Pam.Enums.AccessDeciderKind;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
