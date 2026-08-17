@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Utilities;
@@ -9,7 +10,12 @@ namespace Bit.Core.Context;
 /// Represents the claims for a user in relation to a particular organization.
 /// These claims will only be present for users in the <see cref="OrganizationUserStatusType.Confirmed"/> status.
 /// </summary>
-public class CurrentContextOrganization
+/// <remarks>
+/// Implements <see cref="IOrganizationUserRole"/> so these claims can be used directly as the "acting user" in
+/// <see cref="Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction.IOrganizationUserValidationService"/>
+/// checks, without mapping to an intermediate <see cref="OrganizationUserRole"/>.
+/// </remarks>
+public class CurrentContextOrganization : IOrganizationUserRole
 {
     public CurrentContextOrganization() { }
 
@@ -27,4 +33,7 @@ public class CurrentContextOrganization
     public Permissions Permissions { get; set; } = new();
     public bool AccessSecretsManager { get; set; }
     public bool AccessPam { get; set; }
+
+    Guid IOrganizationUserRole.OrganizationId => Id;
+    Permissions? IOrganizationUserRole.GetPermissions() => Permissions;
 }

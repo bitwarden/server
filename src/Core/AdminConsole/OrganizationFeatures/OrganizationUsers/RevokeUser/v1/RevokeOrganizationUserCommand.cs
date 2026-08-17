@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.Models.Data;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -30,11 +29,8 @@ public class RevokeOrganizationUserCommand(
         if (revokingUserId.HasValue)
         {
             var actingOrganization = currentContext.GetOrganization(organizationUser.OrganizationId);
-            var actingUser = actingOrganization is null
-                ? null
-                : new OrganizationUserRole(actingOrganization.Type, organizationUser.OrganizationId, actingOrganization.Permissions);
 
-            var error = await organizationUserValidationService.CanManageAsync(revokingUserId.Value, actingUser, organizationUser);
+            var error = await organizationUserValidationService.CanManageAsync(revokingUserId.Value, actingOrganization, organizationUser);
             if (error is not null)
             {
                 throw new BadRequestException(error.Message);

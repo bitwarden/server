@@ -91,8 +91,11 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.Type = OrganizationUserType.Owner;
 
         UseRealValidationService(sutProvider);
+        // Manual (not a policy-enforcement reason) so the manage-role hierarchy check still applies; see
+        // RevokeNonCompliantOrganizationUsersAsync_GivenCustomActingUserWithManagePoliciesButNotManageUsers_*
+        // for coverage of the policy-enforcement bypass.
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
-            CreateActingUser(Guid.NewGuid(), OrganizationUserType.Admin), RevocationReason.TwoFactorPolicyNonCompliance);
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.Admin), RevocationReason.Manual);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -113,9 +116,12 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.Type = OrganizationUserType.Admin;
 
         UseRealValidationService(sutProvider);
+        // Manual (not a policy-enforcement reason) so the manage-role hierarchy check still applies; see
+        // RevokeNonCompliantOrganizationUsersAsync_GivenCustomActingUserWithManagePoliciesButNotManageUsers_*
+        // for coverage of the policy-enforcement bypass.
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
             CreateActingUser(Guid.NewGuid(), OrganizationUserType.Custom, new Permissions { ManageUsers = true }),
-            RevocationReason.TwoFactorPolicyNonCompliance);
+            RevocationReason.Manual);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -160,8 +166,11 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         revocableUsers[1].Status = OrganizationUserStatusType.Revoked;
 
         UseRealValidationService(sutProvider);
+        // Manual (not a policy-enforcement reason) so the manage-role hierarchy check still applies; see
+        // RevokeNonCompliantOrganizationUsersAsync_GivenCustomActingUserWithManagePoliciesButNotManageUsers_*
+        // for coverage of the policy-enforcement bypass.
         var command = new RevokeOrganizationUsersRequest(organizationId, revocableUsers,
-            CreateActingUser(Guid.NewGuid(), OrganizationUserType.User), RevocationReason.TwoFactorPolicyNonCompliance);
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.User), RevocationReason.Manual);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -237,8 +246,11 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.Type = OrganizationUserType.User;
 
         UseRealValidationService(sutProvider);
+        // Manual (not a policy-enforcement reason) so the manage-role hierarchy check still applies; see
+        // RevokeNonCompliantOrganizationUsersAsync_GivenCustomActingUserWithManagePoliciesButNotManageUsers_*
+        // for coverage of the policy-enforcement bypass.
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
-            new StandardUser(Guid.NewGuid(), isOrganizationOwner: false), RevocationReason.TwoFactorPolicyNonCompliance);
+            new StandardUser(Guid.NewGuid(), isOrganizationOwner: false), RevocationReason.Manual);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -247,6 +259,55 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
         Assert.True(result.HasErrors);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RevokeNonCompliantOrganizationUsersAsync_GivenCustomActingUserWithManagePoliciesButNotManageUsers_WhenRevokingForTwoFactorNonCompliance_ThenUserShouldBeRevoked(
+        Guid organizationId, OrganizationUserUserDetails userToRevoke,
+        SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+    {
+        // A Custom member who can enable the triggering policy (ManagePolicies) but lacks ManageUsers must still be
+        // able to revoke non-compliant members: authority for this comes from the policy endpoint, not ManageUsers.
+        userToRevoke.OrganizationId = organizationId;
+        userToRevoke.Type = OrganizationUserType.User;
+
+        UseRealValidationService(sutProvider);
+        var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.Custom, new Permissions { ManagePolicies = true, ManageUsers = false }),
+            RevocationReason.TwoFactorPolicyNonCompliance);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+
+        Assert.True(result.Success);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RevokeNonCompliantOrganizationUsersAsync_GivenCustomActingUserWithManagePoliciesButNotManageUsers_WhenRevokingForSingleOrgNonCompliance_ThenUserShouldBeRevoked(
+        Guid organizationId, OrganizationUserUserDetails userToRevoke,
+        SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+    {
+        // Same as the Two-Factor case above, but for the Single Organization policy, which can also be enabled as a
+        // side effect of domain verification (gated on ManageSso rather than ManagePolicies) - either way, neither
+        // gate is ManageUsers.
+        userToRevoke.OrganizationId = organizationId;
+        userToRevoke.Type = OrganizationUserType.User;
+
+        UseRealValidationService(sutProvider);
+        var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
+            CreateActingUser(Guid.NewGuid(), OrganizationUserType.Custom, new Permissions { ManagePolicies = true, ManageUsers = false }),
+            RevocationReason.SingleOrgPolicyNonCompliance);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+
+        Assert.True(result.Success);
     }
 
     [Theory, BitAutoData]

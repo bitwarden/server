@@ -9,7 +9,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -854,10 +853,10 @@ public class RestoreOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserValidationService>()
             .CanManageAsync(customUser.Id, Arg.Any<IOrganizationUserRole?>(), organization.Id,
                 Arg.Any<IReadOnlyDictionary<Guid, IOrganizationUserRole>>())
-            .Returns(new Dictionary<Guid, Error?>
+            .Returns(new Dictionary<Guid, ManageAuthorizationResult>
             {
                 { adminUser.Id, new CustomUsersCannotManageAdminsOrOwners() },
-                { regularUser.Id, null }
+                { regularUser.Id, ManageAuthorizationResult.Authorized }
             });
 
         // Act

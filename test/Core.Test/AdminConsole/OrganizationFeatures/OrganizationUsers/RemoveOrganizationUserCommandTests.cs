@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -502,10 +501,10 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserValidationService>()
             .CanManageAsync(deletingUser.UserId!.Value, Arg.Any<IOrganizationUserRole?>(), deletingUser.OrganizationId,
                 Arg.Any<IReadOnlyDictionary<Guid, IOrganizationUserRole>>())
-            .Returns(new Dictionary<Guid, Error?>
+            .Returns(new Dictionary<Guid, ManageAuthorizationResult>
             {
                 { orgUser1.Id, new OnlyOwnersCanManageOwners() },
-                { orgUser2.Id, null }
+                { orgUser2.Id, ManageAuthorizationResult.Authorized }
             });
 
         // Act
@@ -535,7 +534,7 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserValidationService>()
             .CanManageAsync(deletingUser.UserId!.Value, Arg.Any<IOrganizationUserRole?>(), deletingUser.OrganizationId,
                 Arg.Any<IReadOnlyDictionary<Guid, IOrganizationUserRole>>())
-            .Returns(new Dictionary<Guid, Error?>
+            .Returns(new Dictionary<Guid, ManageAuthorizationResult>
             {
                 { orgUser.Id, new CustomUsersCannotManageAdminsOrOwners() }
             });

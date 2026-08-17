@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.Models.Data;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -37,17 +36,22 @@ public class RecoverAccountAuthorizationHandler(
         RecoverAccountAuthorizationRequirement requirement,
         OrganizationUser targetOrganizationUser)
     {
+        // CanManageAsync requires a real acting user id; an authenticated request should always have one, but
+        // deny rather than substituting a fabricated id (e.g. Guid.Empty) into a security check if it's ever missing.
+        if (currentContext.UserId is not { } actingUserId)
+        {
+            context.Fail(new AuthorizationFailureReason(this, FailureReason));
+            return;
+        }
+
         // Step 1: check that the User has permissions with respect to the organization, using the same
         // Owner > Admin > Custom > User hierarchy (plus provider override) as every other "can manage this user"
         // check, but gated on ManageResetPassword instead of the default ManageUsers.
         var actingOrganization = organizationContext.GetOrganizationClaims(context.User, targetOrganizationUser.OrganizationId);
-        var actingUser = actingOrganization is null
-            ? null
-            : new OrganizationUserRole(actingOrganization.Type, targetOrganizationUser.OrganizationId, actingOrganization.Permissions);
 
         var manageError = await organizationUserValidationService.CanManageAsync(
-            currentContext.UserId ?? Guid.Empty, actingUser, targetOrganizationUser,
-            customPermissionGate: p => p.ManageResetPassword);
+            actingUserId, actingOrganization, targetOrganizationUser,
+            customPermissionGate: CustomUserManagePermission.ManageResetPassword);
 
         if (manageError is not null)
         {

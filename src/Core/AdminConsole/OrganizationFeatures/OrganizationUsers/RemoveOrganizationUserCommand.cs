@@ -152,11 +152,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         if (deletingUserId.HasValue)
         {
             var actingOrganization = _currentContext.GetOrganization(orgUser.OrganizationId);
-            var actingUser = actingOrganization is null
-                ? null
-                : new OrganizationUserRole(actingOrganization.Type, orgUser.OrganizationId, actingOrganization.Permissions);
 
-            var error = await _organizationUserValidationService.CanManageAsync(deletingUserId.Value, actingUser, orgUser);
+            var error = await _organizationUserValidationService.CanManageAsync(deletingUserId.Value, actingOrganization, orgUser);
             if (error is not null)
             {
                 throw new BadRequestException(error.Message);
@@ -216,18 +213,15 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         }
 
         var actingOrganization = _currentContext.GetOrganization(organizationId);
-        var actingUser = actingOrganization is null
-            ? null
-            : new OrganizationUserRole(actingOrganization.Type, organizationId, actingOrganization.Permissions);
 
         var targetsById = targetUsers.ToDictionary(u => u.Id, u => (IOrganizationUserRole)u);
 
         var results = await _organizationUserValidationService.CanManageAsync(
-            deletingUserId.Value, actingUser, organizationId, targetsById);
+            deletingUserId.Value, actingOrganization, organizationId, targetsById);
 
         return results
-            .Where(kvp => kvp.Value is not null)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value!);
+            .Where(kvp => kvp.Value.IsDenied)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsError);
     }
 
     private async Task<IEnumerable<(OrganizationUser OrganizationUser, string ErrorMessage)>> RemoveUsersInternalAsync(

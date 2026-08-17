@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.Utilities.Commands;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -104,9 +103,9 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
                 return result;
             }
 
-            if (manageErrorsByTarget[userToRevoke.Id] is { } manageError)
+            if (manageErrorsByTarget[userToRevoke.Id].TryGetError(out var manageError))
             {
-                result.ErrorMessages.Add(manageError.Message);
+                result.ErrorMessages.Add(manageError!.Message);
                 return result;
             }
 
@@ -117,15 +116,16 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
     /// <summary>
     /// Delegates the "can the acting user manage this target's role" decision to
     /// <see cref="IOrganizationUserValidationService"/>'s bulk CanManageAsync overload.
-    /// System users (SCIM, Public API) skip the check entirely.
+    /// System users (SCIM, Public API) skip the check entirely, as do policy-enforcement revocations (see
+    /// <see cref="IsPolicyEnforcementRevocation"/>).
     /// </summary>
-    private async Task<IReadOnlyDictionary<Guid, Error?>> GetManageErrorsAsync(RevokeOrganizationUsersRequest request)
+    private async Task<IReadOnlyDictionary<Guid, ManageAuthorizationResult>> GetManageErrorsAsync(RevokeOrganizationUsersRequest request)
     {
         var targetsById = request.OrganizationUsers.ToDictionary(u => u.Id, u => (IOrganizationUserRole)u);
 
-        if (request.ActionPerformedBy is not StandardUser standardUser)
+        if (request.ActionPerformedBy is not StandardUser standardUser || IsPolicyEnforcementRevocation(request.RevocationReason))
         {
-            return targetsById.ToDictionary(kvp => kvp.Key, Error? (_) => null);
+            return targetsById.ToDictionary(kvp => kvp.Key, _ => ManageAuthorizationResult.Authorized);
         }
 
         // Fall back to Owner-level authority when the caller didn't resolve a confirmed role (e.g. legacy call
@@ -139,9 +139,18 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
             : null;
 
         return await organizationUserValidationService.CanManageAsync(
-            standardUser.UserId!.Value, actingUser, request.OrganizationId, targetsById)
-            ?? new Dictionary<Guid, Error?>();
+            standardUser.UserId!.Value, actingUser, request.OrganizationId, targetsById);
     }
+
+    /// <summary>
+    /// Revoking non-compliant members for these reasons is an unavoidable side effect of enabling the triggering
+    /// policy (Require Two-Step Login / Single Organization), not a discretionary "manage this member" action.
+    /// Authority was already established by the endpoint that changed the policy or domain, gated on
+    /// <c>ManagePolicies</c> or <c>ManageSso</c> - neither of which is <c>ManageUsers</c> - so the default
+    /// manage-role check in <see cref="GetManageErrorsAsync"/> doesn't apply here.
+    /// </summary>
+    private static bool IsPolicyEnforcementRevocation(RevocationReason reason) =>
+        reason is RevocationReason.TwoFactorPolicyNonCompliance or RevocationReason.SingleOrgPolicyNonCompliance;
 
     private static bool PerformedByIsAnExpectedType(IActingUser entity) => entity is SystemUser or StandardUser;
 

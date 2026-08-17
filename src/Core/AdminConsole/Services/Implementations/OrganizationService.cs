@@ -937,16 +937,13 @@ public class OrganizationService : IOrganizationService
         OrganizationUserType? oldType, Permissions permissions)
     {
         var actingOrganization = _currentContext.GetOrganization(organizationId);
-        var actingUser = actingOrganization is null
-            ? null
-            : new OrganizationUserRole(actingOrganization.Type, organizationId, actingOrganization.Permissions);
 
         // No prior role for a brand-new invite; only the requested role needs to be manageable.
         var targetUser = new OrganizationUserRole(oldType ?? newType, organizationId);
         var newTargetUser = new OrganizationUserRole(newType, organizationId, permissions);
 
         var error = await _organizationUserValidationService.CanManageRoleChangeAsync(
-            _currentContext.UserId ?? Guid.Empty, actingUser, targetUser, newTargetUser);
+            _currentContext.UserId ?? Guid.Empty, actingOrganization, targetUser, newTargetUser);
 
         if (error is not null)
         {

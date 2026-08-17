@@ -48,11 +48,8 @@ public class RestoreOrganizationUserCommand(
         if (restoringUserId.HasValue)
         {
             var actingOrganization = currentContext.GetOrganization(organizationUser.OrganizationId);
-            var actingUser = actingOrganization is null
-                ? null
-                : new OrganizationUserRole(actingOrganization.Type, organizationUser.OrganizationId, actingOrganization.Permissions);
 
-            var error = await organizationUserValidationService.CanManageAsync(restoringUserId.Value, actingUser, organizationUser);
+            var error = await organizationUserValidationService.CanManageAsync(restoringUserId.Value, actingOrganization, organizationUser);
             if (error is not null)
             {
                 throw new BadRequestException(error.Message);
@@ -400,17 +397,14 @@ public class RestoreOrganizationUserCommand(
         }
 
         var actingOrganization = currentContext.GetOrganization(organizationId);
-        var actingUser = actingOrganization is null
-            ? null
-            : new OrganizationUserRole(actingOrganization.Type, organizationId, actingOrganization.Permissions);
 
         var targetsById = targetUsers.ToDictionary(u => u.Id, u => (IOrganizationUserRole)u);
 
         var results = await organizationUserValidationService.CanManageAsync(
-            restoringUserId.Value, actingUser, organizationId, targetsById);
+            restoringUserId.Value, actingOrganization, organizationId, targetsById);
 
         return results
-            .Where(kvp => kvp.Value is not null)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value!);
+            .Where(kvp => kvp.Value.IsDenied)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsError);
     }
 }

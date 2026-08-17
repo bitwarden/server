@@ -7,6 +7,21 @@ using Bit.Core.Models.Data;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 
 /// <summary>
+/// The custom permission that grants a Custom user authority to manage Users and other Custom users in
+/// <see cref="IOrganizationUserValidationService.CanManageAsync(Guid, IOrganizationUserRole?, IOrganizationUserRole, CustomUserManagePermission)"/>.
+/// A closed set keeps the mapping to <see cref="Permissions"/> inside the validation service, instead of letting
+/// callers hand it an arbitrary predicate.
+/// </summary>
+public enum CustomUserManagePermission
+{
+    /// <summary>The default gate: managing regular Users and other Custom users.</summary>
+    ManageUsers,
+
+    /// <summary>Gates flows that are scoped to account recovery instead of general user management.</summary>
+    ManageResetPassword
+}
+
+/// <summary>
 /// Reusable organization-user authorization rules shared by command-specific validators.
 /// </summary>
 public interface IOrganizationUserValidationService
@@ -29,16 +44,15 @@ public interface IOrganizationUserValidationService
     /// <param name="actingUser">The acting user's role, or <c>null</c> if not a confirmed member.</param>
     /// <param name="targetUser">The member being managed.</param>
     /// <param name="customPermissionGate">
-    /// The permission that grants a Custom user authority to manage Users and other Custom users. Defaults to
-    /// <see cref="Permissions.ManageUsers"/>; pass a different selector (e.g. <see cref="Permissions.ManageResetPassword"/>)
-    /// for flows gated by a different permission.
+    /// The custom permission that grants a Custom user authority. Defaults to <see cref="CustomUserManagePermission.ManageUsers"/>;
+    /// pass <see cref="CustomUserManagePermission.ManageResetPassword"/> for flows gated by that permission instead.
     /// </param>
     /// <returns><c>null</c> when allowed, otherwise the error explaining why.</returns>
     Task<Error?> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser,
-        Func<Permissions, bool>? customPermissionGate = null);
+        CustomUserManagePermission customPermissionGate = CustomUserManagePermission.ManageUsers);
 
     /// <summary>
-    /// Bulk form of <see cref="CanManageAsync(Guid, IOrganizationUserRole?, IOrganizationUserRole, Func{Permissions, bool}?)"/>
+    /// Bulk form of <see cref="CanManageAsync(Guid, IOrganizationUserRole?, IOrganizationUserRole, CustomUserManagePermission)"/>
     /// for checking many targets in the same organization at once. Provider authority is resolved once for the whole
     /// batch instead of once per target.
     /// </summary>
@@ -46,11 +60,11 @@ public interface IOrganizationUserValidationService
     /// <param name="actingUser">The acting user's role, or <c>null</c> if not a confirmed member.</param>
     /// <param name="organizationId">The organization all target users belong to.</param>
     /// <param name="targetUsersById">The members being managed, keyed by their <c>OrganizationUserId</c>.</param>
-    /// <param name="customPermissionGate">See <see cref="CanManageAsync(Guid, IOrganizationUserRole?, IOrganizationUserRole, Func{Permissions, bool}?)"/>.</param>
-    /// <returns>A per-target result, keyed by <c>OrganizationUserId</c>; <c>null</c> means allowed.</returns>
-    Task<IReadOnlyDictionary<Guid, Error?>> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser,
+    /// <param name="customPermissionGate">See <see cref="CanManageAsync(Guid, IOrganizationUserRole?, IOrganizationUserRole, CustomUserManagePermission)"/>.</param>
+    /// <returns>A <see cref="ManageAuthorizationResult"/> per target, keyed by <c>OrganizationUserId</c>.</returns>
+    Task<IReadOnlyDictionary<Guid, ManageAuthorizationResult>> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser,
         Guid organizationId, IReadOnlyDictionary<Guid, IOrganizationUserRole> targetUsersById,
-        Func<Permissions, bool>? customPermissionGate = null);
+        CustomUserManagePermission customPermissionGate = CustomUserManagePermission.ManageUsers);
 
     /// <summary>
     /// Checks whether the acting user can change the target member's role without escalating privileges. The acting

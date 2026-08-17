@@ -171,7 +171,7 @@ public class OrganizationUserValidationServiceTests
         // Holds ManageUsers but not ManageResetPassword: denied when gated on ManageResetPassword.
         var actingUser = ActingUser(OrganizationUserType.Custom);
         var deniedResult = await _sut.CanManageAsync(_actingUserId, actingUser, TargetUser(OrganizationUserType.User),
-            customPermissionGate: p => p.ManageResetPassword);
+            customPermissionGate: CustomUserManagePermission.ManageResetPassword);
 
         Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(deniedResult);
 
@@ -180,7 +180,7 @@ public class OrganizationUserValidationServiceTests
         actingUserWithResetPassword.SetPermissions(new Permissions { ManageResetPassword = true });
 
         var allowedResult = await _sut.CanManageAsync(_actingUserId, actingUserWithResetPassword,
-            TargetUser(OrganizationUserType.User), customPermissionGate: p => p.ManageResetPassword);
+            TargetUser(OrganizationUserType.User), customPermissionGate: CustomUserManagePermission.ManageResetPassword);
 
         Assert.Null(allowedResult);
     }
@@ -207,9 +207,9 @@ public class OrganizationUserValidationServiceTests
 
         var results = await _sut.CanManageAsync(_actingUserId, admin, _organizationId, targetsById);
 
-        Assert.IsType<OnlyOwnersCanManageOwners>(results[ownerTargetId]);
-        Assert.Null(results[adminTargetId]);
-        Assert.Null(results[userTargetId]);
+        Assert.IsType<OnlyOwnersCanManageOwners>(results[ownerTargetId].AsError);
+        Assert.True(results[adminTargetId].IsAuthorized);
+        Assert.True(results[userTargetId].IsAuthorized);
 
         // Provider lookup is only resolved once for the whole batch, not once per target.
         await _providerUserRepository.Received(1)
@@ -217,7 +217,7 @@ public class OrganizationUserValidationServiceTests
     }
 
     [Fact]
-    public async Task CanManageAsync_Bulk_WhenActingUserIsProvider_ReturnsNullForAllTargets()
+    public async Task CanManageAsync_Bulk_WhenActingUserIsProvider_ReturnsAuthorizedForAllTargets()
     {
         _providerUserRepository
             .GetManyOrganizationDetailsByUserAsync(_actingUserId, ProviderUserStatusType.Confirmed)
@@ -231,7 +231,7 @@ public class OrganizationUserValidationServiceTests
 
         var results = await _sut.CanManageAsync(_actingUserId, actingUser: null, _organizationId, targetsById);
 
-        Assert.All(results.Values, Assert.Null);
+        Assert.All(results.Values, result => Assert.True(result.IsAuthorized));
     }
 
     [Fact]

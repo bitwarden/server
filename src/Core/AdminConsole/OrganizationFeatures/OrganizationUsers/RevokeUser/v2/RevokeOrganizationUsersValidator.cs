@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -35,8 +34,8 @@ public class RevokeOrganizationUsersValidator(
                     Invalid(organizationUser, new UserAlreadyRevoked()),
                 { Type: OrganizationUserType.Owner } when !hasRemainingOwner =>
                     Invalid(organizationUser, new MustHaveConfirmedOwner()),
-                _ when manageErrorsByTarget[organizationUser.Id] is { } manageError =>
-                    Invalid(organizationUser, manageError),
+                _ when manageErrorsByTarget[organizationUser.Id].TryGetError(out var manageError) =>
+                    Invalid(organizationUser, manageError!),
 
                 _ => Valid(organizationUser)
             };
@@ -48,13 +47,13 @@ public class RevokeOrganizationUsersValidator(
     /// <see cref="IOrganizationUserValidationService"/>'s bulk <c>CanManageAsync</c> overload.
     /// System users (SCIM, Public API) skip the check entirely.
     /// </summary>
-    private async Task<IReadOnlyDictionary<Guid, Error?>> GetManageErrorsAsync(RevokeOrganizationUsersValidationRequest request)
+    private async Task<IReadOnlyDictionary<Guid, ManageAuthorizationResult>> GetManageErrorsAsync(RevokeOrganizationUsersValidationRequest request)
     {
         var targetsById = request.OrganizationUsersToRevoke.ToDictionary(u => u.Id, u => (IOrganizationUserRole)u);
 
         if (request.PerformedBy is not StandardUser standardUser)
         {
-            return targetsById.ToDictionary(kvp => kvp.Key, Error? (_) => null);
+            return targetsById.ToDictionary(kvp => kvp.Key, _ => ManageAuthorizationResult.Authorized);
         }
 
         var actingUser = standardUser.OrganizationUserType.HasValue

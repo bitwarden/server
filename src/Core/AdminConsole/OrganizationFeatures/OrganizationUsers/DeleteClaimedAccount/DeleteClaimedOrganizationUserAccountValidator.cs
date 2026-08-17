@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -31,7 +30,7 @@ public class DeleteClaimedOrganizationUserAccountValidator(
     /// <see cref="IOrganizationUserValidationService"/>. All requests in a batch share the same acting user and
     /// organization, so the acting user's role/provider-status is only looked up once.
     /// </summary>
-    private async Task<IReadOnlyDictionary<Guid, Error?>> GetManageErrorsAsync(ICollection<DeleteUserValidationRequest> requests)
+    private async Task<IReadOnlyDictionary<Guid, ManageAuthorizationResult>> GetManageErrorsAsync(ICollection<DeleteUserValidationRequest> requests)
     {
         // Bulk delete requests aren't de-duplicated upstream, so a caller-supplied payload can list the same
         // OrganizationUserId more than once; group instead of a plain ToDictionary to avoid throwing on duplicates.
@@ -42,21 +41,18 @@ public class DeleteClaimedOrganizationUserAccountValidator(
 
         if (targetsById.Count == 0)
         {
-            return new Dictionary<Guid, Error?>();
+            return new Dictionary<Guid, ManageAuthorizationResult>();
         }
 
         var first = requests.First(r => r.OrganizationUser is not null);
         var actingOrganization = currentContext.GetOrganization(first.OrganizationId);
-        var actingUser = actingOrganization is null
-            ? null
-            : new OrganizationUserRole(actingOrganization.Type, first.OrganizationId, actingOrganization.Permissions);
 
         return await organizationUserValidationService.CanManageAsync(
-            first.DeletingUserId, actingUser, first.OrganizationId, targetsById) ?? new Dictionary<Guid, Error?>();
+            first.DeletingUserId, actingOrganization, first.OrganizationId, targetsById);
     }
 
     private async Task<ValidationResult<DeleteUserValidationRequest>> ValidateAsync(
-        DeleteUserValidationRequest request, IReadOnlyDictionary<Guid, Error?> manageErrorsByOrgUserId)
+        DeleteUserValidationRequest request, IReadOnlyDictionary<Guid, ManageAuthorizationResult> manageErrorsByOrgUserId)
     {
         // Ensure user exists
         if (request.User == null || request.OrganizationUser == null)
@@ -83,9 +79,9 @@ public class DeleteClaimedOrganizationUserAccountValidator(
         }
 
         // Cannot delete a member whose role you cannot manage (e.g. an owner, or an admin if you are a custom user)
-        if (manageErrorsByOrgUserId.TryGetValue(request.OrganizationUserId, out var manageError) && manageError is not null)
+        if (manageErrorsByOrgUserId.TryGetValue(request.OrganizationUserId, out var manageResult) && manageResult.TryGetError(out var manageError))
         {
-            return Invalid(request, manageError);
+            return Invalid(request, manageError!);
         }
 
         // Cannot delete a user who is the sole owner of an organization
