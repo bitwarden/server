@@ -88,7 +88,14 @@ public class ProviderBillingController(
         }
 
         var subscription = await stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer.tax_ids", "discounts", "test_clock"] });
+            new SubscriptionGetOptions
+            {
+                // `customer.discount.source.coupon` (4 levels — Stripe's cap) and
+                // `discounts.source.coupon` (3 levels) are needed because Discount.Source
+                // is expandable, not inline, after the 2025-09-30.clover Discount refactor.
+                // Without them, ProviderSubscriptionResponse's PercentOff read comes back null.
+                Expand = ["customer.tax_ids", "customer.discount.source.coupon", "discounts.source.coupon", "test_clock"]
+            });
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 

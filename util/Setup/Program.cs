@@ -279,7 +279,27 @@ public class Program
     {
         var vaultConnectionString = Helpers.GetValueFromEnvFile(_context.App, "global",
             "globalSettings__sqlServer__connectionString");
-        var migrator = new DbMigrator(vaultConnectionString);
+
+        // setup runs outside the app host, so read the setting from the env file
+        var timeoutValue = Helpers.GetValueFromEnvFile(_context.App, "global",
+            "globalSettings__sqlServer__migrationExecutionTimeoutSeconds");
+
+        int? executionTimeoutSeconds = null;
+        if (!string.IsNullOrWhiteSpace(timeoutValue))
+        {
+            if (int.TryParse(timeoutValue, out var parsedTimeout))
+            {
+                executionTimeoutSeconds = parsedTimeout;
+                Helpers.WriteLine(_context, "Using a migration execution timeout of {0} seconds.", parsedTimeout);
+            }
+            else
+            {
+                Helpers.WriteLine(_context, "Ignoring migration execution timeout '{0}', which is not a whole " +
+                    "number of seconds. Using the default.", timeoutValue);
+            }
+        }
+
+        var migrator = new DbMigrator(vaultConnectionString, executionTimeoutSeconds: executionTimeoutSeconds);
 
         var enableLogging = false;
 

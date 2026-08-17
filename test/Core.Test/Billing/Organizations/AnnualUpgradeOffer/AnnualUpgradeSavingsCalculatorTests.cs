@@ -37,12 +37,16 @@ public class AnnualUpgradeSavingsCalculatorTests
         string? currency = "usd") => new()
         {
             Id = $"di_{couponId}",
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                Duration = duration,
-                PercentOff = percentOff,
-                Currency = currency
+                CouponId = couponId,
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    Duration = duration,
+                    PercentOff = percentOff,
+                    Currency = currency
+                }
             }
         };
 
@@ -97,6 +101,7 @@ public class AnnualUpgradeSavingsCalculatorTests
         {
             Assert.Equal("cus_123", options.Customer);
             Assert.False(options.AutomaticTax.Enabled);
+            Assert.Equal(BillingMode.Classic, options.SubscriptionDetails.BillingMode.Type);
             // No Subscription set: the preview prices a fresh full term rather than the remainder
             // of the current period, and nothing prorates against an existing schedule.
             Assert.Null(options.Subscription);
