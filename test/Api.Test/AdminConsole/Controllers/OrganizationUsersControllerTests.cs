@@ -31,8 +31,6 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -400,7 +398,6 @@ public class OrganizationUsersControllerTests
         var response = await sutProvider.Sut.Get(organizationUser.OrganizationId, organizationUser.Id, false);
 
         Assert.Equal(organizationUser.Id, response.Id);
-        Assert.True(response.ManagedByOrganization);
         Assert.True(response.ClaimedByOrganization);
     }
 
@@ -546,8 +543,6 @@ public class OrganizationUsersControllerTests
         {
             orgUser.Permissions = null;
         }
-
-        sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>().GetOrganizationUserUserDetails(Arg.Any<OrganizationUserUserDetailsQueryRequest>()).Returns(organizationUsers);
 
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
             user: Arg.Any<ClaimsPrincipal>(),

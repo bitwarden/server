@@ -140,9 +140,3 @@ public class OrganizationUserBulkRequestModel
     public string? DefaultUserCollectionName { get; set; }
 }
 #nullable disable
-
-public class ResetPasswordWithOrgIdRequestModel : OrganizationUserResetPasswordEnrollmentRequestModel
-{
-    [Required]
-    public Guid OrganizationId { get; set; }
-}

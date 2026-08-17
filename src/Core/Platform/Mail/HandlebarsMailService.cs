@@ -1429,7 +1429,7 @@ public class HandlebarsMailService : IMailService
     {
         MailQueueMessage CreateMessage((string Email, bool ExistingAccount, string Token) invite)
         {
-            var message = CreateDefaultMessage("Accept Your Free Families Subscription", invite.Email);
+            var message = CreateDefaultMessage("Accept your Sponsored Families Plan", invite.Email);
             message.Category = "FamiliesForEnterpriseOffer";
             var model = new FamiliesForEnterpriseOfferViewModel
             {
