@@ -840,12 +840,12 @@ public class AccountController : Controller
     /// Attempts to get an <see cref="OrganizationUser"/> for a given organization
     /// by first checking for an existing user relationship, and if none is found,
     /// by looking up the organization user via their email address for rows not
-    /// yet linked to a User account.
+    /// yet linked to a User by Id.
     /// </summary>
     /// <param name="user">The existing user entity to be looked up in OrganizationUsers table.</param>
     /// <param name="organizationId">Organization id from the provider data.</param>
     /// <param name="email">Email used to look up an OrganizationUser row that isn't
-    /// linked to a User account yet.</param>
+    /// linked to a User by Id yet.</param>
     private async Task<OrganizationUser?> GetOrganizationUserByUserAndOrgIdOrEmailAsync(
         User? user,
         Guid organizationId,
@@ -862,7 +862,7 @@ public class AccountController : Controller
         }
 
         // If no Org User found by Existing User Id - search all the organization's users via email.
-        // This covers users whose OrganizationUser row isn't yet linked to a User account.
+        // This covers users whose OrganizationUser row isn't yet linked to a User by Id
         if (email != null)
         {
             // NOTE: this can return users in any status - so we count on the caller to enforce that the status is valid for SSO login.
