@@ -20,8 +20,10 @@ public class CipherRequestModel
     public Guid? EncryptedFor { get; set; }
 
     /// <summary>
-    /// Hex-encoded key id of the user key the client held when it encrypted this cipher. Absent for
-    /// clients that predate the field. When present, it must match the acting user's current user key id.
+    /// Hex-encoded key id of the key the client held when it encrypted this cipher: the user key for a
+    /// user-owned cipher, the organization key for an organization cipher. Absent for clients that
+    /// predate the field. For a user-owned cipher it must match the acting user's current user key id;
+    /// for an organization cipher it is not validated, because organizations carry no key id yet.
     /// </summary>
     [KeyId]
     public string EncryptedByKeyId { get; set; }
@@ -83,9 +85,15 @@ public class CipherRequestModel
     public KeyId GetEncryptedByKeyId() =>
         KeyId.FromHexEncodedString(string.IsNullOrEmpty(EncryptedByKeyId) ? null : EncryptedByKeyId);
 
+    /// <summary>
+    /// True when this cipher is owned by an organization, and so is encrypted with the organization
+    /// key rather than the acting user's key.
+    /// </summary>
+    public bool IsOrganizationCipher => !string.IsNullOrWhiteSpace(OrganizationId);
+
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
     {
-        var hasOrgId = !string.IsNullOrWhiteSpace(OrganizationId);
+        var hasOrgId = IsOrganizationCipher;
         var cipher = new CipherDetails
         {
             Type = Type,
