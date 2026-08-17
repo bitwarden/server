@@ -8,7 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
@@ -29,7 +28,7 @@ public class OrganizationUserResponseModel : ResponseModel
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         AccessPam = organizationUser.AccessPam;
-        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
+        Permissions = organizationUser.GetPermissions();
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
     }
 
@@ -49,7 +48,7 @@ public class OrganizationUserResponseModel : ResponseModel
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         AccessPam = organizationUser.AccessPam;
-        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
+        Permissions = organizationUser.GetPermissions();
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
         HasMasterPassword = organizationUser.HasMasterPassword;
@@ -62,6 +61,7 @@ public class OrganizationUserResponseModel : ResponseModel
     public string ExternalId { get; set; }
     public bool AccessSecretsManager { get; set; }
     public bool AccessPam { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public bool UsesKeyConnector { get; set; }
