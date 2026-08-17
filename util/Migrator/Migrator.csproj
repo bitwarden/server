@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Migrator.Test" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="DbScripts\**\*.sql" />
     <EmbeddedResource Include="DbScripts_transition\**\*.sql" />
     <EmbeddedResource Include="DbScripts_finalization\**\*.sql" />

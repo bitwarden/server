@@ -155,7 +155,11 @@ public class PreviewOrganizationTaxCommand(
                     break;
             }
 
-            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic },
+                Items = items
+            };
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
@@ -195,7 +199,11 @@ public class PreviewOrganizationTaxCommand(
                     });
                 }
 
-                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                    Items = items
+                };
 
                 var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
@@ -214,10 +222,12 @@ public class PreviewOrganizationTaxCommand(
                 var options = GetBaseOptions(billingAddress, planChange.Tier != ProductTierType.Families);
 
                 var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                    new SubscriptionGetOptions
-                    {
-                        Expand = ["customer", "discounts.coupon.applies_to"]
-                    });
+                    // `customer.discount.source.coupon` is 4 levels — Stripe's cap. Needed
+                    // because `Discount.source` is expandable, not inline, after the
+                    // 2025-09-30.clover Discount refactor; without it, the read below
+                    // NREs on `Discount.Source`. `discounts.source.coupon` materializes the
+                    // subscription-level discounts too; without it they come back as null list entries.
+                    new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon", "discounts.source.coupon"] });
 
                 // Genuine org coupons (complimentary PM, SM-standalone) attach at the subscription level, not the
                 // customer. The migration coupon lives on the schedule, not the live subscription, so it's excluded.
@@ -227,7 +237,7 @@ public class PreviewOrganizationTaxCommand(
                 {
                     options.Discounts =
                     [
-                        new InvoiceDiscountOptions { Coupon = discount.Coupon.Id }
+                        new InvoiceDiscountOptions { Coupon = discount.Source?.Coupon?.Id }
                     ];
                 }
 
@@ -328,7 +338,11 @@ public class PreviewOrganizationTaxCommand(
                     }
                 }
 
-                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                    Items = items
+                };
 
                 var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
@@ -350,10 +364,12 @@ public class PreviewOrganizationTaxCommand(
             }
 
             var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions
-                {
-                    Expand = ["customer.tax_ids", "discounts.coupon.applies_to"]
-                });
+                // `customer.discount.source.coupon` is 4 levels — Stripe's cap. Needed
+                // because `Discount.source` is expandable, not inline, after the
+                // 2025-09-30.clover Discount refactor; without it, the read below
+                // NREs on `Discount.Source`. `discounts.source.coupon` materializes the
+                // subscription-level discounts too; without it they come back as null list entries.
+                new SubscriptionGetOptions { Expand = ["customer.tax_ids", "customer.discount.source.coupon", "discounts.source.coupon"] });
 
             var options = GetBaseOptions(subscription.Customer,
                 organization.GetProductUsageType() == ProductUsageType.Business);
@@ -365,7 +381,7 @@ public class PreviewOrganizationTaxCommand(
             {
                 options.Discounts =
                 [
-                    new InvoiceDiscountOptions { Coupon = discount.Coupon.Id }
+                    new InvoiceDiscountOptions { Coupon = discount.Source?.Coupon?.Id }
                 ];
             }
 
@@ -411,7 +427,11 @@ public class PreviewOrganizationTaxCommand(
                 }
             }
 
-            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                Items = items
+            };
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);

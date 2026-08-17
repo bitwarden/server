@@ -14,7 +14,8 @@
     @AccessSecretsManager BIT = 0,
     @RevocationReason TINYINT = NULL,
     @StatusNew SMALLINT = NULL,
-    @AccessPam BIT = 0
+    @AccessPam BIT = 0,
+    @V2UpgradeToken VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -36,7 +37,8 @@ BEGIN
         [AccessSecretsManager],
         [RevocationReason],
         [StatusNew],
-        [AccessPam]
+        [AccessPam],
+        [V2UpgradeToken]
     )
     VALUES
     (
@@ -55,6 +57,7 @@ BEGIN
         @AccessSecretsManager,
         @RevocationReason,
         @StatusNew,
-        @AccessPam
+        @AccessPam,
+        @V2UpgradeToken
     )
 END
