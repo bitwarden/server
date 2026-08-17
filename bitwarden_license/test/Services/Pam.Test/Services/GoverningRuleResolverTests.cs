@@ -25,6 +25,8 @@ public class GoverningRuleResolverTests
     private static readonly AccessSignals _signals = new()
     {
         IpAddress = IPAddress.Parse("10.0.0.5"),
+        // Fixed instant: no rule below carries a time-of-day condition, so it only has to be deterministic.
+        Timestamp = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero),
     };
 
     [Theory, BitAutoData]
