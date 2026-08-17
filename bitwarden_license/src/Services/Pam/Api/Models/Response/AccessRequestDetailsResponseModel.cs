@@ -1,5 +1,5 @@
 ﻿using Bit.HttpExtensions;
-using Bit.Pam.Enums;
+using Bit.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -13,6 +13,44 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     public AccessRequestDetailsResponseModel()
         : base("accessRequestDetails")
     {
+    }
+
+    public AccessRequestDetailsResponseModel(AccessRequestDetails details)
+        : base("accessRequestDetails")
+    {
+        ArgumentNullException.ThrowIfNull(details);
+
+        Id = details.Id;
+        CipherId = details.CipherId;
+        CollectionId = details.CollectionId;
+        OrganizationId = details.OrganizationId;
+        RequesterId = details.RequesterId;
+        RuleId = details.RuleId;
+        Status = details.Status.ToApiStatus(details.ProducedLeaseId.HasValue);
+        LeaseNotBefore = details.NotBefore.AsUtc();
+        LeaseNotAfter = details.NotAfter.AsUtc();
+        Reason = details.Reason;
+        SubmittedAt = details.CreationDate.AsUtc();
+        ResolvedAt = details.ResolvedDate.AsUtc();
+        // The request's full decision log, oldest first: one element per recorded decision (human or automatic).
+        // Empty only while pending (no decision recorded yet).
+        Decisions = details.Decisions
+            .Select(d => new AccessRequestDecisionResponseModel
+            {
+                DeciderKind = d.DeciderKind,
+                Id = d.ApproverId,
+                Name = d.Name,
+                Email = d.Email,
+                Comment = d.Comment,
+                Verdict = d.Verdict.ToApiVerdict(),
+                DecidedAt = d.DecidedAt.AsUtc(),
+            })
+            .ToList();
+        ProducedLeaseId = details.ProducedLeaseId;
+        ProducedLeaseStatus = details.ProducedLeaseStatus?.ToApiStatus();
+        ExtensionOfLeaseId = details.ExtensionOfLeaseId;
+        RequesterName = details.RequesterName;
+        RequesterEmail = details.RequesterEmail;
     }
 
     /// <summary>The access request's unique identifier.</summary>
