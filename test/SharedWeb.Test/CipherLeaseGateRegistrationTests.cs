@@ -10,14 +10,20 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bit.SharedWeb.Test.Utilities;
 
 /// <summary>
-/// Pins the default <see cref="ICipherLeaseGate"/> registration. PAM leasing is wired end to end, but nothing is
-/// gated: the default gate lets every cipher read through. These tests exist so that stays a decision rather than an
-/// accident — when the commercial gate lands and replaces the default, the first test fails and points at the change.
+/// Pins the <em>default</em> <see cref="ICipherLeaseGate"/> registration, which is the open-source fallback: it lets
+/// every cipher read through, because leasing is a commercial feature. The real gate is registered by
+/// <c>AddPamServices</c>, which Startup calls after <c>AddBaseServices</c> and only in a non-OSS build.
 /// </summary>
+/// <remarks>
+/// That arrangement rests on last-one-wins, so it is only correct while <em>both</em> registrations are a plain
+/// <c>Add</c> — hence two tests rather than one. This file owns the open-source half; the commercial half is pinned by
+/// <c>ServiceCollectionExtensionsTests</c> in the Pam test project. Turning either into a <c>TryAdd</c> leaves leasing
+/// silently ungated with the rest of the feature working, which is exactly the failure these pin against.
+/// </remarks>
 public class CipherLeaseGateRegistrationTests
 {
     [Fact]
-    public void AddBaseServices_RegistersUnrestrictedGate_SoLeasingIsNotEnforced()
+    public void AddBaseServices_RegistersUnrestrictedGate_AsTheOpenSourceDefault()
     {
         var services = new ServiceCollection();
 
@@ -31,9 +37,8 @@ public class CipherLeaseGateRegistrationTests
     [Fact]
     public void AddBaseServices_RegistersGateSoALaterPlainAddWins()
     {
-        // The commercial gate overrides the default by registering after AddBaseServices and relying on last-one-wins.
-        // That only holds while the default is a plain Add: a TryAdd default would still be the sole registration, and
-        // a TryAdd override would silently no-op and leave leasing ungated.
+        // Stands in for what AddPamServices does. This project cannot reference the commercial library, so the
+        // override is modelled with a stub here and asserted for real over there.
         var services = new ServiceCollection();
         services.AddBaseServices(new GlobalSettings());
 

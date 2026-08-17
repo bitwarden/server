@@ -1,4 +1,5 @@
-﻿using Bit.Services.Pam.Api.Endpoints.Handlers;
+﻿using Bit.Core.Pam.Services;
+using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Services;
 using Bit.Services.Pam.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,6 +57,21 @@ public class ServiceCollectionExtensionsTests
         }
 
         Assert.Empty(missing);
+    }
+
+    /// <summary>
+    /// The gate override is the one registration here that has to <em>beat</em> another rather than merely exist:
+    /// AddBaseServices already registers the ungating open-source default. A TryAdd here would no-op against it and
+    /// leave every PAM-governed cipher fully readable — silently, with the rest of the feature working.
+    /// </summary>
+    [Fact]
+    public void AddPamServices_OverridesTheDefaultCipherLeaseGate()
+    {
+        var services = new ServiceCollection().AddPamServices();
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(ICipherLeaseGate));
+        Assert.Equal(typeof(CipherLeaseGate), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
     }
 
     [Fact]
