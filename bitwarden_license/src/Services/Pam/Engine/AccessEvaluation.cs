@@ -33,6 +33,12 @@ public enum DenyReason
     /// visitor dispatch is exhaustive at compile time.
     /// </summary>
     UnsupportedCondition,
+
+    /// <summary>
+    /// The request fell outside every window on a time-of-day condition, or the condition's timezone could not be
+    /// resolved so no window could be evaluated.
+    /// </summary>
+    NotWithinTimeWindow,
 }
 
 /// <summary>
