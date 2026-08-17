@@ -398,7 +398,6 @@ public class OrganizationUsersControllerTests
         var response = await sutProvider.Sut.Get(organizationUser.OrganizationId, organizationUser.Id, false);
 
         Assert.Equal(organizationUser.Id, response.Id);
-        Assert.True(response.ManagedByOrganization);
         Assert.True(response.ClaimedByOrganization);
     }
 
