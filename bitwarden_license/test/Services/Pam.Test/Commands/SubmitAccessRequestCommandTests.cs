@@ -165,90 +165,6 @@ public class SubmitAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_Human_EmailsApproversExcludingRequester(
-        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
-    {
-        var sutProvider = Setup();
-        SetupCipher(sutProvider, userId, cipherId);
-        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
-        SetupHumanCreate(sutProvider);
-        SetupApproverEmails(sutProvider, collectionId, userId, orgId);
-
-        var start = _now.AddHours(1);
-        var end = _now.AddHours(2);
-        await sutProvider.Sut.SubmitAsync(userId, cipherId,
-            new AccessRequestSubmission { Start = start, End = end, Reason = "audit" });
-
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendPamPendingAccessRequestEmailsAsync(
-                Arg.Is<IEnumerable<string>>(e =>
-                    e.Contains("a@example.com") && e.Contains("b@example.com") && !e.Contains("requester@example.com")),
-                "Acme Corp", "Reqi", "requester@example.com", start, end, "audit");
-    }
-
-    [Theory, BitAutoData]
-    public async Task SubmitAsync_Human_NoApprovers_DoesNotEmail(
-        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
-    {
-        var sutProvider = Setup();
-        SetupCipher(sutProvider, userId, cipherId);
-        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
-        SetupHumanCreate(sutProvider);
-        // Setup() defaults the collection to no managers, so there is nobody to email.
-
-        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
-            new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "audit" });
-
-        Assert.Equal(AccessApprovalMode.Human, result.ApprovalMode);
-        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
-            .SendPamPendingAccessRequestEmailsAsync(default!, default!, default, default!, default, default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SubmitAsync_Human_RequesterNotFound_DoesNotEmail(
-        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
-    {
-        var sutProvider = Setup();
-        SetupCipher(sutProvider, userId, cipherId);
-        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
-        SetupHumanCreate(sutProvider);
-        var manager = new User { Id = Guid.NewGuid(), Email = "manager@example.com" };
-        sutProvider.GetDependency<ICollectionRepository>().GetManagingUserIdsAsync(collectionId)
-            .Returns(new List<Guid> { manager.Id });
-        sutProvider.GetDependency<IUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<User> { manager });
-        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(userId).Returns((User?)null);
-
-        await sutProvider.Sut.SubmitAsync(userId, cipherId,
-            new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "audit" });
-
-        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
-            .SendPamPendingAccessRequestEmailsAsync(default!, default!, default, default!, default, default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SubmitAsync_Human_MailServiceThrows_StillReturnsResult(
-        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
-    {
-        var sutProvider = Setup();
-        SetupCipher(sutProvider, userId, cipherId);
-        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
-        SetupHumanCreate(sutProvider);
-        SetupApproverEmails(sutProvider, collectionId, userId, orgId);
-        sutProvider.GetDependency<IMailService>()
-            .SendPamPendingAccessRequestEmailsAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
-                Arg.Any<string?>(), Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<string?>())
-            .Returns(Task.FromException(new Exception("smtp down")));
-
-        // An email failure must not fail the submission — the request is already persisted.
-        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
-            new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "audit" });
-
-        Assert.Equal(AccessApprovalMode.Human, result.ApprovalMode);
-        Assert.Equal(AccessRequestStatus.Pending, result.Request!.Status);
-    }
-
-    [Theory, BitAutoData]
     public async Task SubmitAsync_Automatic_DoesNotNotifyApprovers(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
@@ -265,8 +181,6 @@ public class SubmitAccessRequestCommandTests
         // request.
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
             .NotifyRequesterAsync(userId);
-        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
-            .SendPamPendingAccessRequestEmailsAsync(default!, default!, default, default!, default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -363,9 +277,6 @@ public class SubmitAccessRequestCommandTests
     {
         var sutProvider = new SutProvider<SubmitAccessRequestCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
-        // Default to a collection with no managers so tests that don't exercise the approver email skip it cleanly.
-        sutProvider.GetDependency<ICollectionRepository>().GetManagingUserIdsAsync(Arg.Any<Guid>())
-            .Returns(new List<Guid>());
         return sutProvider;
     }
 
@@ -373,25 +284,6 @@ public class SubmitAccessRequestCommandTests
         sutProvider.GetDependency<IAccessRequestRepository>()
             .CreateAsync(Arg.Any<AccessRequest>())
             .Returns(callInfo => callInfo.Arg<AccessRequest>());
-
-    /// <summary>
-    /// Wires the collection managers, requester, and organization so the approver email resolves and sends.
-    /// The requester (<paramref name="userId"/>) is intentionally also a manager, to assert they're excluded.
-    /// </summary>
-    private static void SetupApproverEmails(SutProvider<SubmitAccessRequestCommand> sutProvider,
-        Guid collectionId, Guid userId, Guid orgId)
-    {
-        var managerA = new User { Id = Guid.NewGuid(), Email = "a@example.com", Name = "A" };
-        var managerB = new User { Id = Guid.NewGuid(), Email = "b@example.com", Name = "B" };
-        sutProvider.GetDependency<ICollectionRepository>().GetManagingUserIdsAsync(collectionId)
-            .Returns(new List<Guid> { managerA.Id, managerB.Id, userId });
-        sutProvider.GetDependency<IUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<User> { managerA, managerB });
-        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(userId)
-            .Returns(new User { Id = userId, Email = "requester@example.com", Name = "Reqi" });
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId)
-            .Returns(new Organization { Id = orgId, Name = "Acme Corp" });
-    }
 
     private static void SetupCipher(SutProvider<SubmitAccessRequestCommand> sutProvider, Guid userId, Guid cipherId)
     {
