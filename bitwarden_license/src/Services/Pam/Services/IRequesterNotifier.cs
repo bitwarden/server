@@ -7,10 +7,6 @@
 /// request being cancelled — so their "My requests" list, lease banner, and row badges stay live, and an open cipher
 /// re-locks the moment its lease ends.
 /// </summary>
-/// <remarks>
-/// The only implementation today is <see cref="NoopRequesterNotifier"/>: the push type does not exist yet, so nothing
-/// is actually sent.
-/// </remarks>
 public interface IRequesterNotifier
 {
     Task NotifyRequesterAsync(Guid requesterId);
