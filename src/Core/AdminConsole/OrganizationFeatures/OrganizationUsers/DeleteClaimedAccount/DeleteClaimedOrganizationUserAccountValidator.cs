@@ -33,9 +33,12 @@ public class DeleteClaimedOrganizationUserAccountValidator(
     /// </summary>
     private async Task<IReadOnlyDictionary<Guid, Error?>> GetManageErrorsAsync(ICollection<DeleteUserValidationRequest> requests)
     {
+        // Bulk delete requests aren't de-duplicated upstream, so a caller-supplied payload can list the same
+        // OrganizationUserId more than once; group instead of a plain ToDictionary to avoid throwing on duplicates.
         var targetsById = requests
             .Where(r => r.OrganizationUser is not null)
-            .ToDictionary(r => r.OrganizationUserId, r => (IOrganizationUserRole)r.OrganizationUser!);
+            .GroupBy(r => r.OrganizationUserId)
+            .ToDictionary(g => g.Key, g => (IOrganizationUserRole)g.First().OrganizationUser!);
 
         if (targetsById.Count == 0)
         {

@@ -40,7 +40,9 @@ public class VerifyOrganizationDomainCommand(
                 $"Please call {nameof(SystemVerifyOrganizationDomainAsync)} for system users.");
         }
 
-        var actingUser = new StandardUser(currentContext.UserId.Value, await currentContext.OrganizationOwner(organizationDomain.OrganizationId));
+        var actingOrganization = currentContext.GetOrganization(organizationDomain.OrganizationId);
+        var actingUser = new StandardUser(currentContext.UserId.Value, await currentContext.OrganizationOwner(organizationDomain.OrganizationId),
+            actingOrganization?.Type, actingOrganization?.Permissions);
 
         var domainVerificationResult = await VerifyOrganizationDomainAsync(organizationDomain, actingUser);
 

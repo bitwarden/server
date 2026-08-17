@@ -543,6 +543,49 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
         Assert.True(userResult.IsValid);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WithDuplicateOrganizationUserIds_DoesNotThrowAndReturnsResultPerRequest(
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
+        User user,
+        Guid organizationId,
+        Guid deletingUserId,
+        [OrganizationUser] OrganizationUser organizationUser)
+    {
+        // A caller-supplied bulk payload isn't de-duplicated upstream, so the same OrganizationUserId can appear
+        // more than once; this must not throw when grouping targets for the batched "can manage" check.
+        organizationUser.UserId = user.Id;
+        organizationUser.OrganizationId = organizationId;
+
+        var request1 = new DeleteUserValidationRequest
+        {
+            OrganizationId = organizationId,
+            OrganizationUserId = organizationUser.Id,
+            OrganizationUser = organizationUser,
+            User = user,
+            DeletingUserId = deletingUserId,
+            IsClaimed = true
+        };
+
+        var request2 = new DeleteUserValidationRequest
+        {
+            OrganizationId = organizationId,
+            OrganizationUserId = organizationUser.Id,
+            OrganizationUser = organizationUser,
+            User = user,
+            DeletingUserId = deletingUserId,
+            IsClaimed = true
+        };
+
+        SetupMocks(sutProvider, organizationId, user.Id);
+
+        var results = await sutProvider.Sut.ValidateAsync([request1, request2]);
+
+        var resultsList = results.ToList();
+        Assert.Equal(2, resultsList.Count);
+        Assert.All(resultsList, result => Assert.True(result.IsValid));
+    }
+
     private static void SetupMocks(
         SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         Guid organizationId,

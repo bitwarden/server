@@ -128,8 +128,14 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
             return targetsById.ToDictionary(kvp => kvp.Key, Error? (_) => null);
         }
 
-        var actingUser = standardUser.OrganizationUserType.HasValue
-            ? new OrganizationUserRole(standardUser.OrganizationUserType.Value, request.OrganizationId, standardUser.Permissions)
+        // Fall back to Owner-level authority when the caller didn't resolve a confirmed role (e.g. legacy call
+        // sites), so an actual owner/provider isn't silently denied. Non-owner/provider callers are still denied,
+        // since IsProviderAsync is checked separately by CanManageAsync.
+        var resolvedType = standardUser.OrganizationUserType
+            ?? (standardUser.IsOrganizationOwnerOrProvider ? Bit.Core.Enums.OrganizationUserType.Owner : (Bit.Core.Enums.OrganizationUserType?)null);
+
+        var actingUser = resolvedType.HasValue
+            ? new OrganizationUserRole(resolvedType.Value, request.OrganizationId, standardUser.Permissions)
             : null;
 
         return await organizationUserValidationService.CanManageAsync(

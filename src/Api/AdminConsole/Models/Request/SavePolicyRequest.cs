@@ -18,7 +18,9 @@ public class SavePolicyRequest
     {
         var policyUpdate = await Policy.ToPolicyUpdateAsync(organizationId, type, currentContext);
         var metadata = PolicyDataValidator.ValidateAndDeserializeMetadata(Metadata, type);
-        var performedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId));
+        var actingOrganization = currentContext.GetOrganization(organizationId);
+        var performedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId),
+            actingOrganization?.Type, actingOrganization?.Permissions);
 
         return new SavePolicyModel(policyUpdate, performedBy, metadata);
     }
