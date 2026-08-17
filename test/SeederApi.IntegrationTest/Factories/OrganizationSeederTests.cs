@@ -127,9 +127,22 @@ public class OrganizationSeederTests
     }
 
     [Fact]
+    public void Create_FreeWithSecretsManager_SetsFreeTierDefaults()
+    {
+        var free = OrganizationSeeder.Create(
+            Seed() with { PlanType = PlanType.Free, EnableSecretsManager = true },
+            new NoOpManglerService());
+
+        Assert.True(free.UseSecretsManager);
+        Assert.Equal(2, free.SmSeats);            // Free tier base seats
+        Assert.Equal(3, free.SmServiceAccounts);  // Free tier base service accounts
+    }
+
+    [Fact]
     public void Create_SecretsManagerOnUnsupportedPlan_Throws()
     {
-        var seed = Seed() with { PlanType = PlanType.Free, EnableSecretsManager = true };
+        // Families has no Secrets Manager tier, so enabling it must still throw.
+        var seed = Seed() with { PlanType = PlanType.FamiliesAnnually, EnableSecretsManager = true };
 
         Assert.Throws<ArgumentException>(() => OrganizationSeeder.Create(seed, new NoOpManglerService()));
     }

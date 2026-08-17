@@ -54,7 +54,7 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
             stripeAdapter, _logger, organization,
-            ["discounts.coupon", "items.data.discounts.coupon", "schedule"]);
+            ["discounts.source.coupon", "items.data.discounts.source", "schedule"]);
         if (subscription is null)
         {
             return new BadRequest(OfferNoLongerAvailable);
@@ -211,8 +211,8 @@ public class RedeemAnnualUpgradeOfferCommand(
     private static List<SubscriptionSchedulePhaseItemDiscountOptions>? ItemDiscounts(SubscriptionItem item)
     {
         var discounts = item.Discounts?
-            .Where(discount => !string.IsNullOrEmpty(discount?.Coupon?.Id))
-            .Select(discount => new SubscriptionSchedulePhaseItemDiscountOptions { Coupon = discount!.Coupon.Id })
+            .Where(discount => !string.IsNullOrEmpty(discount?.Source?.CouponId))
+            .Select(discount => new SubscriptionSchedulePhaseItemDiscountOptions { Coupon = discount!.Source.CouponId })
             .ToList();
 
         return discounts is { Count: > 0 } ? discounts : null;

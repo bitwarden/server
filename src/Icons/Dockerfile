@@ -57,6 +57,6 @@ WORKDIR /app
 COPY --from=build /source/src/Icons/out /app
 COPY ./src/Icons/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-HEALTHCHECK CMD wget --quiet --tries=1 --output-document=/dev/null http://localhost:5000/google.com/icon.png || exit 1
+HEALTHCHECK CMD wget -Y off --quiet --tries=1 --output-document=/dev/null http://localhost:5000/google.com/icon.png || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

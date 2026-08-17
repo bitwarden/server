@@ -42,13 +42,4 @@ public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseM
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
     public bool IsAdminInitiated { get; set; }
-    /// <summary>
-    /// Obsolete property for backward compatibility
-    /// </summary>
-    [Obsolete("Please use UserIsClaimedByOrganization instead. This property will be removed in a future version.")]
-    public bool UserIsManagedByOrganization
-    {
-        get => UserIsClaimedByOrganization;
-        set => UserIsClaimedByOrganization = value;
-    }
 }
