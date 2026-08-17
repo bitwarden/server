@@ -1,4 +1,5 @@
-﻿using Bit.HttpExtensions;
+﻿using Bit.Core.Pam.Services;
+using Bit.HttpExtensions;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Engine;
@@ -20,6 +21,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
         services.AddScoped<CipherLeaseEndpointsHandler>();
+
+        // The read decision point Vault code consults before releasing a cipher's secrets. AddBaseServices
+        // registers the open-source UnrestrictedCipherLeaseGate, which gates nothing; this overrides it by
+        // last-one-wins, which holds because Startup calls AddPamServices after AddBaseServices and both
+        // registrations are a plain Add. A TryAdd on either side would silently leave leasing ungated, so
+        // keep this an AddScoped — CipherLeaseGateRegistrationTests pins both halves of that contract.
+        services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
 
         // Rule evaluation engine. Pure and stateless, so a singleton is safe.
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
