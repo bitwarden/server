@@ -10,6 +10,29 @@ These options apply to any preset that uses generated (count-based) ciphers — 
 | ------------------------ | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `repromptEveryNthCipher` | integer | 0       | Set `Reprompt=Password` on every Nth generated cipher. `0` = disabled. Example: `5` flags ciphers at indices 0, 5, 10, … ≈ 20% reprompt rate. |
 
+## Developer
+
+Day-to-day local development: one org with memorable role-based logins, production-shaped collections, and a realistic vault. No attachments, so no Azurite required.
+
+```bash
+dotnet run -- preset --name dev.playground
+```
+
+| Preset     | Org Fixture | Roster    | Ciphers        | Use Case                                    |
+| ---------- | ----------- | --------- | -------------- | ------------------------------------------- |
+| playground | dev-org     | dev-roles | dev-playground | Convenient logins over production-like data |
+
+The four role accounts use the roster `email` override (`roster.schema.json`), so the login is the role — password `asdfasdfasdf` unless overridden:
+
+| Login            | Role   | What they see                                                                     |
+| ---------------- | ------ | --------------------------------------------------------------------------------- |
+| `owner@bw.test`  | Owner  | Everything — direct Can Manage on every collection                                 |
+| `admin@bw.test`  | Admin  | Company-Wide, Break Glass, plus read-only Leadership views (CI & Releases, Vendors & Contracts) |
+| `custom@bw.test` | Custom | Company-Wide, CI & Releases (read-only), Finance (read-only, hidden passwords)     |
+| `user@bw.test`   | User   | Company-Wide plus the Engineering collections, with folders and favorites          |
+
+The other eight roster members are production-realistic (`firstname.lastname@bw.test`, e.g. `elena.vasquez@bw.test`) and fill out the Engineering, Finance, People Ops, and Leadership groups. Collections use `/` hierarchy (e.g. `Engineering/Cloud Infrastructure`), every cipher is assigned to a collection, and the 21 vault items span logins (with TOTP), secure notes, a card, an identity, and an SSH key — three of them cipher-key encrypted.
+
 ## Features
 
 Test specific Bitwarden features. Fixture-based data for deterministic results.
