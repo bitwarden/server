@@ -1,5 +1,6 @@
 ﻿using Bit.HttpExtensions;
 using Bit.Services.Pam.Enums;
+using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -12,6 +13,21 @@ public class AccessPreCheckResponseModel : ResponseModel
     public AccessPreCheckResponseModel()
         : base("accessPreCheck")
     {
+    }
+
+    /// <param name="cipherId">
+    /// The cipher the pre-check was run for. Passed in because <see cref="AccessPreCheckResult"/> describes only the
+    /// outcome and does not carry the subject cipher.
+    /// </param>
+    /// <param name="result">The resolved approval outcome.</param>
+    public AccessPreCheckResponseModel(Guid cipherId, AccessPreCheckResult result)
+        : base("accessPreCheck")
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        CipherId = cipherId;
+        ApprovalMode = result.ApprovalMode;
+        HasActiveLease = result.HasActiveLease;
     }
 
     public Guid CipherId { get; set; }

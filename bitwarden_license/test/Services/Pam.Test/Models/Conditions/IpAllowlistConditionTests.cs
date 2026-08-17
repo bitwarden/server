@@ -7,9 +7,11 @@ namespace Bit.Services.Pam.Test.Models.Conditions;
 
 public class IpAllowlistConditionTests
 {
+    // Fixed instant: this condition ignores the timestamp, so the value only has to be deterministic.
     private static AccessSignals Signals(IPAddress? ip) => new()
     {
         IpAddress = ip,
+        Timestamp = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero),
     };
 
     [Fact]

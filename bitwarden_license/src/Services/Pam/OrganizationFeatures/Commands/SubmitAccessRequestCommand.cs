@@ -1,13 +1,10 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
-using Bit.Pam.Services;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -31,11 +28,6 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
-    private readonly ICollectionRepository _collectionRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IMailService _mailService;
-    private readonly ILogger<SubmitAccessRequestCommand> _logger;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
@@ -48,11 +40,6 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         IAccessRequestRepository accessRequestRepository,
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
-        ICollectionRepository collectionRepository,
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IMailService mailService,
-        ILogger<SubmitAccessRequestCommand> logger,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
@@ -64,11 +51,6 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         _accessRequestRepository = accessRequestRepository;
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
-        _collectionRepository = collectionRepository;
-        _userRepository = userRepository;
-        _organizationRepository = organizationRepository;
-        _mailService = mailService;
-        _logger = logger;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -206,7 +188,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         // without a manual refresh.
         await _requesterNotifier.NotifyRequesterAsync(userId);
 
-        return AccessRequestResult.Automatic(request);
+        return AccessRequestResult.Automatic(request, decision);
     }
 
     private async Task<AccessRequestResult> RequestHumanApprovalAsync(
@@ -279,74 +261,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         // manual refresh.
         await _requesterNotifier.NotifyRequesterAsync(userId);
 
-        // Also email the collection's approvers so they learn about the request outside of an open session.
-        await NotifyApproversByEmailAsync(created);
-
         return AccessRequestResult.Human(created);
-    }
-
-    /// <summary>
-    /// Emails the managers (approvers) of the request's collection that a new request is pending their review.
-    /// Best-effort: failures are logged and swallowed so they never fail the request submission.
-    /// </summary>
-    private async Task NotifyApproversByEmailAsync(AccessRequest request)
-    {
-        try
-        {
-            var managerIds = await _collectionRepository.GetManagingUserIdsAsync(request.CollectionId);
-
-            // The requester may manage the collection themselves; never notify them of their own request.
-            var recipientIds = managerIds.Where(id => id != request.RequesterId).ToList();
-            if (recipientIds.Count == 0)
-            {
-                return;
-            }
-
-            var managers = await _userRepository.GetManyAsync(recipientIds);
-            var managerEmails = managers
-                .Select(u => u.Email)
-                .Where(email => !string.IsNullOrWhiteSpace(email))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            if (managerEmails.Count == 0)
-            {
-                return;
-            }
-
-            var requester = await _userRepository.GetByIdAsync(request.RequesterId);
-            if (requester is null || string.IsNullOrWhiteSpace(requester.Email))
-            {
-                _logger.LogWarning(
-                    "Skipping PAM approver email for access request {AccessRequestId}; requester not found or has no email.",
-                    request.Id);
-                return;
-            }
-
-            var organization = await _organizationRepository.GetByIdAsync(request.OrganizationId);
-            if (organization is null)
-            {
-                _logger.LogWarning(
-                    "Skipping PAM approver email for access request {AccessRequestId}; organization not found.",
-                    request.Id);
-                return;
-            }
-
-            await _mailService.SendPamPendingAccessRequestEmailsAsync(
-                managerEmails,
-                organization.Name,
-                requester.Name,
-                requester.Email,
-                request.NotBefore,
-                request.NotAfter,
-                request.Reason);
-        }
-        catch (Exception ex)
-        {
-            // Best effort: the request is already persisted and the inbox push already fired. An email failure
-            // must never fail the submission, so log and move on.
-            _logger.LogError(ex,
-                "Failed to send PAM approver emails for access request {AccessRequestId}.", request.Id);
-        }
     }
 
     private static string DenyMessage(AccessEvaluation evaluation) => evaluation.Reason switch
