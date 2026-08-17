@@ -330,7 +330,7 @@ public class SendRequestModel
         return new SendTextData(Name ?? string.Empty, Notes, text.Text, text.Hidden);
     }
 
-     // Only called from the SendType.Item branch of UpdateSend, Data is required by client and not null
+    // Only called from the SendType.Item branch of UpdateSend, Data is required by client and not null
     private SendItemData ToSendItemData()
     {
         var data = Data ?? throw new ArgumentNullException(nameof(Data), "Data is required for item sends.");

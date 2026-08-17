@@ -76,9 +76,10 @@ public class SendRequestModelTests
             Name = "encrypted_name",
             Notes = null,
             Emails = "owner@bitwarden.com",
-            Data = new SendDataModel {
+            Data = new SendDataModel
+            {
                 EncryptionVersion = SendEncryptionType.V1,
-                Data = "{ \"name\": \"ENCRYPTED_VALUE\" }"  
+                Data = "{ \"name\": \"ENCRYPTED_VALUE\" }"
             },
             Type = SendType.Item,
         };

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 
@@ -6,7 +6,7 @@ namespace Bit.Api.Tools.Models;
 
 public class SendDataModel
 {
-    public SendDataModel() {}
+    public SendDataModel() { }
 
     public SendDataModel(SendItemData data)
     {
