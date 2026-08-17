@@ -34,7 +34,7 @@ public class IndividualArgs : IArgumentModel
     public bool SelfHosted { get; set; }
 
     [Option("account-age-days", Description = "Backdate the account's CreationDate by N days (default: 0 = today)")]
-    public int AccountAgeDays { get; set; }
+    public int? AccountAgeDays { get; set; }
 
     [Option("mangle", Description = "Enable ID mangling for test isolation")]
     public bool Mangle { get; set; }
@@ -82,6 +82,6 @@ public class IndividualArgs : IArgumentModel
         Password = Password,
         KdfIterations = KdfIterations,
         SelfHosted = SelfHosted,
-        AccountAgeDays = AccountAgeDays
+        AccountAgeDays = AccountAgeDays ?? 0
     };
 }
