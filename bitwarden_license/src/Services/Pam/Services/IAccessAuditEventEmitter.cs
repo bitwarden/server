@@ -6,9 +6,9 @@ namespace Bit.Services.Pam.Services;
 /// Records a PAM audit event at the moment a state-changing action happens (a request submitted or decided; a lease
 /// activated, extended, or revoked). This is the write side of the access-audit trail.
 ///
-/// Every state-changing PAM command emits through this seam, so the call sites do not change as the write side lands.
-/// The only implementation today is <see cref="NoopAccessAuditEventEmitter"/>, which records nothing: the audit store
-/// and the trail read model are a separate piece of work.
+/// Every state-changing PAM command emits through this seam, so the call sites do not depend on where the events land.
+/// <see cref="AccessAuditEventEmitter"/> appends them to the dedicated append-only audit store, which the access-audit
+/// trail is read back from.
 /// </summary>
 public interface IAccessAuditEventEmitter
 {
