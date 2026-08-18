@@ -11,11 +11,11 @@ namespace Bit.Api.Test.Vault.AutoFixture;
 
 /// <summary>
 /// Injects an <see cref="ICipherLeaseGate"/> substitute pre-configured to authorize full data for every
-/// cipher — the flag-off / not-gated behaviour. This lets leasing-agnostic controller tests assert their
-/// existing full-data expectations without each one having to stub the gate. Tests that exercise gating
-/// re-stub the dependency (e.g. make <c>AuthorizeReadAsync</c> or <c>AuthorizeWriteReturnAsync</c> return
-/// null) after building the SUT.
-/// It also authorizes every mutation.
+/// cipher, and to permit every mutation — the flag-off / not-gated behaviour. This lets leasing-agnostic
+/// controller tests assert their existing full-data expectations without each one having to stub the gate.
+/// Tests that exercise gating re-stub the dependency (e.g. make <c>AuthorizeReadAsync</c> or
+/// <c>AuthorizeWriteReturnAsync</c> return null, or make <c>EnsureCanMutateAsync</c> throw) after building
+/// the SUT.
 /// </summary>
 public class CipherLeaseGateBypassCustomization : ICustomization
 {
@@ -39,9 +39,6 @@ public class CipherLeaseGateBypassCustomization : ICustomization
             .Returns(unrestricted);
         gate.EnsureCanMutateAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
         gate.EnsureCanMutateManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>()).Returns(unrestricted);
-        gate.EnsureCanMutateAsAdminAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
-        gate.EnsureCanMutateManyAsAdminAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>())
-            .Returns(unrestricted);
 
         fixture.Inject(gate);
     }
