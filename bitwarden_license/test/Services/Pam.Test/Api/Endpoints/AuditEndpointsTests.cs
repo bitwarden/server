@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Models.Api;
+using Bit.HttpExtensions;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
@@ -12,12 +13,12 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the cipher-lease wire contract that the generated OpenAPI spec — and the client bindings built from it —
-/// depend on. The endpoint bodies just delegate; the contract (routes, names, methods, return types) is the
+/// Locks the audit wire contract that the generated OpenAPI spec — and the client bindings built from it —
+/// depend on. The endpoint body just delegates; the contract (route, name, method, return type) is the
 /// thing under test. Endpoints are materialized by mapping them onto a minimal host and reading its
 /// <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator inspects.
 /// </summary>
-public class CipherLeaseEndpointsTests
+public class AuditEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
@@ -43,21 +44,19 @@ public class CipherLeaseEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheThreeCipherLeaseRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheSingleAuditRoute_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
-            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("CipherLease"))
+            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Audit"))
             .ToList();
 
-        Assert.Equal(3, endpoints.Count);
+        Assert.Single(endpoints);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
 
     [Theory]
-    [InlineData("Pam_CipherLease_PreCheck", "GET", "leases/ciphers/{id:guid}/pre-check")]
-    [InlineData("Pam_CipherLease_State", "GET", "leases/ciphers/{id:guid}/state")]
-    [InlineData("Pam_CipherLease_Post", "POST", "leases/ciphers/{id:guid}")]
+    [InlineData("Pam_Audit_GetTrail", "GET", "organizations/{orgId:guid}/audit")]
     public void MapPamEndpoints_RegistersExpectedRoute(string name, string method, string route)
     {
         var endpoints = MaterializeEndpoints();
@@ -65,17 +64,16 @@ public class CipherLeaseEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/leases/ciphers/{id:guid}/state")
-        // that the generated spec path does not.
+        // Trim slashes: the raw pattern carries routing's leading/trailing slashes that the generated spec path does not.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }
 
     [Fact]
-    public void CipherLeaseGroup_DocumentsErrorResponseModel_For400And404()
+    public void AuditGroup_DocumentsErrorResponseModel_For400And404()
     {
         var endpoint = MaterializeEndpoints()
-            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("CipherLease"));
+            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Audit"));
         var produces = endpoint.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>();
 
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status400BadRequest && p.Type == typeof(ErrorResponseModel));
@@ -83,12 +81,10 @@ public class CipherLeaseEndpointsTests
     }
 
     [Theory]
-    [InlineData(nameof(CipherLeaseEndpointsHandler.PreCheck), typeof(Task<AccessPreCheckResponseModel>))]
-    [InlineData(nameof(CipherLeaseEndpointsHandler.State), typeof(Task<CipherAccessStateResponseModel>))]
-    [InlineData(nameof(CipherLeaseEndpointsHandler.Post), typeof(Task<AccessRequestResultResponseModel>))]
+    [InlineData(nameof(AuditEndpointsHandler.GetTrail), typeof(Task<ListResponseModel<AccessAuditEventResponseModel>>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
-        var method = typeof(CipherLeaseEndpointsHandler).GetMethod(methodName);
+        var method = typeof(AuditEndpointsHandler).GetMethod(methodName);
 
         Assert.NotNull(method);
         Assert.Equal(expectedReturnType, method!.ReturnType);
