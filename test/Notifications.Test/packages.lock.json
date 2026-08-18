@@ -1544,8 +1544,8 @@
       },
       "RabbitMQ.Client": {
         "type": "Transitive",
-        "resolved": "7.1.2",
-        "contentHash": "y3c6ulgULScWthHw5PLM1ShHRLhxg0vCtzX/hh61gRgNecL3ZC3WoBW2HYHoXOVRqTl99Br9E7CZEytGZEsCyQ==",
+        "resolved": "7.2.2",
+        "contentHash": "k4b6RnTXpLbsF96V93ooNYxgPMnoA2tEm24B6AXNJr1mG8wwNYdA1XJtgU66L5xqeGyveS7SJriRzlX3cbqQNA==",
         "dependencies": {
           "System.Threading.RateLimiting": "8.0.0"
         }
@@ -1897,7 +1897,7 @@
           "Quartz": "[3.15.1, 3.15.1]",
           "Quartz.Extensions.DependencyInjection": "[3.15.1, 3.15.1]",
           "Quartz.Extensions.Hosting": "[3.15.1, 3.15.1]",
-          "RabbitMQ.Client": "[7.1.2, 7.1.2]",
+          "RabbitMQ.Client": "[7.2.2, 7.2.2]",
           "SendGrid": "[9.29.3, 9.29.3]",
           "SerilogFileLogging": "[0.0.1, )",
           "SsrfProtection": "[0.0.1, )",
@@ -1940,7 +1940,7 @@
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
           "Bitwarden.Server.Sdk.WebEssentials": "[0.5.0, )",
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.2, )",
@@ -1948,7 +1948,7 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
-          "SharedWeb": "[2026.7.2, )"
+          "SharedWeb": "[2026.8.0, )"
         }
       },
       "infrastructure.dapper": {
@@ -1977,17 +1977,17 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Common": "[2026.7.2, )",
-          "Identity": "[2026.7.2, )",
+          "Common": "[2026.8.0, )",
+          "Identity": "[2026.8.0, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[10.0.8, 10.0.8]",
-          "Migrator": "[2026.7.2, )",
-          "Seeder": "[2026.7.2, )"
+          "Migrator": "[2026.8.0, )",
+          "Seeder": "[2026.8.0, )"
         }
       },
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.7.2, )",
+          "Core": "[2026.8.0, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -2018,12 +2018,6 @@
           "Data": "[0.0.1, )"
         }
       },
-      "serilogfilelogging": {
-        "type": "Project",
-        "dependencies": {
-          "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]"
-        }
-      },
       "rustsdk": {
         "type": "Project"
       },
@@ -2031,10 +2025,16 @@
         "type": "Project",
         "dependencies": {
           "Bogus": "[35.6.5, 35.6.5]",
-          "Core": "[2026.7.2, )",
-          "Infrastructure.EntityFramework": "[2026.7.2, )",
-          "RustSdk": "[2026.7.2, )",
-          "SharedWeb": "[2026.7.2, )"
+          "Core": "[2026.8.0, )",
+          "Infrastructure.EntityFramework": "[2026.8.0, )",
+          "RustSdk": "[2026.8.0, )",
+          "SharedWeb": "[2026.8.0, )"
+        }
+      },
+      "serilogfilelogging": {
+        "type": "Project",
+        "dependencies": {
+          "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]"
         }
       },
       "sharedweb": {
