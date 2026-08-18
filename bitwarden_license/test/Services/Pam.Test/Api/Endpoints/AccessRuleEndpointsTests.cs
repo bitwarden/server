@@ -36,6 +36,7 @@ public class AccessRuleEndpointsTests
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
         builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
+        builder.Services.AddScoped<AuditEndpointsHandler>();
         builder.Services.AddScoped<AccessConnectorEndpointsHandler>();
         builder.Services.AddScoped<TargetSystemEndpointsHandler>();
         builder.Services.AddScoped<RotationConfigEndpointsHandler>();
