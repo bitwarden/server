@@ -3421,4 +3421,33 @@ public class CiphersControllerTests
         Assert.Null(result.Data);
         Assert.NotNull(result.PartialData);
     }
+
+    [Theory, BitAutoData]
+    public async Task PutPartial_LeasingGatedCipher_ThrowsAndDoesNotUpdate(
+        User user, Guid folderId, Guid cipherId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = user.Id,
+            Type = Core.Vault.Enums.CipherType.SecureNote,
+            Data = "{}",
+        };
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(Task.FromResult(cipherDetails));
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateAsync(user.Id, cipherDetails)
+            .ThrowsAsync(new NotFoundException());
+
+        // This endpoint writes straight to the repository, so the CipherService-level gate never sees it.
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutPartial(
+            cipherId, new CipherPartialRequestModel { Favorite = true, FolderId = folderId.ToString() }));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().UpdatePartialAsync(default, default, default, default);
+    }
 }
