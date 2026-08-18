@@ -184,7 +184,7 @@ var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 
 - Add the property to the matching `SeedModels.cs` record _and_ the schema, then wire it through the step that consumes it — a schema-only field parses and is dropped on the floor
 - Update the field's bullet in `Seeds/docs/fixtures.md`, and soften any sibling line the new field makes conditional (an override makes "the Seeder builds emails as X" only true by default)
-- Give identifier-bearing strings `"minLength": 1` in the schema, and reject whitespace in the step rather than committing an unusable row
+- Give identifier-bearing strings `"minLength": 1` in the schema, and treat whitespace as absent in the step so it falls back to the derived value rather than committing an unusable row
 - Add a row to `Seeds/docs/regression.md` when the field changes what a real seed writes to the database — the unit suite proves the parse, not the seed
 - Fixture org domains MUST be `.example` (RFC 2606) — never `.test`, `.local`, or a real TLD. `Seeds/docs/fixtures.md` holds the full naming table
 
