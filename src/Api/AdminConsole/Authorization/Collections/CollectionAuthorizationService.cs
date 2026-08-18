@@ -62,8 +62,9 @@ public class CollectionAuthorizationService(
         }
 
         var callerManagedCollectionIds = await GetCallerManagedCollectionIdsAsync(currentContext.UserId.Value);
-        // Only Owners and Admins can manage orphaned collections, so skip this query for other callers.
-        var orphanedCollectionIds = CollectionRules.PerCollection.CanManageOrphanedCollections(organization)
+        var hasUnmanagedCollections = requestedCollectionIds.Any(id => !callerManagedCollectionIds.Contains(id));
+        // Only Owners and Admins can manage orphaned collections, and only unmanaged collections need the check.
+        var orphanedCollectionIds = hasUnmanagedCollections && CollectionRules.PerCollection.CanManageOrphanedCollections(organization)
             ? await GetOrphanedCollectionIdsAsync(organizationId)
             : new HashSet<Guid>();
 

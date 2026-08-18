@@ -182,6 +182,29 @@ public class CollectionAuthorizationServiceTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
+    public async Task AuthorizeUpdateAsync_WhenOwnerManagesCollectionDirectly_SkipsOrphanedCollectionsQuery(
+        SutProvider<CollectionAuthorizationService> sutProvider,
+        Collection collection,
+        CurrentContextOrganization organization,
+        Guid userId)
+    {
+        organization.Type = OrganizationUserType.Owner;
+        organization.Permissions = new Permissions();
+
+        SetupCollections(sutProvider, collection);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails> { new() { Id = collection.Id, Manage = true } });
+
+        var result = await sutProvider.Sut.AuthorizeUpdateAsync(collection.OrganizationId, collection.Id);
+
+        Assert.True(result);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive()
+            .GetManyByOrganizationIdWithAccessAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
     public async Task AuthorizeUpdateAsync_WhenOwnerAndCollectionOrphaned_Success(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Collection collection,
