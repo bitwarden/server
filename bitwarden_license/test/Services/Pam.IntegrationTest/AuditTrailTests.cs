@@ -104,6 +104,58 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.False(rows[1]!["incomplete"]!.GetValue<bool>());
     }
 
+    // Rule administration goes through the same store as the request/lease lifecycle. This is the end-to-end proof
+    // that the three rule commands emit: create, rename, and delete one rule over HTTP and read the trail back.
+    [Fact]
+    public async Task Audit_RuleCreateUpdateDelete_AreRecordedWithTheRuleName()
+    {
+        var created = await Client.PostAsJsonAsync(
+            $"organizations/{Organization.Id}/access-rules",
+            new
+            {
+                name = "Production database",
+                enabled = true,
+                conditions = JsonNode.Parse("""[{"kind":"human_approval","approverCount":1}]"""),
+                collections = Array.Empty<Guid>(),
+            });
+        created.EnsureSuccessStatusCode();
+        var ruleId = (await created.Content.ReadFromJsonAsync<JsonObject>())!["id"]!.GetValue<Guid>();
+
+        var renamed = await Client.PutAsJsonAsync(
+            $"organizations/{Organization.Id}/access-rules/{ruleId}",
+            new
+            {
+                name = "Production database (paused)",
+                enabled = false,
+                conditions = JsonNode.Parse("""[{"kind":"human_approval","approverCount":1}]"""),
+                collections = Array.Empty<Guid>(),
+            });
+        renamed.EnsureSuccessStatusCode();
+
+        var deleted = await Client.DeleteAsync($"organizations/{Organization.Id}/access-rules/{ruleId}");
+        deleted.EnsureSuccessStatusCode();
+
+        var rows = (await GetJsonAsync(AuditUrl))["data"]!.AsArray();
+
+        var owner = await Factory.GetService<IUserRepository>().GetByEmailAsync(OwnerEmail);
+        var byKind = rows.ToDictionary(row => row!["kind"]!.GetValue<string>(), row => row!);
+        Assert.Equal(3, rows.Count);
+
+        // The name is snapshotted per event, so the create and the rename each read as they were at the time.
+        Assert.Equal("Production database", byKind["ruleCreated"]["ruleName"]!.GetValue<string>());
+        Assert.Equal("Production database (paused)", byKind["ruleUpdated"]["ruleName"]!.GetValue<string>());
+        // The rule row is gone, so the delete event is the only thing that still knows what it was called.
+        Assert.Equal("Production database (paused)", byKind["ruleDeleted"]["ruleName"]!.GetValue<string>());
+
+        Assert.All(byKind.Values, row =>
+        {
+            Assert.Equal(ruleId, row["ruleId"]!.GetValue<Guid>());
+            Assert.Equal(owner!.Id, row["actorId"]!.GetValue<Guid>());
+            Assert.False(row["automated"]!.GetValue<bool>());
+            Assert.False(row["incomplete"]!.GetValue<bool>());
+        });
+    }
+
     // The trail is authorized by AccessEventLogs on the route organization; a caller outside it learns nothing.
     [Fact]
     public async Task Audit_AnOrganizationTheCallerIsNotIn_Returns404()
