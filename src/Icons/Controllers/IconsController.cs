@@ -28,7 +28,7 @@ public class IconsController : Controller
     private readonly IconsSettings _iconsSettings;
 
     public IconsController(
-        IMemoryCache memoryCache,
+        [FromKeyedServices(IconsCacheConstants.IconsCacheName)] IMemoryCache memoryCache,
         IDomainMappingService domainMappingService,
         IIconFetchingService iconFetchingService,
         ILogger<IconsController> logger,
