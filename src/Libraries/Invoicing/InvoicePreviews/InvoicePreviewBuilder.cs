@@ -35,9 +35,6 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
                     case ProductType.SecretsManager:
                         secretsManagerProrations.Add(line);
                         break;
-                    case null:
-                        logger.LogError("Proration line references {Reference}, which has no product mapping; skipped.", reference);
-                        break;
                 }
                 continue;
             }
@@ -51,7 +48,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             };
             if (!lineItemsByReference.TryAdd(reference, item))
             {
-                logger.LogError("Duplicate purchasable reference {Reference} on invoice; kept the first line.", reference);
+                throw new InvalidOperationException($"The preview resolved a duplicate purchasable reference '{reference}' on the invoice.");
             }
         }
 
@@ -96,7 +93,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             };
             if (!lineItemsByReference.TryAdd(reference, item))
             {
-                logger.LogError("Duplicate purchasable reference {Reference} on subscription; kept the first item.", reference);
+                throw new InvalidOperationException($"The preview resolved a duplicate purchasable reference '{reference}' on the subscription.");
             }
         }
 
