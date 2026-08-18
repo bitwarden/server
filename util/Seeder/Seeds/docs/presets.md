@@ -24,14 +24,12 @@ dotnet run -- preset --name dev.playground
 
 The four role accounts use the roster `email` override (`roster.schema.json`), so the login is the role — password `asdfasdfasdf` unless overridden:
 
-| Login            | Role   | What they see                                                                     |
-| ---------------- | ------ | --------------------------------------------------------------------------------- |
-| `owner@bw.test`  | Owner  | Everything — direct Can Manage on every collection                                 |
-| `admin@bw.test`  | Admin  | Company-Wide, Break Glass, plus read-only Leadership views (CI & Releases, Vendors & Contracts) |
-| `custom@bw.test` | Custom | Company-Wide, CI & Releases (read-only), Finance (read-only, hidden passwords)     |
-| `user@bw.test`   | User   | Company-Wide plus the Engineering collections, with folders and favorites          |
-
-The other eight roster members are production-realistic (`firstname.lastname@bw.test`, e.g. `elena.vasquez@bw.test`) and fill out the Engineering, Finance, People Ops, and Leadership groups. Collections use `/` hierarchy (e.g. `Engineering/Cloud Infrastructure`), every cipher is assigned to a collection, and the 21 vault items span logins (with TOTP), secure notes, a card, an identity, and an SSH key — three of them cipher-key encrypted.
+| Login               | Role   | What they see                                                                                   |
+| ------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| `owner@bw.example`  | Owner  | Everything — direct Can Manage on every collection                                              |
+| `admin@bw.example`  | Admin  | Company-Wide, Break Glass, plus read-only Leadership views (CI & Releases, Vendors & Contracts) |
+| `custom@bw.example` | Custom | Company-Wide, CI & Releases (read-only), Finance (read-only, hidden passwords)                  |
+| `user@bw.example`   | User   | Company-Wide plus the Engineering collections, with folders and favorites                       |
 
 ## Features
 

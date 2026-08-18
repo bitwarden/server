@@ -91,13 +91,13 @@ public sealed class FixtureParsingTests
         Assert.Equal("dev-playground", preset.Ciphers?.Fixture);
 
         var org = _reader.Read<SeedOrganization>("organizations.dev-org");
-        Assert.Equal("bw.test", org.Domain);
+        Assert.Equal("bw.example", org.Domain);
 
         // The four role logins carry email overrides; everyone else derives firstName.lastName@domain.
         var roster = _reader.Read<SeedRoster>("rosters.dev-roles");
         var overrides = roster.Users.Where(u => u.Email is not null).Select(u => u.Email).ToHashSet();
         Assert.Equal(
-            new HashSet<string?> { "owner@bw.test", "admin@bw.test", "custom@bw.test", "user@bw.test" },
+            new HashSet<string?> { "owner@bw.example", "admin@bw.example", "custom@bw.example", "user@bw.example" },
             overrides);
 
         // Every cipher is mapped to a roster collection, and every mapping resolves both ways.

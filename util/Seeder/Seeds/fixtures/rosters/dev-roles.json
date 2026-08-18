@@ -5,7 +5,7 @@
       "firstName": "Owen",
       "lastName": "Owner",
       "role": "owner",
-      "email": "owner@bw.test",
+      "email": "owner@bw.example",
       "title": "Chief Executive Officer",
       "folders": ["Break Glass"]
     },
@@ -13,21 +13,21 @@
       "firstName": "Ada",
       "lastName": "Admin",
       "role": "admin",
-      "email": "admin@bw.test",
+      "email": "admin@bw.example",
       "title": "IT Director"
     },
     {
       "firstName": "Casey",
       "lastName": "Custom",
       "role": "custom",
-      "email": "custom@bw.test",
+      "email": "custom@bw.example",
       "title": "Compliance Manager"
     },
     {
       "firstName": "Uma",
       "lastName": "User",
       "role": "user",
-      "email": "user@bw.test",
+      "email": "user@bw.example",
       "title": "Software Engineer",
       "folders": ["Work", "Personal Projects"]
     },

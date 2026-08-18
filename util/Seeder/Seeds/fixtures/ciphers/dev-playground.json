@@ -39,7 +39,7 @@
       "name": "Figma",
       "cipherEncryption": "cipherKey",
       "login": {
-        "username": "design@bw.test",
+        "username": "design@bw.example",
         "password": "F1gmaSharedSeat2026",
         "uris": [{ "uri": "https://www.figma.com", "match": "domain" }]
       }
@@ -62,9 +62,9 @@
       "name": "PgAdmin (Production)",
       "cipherEncryption": "cipherKey",
       "login": {
-        "username": "pgadmin@bw.test",
+        "username": "pgadmin@bw.example",
         "password": "Pg4dminPr0dRead0nly2026",
-        "uris": [{ "uri": "https://pgadmin.internal.bw.test", "match": "host" }]
+        "uris": [{ "uri": "https://pgadmin.internal.bw.example", "match": "host" }]
       },
       "notes": "Read-only reporting account. Writes go through migrations only."
     },
@@ -72,7 +72,7 @@
       "type": "login",
       "name": "Datadog",
       "login": {
-        "username": "ops@bw.test",
+        "username": "ops@bw.example",
         "password": "D4tadogSeededLogin2026",
         "uris": [{ "uri": "https://app.datadoghq.com", "match": "domain" }]
       }
@@ -81,7 +81,7 @@
       "type": "login",
       "name": "Stripe Dashboard",
       "login": {
-        "username": "finance@bw.test",
+        "username": "finance@bw.example",
         "password": "Str1peDashSeeded2026#",
         "uris": [{ "uri": "https://dashboard.stripe.com", "match": "domain" }],
         "totp": "JBSWY3DPEHPK3PXPDEVST"
@@ -92,7 +92,7 @@
       "type": "login",
       "name": "Xero",
       "login": {
-        "username": "books@bw.test",
+        "username": "books@bw.example",
         "password": "Xer0Ledger2026!",
         "uris": [{ "uri": "https://go.xero.com", "match": "domain" }]
       }
@@ -101,7 +101,7 @@
       "type": "login",
       "name": "BambooHR",
       "login": {
-        "username": "people@bw.test",
+        "username": "people@bw.example",
         "password": "B4mbooPeopleOps2026",
         "uris": [{ "uri": "https://devorg.bamboohr.com", "match": "host" }]
       }
@@ -110,7 +110,7 @@
       "type": "login",
       "name": "Slack",
       "login": {
-        "username": "workspace@bw.test",
+        "username": "workspace@bw.example",
         "password": "Sl4ckWorkspace2026",
         "uris": [{ "uri": "https://dev-org.slack.com", "match": "host" }]
       },
@@ -120,7 +120,7 @@
       "type": "login",
       "name": "Google Workspace Admin",
       "login": {
-        "username": "gw-admin@bw.test",
+        "username": "gw-admin@bw.example",
         "password": "GwAdminBreakGlass2026#",
         "uris": [{ "uri": "https://admin.google.com", "match": "domain" }],
         "totp": "JBSWY3DPEHPK3PXPDEVGW"
@@ -132,7 +132,7 @@
       "name": "AWS Console (Root)",
       "cipherEncryption": "cipherKey",
       "login": {
-        "username": "root@bw.test",
+        "username": "root@bw.example",
         "password": "AwsR00tBreakGlass2026#",
         "uris": [{ "uri": "https://console.aws.amazon.com", "match": "domain" }],
         "totp": "JBSWY3DPEHPK3PXPDEVRT"
@@ -179,7 +179,7 @@
         "expYear": "2029",
         "code": "1234"
       },
-      "notes": "Team subscriptions and travel. Receipts to books@bw.test."
+      "notes": "Team subscriptions and travel. Receipts to books@bw.example."
     },
     {
       "type": "identity",
@@ -193,7 +193,7 @@
         "state": "OR",
         "postalCode": "97204",
         "country": "US",
-        "email": "office@bw.test",
+        "email": "office@bw.example",
         "phone": "+1-503-555-0142"
       },
       "notes": "Use for hardware orders and vendor deliveries."
@@ -204,7 +204,7 @@
       "cipherEncryption": "cipherKey",
       "sshKey": {
         "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nFAKE-EXAMPLE-NOT-A-REAL-KEY-DEV-PLAYGROUND\n-----END OPENSSH PRIVATE KEY-----",
-        "publicKey": "ssh-ed25519 AAAAExampleFakeKeyNotRealForSeedingOnly deploy@bw.test",
+        "publicKey": "ssh-ed25519 AAAAExampleFakeKeyNotRealForSeedingOnly deploy@bw.example",
         "keyFingerprint": "SHA256:ExampleFakeFingerprintDevPlayground"
       },
       "notes": "Read-only deploy key for the prod-web-01 host."

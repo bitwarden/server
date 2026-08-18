@@ -49,7 +49,9 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
                 && !string.IsNullOrWhiteSpace(ownerEmailOverride);
             var email = useOwnerOverride
                 ? ownerEmailOverride!
-                : rosterUser.Email ?? $"{emailPrefix}@{domain}";
+                : !string.IsNullOrWhiteSpace(rosterUser.Email)
+                    ? rosterUser.Email
+                    : $"{emailPrefix}@{domain}";
 
             if (!emails.Add(email))
             {

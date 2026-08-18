@@ -6,7 +6,7 @@
       "subscription": "free",
       "firstName": "Jane",
       "lastName": "Doe",
-      "email": "jane@bw.test"
+      "email": "jane@bw.example"
     }
   },
   {
@@ -16,7 +16,7 @@
       "subscription": "premium",
       "firstName": "John",
       "lastName": "Doe",
-      "email": "john@bw.test"
+      "email": "john@bw.example"
     }
   },
   {

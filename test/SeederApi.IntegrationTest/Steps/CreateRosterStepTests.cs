@@ -133,8 +133,8 @@ public class CreateRosterStepTests
         {
             Users =
             [
-                new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = "owner@bw.test" },
-                new SeedRosterUser { FirstName = "Uma", LastName = "User", Role = "user", Email = "user@bw.test" }
+                new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = "owner@bw.example" },
+                new SeedRosterUser { FirstName = "Uma", LastName = "User", Role = "user", Email = "user@bw.example" }
             ],
             Groups =
             [
@@ -148,7 +148,7 @@ public class CreateRosterStepTests
         new CreateRosterStep("test").Execute(context);
 
         var emails = context.Users.Select(u => u.Email).OrderBy(e => e).ToList();
-        Assert.Equal(["owner@bw.test", "user@bw.test"], emails);
+        Assert.Equal(["owner@bw.example", "user@bw.example"], emails);
         Assert.Equal(2, context.GroupUsers.Count);
     }
 
@@ -157,7 +157,7 @@ public class CreateRosterStepTests
     {
         var roster = new SeedRoster
         {
-            Users = [new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = "owner@bw.test" }]
+            Users = [new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = "owner@bw.example" }]
         };
         var reader = new StubSeedReader().Add("rosters.test", roster);
         var context = NewContext(new SeederSettings(OwnerEmailOverride: "cli-owner@bw.example"), reader);
@@ -175,8 +175,8 @@ public class CreateRosterStepTests
         {
             Users =
             [
-                new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = "same@bw.test" },
-                new SeedRosterUser { FirstName = "Uma", LastName = "User", Role = "user", Email = "same@bw.test" }
+                new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = "same@bw.example" },
+                new SeedRosterUser { FirstName = "Uma", LastName = "User", Role = "user", Email = "same@bw.example" }
             ]
         };
         var reader = new StubSeedReader().Add("rosters.test", roster);
@@ -184,7 +184,25 @@ public class CreateRosterStepTests
         PreloadOrganization(context);
 
         var ex = Assert.Throws<InvalidOperationException>(() => new CreateRosterStep("test").Execute(context));
-        Assert.Contains("Duplicate email 'same@bw.test'", ex.Message);
+        Assert.Contains("Duplicate email 'same@bw.example'", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void RosterEmailOverride_BlankOverride_FallsBackToDerivedEmail(string blankOverride)
+    {
+        var roster = new SeedRoster
+        {
+            Users = [new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = blankOverride }]
+        };
+        var reader = new StubSeedReader().Add("rosters.test", roster);
+        var context = NewContext(new SeederSettings(), reader);
+        PreloadOrganization(context);
+
+        new CreateRosterStep("test").Execute(context);
+
+        Assert.Equal($"owen.owner@{TestDomain}", context.Owner!.Email);
     }
 
     private static SeedRoster TwoUserRoster() => new()
