@@ -1,13 +1,18 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
+using Microsoft.Data.SqlClient;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Auth.Repositories;
 
 public class EmergencyAccessRepositoriesTests
 {
+    private const string _staleKeyEncrypted = "4.stale-emergency-access-key";
+    private const string _rotatedKeyEncrypted = "4.rotated-emergency-access-key";
+
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_UpdatesRevisionDate(IUserRepository userRepository,
       IEmergencyAccessRepository emergencyAccessRepository)
@@ -761,4 +766,129 @@ public class EmergencyAccessRepositoriesTests
             Assert.Null(updated.KeyEncrypted);
         }
     }
+
+    [Theory, DatabaseData]
+    public async Task UpdateForKeyRotation_PersistsKeyEncrypted(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        // Arrange
+        var grantor = await CreateUserAsync(userRepository, "grantor");
+        var grantee = await CreateUserAsync(userRepository, "grantee");
+
+        var emergencyAccess =
+            await CreateConfirmedEmergencyAccessAsync(emergencyAccessRepository, grantor, grantee);
+        emergencyAccess.KeyEncrypted = _rotatedKeyEncrypted;
+
+        // Act
+        await RunUpdateForKeyRotationAsync(
+            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [emergencyAccess]), database, serviceProvider);
+
+        // Assert
+        var updated = await emergencyAccessRepository.GetByIdAsync(emergencyAccess.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(_rotatedKeyEncrypted, updated.KeyEncrypted);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateForKeyRotation_WithModifiedNonKeyFields_UpdatesKeyEncryptedOnly(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        // Arrange
+        var grantor = await CreateUserAsync(userRepository, "grantor");
+        var grantee = await CreateUserAsync(userRepository, "grantee");
+
+        var emergencyAccess = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            KeyEncrypted = _staleKeyEncrypted,
+            Status = EmergencyAccessStatusType.Confirmed,
+            Type = EmergencyAccessType.View,
+            WaitTimeDays = 10,
+        });
+
+        // A key rotation only re-encrypts the key, so everything else the caller sends is ignored
+        emergencyAccess.KeyEncrypted = _rotatedKeyEncrypted;
+        emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
+        emergencyAccess.Type = EmergencyAccessType.Takeover;
+        emergencyAccess.WaitTimeDays = 1;
+
+        // Act
+        await RunUpdateForKeyRotationAsync(
+            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [emergencyAccess]), database, serviceProvider);
+
+        // Assert
+        var updated = await emergencyAccessRepository.GetByIdAsync(emergencyAccess.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(_rotatedKeyEncrypted, updated.KeyEncrypted);
+        Assert.Equal(EmergencyAccessStatusType.Confirmed, updated.Status);
+        Assert.Equal(EmergencyAccessType.View, updated.Type);
+        Assert.Equal(10, updated.WaitTimeDays);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateForKeyRotation_WithGrantMissingFromPayload_LeavesItUnchanged(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        // Arrange - the grantor has two grants, both holding a key from an earlier rotation
+        var grantor = await CreateUserAsync(userRepository, "grantor");
+        var grantee = await CreateUserAsync(userRepository, "grantee");
+
+        var rotated = await CreateConfirmedEmergencyAccessAsync(emergencyAccessRepository, grantor, grantee);
+        var omitted = await CreateConfirmedEmergencyAccessAsync(emergencyAccessRepository, grantor, grantee);
+
+        // Act - only one of the two grants is submitted for rotation
+        rotated.KeyEncrypted = _rotatedKeyEncrypted;
+        await RunUpdateForKeyRotationAsync(
+            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [rotated]), database, serviceProvider);
+
+        // Assert
+        var updatedRotated = await emergencyAccessRepository.GetByIdAsync(rotated.Id);
+        Assert.NotNull(updatedRotated);
+        Assert.Equal(_rotatedKeyEncrypted, updatedRotated.KeyEncrypted);
+
+        var updatedOmitted = await emergencyAccessRepository.GetByIdAsync(omitted.Id);
+        Assert.NotNull(updatedOmitted);
+        Assert.Equal(_staleKeyEncrypted, updatedOmitted.KeyEncrypted);
+    }
+
+    /// <summary>
+    /// <see cref="UpdateEncryptedDataForKeyRotation"/> only ever receives a connection on the Dapper path, so the
+    /// Entity Framework providers get nulls and open their own connection.
+    /// </summary>
+    private static Task RunUpdateForKeyRotationAsync(UpdateEncryptedDataForKeyRotation action, Database database,
+        IServiceProvider serviceProvider)
+        => DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            (connection, transaction) => action(connection as SqlConnection, transaction as SqlTransaction),
+            serviceProvider);
+
+    private static Task<User> CreateUserAsync(IUserRepository userRepository, string identifier)
+        => userRepository.CreateAsync(new User
+        {
+            Name = $"Test {identifier}",
+            Email = $"test+{identifier}{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+    private static Task<EmergencyAccess> CreateConfirmedEmergencyAccessAsync(
+        IEmergencyAccessRepository emergencyAccessRepository, User grantor, User grantee)
+        => emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            KeyEncrypted = _staleKeyEncrypted,
+            Status = EmergencyAccessStatusType.Confirmed,
+            Type = EmergencyAccessType.View,
+            WaitTimeDays = 10,
+        });
 }
