@@ -1,9 +1,7 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
-using Microsoft.Data.SqlClient;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Auth.Repositories;
@@ -783,8 +781,8 @@ public class EmergencyAccessRepositoriesTests
         emergencyAccess.KeyEncrypted = _rotatedKeyEncrypted;
 
         // Act
-        await RunUpdateForKeyRotationAsync(
-            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [emergencyAccess]), database, serviceProvider);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [emergencyAccess]), serviceProvider);
 
         // Assert
         var updated = await emergencyAccessRepository.GetByIdAsync(emergencyAccess.Id);
@@ -820,8 +818,8 @@ public class EmergencyAccessRepositoriesTests
         emergencyAccess.WaitTimeDays = 1;
 
         // Act
-        await RunUpdateForKeyRotationAsync(
-            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [emergencyAccess]), database, serviceProvider);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [emergencyAccess]), serviceProvider);
 
         // Assert
         var updated = await emergencyAccessRepository.GetByIdAsync(emergencyAccess.Id);
@@ -848,8 +846,8 @@ public class EmergencyAccessRepositoriesTests
 
         // Act - only one of the two grants is submitted for rotation
         rotated.KeyEncrypted = _rotatedKeyEncrypted;
-        await RunUpdateForKeyRotationAsync(
-            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [rotated]), database, serviceProvider);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [rotated]), serviceProvider);
 
         // Assert
         var updatedRotated = await emergencyAccessRepository.GetByIdAsync(rotated.Id);
@@ -860,16 +858,6 @@ public class EmergencyAccessRepositoriesTests
         Assert.NotNull(updatedOmitted);
         Assert.Equal(_staleKeyEncrypted, updatedOmitted.KeyEncrypted);
     }
-
-    /// <summary>
-    /// <see cref="UpdateEncryptedDataForKeyRotation"/> only ever receives a connection on the Dapper path, so the
-    /// Entity Framework providers get nulls and open their own connection.
-    /// </summary>
-    private static Task RunUpdateForKeyRotationAsync(UpdateEncryptedDataForKeyRotation action, Database database,
-        IServiceProvider serviceProvider)
-        => DatabaseTransactionActionTestHelper.ExecuteAsync(database,
-            (connection, transaction) => action(connection as SqlConnection, transaction as SqlTransaction),
-            serviceProvider);
 
     private static Task<User> CreateUserAsync(IUserRepository userRepository, string identifier)
         => userRepository.CreateAsync(new User
