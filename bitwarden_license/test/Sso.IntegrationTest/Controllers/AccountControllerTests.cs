@@ -764,6 +764,217 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     }
 
     /*
+    * SUCCESS PATH: Test to verify /Account/ExternalCallback JIT-provisions a brand-new
+    * user when the org has an explicit seat cap with headroom. Locks in the "guard fires,
+    * seats available" branch of the pre-user-creation seat check — currently exercised
+    * only implicitly by the unlimited-seats JIT test.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithSeatCapAndHeadroom_JitSucceeds()
+    {
+        // Arrange — seat cap of 1, 0 occupied (builder skips auto-fill when Seats == 1),
+        // so the seat check should observe 1 available seat and proceed without autoscale.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithOrganization(org =>
+            {
+                org.Seats = 1;
+            })
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — JIT proceeded and produced the standard SSO-success redirect.
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+    }
+
+    /*
+    * SUCCESS PATH: Test to verify /Account/ExternalCallback promotes a Staged OrganizationUser
+    * row to Invited when a brand-new (no BW User yet) user JIT-provisions against it. Staged
+    * rows come from directory-import (UserId=null, Email set); after JIT the row must not
+    * remain Staged, otherwise the user is a member of the org but exempt from all org policies.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithJitProvisioning_AgainstStagedOrgUser_PromotesToInvited()
+    {
+        // Arrange — no BW User; a Staged OrganizationUser exists matching the SSO-claimed email.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithStagedOrganizationUser()
+            .WithPM34423StagedStatusFlag()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        // Act — JIT-provision the user via SSO.
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — SSO callback succeeded end-to-end.
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+
+        // Assert — the Staged row has been promoted to Invited and back-linked to the
+        // newly-provisioned BW user, not left in Staged status.
+        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var refreshedOrgUser = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
+        Assert.NotNull(refreshedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Invited, refreshedOrgUser.Status);
+        Assert.NotNull(refreshedOrgUser.UserId);
+    }
+
+    /*
+    * SUCCESS PATH: Test to verify /Account/ExternalCallback JIT-provisions successfully
+    * when the org is at its seat cap but cloud autoscale succeeds. Locks in the
+    * "at cap, cloud, autoscale succeeds" branch of the pre-user-creation seat check.
+    * IOrganizationService.AutoAddSeatsAsync is substituted to bypass the real billing
+    * gateway (which requires a Stripe-linked org).
+    */
+    [Fact]
+    public async Task ExternalCallback_WithSeatCapAtLimitAndAutoscaleSucceeds_JitSucceeds()
+    {
+        // Arrange — Seats = 5 causes the builder to auto-fill 5 Confirmed OrgUsers,
+        // putting the org at cap. Mocked AutoAddSeatsAsync succeeds silently.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithOrganization(org =>
+            {
+                org.Seats = 5;
+            })
+            .WithAutoscaleSucceeds()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — SSO callback succeeded and autoscale was actually invoked (proves we
+        // went through the "at cap → autoscale → success" branch, not the "seats available"
+        // shortcut).
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+
+        var orgService = testData.Factory.Services.GetRequiredService<IOrganizationService>();
+        await orgService.Received(1).AutoAddSeatsAsync(Arg.Any<Organization>(), 1);
+    }
+
+    /*
+    * FAILURE PATH: Test to verify /Account/ExternalCallback rolls back a mid-flight
+    * seat-count mutation when AutoAddSeatsAsync partially succeeds (bumps Seats) and
+    * then throws. The catch-path must call AdjustSeatsAsync with the negated delta
+    * before rethrowing NoSeatsAvailable.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithAutoscalePartialFailure_RollsBackSeatsAndThrows()
+    {
+        // Arrange — Seats = 5, at cap. Mocked AutoAddSeatsAsync bumps Seats to 6 then throws.
+        // The catch block should observe org.Seats (6) != initialSeatCount (5) and call
+        // AdjustSeatsAsync(orgId, -1) to roll back before rethrowing NoSeatsAvailable.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithOrganization(org =>
+            {
+                org.Seats = 5;
+            })
+            .WithAutoscalePartialFailure()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — NoSeatsAvailable was thrown, AND the rollback ran with the exact delta.
+        var stringResponse = await response.Content.ReadAsStringAsync();
+        Assert.Contains("No seats available for organization", stringResponse);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        var orgService = testData.Factory.Services.GetRequiredService<IOrganizationService>();
+        await orgService.Received(1).AdjustSeatsAsync(testData.Organization!.Id, -1);
+    }
+
+    /*
+    * FAILURE PATH: Test to verify /Account/ExternalCallback rejects a Staged-against-JIT
+    * SSO login when the org is at its seat cap on self-hosted. Staged rows do not count
+    * against occupied seats; promoting one to Invited consumes a seat and therefore must
+    * run the same "seats available or autoscale" check as a fresh JIT provisioning.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithJitProvisioning_AgainstStagedOrgUser_OnSelfHostedAtSeatCap_ThrowsNoSeatsAvailable()
+    {
+        // Arrange — Seats = 5 causes the builder to auto-fill 5 Confirmed OrgUsers (occupying
+        // all seats). The Staged row is not counted against seats. Self-hosted disables autoscale.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithStagedOrganizationUser()
+            .WithOrganization(org =>
+            {
+                org.Seats = 5;
+            })
+            .AsSelfHosted()
+            .WithPM34423StagedStatusFlag()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — Should fail because promoting the Staged row would exceed the seat cap
+        // and self-hosted cannot autoscale.
+        var stringResponse = await response.Content.ReadAsStringAsync();
+        Assert.Contains("No seats available for organization", stringResponse);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+    }
+
+    /*
+    * FAILURE PATH: Test to verify /Account/ExternalCallback rejects a Staged-against-JIT
+    * SSO login when the org is at its seat cap on cloud and autoscale cannot grow the cap.
+    * Mirrors ExternalCallback_WithNoAvailableSeats_AndAutoAddSeatsFails_ReturnsError but
+    * for the Staged-promotion path rather than fresh JIT.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithJitProvisioning_AgainstStagedOrgUser_OnCloudAutoscaleFails_ThrowsNoSeatsAvailable()
+    {
+        // Arrange — Seats == MaxAutoscaleSeats forces AutoAddSeatsAsync to fail. Builder
+        // auto-fills 5 Confirmed OrgUsers, so the org is at cap when SSO arrives.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithStagedOrganizationUser()
+            .WithOrganization(org =>
+            {
+                org.Seats = 5;
+                org.MaxAutoscaleSeats = 5;
+            })
+            .WithPM34423StagedStatusFlag()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — Should fail because promoting the Staged row would exceed the seat cap
+        // and autoscale cannot grow past MaxAutoscaleSeats.
+        var stringResponse = await response.Content.ReadAsStringAsync();
+        Assert.Contains("No seats available for organization", stringResponse);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+    }
+
+    /*
     * SUCCESS PATH: Test to verify /Account/ExternalCallback succeeds when an existing user
     * with a valid (Confirmed) organization user status logs in via SSO for the first time.
     */
