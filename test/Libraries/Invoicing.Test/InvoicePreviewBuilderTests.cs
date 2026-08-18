@@ -211,7 +211,7 @@ public class InvoicePreviewBuilderTests
     }
 
     [Fact]
-    public void BuildFromInvoice_DuplicateReference_KeepsFirstAndLogs()
+    public void BuildFromInvoice_DuplicateReference_Throws()
     {
         var invoice = Deserialize("""
         {
@@ -223,12 +223,9 @@ public class InvoicePreviewBuilderTests
         }
         """);
 
-        var builder = Builder(out var logger);
-        var preview = builder.Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually);
+        var builder = Builder(out _);
 
-        Assert.Equal(5, preview.PasswordManager.Seats.Quantity);
-        Assert.Equal(127.90m, preview.PasswordManager.Seats.Cost);
-        Assert.Contains(logger.Errors, e => e.Contains("pm-seat"));
+        Assert.Throws<InvalidOperationException>(() => builder.Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually));
     }
 
     [Fact]
@@ -347,7 +344,7 @@ public class InvoicePreviewBuilderTests
     }
 
     [Fact]
-    public void BuildFromSubscription_DuplicateReference_KeepsFirstItemAndLogs()
+    public void BuildFromSubscription_DuplicateReference_Throws()
     {
         var subscription = DeserializeSubscription("""
         {
@@ -359,14 +356,8 @@ public class InvoicePreviewBuilderTests
         }
         """);
 
-        var builder = Builder(out var logger);
-        var preview = builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly);
+        var builder = Builder(out _);
 
-        // The first item wins the reference...
-        Assert.Equal(5, preview.PasswordManager.Seats.Quantity);
-        Assert.Equal(127.90m, preview.PasswordManager.Seats.Cost);
-        // ...yet both items still count toward the total (127.90 + 9.00).
-        Assert.Equal(136.90m, preview.Total);
-        Assert.Contains(logger.Errors, e => e.Contains("pm-seat"));
+        Assert.Throws<InvalidOperationException>(() => builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly));
     }
 }
