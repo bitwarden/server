@@ -278,9 +278,11 @@ jobs:
       # annotations at the raw defaults (title=server, version=<branch>, revision=github.sha).
       # Build the custom set once here and feed it to both inputs so they cannot drift.
       #
-      # title/description/url/source/created are left to the action's defaults, which derive from
-      # the repo itself. The rest are set here because those defaults are wrong for this repo:
+      # description/source/created are left to the action's defaults, which derive from the repo
+      # itself. The rest are set here because those defaults are wrong for this repo:
       #   title    - defaults to the repo name ("server"), not the individual service
+      #   url      - defaults to the repo URL, duplicating `source`. Per the OCI spec `url` is
+      #              "more information on the image", so it points at the product page instead.
       #   licenses - defaults to the repo SPDX id, which GitHub reports as NOASSERTION because
       #              this repo is dual-licensed. Per LICENSE.txt, AGPL-3.0 is the default and
       #              Bitwarden Licensed code lives only in /bitwarden_license.
@@ -299,6 +301,7 @@ jobs:
             echo "items<<METADATA_EOF"
             echo "org.opencontainers.image.title=Bitwarden ${PROJECT_TITLE}"
             echo "org.opencontainers.image.vendor=Bitwarden Inc."
+            echo "org.opencontainers.image.url=https://bitwarden.com"
             echo "org.opencontainers.image.licenses=${LICENSE_ID}"
             echo "org.opencontainers.image.version=${IMAGE_TAG}"
             echo "org.opencontainers.image.revision=${REVISION}"
