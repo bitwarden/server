@@ -720,6 +720,7 @@ public class AccountController : Controller
             }
 
             possibleOrgUser.UserId = newUser.Id;
+            possibleOrgUser.RevisionDate = DateTime.UtcNow;
             await _organizationUserRepository.ReplaceAsync(possibleOrgUser);
         }
 

@@ -798,8 +798,9 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     /*
     * SUCCESS PATH: Test to verify /Account/ExternalCallback promotes a Staged OrganizationUser
     * row to Invited when a brand-new (no BW User yet) user JIT-provisions against it. Staged
-    * rows come from directory-import (UserId=null, Email set); after JIT the row must not
-    * remain Staged, otherwise the user is a member of the org but exempt from all org policies.
+    * rows come from directory-import (UserId=null, Email set); the JIT finish-accept path
+    * only handles Invited, so we must promote before letting the standard invite lifecycle
+    * pick up. Also asserts RevisionDate is bumped so watermark-driven consumers see the change.
     */
     [Fact]
     public async Task ExternalCallback_WithJitProvisioning_AgainstStagedOrgUser_PromotesToInvited()
@@ -810,6 +811,9 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
             .WithStagedOrganizationUser()
             .WithPM34423StagedStatusFlag()
             .BuildAsync();
+
+        // Capture the seeded row's RevisionDate so we can prove it was bumped by the promotion.
+        var stagedRowInitialRevisionDate = testData.OrganizationUser!.RevisionDate;
 
         var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -823,13 +827,15 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.NotNull(response.Headers.Location);
 
-        // Assert — the Staged row has been promoted to Invited and back-linked to the
-        // newly-provisioned BW user, not left in Staged status.
+        // Assert — the Staged row has been promoted to Invited, back-linked to the
+        // newly-provisioned BW user, and RevisionDate has advanced past the seeded value.
         var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
         var refreshedOrgUser = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
         Assert.NotNull(refreshedOrgUser);
         Assert.Equal(OrganizationUserStatusType.Invited, refreshedOrgUser.Status);
         Assert.NotNull(refreshedOrgUser.UserId);
+        Assert.True(refreshedOrgUser.RevisionDate > stagedRowInitialRevisionDate,
+            $"RevisionDate should be bumped after promotion. Before: {stagedRowInitialRevisionDate:O}, After: {refreshedOrgUser.RevisionDate:O}.");
     }
 
     /*
