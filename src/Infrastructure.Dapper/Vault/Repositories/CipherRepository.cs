@@ -4,7 +4,7 @@
 using System.Data;
 using System.Text.Json;
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
@@ -366,11 +366,14 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid userId, IEnumerable<Cipher> ciphers)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (dbConnection, dbTransaction) =>
         {
+            var connection = (SqlConnection)dbConnection;
+            var transaction = (SqlTransaction)dbTransaction;
+
             // Create temp table
             var sqlCreateTemp = @"
                             SELECT TOP 0 *
