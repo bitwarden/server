@@ -261,6 +261,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new NotFoundException();
         }
 
+        if (!await CanRecoverAccountAsync(organizationUser))
+        {
+            throw new NotFoundException();
+        }
+
         // Retrieve data necessary for response (KDF, KDF Iterations, ResetPasswordKey)
         // TODO Reset Password - Revisit this and create SPROC to reduce DB calls
         var user = await _userService.GetUserByIdAsync(organizationUser.UserId.Value);
@@ -276,9 +281,28 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageAccountRecoveryRequirement>]
     public async Task<ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>> GetAccountRecoveryDetails(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        var responses = await _organizationUserRepository.GetManyAccountRecoveryDetailsByOrganizationUserAsync(orgId, model.Ids);
+        var organizationUsers = await _organizationUserRepository.GetManyAsync(model.Ids);
+        var authorizedIds = new List<Guid>();
+        foreach (var organizationUser in organizationUsers.Where(organizationUser => organizationUser.OrganizationId == orgId))
+        {
+            if (await CanRecoverAccountAsync(organizationUser))
+            {
+                authorizedIds.Add(organizationUser.Id);
+            }
+        }
+
+        if (authorizedIds.Count == 0)
+        {
+            return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>([]);
+        }
+
+        var responses = await _organizationUserRepository.GetManyAccountRecoveryDetailsByOrganizationUserAsync(orgId, authorizedIds);
         return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>(responses.Select(r => new OrganizationUserResetPasswordDetailsResponseModel(r)));
     }
+
+    private async Task<bool> CanRecoverAccountAsync(OrganizationUser organizationUser) =>
+        (await _authorizationService.AuthorizeAsync(
+            User, organizationUser, new RecoverAccountAuthorizationRequirement())).Succeeded;
 
     [HttpPost("invite")]
     [Authorize<ManageUsersRequirement>]

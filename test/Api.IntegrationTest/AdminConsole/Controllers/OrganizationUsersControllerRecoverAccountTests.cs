@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
@@ -68,6 +69,22 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
     {
         _client.Dispose();
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Minimal shape for reading the account recovery details response.
+    /// <see cref="OrganizationUserResetPasswordDetailsResponseModel"/> is response-only and has no
+    /// constructor that System.Text.Json can bind to.
+    /// </summary>
+    private sealed class AccountRecoveryDetails
+    {
+        public Guid OrganizationUserId { get; set; }
+        public string? ResetPasswordKey { get; set; }
+    }
+
+    private sealed class AccountRecoveryDetailsList
+    {
+        public List<AccountRecoveryDetails> Data { get; set; } = [];
     }
 
     /// <summary>
@@ -267,5 +284,191 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
         Assert.Equal(RecoverAccountAuthorizationHandler.ProviderFailureReason, model.Message);
+    }
+
+    [Fact]
+    public async Task RecoverAccount_AsFellowProviderMember_CannotRecoverProviderAdmin()
+    {
+        // Arrange - the caller and the target belong to the same provider. Shared membership is not enough
+        // on its own: the caller must also hold an equal or greater role, otherwise a Service User could
+        // take over a Provider admin.
+        var provider = await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(
+            _factory, _organization.Id, ProviderType.Msp);
+
+        var (callerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, callerEmail,
+            ProviderUserType.ServiceUser);
+
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, targetEmail,
+            ProviderUserType.ProviderAdmin);
+        await SetResetPasswordKeyAsync(targetOrgUser);
+
+        // Log in only once the provider membership exists, so that it is present in the caller's claims
+        await _loginHelper.LoginAsync(callerEmail);
+
+        var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
+        {
+            ResetMasterPassword = true,
+            NewMasterPasswordHash = "new-master-password-hash",
+            Key = "encrypted-recovery-key"
+        };
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/recover-account",
+            resetPasswordRequest);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
+        Assert.Equal(RecoverAccountAuthorizationHandler.ProviderFailureReason, model.Message);
+    }
+
+    [Fact]
+    public async Task GetResetPasswordDetails_AsLowerRole_DoesNotDiscloseHigherRoleKeyMaterial()
+    {
+        // Arrange
+        var (adminEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Admin);
+        await _loginHelper.LoginAsync(adminEmail);
+
+        var (_, targetOwnerOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.Owner);
+        await SetResetPasswordKeyAsync(targetOwnerOrgUser);
+
+        // Act
+        var response = await _client.GetAsync(
+            $"organizations/{_organization.Id}/users/{targetOwnerOrgUser.Id}/reset-password-details");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetResetPasswordDetails_ForProviderMemberOutsideCallersProviders_DoesNotDiscloseKeyMaterial()
+    {
+        // Arrange - the caller is an organization Owner with no membership of the target's provider
+        var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await _loginHelper.LoginAsync(ownerEmail);
+
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await SetResetPasswordKeyAsync(targetOrgUser);
+
+        var provider = await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(
+            _factory, _organization.Id, ProviderType.Msp);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, targetEmail,
+            ProviderUserType.ProviderAdmin);
+
+        // Act
+        var response = await _client.GetAsync(
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/reset-password-details");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetResetPasswordDetails_AsFellowProviderMember_DoesNotDiscloseProviderAdminKeyMaterial()
+    {
+        // Arrange - a Service User must not be able to read the key material of a Provider admin in their
+        // own provider. Reading it is equivalent to the recovery itself, so it is denied on the same terms.
+        var provider = await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(
+            _factory, _organization.Id, ProviderType.Msp);
+
+        var (callerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, callerEmail,
+            ProviderUserType.ServiceUser);
+
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, targetEmail,
+            ProviderUserType.ProviderAdmin);
+        await SetResetPasswordKeyAsync(targetOrgUser);
+
+        await _loginHelper.LoginAsync(callerEmail);
+
+        // Act
+        var response = await _client.GetAsync(
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/reset-password-details");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAccountRecoveryDetails_AsFellowProviderMember_OmitsProviderAdmin()
+    {
+        // Arrange
+        var provider = await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(
+            _factory, _organization.Id, ProviderType.Msp);
+
+        var (callerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, callerEmail,
+            ProviderUserType.ServiceUser);
+
+        var (providerAdminEmail, providerAdminOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, providerAdminEmail,
+            ProviderUserType.ProviderAdmin);
+        await SetResetPasswordKeyAsync(providerAdminOrgUser);
+
+        var (_, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await SetResetPasswordKeyAsync(memberOrgUser);
+
+        await _loginHelper.LoginAsync(callerEmail);
+
+        var request = new OrganizationUserBulkRequestModel { Ids = [providerAdminOrgUser.Id, memberOrgUser.Id] };
+
+        // Act
+        var response = await _client.PostAsJsonAsync(
+            $"organizations/{_organization.Id}/users/account-recovery-details", request);
+
+        // Assert - the Provider admin is dropped, the ordinary member is still returned
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content
+            .ReadFromJsonAsync<AccountRecoveryDetailsList>();
+        var details = Assert.Single(result.Data);
+        Assert.Equal(memberOrgUser.Id, details.OrganizationUserId);
+        // The filtering is what withholds the key material, so confirm it is really being returned
+        // for the user who is allowed through
+        Assert.Equal("encrypted-reset-password-key", details.ResetPasswordKey);
+    }
+
+    [Fact]
+    public async Task GetAccountRecoveryDetails_OmitsUsersTheCallerCannotRecover()
+    {
+        // Arrange
+        var (adminEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Admin);
+        await _loginHelper.LoginAsync(adminEmail);
+
+        var (_, ownerOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.Owner);
+        await SetResetPasswordKeyAsync(ownerOrgUser);
+
+        var (_, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await SetResetPasswordKeyAsync(memberOrgUser);
+
+        var request = new OrganizationUserBulkRequestModel { Ids = [ownerOrgUser.Id, memberOrgUser.Id] };
+
+        // Act
+        var response = await _client.PostAsJsonAsync(
+            $"organizations/{_organization.Id}/users/account-recovery-details", request);
+
+        // Assert - an Admin may recover the member but not the Owner
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content
+            .ReadFromJsonAsync<AccountRecoveryDetailsList>();
+        var details = Assert.Single(result.Data);
+        Assert.Equal(memberOrgUser.Id, details.OrganizationUserId);
     }
 }
