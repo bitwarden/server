@@ -432,7 +432,7 @@ public class SendOrganizationInvitesCommandTests
     {
         SetupSutProviderWithNoExistingUsers(sutProvider);
 
-        // Arrange - one healthy invite, one whose email resolves from its linked user, and one that cannot
+        // Arrange
         resolvableInvite.Email = null;
         resolvableInvite.UserId = linkedUser.Id;
 
@@ -456,7 +456,7 @@ public class SendOrganizationInvitesCommandTests
             null,
             Arg.Any<Func<object, Exception, string>>());
 
-        // Assert - the healthy and resolved invites are sent, the unresolvable one is not
+        // Assert - correct invites are sent
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.OrgUserTokenPairs.Count() == 2 &&
