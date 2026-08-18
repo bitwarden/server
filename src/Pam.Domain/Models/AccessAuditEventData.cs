@@ -5,9 +5,9 @@ namespace Bit.Pam.Models;
 /// <summary>
 /// The write-side payload for a PAM audit event: the raw facts a state-changing action records at the moment it
 /// happens, before anything is stored. It carries only the event itself — its <see cref="Kind"/> and <see cref="Phase"/>, when it occurred,
-/// the organization, the actor and requester, the subject ids, and free-text <see cref="Detail"/>. Unlike the trail's
-/// read model, it has no denormalized display fields (actor / requester / cipher / collection / rule names); those are
-/// joined in on read. Emitted through the PAM audit-event emitter.
+/// the organization, the actor and requester, the subject ids, and free-text <see cref="Detail"/>. Unlike the read
+/// model <see cref="AccessAuditEvent"/>, it has no denormalized display fields (actor / requester / cipher /
+/// collection / rule names); those are joined in on read. Emitted through the PAM audit-event emitter.
 /// </summary>
 public record AccessAuditEventData
 {
