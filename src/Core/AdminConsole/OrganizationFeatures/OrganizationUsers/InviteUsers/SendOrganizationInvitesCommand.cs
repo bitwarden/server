@@ -38,8 +38,8 @@ public class SendOrganizationInvitesCommand(
     }
 
     /// <summary>
-    /// Returns the invitable org users, resolving a missing email in memory from the linked user (via UserId) and
-    /// logging then excluding any that still lack one. SSO JIT provisioning can leave such invalid invited rows.
+    /// Returns the invitable org users, resolving a missing email from the linked user (via UserId), and
+    /// logging then excluding any that still lack one.
     /// </summary>
     private async Task<List<OrganizationUser>> ValidateInvitedUsersAsync(OrganizationUser[] requestedOrgUsers)
     {
