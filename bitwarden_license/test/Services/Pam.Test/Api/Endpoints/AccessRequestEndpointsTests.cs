@@ -30,6 +30,7 @@ public class AccessRequestEndpointsTests
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
         builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
+        builder.Services.AddScoped<AuditEndpointsHandler>();
 
         var app = builder.Build();
         app.MapPamEndpoints();

@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
         services.AddScoped<CipherLeaseEndpointsHandler>();
+        services.AddScoped<AuditEndpointsHandler>();
 
         // The read decision point Vault code consults before releasing a cipher's secrets. AddBaseServices
         // registers the open-source UnrestrictedCipherLeaseGate, which gates nothing; this overrides it by
@@ -54,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
         services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
         services.AddScoped<IListMyActiveAccessLeasesQuery, ListMyActiveAccessLeasesQuery>();
+        services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
 
         // Access-request and lease write path.
         services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
@@ -69,12 +71,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
 
         // Side channels the commands emit through. The two notifiers send the RefreshApproverInbox and
-        // RefreshAccessRequest pushes; the audit emitter stays inert because the audit store it would write to is
-        // separate work. Registering them is not optional — every command above takes all three, so dropping one
-        // turns each PAM request into a DI resolution failure at runtime rather than a compile error.
+        // RefreshAccessRequest pushes; the audit emitter appends to the PAM audit store. Registering them is not
+        // optional — every command above takes all three, so dropping one turns each PAM request into a DI
+        // resolution failure at runtime rather than a compile error.
         services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
         services.AddScoped<IRequesterNotifier, RequesterNotifier>();
-        services.AddScoped<IAccessAuditEventEmitter, NoopAccessAuditEventEmitter>();
+        services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
 
         services.AddPamOpenApiEndpointDataSource();
 
