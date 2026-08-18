@@ -4,6 +4,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Test.Billing.Extensions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -16,16 +17,20 @@ using static StripeConstants;
 
 public class UpdateBillingAddressCommandTests
 {
+    private readonly ILogger<UpdateBillingAddressCommand> _logger =
+        Substitute.For<ILogger<UpdateBillingAddressCommand>>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly ITaxService _taxService = Substitute.For<ITaxService>();
     private readonly UpdateBillingAddressCommand _command;
 
     public UpdateBillingAddressCommandTests()
     {
         _command = new UpdateBillingAddressCommand(
-            Substitute.For<ILogger<UpdateBillingAddressCommand>>(),
+            _logger,
             _subscriberService,
-            _stripeAdapter);
+            _stripeAdapter,
+            _taxService);
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
@@ -88,6 +93,9 @@ public class UpdateBillingAddressCommandTests
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
+
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options => options.HasExpansions("discount.source.coupon")));
     }
 
     [Fact]
@@ -213,6 +221,53 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
+    public async Task Run_BusinessOrganization_FetchesCustomerWithDiscountSourceCouponExpanded()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.None });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        await _command.Run(organization, input);
+
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options => options.HasExpansions("discount.source.coupon")));
+    }
+
+    [Fact]
     public async Task Run_BusinessOrganization_RemovingTaxId_MakesCorrectInvocations_ReturnsBillingAddress()
     {
         var organization = new Organization
@@ -330,6 +385,8 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
+        _taxService.GetStripeTaxCode(input.Country, input.TaxId.Value).Returns(TaxIdType.SpanishNIF);
+
         _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
             .Returns(new Customer { TaxExempt = TaxExempt.None });
 
@@ -377,6 +434,8 @@ public class UpdateBillingAddressCommandTests
             State = "NY",
             TaxId = new TaxID("us_ein", "987654321")
         };
+
+        _taxService.GetStripeTaxCode(input.Country, input.TaxId.Value).Returns("us_ein");
 
         var existingTaxId = new TaxId { Id = "tax_id_123", Type = "us_ein", Value = "987654321" };
 
@@ -438,6 +497,194 @@ public class UpdateBillingAddressCommandTests
         await _stripeAdapter.Received(1).DeleteTaxIdAsync(customer.Id, existingTaxId.Id);
         await _stripeAdapter.Received(1).CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
             options => options.Type == "us_ein" && options.Value == "987654321"));
+    }
+
+    [Fact]
+    public async Task Run_BusinessOrganization_UKTaxIdSentAsEUVAT_CreatesGBVATTaxId()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "GB",
+            PostalCode = "SW1A 1AA",
+            TaxId = new TaxID(TaxIdType.EUVAT, "GB123456789")
+        };
+
+        var customer = BusinessCustomer(organization, input);
+
+        _taxService.GetStripeTaxCode("GB", "GB123456789").Returns("gb_vat");
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        _stripeAdapter.CreateTaxIdAsync(customer.Id, Arg.Any<TaxIdCreateOptions>())
+            .Returns(new TaxId { Type = "gb_vat", Value = input.TaxId.Value });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
+            options => options.Type == "gb_vat" && options.Value == "GB123456789"));
+    }
+
+    [Fact]
+    public async Task Run_BusinessOrganization_NorthernIrelandTaxId_CreatesEUVATTaxId()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "GB",
+            PostalCode = "BT1 5GS",
+            TaxId = new TaxID("gb_vat", "XI123456789")
+        };
+
+        var customer = BusinessCustomer(organization, input);
+
+        _taxService.GetStripeTaxCode("GB", "XI123456789").Returns(TaxIdType.EUVAT);
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        _stripeAdapter.CreateTaxIdAsync(customer.Id, Arg.Any<TaxIdCreateOptions>())
+            .Returns(new TaxId { Type = TaxIdType.EUVAT, Value = input.TaxId.Value });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
+            options => options.Type == TaxIdType.EUVAT && options.Value == "XI123456789"));
+    }
+
+    [Fact]
+    public async Task Run_BusinessOrganization_SpanishCIFSentAsEUVAT_CreatesBothSpanishNIFAndEUVATTaxIds()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "ES",
+            PostalCode = "28001",
+            TaxId = new TaxID(TaxIdType.EUVAT, "A12345678")
+        };
+
+        var customer = BusinessCustomer(organization, input);
+
+        _taxService.GetStripeTaxCode("ES", "A12345678").Returns(TaxIdType.SpanishNIF);
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        _stripeAdapter.CreateTaxIdAsync(customer.Id,
+                Arg.Is<TaxIdCreateOptions>(options => options.Type == TaxIdType.EUVAT))
+            .Returns(new TaxId { Type = TaxIdType.EUVAT, Value = "ESA12345678" });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
+            options => options.Type == TaxIdType.SpanishNIF && options.Value == "A12345678"));
+
+        await _stripeAdapter.Received(1).CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
+            options => options.Type == TaxIdType.EUVAT && options.Value == "ESA12345678"));
+    }
+
+    [Fact]
+    public async Task Run_BusinessOrganization_CanadianBusinessNumberSentAsGSTHST_CreatesCABNTaxId()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "CA",
+            PostalCode = "M5H 2N2",
+            TaxId = new TaxID("ca_gst_hst", "987654321")
+        };
+
+        var customer = BusinessCustomer(organization, input);
+
+        _taxService.GetStripeTaxCode("CA", "987654321").Returns("ca_bn");
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        _stripeAdapter.CreateTaxIdAsync(customer.Id, Arg.Any<TaxIdCreateOptions>())
+            .Returns(new TaxId { Type = "ca_bn", Value = input.TaxId.Value });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
+            options => options.Type == "ca_bn" && options.Value == "987654321"));
+    }
+
+    [Fact]
+    public async Task Run_BusinessOrganization_UnderivableTaxId_FallsBackToClientCodeAndWarns()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "MK",
+            PostalCode = "1000",
+            TaxId = new TaxID(TaxIdType.EUVAT, "MK1234567890123")
+        };
+
+        var customer = BusinessCustomer(organization, input);
+
+        _taxService.GetStripeTaxCode("MK", "MK1234567890123").Returns((string?)null);
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        _stripeAdapter.CreateTaxIdAsync(customer.Id, Arg.Any<TaxIdCreateOptions>())
+            .Returns(new TaxId { Type = TaxIdType.EUVAT, Value = input.TaxId.Value });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
+            options => options.Type == TaxIdType.EUVAT && options.Value == "MK1234567890123"));
+
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains("MK") &&
+                                    state.ToString()!.Contains(TaxIdType.EUVAT) &&
+                                    !state.ToString()!.Contains(input.TaxId.Value)),
+            null,
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -566,7 +813,7 @@ public class UpdateBillingAddressCommandTests
         {
             Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
             // The fetched customer carries a customer-level discount.
-            Discount = new Discount { Coupon = new Coupon { Id = "retention" } },
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } },
             Subscriptions = new StripeList<Subscription>
             {
                 Data =
@@ -666,7 +913,7 @@ public class UpdateBillingAddressCommandTests
         var customer = new Customer
         {
             Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
-            Discount = new Discount { Coupon = new Coupon { Id = "retention" } },
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } },
             Subscriptions = new StripeList<Subscription>
             {
                 Data =
@@ -1127,4 +1374,21 @@ public class UpdateBillingAddressCommandTests
 
         await _stripeAdapter.DidNotReceive().GetCustomerAsync(organization.GatewayCustomerId);
     }
+
+    private static Customer BusinessCustomer(Organization organization, BillingAddress billingAddress) => new()
+    {
+        Address = new Address { Country = billingAddress.Country, PostalCode = billingAddress.PostalCode },
+        Id = organization.GatewayCustomerId,
+        Subscriptions = new StripeList<Subscription>
+        {
+            Data =
+            [
+                new Subscription
+                {
+                    Id = organization.GatewaySubscriptionId,
+                    AutomaticTax = new SubscriptionAutomaticTax { Enabled = true }
+                }
+            ]
+        }
+    };
 }

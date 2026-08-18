@@ -16,8 +16,7 @@ public class SalesAssistedTrialInviteModel : IValidatableObject
     public ProductTierType ProductTier { get; set; }
 
     [Required]
-    [MinLength(1)]
-    public IEnumerable<ProductType> Products { get; set; } = null!;
+    public ProductType Product { get; set; }
 
     [Display(Name = "Trial Length (Days)")]
     [Required]
@@ -31,6 +30,16 @@ public class SalesAssistedTrialInviteModel : IValidatableObject
             yield return new ValidationResult(
                 "Teams Starter is no longer available for new trials.",
                 [nameof(ProductTier)]);
+        }
+
+        if (ProductTier == ProductTierType.Families && Product == ProductType.SecretsManager)
+        {
+            // Current constraint of Families plan, hard-coded validation here for
+            // fail-fast feedback to tool users.
+            // PM-41426
+            yield return new ValidationResult(
+                "Secrets Manager is not available for the Families plan.",
+                [nameof(Product)]);
         }
     }
 }

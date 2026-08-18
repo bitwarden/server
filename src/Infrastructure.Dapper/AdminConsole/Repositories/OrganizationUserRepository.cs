@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.M
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -596,7 +595,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid userId, IEnumerable<OrganizationUser> resetPasswordKeys)
     {
         return async (connection, transaction) =>
@@ -775,5 +774,44 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             return results.ToList();
         }
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction UpdateStatusAndKeyById(Guid id,
+        OrganizationUserStatusType status, string? key, DateTime revisionDate)
+    {
+        return async (connection, transaction) =>
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[OrganizationUser_UpdateStatusKeyById]",
+                new
+                {
+                    Id = id,
+                    Status = (short)status,
+                    Key = key,
+                    RevisionDate = revisionDate
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction DeleteManyByIds(IEnumerable<Guid> ids)
+    {
+        return async (connection, transaction) =>
+        {
+            var idsList = ids.ToList();
+            if (idsList.Count == 0)
+            {
+                return;
+            }
+
+            await connection.ExecuteAsync(
+                "[dbo].[OrganizationUser_DeleteByIds]",
+                new { Ids = idsList.ToGuidIdArrayTVP() },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
     }
 }

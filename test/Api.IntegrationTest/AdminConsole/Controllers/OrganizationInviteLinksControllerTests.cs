@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
 using Xunit;
@@ -97,6 +98,137 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var result = await validateResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkValidateEmailDomainResponseModel>();
         Assert.NotNull(result);
         Assert.True(result.IsAllowed);
+    }
+
+    [Fact]
+    public async Task ValidateEmailDomain_WithDisallowedEmail_ReturnsIsAllowedFalse()
+    {
+        // EmailDomainNotAllowed must map to a 200 OK with IsAllowed: false so that clients can
+        // surface a targeted UX message rather than treating the mismatch as an error.
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+            Invite = _invite,
+            SupportsConfirmation = false,
+        };
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(created);
+
+        var validateRequest = new OrganizationInviteLinkValidateEmailDomainRequestModel
+        {
+            OrganizationId = _organization.Id,
+            Code = created.Code,
+            Email = "user@other.com",
+        };
+        using var anonymousClient = _factory.CreateClient();
+        var validateResponse = await anonymousClient.PostAsJsonAsync(
+            "/organizations/invite-link/validate-email-domain", validateRequest);
+
+        Assert.Equal(HttpStatusCode.OK, validateResponse.StatusCode);
+        var result = await validateResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkValidateEmailDomainResponseModel>();
+        Assert.NotNull(result);
+        Assert.False(result.IsAllowed);
+    }
+
+    [Fact]
+    public async Task ValidateEmailDomain_WithMismatchedCode_ReturnsNotFound()
+    {
+        // Non-domain failures must continue to surface as errors (via Handle) instead of being
+        // silently converted to IsAllowed:true — the disallowed-domain fallthrough is scoped to
+        // EmailDomainNotAllowed only.
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+            Invite = _invite,
+            SupportsConfirmation = false,
+        };
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var validateRequest = new OrganizationInviteLinkValidateEmailDomainRequestModel
+        {
+            OrganizationId = _organization.Id,
+            Code = Guid.NewGuid(),
+            Email = "user@acme.com",
+        };
+        using var anonymousClient = _factory.CreateClient();
+        var validateResponse = await anonymousClient.PostAsJsonAsync(
+            "/organizations/invite-link/validate-email-domain", validateRequest);
+
+        Assert.Equal(HttpStatusCode.NotFound, validateResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ValidateEmailDomain_WithOrgDisabled_ReturnsNotFound()
+    {
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+            Invite = _invite,
+            SupportsConfirmation = false,
+        };
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(created);
+
+        // Disable the org after creating the link so the validate call trips the Enabled=false branch.
+        var organizationRepository = _factory.Services.GetRequiredService<IOrganizationRepository>();
+        _organization.Enabled = false;
+        await organizationRepository.ReplaceAsync(_organization);
+
+        var validateRequest = new OrganizationInviteLinkValidateEmailDomainRequestModel
+        {
+            OrganizationId = _organization.Id,
+            Code = created.Code,
+            Email = "user@acme.com",
+        };
+        using var anonymousClient = _factory.CreateClient();
+        var validateResponse = await anonymousClient.PostAsJsonAsync(
+            "/organizations/invite-link/validate-email-domain", validateRequest);
+
+        Assert.Equal(HttpStatusCode.NotFound, validateResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ValidateEmailDomain_WithUseInviteLinksOff_ReturnsBadRequest()
+    {
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+            Invite = _invite,
+            SupportsConfirmation = false,
+        };
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(created);
+
+        // Turn off the invite-links entitlement so the validate call trips the InviteLinkNotAvailable branch.
+        var organizationRepository = _factory.Services.GetRequiredService<IOrganizationRepository>();
+        _organization.UseInviteLinks = false;
+        await organizationRepository.ReplaceAsync(_organization);
+
+        var validateRequest = new OrganizationInviteLinkValidateEmailDomainRequestModel
+        {
+            OrganizationId = _organization.Id,
+            Code = created.Code,
+            Email = "user@acme.com",
+        };
+        using var anonymousClient = _factory.CreateClient();
+        var validateResponse = await anonymousClient.PostAsJsonAsync(
+            "/organizations/invite-link/validate-email-domain", validateRequest);
+
+        Assert.Equal(HttpStatusCode.BadRequest, validateResponse.StatusCode);
     }
 
     [Fact]
@@ -329,6 +461,44 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.True(status.LinksEnabled);
         Assert.True(status.SeatsAvailable);
         Assert.True(status.SupportsConfirmation);
+    }
+
+    [Fact]
+    public async Task GetStatus_WithHtmlEncodedOrgName_ReturnsDecodedName()
+    {
+        // Organization.Name is stored HTML-encoded at write time (legacy XSS defense — see
+        // Admin OrganizationsController), so read paths must call Organization.DisplayName() to
+        // return a human-readable value. This test locks in that contract for the invite-link
+        // status endpoint so a raw Organization.Name regression can't ship literal entities
+        // (&amp;, &#39;, &quot;) to the client.
+        const string encodedName = "Acme &amp; &#39; &quot; Co.";
+        const string decodedName = "Acme & ' \" Co.";
+
+        var organizationRepository = _factory.Services.GetRequiredService<IOrganizationRepository>();
+        _organization.Name = encodedName;
+        await organizationRepository.ReplaceAsync(_organization);
+
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+            Invite = _invite,
+            SupportsConfirmation = false,
+        };
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(created);
+
+        var anonClient = _factory.CreateClient();
+        var statusResponse = await anonClient.PostAsJsonAsync(
+            "/organizations/invite-link/status",
+            new GetOrganizationInviteLinkStatusRequestModel { OrganizationId = _organization.Id, Code = created.Code });
+
+        Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+        var status = await statusResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkStatusResponseModel>();
+        Assert.NotNull(status);
+        Assert.Equal(decodedName, status.OrganizationName);
     }
 
     [Fact]

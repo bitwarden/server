@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Stripe;
+using static Bit.Core.Billing.Constants.StripeConstants;
 
 #nullable enable
 
@@ -42,16 +43,16 @@ public class SubscriptionInfo
         /// <param name="discount">The Stripe discount containing coupon and expiration information.</param>
         public BillingCustomerDiscount(Discount discount)
         {
-            Id = discount.Coupon?.Id;
+            Id = discount.Source?.Coupon?.Id;
             // Active = true only for perpetual/recurring discounts (no end date)
             // This is intentional for Milestone 2 - only perpetual discounts are shown in UI
             Active = discount.End == null;
             End = discount.End;
-            DurationInMonths = discount.Coupon?.DurationInMonths;
-            PercentOff = discount.Coupon?.PercentOff;
-            AmountOff = ConvertFromStripeMinorUnits(discount.Coupon?.AmountOff);
+            DurationInMonths = discount.Source?.Coupon?.DurationInMonths;
+            PercentOff = discount.Source?.Coupon?.PercentOff;
+            AmountOff = ConvertFromStripeMinorUnits(discount.Source?.Coupon?.AmountOff);
             // Stripe's CouponAppliesTo.Products is already IReadOnlyList<string>, so no conversion needed
-            AppliesTo = discount.Coupon?.AppliesTo?.Products;
+            AppliesTo = discount.Source?.Coupon?.AppliesTo?.Products;
         }
 
         /// <summary>
@@ -155,6 +156,7 @@ public class SubscriptionInfo
                 ? 14
                 : 30;
             ServiceAccountGrace = sub?.GetMigrationGraceServiceAccounts() ?? 0;
+            ScheduleId = sub?.ScheduleId;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -178,6 +180,13 @@ public class SubscriptionInfo
         /// </summary>
         public int ServiceAccountGrace { get; set; }
 
+        /// <summary>
+        /// The Stripe subscription schedule id, or null when no schedule is attached. Internal only;
+        /// not mapped to the API response. Used to gate billing lookups that are only meaningful for a
+        /// scheduled subscription.
+        /// </summary>
+        public string? ScheduleId { get; set; }
+
         public class BillingSubscriptionItem
         {
             public BillingSubscriptionItem(SubscriptionItem item)
@@ -192,12 +201,41 @@ public class SubscriptionInfo
 
                     if (item.Price?.Metadata != null)
                     {
-                        AddonSubscriptionItem = item.Price.Metadata.TryGetValue("isAddOn", out var value) && bool.Parse(value);
+                        AddonSubscriptionItem = item.Price.Metadata.TryGetValue(MetadataKeys.IsAddOn, out var value) && bool.Parse(value);
                     }
                 }
 
                 Quantity = (int)item.Quantity;
                 SponsoredSubscriptionItem = item.Plan != null && SponsoredPlans.All.Any(p => p.StripePlanId == item.Plan.Id);
+            }
+
+            /// <summary>
+            /// Builds a line item from a subscription schedule phase item. Phase items carry an
+            /// expanded <see cref="Price"/> and no <see cref="Plan"/>, so the fields the
+            /// <see cref="SubscriptionItem"/> constructor reads off the plan are read off the price here.
+            /// </summary>
+            public BillingSubscriptionItem(SubscriptionSchedulePhaseItem item)
+            {
+                var price = item.Price;
+                if (price != null)
+                {
+                    PriceId = price.Id;
+                    ProductId = price.ProductId;
+                    Name = price.Nickname;
+                    Amount = ConvertFromStripeMinorUnits(price.UnitAmount) ?? 0;
+                    Interval = price.Recurring?.Interval;
+
+                    if (price.Metadata != null)
+                    {
+                        AddonSubscriptionItem =
+                            price.Metadata.TryGetValue(MetadataKeys.IsAddOn, out var value) &&
+                            bool.TryParse(value, out var isAddOn) && isAddOn;
+                    }
+
+                    SponsoredSubscriptionItem = SponsoredPlans.All.Any(p => p.StripePlanId == price.Id);
+                }
+
+                Quantity = (int)item.Quantity;
             }
 
             public bool AddonSubscriptionItem { get; set; }

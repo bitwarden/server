@@ -468,6 +468,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 model.Type.Value,
                 model.Permissions,
                 model.AccessSecretsManager,
+                model.AccessPam,
                 collectionAccessToSave,
                 groupsToSave,
                 model.Email,
@@ -805,7 +806,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             // Self-hosted instances can't autoscale their Stripe subscription, so reject before touching billing.
             if (_globalSettings.SelfHosted)
             {
-                throw new BadRequestException("Cannot autoscale on a self-hosted instance.");
+                throw new BadRequestException(new V2_UpdateUserCommand.CannotAutoscaleSecretsManagerSeatsOnSelfHost().Message);
             }
 
             var organization = await _organizationRepository.GetByIdAsync(orgId);
@@ -818,6 +819,38 @@ public class OrganizationUsersController : BaseAdminConsoleController
         foreach (var orgUser in orgUsers)
         {
             orgUser.AccessSecretsManager = true;
+        }
+
+        await _organizationUserRepository.ReplaceManyAsync(orgUsers);
+    }
+
+    /// <summary>
+    /// Grants PAM access to the specified members. A plain field write: PAM has no seats, so there is no
+    /// autoscale or billing step. Members who already have access are skipped.
+    /// </summary>
+    [HttpPut("enable-pam")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task BulkEnablePamAsync(Guid orgId,
+        [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        var orgUsers = (await _organizationUserRepository.GetManyAsync(model.Ids))
+            .Where(ou => ou.OrganizationId == orgId && !ou.AccessPam).ToList();
+        if (orgUsers.Count == 0)
+        {
+            throw new BadRequestException(new UsersInvalid().Message);
+        }
+
+        // Granting access on an organization without PAM would be inert: claim emission ANDs AccessPam with the
+        // organization's UsePam.
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        if (organization is not { UsePam: true })
+        {
+            throw new BadRequestException(new V2_UpdateUserCommand.PamNotEnabled().Message);
+        }
+
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.AccessPam = true;
         }
 
         await _organizationUserRepository.ReplaceManyAsync(orgUsers);

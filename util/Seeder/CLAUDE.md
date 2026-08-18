@@ -96,9 +96,13 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 **Preset JSON**: Add an optional `"density": { ... }` block. See `Seeds/schemas/preset.schema.json` for the full schema.
 
-**Presets**: Organized into `features/`, `qa/`, `scale/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
+**Presets**: Organized into `dev/`, `features/`, `qa/`, `scale/`, `individual/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
 
 **Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
+
+## Regression Testing
+
+Changes to `Factories/`, `Steps/`, `Scenes/`, or `Recipes/` need more than the unit suite — it covers none of the CLI, the SeederApi, or a real database. `Seeds/docs/regression.md` maps each changed path to the preset that reaches it and the assertion that proves it, and records the known non-regressions worth not chasing. Claude drives the CLI, API, and SQL; the developer smoke-tests the web vault.
 
 ## Data/ File Organization
 
@@ -171,6 +175,18 @@ Same domain = same seed = reproducible data:
 ```csharp
 var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
+
+## Fixture Contract Sync
+
+`Models/SeedModels.cs`, `Seeds/schemas/*.schema.json`, and `Seeds/docs/fixtures.md` describe one contract from three angles — the deserialization target, the editor validation, and the human documentation. A field present in only some of them is silently ignored or silently undocumented: `roster.schema.json` documented a per-user `email` for months while `SeedRosterUser` had no property to carry it.
+
+**Whenever you add, rename, or remove a fixture field:**
+
+- Add the property to the matching `SeedModels.cs` record _and_ the schema, then wire it through the step that consumes it — a schema-only field parses and is dropped on the floor
+- Update the field's bullet in `Seeds/docs/fixtures.md`, and soften any sibling line the new field makes conditional (an override makes "the Seeder builds emails as X" only true by default)
+- Give identifier-bearing strings `"minLength": 1` in the schema, and treat whitespace as absent in the step so it falls back to the derived value rather than committing an unusable row
+- Add a row to `Seeds/docs/regression.md` when the field changes what a real seed writes to the database — the unit suite proves the parse, not the seed
+- Fixture org domains MUST be `.example` (RFC 2606) — never `.test`, `.local`, or a real TLD. `Seeds/docs/fixtures.md` holds the full naming table
 
 ## Scenarios
 

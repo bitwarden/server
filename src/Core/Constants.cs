@@ -1,8 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using System.Reflection;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Core;
 
@@ -111,6 +111,7 @@ public static class Constants
     public static class BrowserExtensions
     {
         public const string ChromeId = "chrome-extension://nngceckbapebfimnlniiiahkandclblb/";
+        public const string ChromeBetaId = "chrome-extension://hccnnhgbibccigepcmlgppchkpfdophk/";
         public const string EdgeId = "chrome-extension://jbkfoedolllekgbhcbcoahefnbanhhlh/";
         public const string OperaId = "chrome-extension://ccnckbpmaceehanjmeomladnmlffdjgn/";
     }
@@ -131,7 +132,8 @@ public static class AuthenticationSchemes
     public const string BitwardenExternalCookieAuthenticationScheme = "bw.external";
 }
 
-public static class FeatureFlagKeys
+[FlagKeyCollection]
+public static partial class FeatureFlagKeys
 {
     /* Admin Console Team */
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
@@ -139,7 +141,6 @@ public static class FeatureFlagKeys
     public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
-    public const string PolicyDrawers = "pm-34804-policy-drawers";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
     public const string ChangeMemberEmailNoMp = "pm-28365-change-member-email-no-mp";
@@ -174,6 +175,7 @@ public static class FeatureFlagKeys
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
     public const string EnableAutofillTriage = "enable-autofill-triage";
     public const string PM39071_DefaultPasswordManagerPrompt = "pm-39071-default-password-manager-prompt";
+    public const string LitInlineMenuComponents = "lit-inline-menu-components";
 
     /* Desktop Native Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
@@ -191,6 +193,8 @@ public static class FeatureFlagKeys
     public const string PM34515_BrowserDesktopCheckout = "pm-34515-browser-desktop-checkout";
     public const string DebugDisableSelfHostPremiumCheck = "debug-disable-self-host-premium-check";
     public const string PM35215_BusinessPlanPriceMigration = "pm-35215-business-plan-price-migration";
+    public const string PM38333_AnnualBillingSavings = "pm-38333-annual-billing-savings";
+    public const string PM38728_SendInvoicePriceMigration = "pm-38728-send-invoice-price-migration";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -241,17 +245,13 @@ public static class FeatureFlagKeys
     public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
 
     /* Tools Team */
-    /// <summary>
-    /// Enable this flag to share the send view used by the web and browser clients
-    /// on the desktop client.
-    /// </summary>
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
-    public const string SendEmailOTP = "pm-19051-send-email-verification";
     public const string SendControls = "pm-31885-send-controls";
     public const string SdkSendsApi = "pm-30110-sdk-sends-api";
     public const string SendEventLogging = "pm-36560-send-event-logging";
     public const string SendControlsExistingSends = "pm-31885-send-controls-existing-sends";
     public const string TemporaryItemSharing = "pm-34203-temporary-item-sharing";
+    public const string ImportRefresh = "pm-35053-import-upgrade";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
@@ -275,6 +275,7 @@ public static class FeatureFlagKeys
     public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
     public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
     public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
+    public const string PM40435_QuickCopyIconSetting = "pm-40435-quick-copy-icon-setting";
     public const string PM28192_CipherAttachmentOps = "pm-28192-cipher-attachment-ops-to-sdk";
     public const string PM32016_RemoveAtRiskCallout = "pm-32016-remove-at-risk-callout";
     public const string PM37785_VaultBatchBar = "pm-37785-vault-batch-bar";
@@ -300,6 +301,7 @@ public static class FeatureFlagKeys
     public const string PasskeyDirectoryReport = "inno-passkey-directory-report";
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
+    public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
@@ -310,14 +312,6 @@ public static class FeatureFlagKeys
 
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
-
-    public static List<string> GetAllKeys()
-    {
-        return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-            .Where(fi => fi.IsLiteral && !fi.IsInitOnly && fi.FieldType == typeof(string))
-            .Select(x => (string)x.GetRawConstantValue())
-            .ToList();
-    }
 
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {
