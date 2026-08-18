@@ -266,6 +266,62 @@ jobs:
           username: bitwarden
           password: ${{ steps.get-kv-secrets.outputs.DOCKERHUB-OAT }}
 
+      # On pull_request, `github.sha` is the ephemeral merge commit, but the checkout above uses
+      # the PR head sha. Read the actual checked-out HEAD so org.opencontainers.image.revision
+      # always names the commit that produced the image.
+      - name: Resolve built revision
+        id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # metadata-action builds its `labels` and `annotations` outputs independently, each merging
+      # only its own input over the same generated defaults. Supplying just `labels` leaves the
+      # annotations at the raw defaults (title=server, version=<branch>, revision=github.sha).
+      # Build the custom set once here and feed it to both inputs so they cannot drift.
+      #
+      # title/description/url/source/created are left to the action's defaults, which derive from
+      # the repo itself. The rest are set here because those defaults are wrong for this repo:
+      #   title    - defaults to the repo name ("server"), not the individual service
+      #   licenses - defaults to the repo SPDX id, which GitHub reports as NOASSERTION because
+      #              this repo is dual-licensed. Per LICENSE.txt, AGPL-3.0 is the default and
+      #              Bitwarden Licensed code lives only in /bitwarden_license.
+      #   version  - derived from the git ref, not our resolved image tag
+      #   revision - github.sha, not the commit actually checked out
+      - name: Build custom image metadata
+        id: custom-meta
+        env:
+          PROJECT_TITLE: ${{ matrix.project_name }}
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+          LICENSE_ID: ${{ contains(matrix.base_path, 'bitwarden_license') && 'LicenseRef-Bitwarden-1.0' || 'AGPL-3.0-only' }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          REVISION: ${{ steps.revision.outputs.sha }}
+        run: |
+          {
+            echo "items<<METADATA_EOF"
+            echo "org.opencontainers.image.title=Bitwarden ${PROJECT_TITLE}"
+            echo "org.opencontainers.image.vendor=Bitwarden Inc."
+            echo "org.opencontainers.image.licenses=${LICENSE_ID}"
+            echo "org.opencontainers.image.version=${IMAGE_TAG}"
+            echo "org.opencontainers.image.revision=${REVISION}"
+            echo "com.bitwarden.project=${PROJECT_NAME}"
+            echo "METADATA_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        env:
+          # Annotate the manifest list too, not just the per-arch manifests, so the metadata is
+          # visible on the multi-arch index that clients resolve first.
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest
+        with:
+          # Tags come from the `image-tags` step, which encodes the ACR/GHCR publish rules.
+          # The `tags` output of this action is intentionally unused.
+          images: |
+            ${{ env._AZ_REGISTRY }}/${{ steps.setup.outputs.project_name }}
+            ${{ env._GHCR_REGISTRY }}/${{ steps.setup.outputs.project_name }}
+          labels: ${{ steps.custom-meta.outputs.items }}
+          annotations: ${{ steps.custom-meta.outputs.items }}
+
       - name: Build Docker image
         id: build-artifacts
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
@@ -275,6 +331,8 @@ jobs:
           platforms: ${{ steps.platforms.outputs.platforms }}
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
 
       - name: Generate image manifest fragment
         env:
