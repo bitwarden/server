@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.M
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -596,7 +595,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid userId, IEnumerable<OrganizationUser> resetPasswordKeys)
     {
         return async (connection, transaction) =>

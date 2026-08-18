@@ -5,7 +5,6 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
@@ -771,7 +770,7 @@ public class UserRepositoryTests
         user.RevisionDate = DateTime.UtcNow;
 
         var actionWasInvoked = false;
-        UpdateEncryptedDataForKeyRotation action = (_, _) =>
+        DatabaseTransactionAction action = (_, _) =>
         {
             actionWasInvoked = true;
             return Task.CompletedTask;

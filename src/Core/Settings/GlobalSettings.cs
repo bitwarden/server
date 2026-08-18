@@ -101,6 +101,7 @@ public class GlobalSettings : IGlobalSettings
     /// </summary>
     public virtual string SendDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
+    public virtual string PricingApiKey { get; set; }
     public virtual Fido2Settings Fido2 { get; set; } = new Fido2Settings();
     public virtual ICommunicationSettings Communication { get; set; } = new CommunicationSettings();
 
