@@ -1,7 +1,5 @@
 ﻿using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
-using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
-using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
@@ -15,12 +13,12 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the access-request wire contract that the generated OpenAPI spec — and the client bindings built from it —
-/// depend on. The endpoint bodies just delegate; the contract (routes, names, methods, return types) is the
+/// Locks the audit wire contract that the generated OpenAPI spec — and the client bindings built from it —
+/// depend on. The endpoint body just delegates; the contract (route, name, method, return type) is the
 /// thing under test. Endpoints are materialized by mapping them onto a minimal host and reading its
 /// <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator inspects.
 /// </summary>
-public class AccessRequestEndpointsTests
+public class AuditEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
@@ -33,11 +31,6 @@ public class AccessRequestEndpointsTests
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
         builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
         builder.Services.AddScoped<AuditEndpointsHandler>();
-        builder.Services.AddScoped<AccessConnectorEndpointsHandler>();
-        builder.Services.AddScoped<TargetSystemEndpointsHandler>();
-        builder.Services.AddScoped<RotationConfigEndpointsHandler>();
-        builder.Services.AddScoped<RotationJobEndpointsHandler>();
-        builder.Services.AddScoped<RotationAttemptEndpointsHandler>();
 
         var app = builder.Build();
         app.MapPamEndpoints();
@@ -51,25 +44,19 @@ public class AccessRequestEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheSevenAccessRequestRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheSingleAuditRoute_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
-            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRequests"))
+            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Audit"))
             .ToList();
 
-        Assert.Equal(7, endpoints.Count);
+        Assert.Single(endpoints);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
 
     [Theory]
-    [InlineData("Pam_AccessRequests_GetInbox", "GET", "access-requests/inbox")]
-    [InlineData("Pam_AccessRequests_GetHistory", "GET", "access-requests/history")]
-    [InlineData("Pam_AccessRequests_GetMine", "GET", "access-requests/mine")]
-    [InlineData("Pam_AccessRequests_GetDetails", "GET", "access-requests/{id:guid}")]
-    [InlineData("Pam_AccessRequests_Decide", "POST", "access-requests/{id:guid}/decision")]
-    [InlineData("Pam_AccessRequests_Activate", "POST", "access-requests/{id:guid}/activate")]
-    [InlineData("Pam_AccessRequests_Revoke", "POST", "access-requests/{id:guid}/revoke")]
+    [InlineData("Pam_Audit_GetTrail", "GET", "organizations/{orgId:guid}/audit")]
     public void MapPamEndpoints_RegistersExpectedRoute(string name, string method, string route)
     {
         var endpoints = MaterializeEndpoints();
@@ -77,17 +64,16 @@ public class AccessRequestEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/access-requests/inbox")
-        // that the generated spec path does not.
+        // Trim slashes: the raw pattern carries routing's leading/trailing slashes that the generated spec path does not.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }
 
     [Fact]
-    public void AccessRequestGroup_DocumentsErrorResponseModel_For400And404()
+    public void AuditGroup_DocumentsErrorResponseModel_For400And404()
     {
         var endpoint = MaterializeEndpoints()
-            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRequests"));
+            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Audit"));
         var produces = endpoint.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>();
 
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status400BadRequest && p.Type == typeof(ErrorResponseModel));
@@ -95,16 +81,10 @@ public class AccessRequestEndpointsTests
     }
 
     [Theory]
-    [InlineData(nameof(AccessRequestEndpointsHandler.GetInbox), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
-    [InlineData(nameof(AccessRequestEndpointsHandler.GetHistory), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
-    [InlineData(nameof(AccessRequestEndpointsHandler.GetMine), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
-    [InlineData(nameof(AccessRequestEndpointsHandler.GetDetails), typeof(Task<AccessRequestDetailsResponseModel>))]
-    [InlineData(nameof(AccessRequestEndpointsHandler.Decide), typeof(Task<AccessRequestDetailsResponseModel>))]
-    [InlineData(nameof(AccessRequestEndpointsHandler.Activate), typeof(Task<AccessLeaseResponseModel>))]
-    [InlineData(nameof(AccessRequestEndpointsHandler.Revoke), typeof(Task))]
+    [InlineData(nameof(AuditEndpointsHandler.GetTrail), typeof(Task<ListResponseModel<AccessAuditEventResponseModel>>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
-        var method = typeof(AccessRequestEndpointsHandler).GetMethod(methodName);
+        var method = typeof(AuditEndpointsHandler).GetMethod(methodName);
 
         Assert.NotNull(method);
         Assert.Equal(expectedReturnType, method!.ReturnType);
