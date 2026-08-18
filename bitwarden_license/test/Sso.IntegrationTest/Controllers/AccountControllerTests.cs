@@ -1,5 +1,7 @@
 ﻿using System.Net;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
@@ -978,6 +980,154 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         var stringResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains("No seats available for organization", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+    }
+
+    /*
+    * SUCCESS PATH: Test to verify /Account/ExternalCallback promotes a Staged OrganizationUser
+    * row to Invited, sends a real invite email via ISendOrganizationInvitesCommand, and redirects
+    * to /login with the standard InviteAcceptanceRequired error when an existing BW user
+    * (matched by email) attempts SSO against a Staged placeholder. Mirrors the JIT-against-Staged
+    * case, but the existing-user path also emits the invite email so the accept flow can
+    * complete via the standard token-based invite acceptance UX.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithExistingUser_AndStagedOrgUser_PromotesInvitesAndRedirects()
+    {
+        // Arrange — existing BW user AND a Staged OrganizationUser row sharing the SSO-claimed email.
+        // The Staged row has UserId=null (matches the directory-import shape).
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithStagedOrganizationUser()
+            .WithPM34423StagedStatusFlag()
+            .WithMockedSendOrganizationInvitesCommand()
+            .BuildAsync();
+
+        var stagedRowInitialRevisionDate = testData.OrganizationUser!.RevisionDate;
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — 302 to /login with the standard InviteAcceptanceRequired error code and context.
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+        var location = response.Headers.Location!.ToString();
+        Assert.Contains("/login?", location);
+        Assert.Contains("error=ssoOrgInviteAcceptanceRequired", location);
+        Assert.Contains($"email={Uri.EscapeDataString(testData.User!.Email)}", location);
+        Assert.Contains($"organizationId={testData.Organization!.Id}", location);
+
+        // Assert — Staged row promoted to Invited, UserId left null (matches standard admin-invite
+        // shape; UserId is set at accept time by the accept endpoint), RevisionDate bumped.
+        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var refreshedOrgUser = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
+        Assert.NotNull(refreshedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Invited, refreshedOrgUser.Status);
+        Assert.Null(refreshedOrgUser.UserId);
+        Assert.True(refreshedOrgUser.RevisionDate > stagedRowInitialRevisionDate,
+            $"RevisionDate should be bumped after promotion. Before: {stagedRowInitialRevisionDate:O}, After: {refreshedOrgUser.RevisionDate:O}.");
+
+        // Assert — invite email was issued for the promoted OrgUser, with invitingUserId=null
+        // (matches the SCIM/automated pattern documented on SendInvitesRequest).
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        await inviteCommand.Received(1).SendInvitesAsync(Arg.Is<SendInvitesRequest>(r =>
+            r.Users.Length == 1 &&
+            r.Users[0].Id == testData.OrganizationUser!.Id &&
+            r.Organization.Id == testData.Organization!.Id &&
+            r.InvitingUserId == null));
+    }
+
+    /*
+    * FAILURE PATH: Test to verify /Account/ExternalCallback rejects an existing-user Staged
+    * promotion when the org is at its seat cap on self-hosted. Also asserts we do NOT send
+    * an invite email (seat check must throw before the email step) and do NOT mutate the row.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithExistingUser_AndStagedOrgUser_OnSelfHostedAtSeatCap_ThrowsAndDoesNotInvite()
+    {
+        // Arrange — Seats = 5, builder fills 5 Confirmed rows to reach cap. Staged row does not
+        // count against the cap; promoting it would push us over.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithStagedOrganizationUser()
+            .WithOrganization(org =>
+            {
+                org.Seats = 5;
+            })
+            .AsSelfHosted()
+            .WithPM34423StagedStatusFlag()
+            .WithMockedSendOrganizationInvitesCommand()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — NoSeatsAvailable throw surfaces as 500.
+        var stringResponse = await response.Content.ReadAsStringAsync();
+        Assert.Contains("No seats available for organization", stringResponse);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        // Assert — no invite was sent (seat check must run before the email step).
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        await inviteCommand.DidNotReceive().SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+
+        // Assert — Staged row was not mutated.
+        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var refreshedOrgUser = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
+        Assert.NotNull(refreshedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Staged, refreshedOrgUser.Status);
+        Assert.Null(refreshedOrgUser.UserId);
+    }
+
+    /*
+    * FAILURE PATH: Mirror of the self-hosted seat-cap test for the cloud path where autoscale
+    * cannot grow beyond MaxAutoscaleSeats. Same expectations: NoSeatsAvailable throw, no invite,
+    * no row mutation.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithExistingUser_AndStagedOrgUser_OnCloudAutoscaleFails_ThrowsAndDoesNotInvite()
+    {
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithStagedOrganizationUser()
+            .WithOrganization(org =>
+            {
+                org.Seats = 5;
+                org.MaxAutoscaleSeats = 5;
+            })
+            .WithPM34423StagedStatusFlag()
+            .WithMockedSendOrganizationInvitesCommand()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — NoSeatsAvailable throw surfaces as 500.
+        var stringResponse = await response.Content.ReadAsStringAsync();
+        Assert.Contains("No seats available for organization", stringResponse);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        // Assert — no invite was sent.
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        await inviteCommand.DidNotReceive().SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+
+        // Assert — Staged row was not mutated.
+        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var refreshedOrgUser = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
+        Assert.NotNull(refreshedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Staged, refreshedOrgUser.Status);
+        Assert.Null(refreshedOrgUser.UserId);
     }
 
     /*

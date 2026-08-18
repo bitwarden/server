@@ -1,5 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
@@ -58,6 +59,7 @@ public class SsoTestDataBuilder
     private bool _isNativeClient = false;
     private bool _mockAutoscaleSuccess = false;
     private bool _mockAutoscalePartialFailure = false;
+    private bool _mockSendOrganizationInvitesCommand = false;
 
     public SsoTestDataBuilder WithOrganization(Action<Organization> configure)
     {
@@ -181,6 +183,18 @@ public class SsoTestDataBuilder
     }
 
     /// <summary>
+    /// Substitutes <see cref="ISendOrganizationInvitesCommand"/> so <c>SendInvitesAsync</c>
+    /// no-ops instead of exercising the real mail pipeline. Use in tests that want to
+    /// assert an invite was (or was not) issued, and to keep integration runs from
+    /// touching the real email path.
+    /// </summary>
+    public SsoTestDataBuilder WithMockedSendOrganizationInvitesCommand()
+    {
+        _mockSendOrganizationInvitesCommand = true;
+        return this;
+    }
+
+    /// <summary>
     /// Substitutes <see cref="IOrganizationService"/> so <c>AutoAddSeatsAsync</c> succeeds
     /// without hitting the real billing gateway. Use to exercise the "at cap, autoscale
     /// succeeds" branch of the seat-availability check in integration.
@@ -266,7 +280,13 @@ public class SsoTestDataBuilder
             });
         }
 
-        // 1.d Configure IOrganizationService for autoscale-branch tests
+        // 1.d Configure ISendOrganizationInvitesCommand for tests that exercise the invite path
+        if (_mockSendOrganizationInvitesCommand)
+        {
+            factory.SubstituteService<ISendOrganizationInvitesCommand>(_ => { });
+        }
+
+        // 1.e Configure IOrganizationService for autoscale-branch tests
         if (_mockAutoscaleSuccess)
         {
             factory.SubstituteService<IOrganizationService>(orgService =>

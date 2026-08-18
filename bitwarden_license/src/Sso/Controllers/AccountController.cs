@@ -2,6 +2,8 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -56,6 +58,7 @@ public class AccountController : Controller
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
+    private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -77,7 +80,8 @@ public class AccountController : Controller
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
         IRegisterUserCommand registerUserCommand,
-        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -99,6 +103,7 @@ public class AccountController : Controller
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
         _featureService = featureService;
+        _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
     }
 
     [HttpGet]
@@ -610,7 +615,19 @@ public class AccountController : Controller
             }
 
 
-            // TODO: handle Staged status here for existing BW users — pending product decision on the invite flow.
+            if (guaranteedOrgUser.Status == OrganizationUserStatusType.Staged
+                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+            {
+                await PromoteStagedOrgUserAndSendInviteAsync(guaranteedOrgUser, organization);
+
+                // TODO: confirm with product they want the same behavior. They might
+                // want to make a dedicated error code for this scenario so they can tell the
+                // user to check their email for the invite.
+                throw new SsoAuthnRequiresInviteAcceptanceException(
+                    organization.Id,
+                    organization.DisplayName(),
+                    guaranteedExistingUser.Email);
+            }
 
             // If the user already exists in Bitwarden, we require that the user already be in the org,
             // and that they are either Accepted or Confirmed.
@@ -773,6 +790,39 @@ public class AccountController : Controller
             _logger.LogInformation(e, "SSO auto provisioning failed");
             throw new Exception(_i18nService.T("NoSeatsAvailable", organization.DisplayName()));
         }
+    }
+
+    /// <summary>
+    /// Promotes a Staged <see cref="OrganizationUser"/> row to
+    /// <see cref="OrganizationUserStatusType.Invited"/> as if the organization admin had just
+    /// issued a fresh invite: verifies seat availability (autoscales on cloud when possible),
+    /// flips status, bumps <see cref="OrganizationUser.RevisionDate"/>, logs
+    /// <see cref="EventType.OrganizationUser_Invited"/>, and dispatches the standard invite
+    /// email via <see cref="ISendOrganizationInvitesCommand"/>. Does not set
+    /// <see cref="OrganizationUser.UserId"/> — matches the standard admin-invite shape;
+    /// the accept endpoint sets it at acceptance time.
+    /// </summary>
+    private async Task PromoteStagedOrgUserAndSendInviteAsync(
+        OrganizationUser orgUser,
+        Organization organization)
+    {
+        await EnsureSeatAvailableAsync(organization);
+
+        orgUser.Status = OrganizationUserStatusType.Invited;
+        orgUser.RevisionDate = DateTime.UtcNow;
+        await _organizationUserRepository.ReplaceAsync(orgUser);
+
+        // TODO: Confirm with product / AC whether OrganizationUser_Invited is the right
+        // event type here. Standard admin-invite flow emits it, but that event is
+        // admin-initiated; ours is triggered by a user's SSO login. A distinct event
+        // (e.g. OrganizationUser_SsoStagedPromotedToInvited) may reflect the semantic difference better.
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Invited);
+
+        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(
+            users: [orgUser],
+            organization: organization,
+            initOrganization: false,
+            invitingUserId: null));
     }
 
     /// <summary>
