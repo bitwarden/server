@@ -26,11 +26,10 @@ public class GetOrganizationUsersClaimedStatusQuery : IGetOrganizationUsersClaim
 
             if (organizationAbility is { Enabled: true, UseOrganizationDomains: true })
             {
-                // Get all organization users with claimed domains by the organization
                 var organizationUsersWithClaimedDomain = await _organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
 
-                // Create a dictionary with the OrganizationUserId and a boolean indicating if the user is claimed by the organization
-                return organizationUserIds.ToDictionary(ouId => ouId, ouId => organizationUsersWithClaimedDomain.Any(ou => ou.Id == ouId));
+                var claimedIds = organizationUsersWithClaimedDomain.Select(ou => ou.Id).ToHashSet();
+                return organizationUserIds.ToDictionary(ouId => ouId, claimedIds.Contains);
             }
         }
 

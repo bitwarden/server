@@ -225,10 +225,9 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     }
 
     /// <remarks>
-    /// Does not persist <see cref="Collection.AccessRuleId"/>. The serialization round-trip copies it onto the
-    /// wrapper and Dapper binds it, but <c>[dbo].[Collection_Create]</c> accepts <c>@AccessRuleId</c> and
-    /// deliberately ignores it, so a new collection is always created ungoverned. Use
-    /// <see cref="SetAccessRuleAssociationsAsync"/> to associate it with an access rule.
+    /// Upholds the interface's <see cref="Collection.AccessRuleId"/> contract through the stored procedure: the
+    /// serialization round-trip copies the property onto the wrapper and Dapper binds it, but
+    /// <c>[dbo].[Collection_Create]</c> accepts <c>@AccessRuleId</c> and deliberately ignores it.
     /// </remarks>
     public async Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
@@ -249,10 +248,9 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     }
 
     /// <remarks>
-    /// Does not persist <see cref="Collection.AccessRuleId"/>. Every branch below routes through
-    /// <c>[dbo].[Collection_Update]</c>, which accepts <c>@AccessRuleId</c> and deliberately ignores it, so an
-    /// ordinary collection edit can neither erase nor forge a PAM association. Use
-    /// <see cref="SetAccessRuleAssociationsAsync"/> to change it.
+    /// Upholds the interface's <see cref="Collection.AccessRuleId"/> contract through the stored procedures: every
+    /// branch below routes into <c>[dbo].[Collection_Update]</c>, which accepts <c>@AccessRuleId</c> and deliberately
+    /// ignores it.
     /// </remarks>
     public async Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {

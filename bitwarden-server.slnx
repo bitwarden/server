@@ -84,6 +84,7 @@
     <Project Path="test/Infrastructure.EFIntegration.Test/Infrastructure.EFIntegration.Test.csproj" />
     <Project Path="test/Infrastructure.IntegrationTest/Infrastructure.IntegrationTest.csproj" />
     <Project Path="test/IntegrationTestCommon/IntegrationTestCommon.csproj" />
+    <Project Path="test/Migrator.Test/Migrator.Test.csproj" />
     <Project Path="test/Notifications.Test/Notifications.Test.csproj" />
     <Project Path="test/SeederApi.IntegrationTest/SeederApi.IntegrationTest.csproj" />
     <Project Path="test/Server.IntegrationTest/Server.IntegrationTest.csproj" />

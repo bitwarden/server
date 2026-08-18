@@ -1,5 +1,4 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.Auth.Models.Request;
+﻿using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.KeyManagement.Enums;
 using Bit.Api.KeyManagement.Models.Requests;
@@ -41,8 +40,7 @@ public class AccountsKeyManagementController : Controller
     private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
     private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
         _emergencyAccessValidator;
-    private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
-            IReadOnlyList<OrganizationUser>>
+    private readonly IRotationValidator<OrganizationAccountRecoveryRotationData, IReadOnlyList<OrganizationUser>>
         _organizationUserValidator;
     private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
         _webauthnKeyValidator;
@@ -65,7 +63,7 @@ public class AccountsKeyManagementController : Controller
         IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> sendValidator,
         IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
             emergencyAccessValidator,
-        IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
+        IRotationValidator<OrganizationAccountRecoveryRotationData, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
         IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
             webAuthnKeyValidator,
@@ -141,11 +139,17 @@ public class AccountsKeyManagementController : Controller
                         model.AccountUnlockData.EmergencyAccessUnlockData),
                 OrganizationUsers =
                     await _organizationUserValidator.ValidateAsync(user,
-                        model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
+                        new OrganizationAccountRecoveryRotationData
+                        {
+                            AccountRecoveryUnlockData = model.AccountUnlockData.OrganizationAccountRecoveryUnlockData,
+                            // A manual key rotation carries no upgrade token, see V2UpgradeToken below.
+                            HasV2UpgradeToken = false
+                        }),
                 WebAuthnKeys =
                     await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
                 DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
-                V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
+                // A manual key rotation always logs the user out, so no upgrade token is needed.
+                V2UpgradeToken = null,
                 Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
                 Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
                 Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
@@ -290,11 +294,14 @@ public class AccountsKeyManagementController : Controller
                 await _emergencyAccessValidator.ValidateAsync(user, request.UnlockData.EmergencyAccessUnlockData),
             OrganizationUsers =
                 await _organizationUserValidator.ValidateAsync(user,
-                    request.UnlockData.OrganizationAccountRecoveryUnlockData),
+                    new OrganizationAccountRecoveryRotationData
+                    {
+                        AccountRecoveryUnlockData = request.UnlockData.OrganizationAccountRecoveryUnlockData,
+                        HasV2UpgradeToken = request.UnlockData.V2UpgradeToken != null
+                    }),
             WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, request.UnlockData.PasskeyUnlockData),
             DeviceKeys = await _deviceValidator.ValidateAsync(user, request.UnlockData.DeviceKeyUnlockData),
             V2UpgradeToken = request.UnlockData.V2UpgradeToken?.ToData(),
-
             Ciphers = await _cipherValidator.ValidateAsync(user, request.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, request.AccountData.Folders),
             Sends = await _sendValidator.ValidateAsync(user, request.AccountData.Sends),
