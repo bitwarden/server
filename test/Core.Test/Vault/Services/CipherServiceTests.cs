@@ -13,6 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Pam.Services;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -25,6 +26,7 @@ using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Services;
@@ -2494,5 +2496,270 @@ public class CipherServiceTests
                 .DidNotReceive()
                 .DeleteAttachmentsForCipherAsync(cipher.Id);
         }
+    }
+
+    // --- PAM credential-leasing write gate ------------------------------------------------------------
+    //
+    // CipherService is the choke point every vault mutation passes through, so this is where a leased
+    // cipher is protected from being edited, deleted, restored, or re-filed without a valid lease. These
+    // tests pin two things per call site: that a refusal from the gate stops the mutation before it
+    // persists, and that the paths deliberately left ungated (a brand-new cipher, an org admin acting
+    // through org-wide permissions, an internal flow passing skipPermissionCheck) never consult the gate
+    // at all. The decision itself is the gate's; these only assert that it is asked, and obeyed.
+
+    private static void RefusesMutation(SutProvider<CipherService> sutProvider) =>
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateAsync(Arg.Any<Guid>(), Arg.Any<Cipher>())
+            .ThrowsAsync(new NotFoundException());
+
+    private static void RefusesBulkMutation(SutProvider<CipherService> sutProvider) =>
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>())
+            .ThrowsAsync(new NotFoundException());
+
+    private static void OwnsPersonalCipher(SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid userId)
+    {
+        cipher.UserId = userId;
+        cipher.OrganizationId = null;
+        cipher.Edit = true;
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(userId).Returns(new User { Id = userId });
+    }
+
+    private static ICipherLeaseGate DidNotGate(SutProvider<CipherService> sutProvider) =>
+        sutProvider.GetDependency<ICipherLeaseGate>().DidNotReceiveWithAnyArgs();
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_GatedCipher_ThrowsAndDoesNotPersist(
+        SutProvider<CipherService> sutProvider, Cipher cipher)
+    {
+        // A personal cipher clears the edit-permission check, so the gate is the only thing left to refuse.
+        cipher.OrganizationId = null;
+        var savingUserId = cipher.UserId!.Value;
+        RefusesMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.SaveAsync(cipher, savingUserId, null));
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_NewCipher_DoesNotConsultTheGate(
+        SutProvider<CipherService> sutProvider, Cipher cipher)
+    {
+        // A cipher that does not exist yet is in no collection, so no rule can govern it.
+        cipher.Id = default;
+        cipher.OrganizationId = null;
+
+        await sutProvider.Sut.SaveAsync(cipher, cipher.UserId!.Value, null);
+
+        await DidNotGate(sutProvider).EnsureCanMutateAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_SkipPermissionCheck_DoesNotConsultTheGate(
+        SutProvider<CipherService> sutProvider, Cipher cipher)
+    {
+        // skipPermissionCheck marks an internal/admin flow that has already been authorized out-of-band.
+        cipher.OrganizationId = null;
+        RefusesMutation(sutProvider);
+
+        await sutProvider.Sut.SaveAsync(cipher, cipher.UserId!.Value, null, skipPermissionCheck: true);
+
+        await DidNotGate(sutProvider).EnsureCanMutateAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_GatedCipher_ThrowsAndDoesNotPersist(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher)
+    {
+        cipher.OrganizationId = null;
+        var savingUserId = cipher.UserId!.Value;
+        RefusesMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default(CipherDetails)!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_GatedCipher_ThrowsAndDoesNotDelete(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid deletingUserId)
+    {
+        OwnsPersonalCipher(sutProvider, cipher, deletingUserId);
+        RefusesMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAsync(cipher, deletingUserId));
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceiveWithAnyArgs().DeleteAttachmentsForCipherAsync(default);
+    }
+
+    [Theory, OrganizationCipherCustomize, BitAutoData]
+    public async Task DeleteAsync_OrgAdmin_DoesNotConsultTheGate(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid deletingUserId)
+    {
+        // An admin acts through org-wide permissions, not a collection-membership path, so leasing — which
+        // only ever gates a collection path — has nothing to say about the delete.
+        await sutProvider.Sut.DeleteAsync(cipher, deletingUserId, orgAdmin: true);
+
+        await DidNotGate(sutProvider).EnsureCanMutateAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SoftDeleteAsync_GatedCipher_ThrowsAndDoesNotSoftDelete(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid deletingUserId)
+    {
+        OwnsPersonalCipher(sutProvider, cipher, deletingUserId);
+        cipher.DeletedDate = null;
+        RefusesMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.SoftDeleteAsync(cipher, deletingUserId));
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreAsync_GatedCipher_ThrowsAndDoesNotRestore(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid restoringUserId)
+    {
+        OwnsPersonalCipher(sutProvider, cipher, restoringUserId);
+        cipher.DeletedDate = DateTime.UtcNow.AddDays(-1);
+        RefusesMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RestoreAsync(cipher, restoringUserId));
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveCollectionsAsync_GatedCipher_ThrowsAndDoesNotReassign(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, List<Guid> collectionIds)
+    {
+        // Re-assigning a leased credential's collections could move it out from under its own rule.
+        // Only an org-owned cipher has collections to reassign, and only an org collection can be gated.
+        cipher.OrganizationId = Guid.NewGuid();
+        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(savingUserId, cipher.Id).Returns(true);
+        RefusesMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.SaveCollectionsAsync(cipher, collectionIds, savingUserId, orgAdmin: false));
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs().UpdateCollectionsAsync(default, default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAttachmentAsync_GatedCipher_ThrowsAndDoesNotDelete(
+        SutProvider<CipherService> sutProvider, Cipher cipher, string attachmentId)
+    {
+        cipher.OrganizationId = null;
+        var deletingUserId = cipher.UserId!.Value;
+        // The attachment has to really be on the cipher, or the missing-attachment NotFoundException further
+        // down would make this pass whether or not the gate is consulted at all.
+        cipher.Attachments = JsonSerializer.Serialize(
+            new Dictionary<string, CipherAttachment.MetaData> { { attachmentId, new CipherAttachment.MetaData() } });
+        RefusesMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.DeleteAttachmentAsync(cipher, attachmentId, deletingUserId, orgAdmin: false));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().DeleteAttachmentAsync(default, default!);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceiveWithAnyArgs().DeleteAttachmentAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateCipherEditForAttachmentAsync_GatedCipher_Throws(
+        SutProvider<CipherService> sutProvider, Cipher cipher)
+    {
+        // Attaching a file to a leased credential is a mutation like any other.
+        cipher.OrganizationId = null;
+        var savingUserId = cipher.UserId!.Value;
+        // Enough storage plumbing that the validation would succeed outright without the gate — otherwise the
+        // NotFoundException for a missing user would stand in for a refusal that never happened.
+        var user = new User { Id = savingUserId, Premium = true, MaxStorageGb = 100, Storage = 0 };
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(savingUserId).Returns(user);
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
+        RefusesMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ValidateCipherEditForAttachmentAsync(
+            cipher, savingUserId, orgAdmin: false, requestLength: 1024));
+    }
+
+    [Theory, BitAutoData]
+    public async Task MoveManyAsync_GatedCipher_ThrowsAndDoesNotMove(
+        SutProvider<CipherService> sutProvider, Guid movingUserId, Guid destinationFolderId, List<Guid> cipherIds)
+    {
+        // Re-filing is a mutation of the caller's view of the credential, so it is gated too.
+        RefusesBulkMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.MoveManyAsync(cipherIds, destinationFolderId, movingUserId));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().MoveAsync(default!, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteManyAsync_OneGatedCipher_ThrowsAndDeletesNothing(
+        SutProvider<CipherService> sutProvider, List<CipherDetails> ciphers, Guid deletingUserId)
+    {
+        var cipherIds = ciphers.Select(c => c.Id).ToArray();
+        foreach (var cipher in ciphers)
+        {
+            OwnsPersonalCipher(sutProvider, cipher, deletingUserId);
+        }
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(deletingUserId).Returns(ciphers);
+        RefusesBulkMutation(sutProvider);
+
+        // All-or-nothing: the gate refuses the batch, so not even the ungated ciphers in it are deleted.
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.DeleteManyAsync(cipherIds, deletingUserId));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().DeleteAsync(default(IEnumerable<Guid>)!, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SoftDeleteManyAsync_OneGatedCipher_ThrowsAndSoftDeletesNothing(
+        SutProvider<CipherService> sutProvider, List<CipherDetails> ciphers, Guid deletingUserId)
+    {
+        var cipherIds = ciphers.Select(c => c.Id).ToArray();
+        foreach (var cipher in ciphers)
+        {
+            OwnsPersonalCipher(sutProvider, cipher, deletingUserId);
+        }
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(deletingUserId).Returns(ciphers);
+        RefusesBulkMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.SoftDeleteManyAsync(cipherIds, deletingUserId, null, false));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().SoftDeleteAsync(default!, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreManyAsync_OneGatedCipher_ThrowsAndRestoresNothing(
+        SutProvider<CipherService> sutProvider, List<CipherDetails> ciphers, Guid restoringUserId)
+    {
+        var cipherIds = ciphers.Select(c => c.Id).ToArray();
+        foreach (var cipher in ciphers)
+        {
+            OwnsPersonalCipher(sutProvider, cipher, restoringUserId);
+            cipher.DeletedDate = DateTime.UtcNow.AddDays(-1);
+        }
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(restoringUserId).Returns(ciphers);
+        RefusesBulkMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().RestoreAsync(default!, default);
     }
 }

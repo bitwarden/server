@@ -8,8 +8,8 @@ namespace Bit.Core.Pam.Services;
 /// <summary>
 /// Open-source fallback for <see cref="ICipherLeaseGate"/>. PAM credential leasing is a commercial
 /// feature, so in builds without the commercial implementation the gate never gates: every cipher is
-/// fully accessible, matching the behaviour when the PAM feature flag is off. The real gating logic
-/// lives in the commercial Pam library.
+/// fully readable and freely mutable, matching the behaviour when the PAM feature flag is off. The real
+/// gating logic lives in the commercial Pam library.
 /// </summary>
 public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
 {
@@ -31,6 +31,12 @@ public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
 
     public Task<FullCipherAccess?> AuthorizeAdminWriteReturnAsync(Guid userId, Guid organizationId, Cipher cipher)
         => Task.FromResult<FullCipherAccess?>(FullCipherAccess.Unrestricted());
+
+    public Task<FullCipherAccess> EnsureCanMutateAsync(Guid userId, Cipher cipher)
+        => Task.FromResult(FullCipherAccess.Unrestricted());
+
+    public Task<FullCipherAccess> EnsureCanMutateManyAsync(Guid userId, IEnumerable<Cipher> ciphers)
+        => Task.FromResult(FullCipherAccess.Unrestricted());
 
     public Task<FullCipherAccess?> AuthorizeAdminReadAsync(Guid userId, Guid organizationId, Cipher cipher)
         => Task.FromResult<FullCipherAccess?>(FullCipherAccess.Unrestricted());
