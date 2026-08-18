@@ -1,6 +1,7 @@
 ﻿using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
@@ -26,6 +27,11 @@ namespace Bit.Services.Pam.Services;
 /// secrets to a caller holding a valid active lease. A bulk read never does — it strips every gated cipher
 /// whatever the lease state — because a sync or a list is not the act of using a credential, and letting one
 /// through there would leak it into every client's local store for as long as that store lives.
+///
+/// The mutation decisions sit with the single read rather than the bulk one, in both their single and bulk
+/// forms: a lease-holder may edit, delete, restore, or re-file the credential they hold. That asymmetry is
+/// not an inconsistency — a write emits no secret, so there is nothing for strictness to protect there,
+/// while refusing the holder would break the very access the lease was issued to grant.
 /// </remarks>
 public class CipherLeaseGate : ICipherLeaseGate
 {
@@ -98,6 +104,63 @@ public class CipherLeaseGate : ICipherLeaseGate
         return BuildBulkWitness(ciphers, collections, collectionCiphersByCipher);
     }
 
+    public async Task<FullCipherAccess> EnsureCanMutateAsync(Guid userId, Cipher cipher)
+    {
+        if (!Enabled)
+        {
+            return FullCipherAccess.Unrestricted();
+        }
+
+        if (await IsBlockedAsync(userId, cipher.Id))
+        {
+            throw new NotFoundException();
+        }
+
+        return FullCipherAccess.ForCipher(cipher.Id);
+    }
+
+    public async Task<FullCipherAccess> EnsureCanMutateManyAsync(Guid userId, IEnumerable<Cipher> ciphers)
+    {
+        if (!Enabled)
+        {
+            return FullCipherAccess.Unrestricted();
+        }
+
+        var cipherIds = ciphers.Select(c => c.Id).Distinct().ToList();
+        if (cipherIds.Count == 0)
+        {
+            return FullCipherAccess.ForCiphers([]);
+        }
+
+        // One lease read for the whole batch, so a caller who holds leases pays for them once rather than
+        // per cipher.
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var leasedCipherIds = (await _accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now))
+            .Select(l => l.CipherId)
+            .ToHashSet();
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
+
+        foreach (var cipherId in cipherIds)
+        {
+            if (leasedCipherIds.Contains(cipherId))
+            {
+                // A valid lease authorizes the mutation whatever rule governs the cipher, so there is
+                // nothing left to resolve.
+                continue;
+            }
+
+            if (await _resolver.ResolveAsync(userId, cipherId, signals) is not null)
+            {
+                // Gated with no lease. Refusing the whole batch rather than the one cipher keeps a bulk
+                // mutation all-or-nothing: a partially applied delete leaves the caller unable to tell what
+                // happened, and mirrors how the service hides inaccessible ciphers entirely.
+                throw new NotFoundException();
+            }
+        }
+
+        return FullCipherAccess.ForCiphers(cipherIds);
+    }
+
     public FullCipherAccess Unrestricted() =>
         // Gating only ever narrows access, never widens it, so an already-authorized context is unrestricted
         // here for the same reason it is on the flag-off path.
@@ -163,8 +226,9 @@ public class CipherLeaseGate : ICipherLeaseGate
 
     /// <summary>
     /// True when the cipher is leasing-gated for the caller and they hold no valid active lease — the
-    /// "withhold full data" condition behind the single-cipher read decision. Resolves the governing rule
-    /// first so a non-gated cipher, the common case, costs no lease query.
+    /// condition behind both the single-cipher read decision ("withhold full data") and the single-cipher
+    /// mutation decision ("refuse"). Resolves the governing rule first so a non-gated cipher, the common
+    /// case, costs no lease query.
     /// </summary>
     private async Task<bool> IsBlockedAsync(Guid userId, Guid cipherId)
     {

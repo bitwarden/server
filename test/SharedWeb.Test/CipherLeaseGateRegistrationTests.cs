@@ -11,8 +11,9 @@ namespace Bit.SharedWeb.Test.Utilities;
 
 /// <summary>
 /// Pins the <em>default</em> <see cref="ICipherLeaseGate"/> registration, which is the open-source fallback: it lets
-/// every cipher read through, because leasing is a commercial feature. The real gate is registered by
-/// <c>AddPamServices</c>, which Startup calls after <c>AddBaseServices</c> and only in a non-OSS build.
+/// every cipher read and every mutation through, because leasing is a commercial feature. The real gate is
+/// registered by <c>AddPamServices</c>, which Startup calls after <c>AddBaseServices</c> and only in a non-OSS
+/// build.
 /// </summary>
 /// <remarks>
 /// That arrangement rests on last-one-wins, so it is only correct while <em>both</em> registrations are a plain
@@ -63,6 +64,12 @@ public class CipherLeaseGateRegistrationTests
             throw new NotSupportedException();
 
         public Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers) =>
+            throw new NotSupportedException();
+
+        public Task<FullCipherAccess> EnsureCanMutateAsync(Guid userId, Cipher cipher) =>
+            throw new NotSupportedException();
+
+        public Task<FullCipherAccess> EnsureCanMutateManyAsync(Guid userId, IEnumerable<Cipher> ciphers) =>
             throw new NotSupportedException();
 
         public FullCipherAccess Unrestricted() => throw new NotSupportedException();
