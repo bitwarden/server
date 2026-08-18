@@ -2944,147 +2944,14 @@ public class CipherServiceTests
         await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId, removeCollections: true);
     }
 
-    [Theory, BitAutoData]
-    public async Task SaveCollectionsAsync_OrgAdmin_CipherOnlyInAnotherUsersDefaultCollection_ThrowsNotFound(
-        SutProvider<CipherService> sutProvider,
-        Guid savingUserId,
-        Cipher cipher,
-        Collection foreignDefaultCollection,
-        List<Guid> targetCollectionIds)
-    {
-        cipher.OrganizationId = Guid.NewGuid();
-        foreignDefaultCollection.Type = CollectionType.DefaultUserCollection;
-
-        sutProvider.GetDependency<ICollectionCipherRepository>()
-            .GetCollectionIdsByCipherIdAsync(cipher.Id)
-            .Returns(new List<Guid> { foreignDefaultCollection.Id });
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<Collection> { foreignDefaultCollection });
-        // The saving user owns no default collections.
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByUserIdAsync(savingUserId)
-            .Returns(new List<CollectionDetails>());
-
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true));
-
-        await sutProvider.GetDependency<ICollectionCipherRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateCollectionsForAdminAsync(default, default, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveCollectionsAsync_CipherOnlyInAnotherUsersDefaultCollection_ThrowsNotFound(
-        SutProvider<CipherService> sutProvider,
-        Guid savingUserId,
-        Cipher cipher,
-        Collection foreignDefaultCollection,
-        List<Guid> targetCollectionIds)
-    {
-        cipher.OrganizationId = Guid.NewGuid();
-        foreignDefaultCollection.Type = CollectionType.DefaultUserCollection;
-
-        sutProvider.GetDependency<ICollectionCipherRepository>()
-            .GetCollectionIdsByCipherIdAsync(cipher.Id)
-            .Returns(new List<Guid> { foreignDefaultCollection.Id });
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<Collection> { foreignDefaultCollection });
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByUserIdAsync(savingUserId)
-            .Returns(new List<CollectionDetails>());
-
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, false));
-
-        await sutProvider.GetDependency<ICollectionCipherRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateCollectionsAsync(default, default, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveCollectionsAsync_OrgAdmin_CipherAlsoInSharedCollection_UpdatesCollections(
-        SutProvider<CipherService> sutProvider,
-        Guid savingUserId,
-        Cipher cipher,
-        Collection foreignDefaultCollection,
-        Collection sharedCollection,
-        List<Guid> targetCollectionIds)
-    {
-        cipher.OrganizationId = Guid.NewGuid();
-        foreignDefaultCollection.Type = CollectionType.DefaultUserCollection;
-        sharedCollection.Type = CollectionType.SharedCollection;
-
-        // The cipher already lives in a shared collection alongside another member's default collection.
-        sutProvider.GetDependency<ICollectionCipherRepository>()
-            .GetCollectionIdsByCipherIdAsync(cipher.Id)
-            .Returns(new List<Guid> { foreignDefaultCollection.Id, sharedCollection.Id });
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<Collection> { foreignDefaultCollection, sharedCollection });
-
-        await sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true);
-
-        await sutProvider.GetDependency<ICollectionCipherRepository>()
-            .Received(1)
-            .UpdateCollectionsForAdminAsync(cipher.Id, cipher.OrganizationId.Value, targetCollectionIds);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveCollectionsAsync_OrgAdmin_UnassignedCipher_UpdatesCollections(
-        SutProvider<CipherService> sutProvider,
-        Guid savingUserId,
-        Cipher cipher,
-        List<Guid> targetCollectionIds)
-    {
-        cipher.OrganizationId = Guid.NewGuid();
-
-        sutProvider.GetDependency<ICollectionCipherRepository>()
-            .GetCollectionIdsByCipherIdAsync(cipher.Id)
-            .Returns(new List<Guid>());
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<Collection>());
-
-        await sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true);
-
-        await sutProvider.GetDependency<ICollectionCipherRepository>()
-            .Received(1)
-            .UpdateCollectionsForAdminAsync(cipher.Id, cipher.OrganizationId.Value, targetCollectionIds);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveCollectionsAsync_OrgAdmin_CipherInOwnDefaultCollection_UpdatesCollections(
-        SutProvider<CipherService> sutProvider,
-        Guid savingUserId,
-        Cipher cipher,
-        Collection ownDefaultCollection,
-        List<Guid> targetCollectionIds)
-    {
-        cipher.OrganizationId = Guid.NewGuid();
-        ownDefaultCollection.Type = CollectionType.DefaultUserCollection;
-
-        sutProvider.GetDependency<ICollectionCipherRepository>()
-            .GetCollectionIdsByCipherIdAsync(cipher.Id)
-            .Returns(new List<Guid> { ownDefaultCollection.Id });
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<Collection> { ownDefaultCollection });
-        // The saving user owns the default collection the cipher lives in.
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByUserIdAsync(savingUserId)
-            .Returns(new List<CollectionDetails>
-            {
-                new() { Id = ownDefaultCollection.Id, Type = CollectionType.DefaultUserCollection }
-            });
-
-        await sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true);
-
-        await sutProvider.GetDependency<ICollectionCipherRepository>()
-            .Received(1)
-            .UpdateCollectionsForAdminAsync(cipher.Id, cipher.OrganizationId.Value, targetCollectionIds);
-    }
+    // --- PAM credential-leasing write gate ------------------------------------------------------------
+    //
+    // CipherService is the choke point every vault mutation passes through, so this is where a leased
+    // cipher is protected from being edited, deleted, restored, or re-filed without a valid lease. These
+    // tests pin two things per call site: that a refusal from the gate stops the mutation before it
+    // persists, and that the paths deliberately left ungated (a brand-new cipher, an org admin acting
+    // through org-wide permissions, an internal flow passing skipPermissionCheck) never consult the gate
+    // at all. The decision itself is the gate's; these only assert that it is asked, and obeyed.
 
     [Theory, BitAutoData]
     public async Task SaveAsync_AdminCreateInAnotherUsersDefaultCollection_ThrowsAndDoesNotCreate(
@@ -3193,16 +3060,6 @@ public class CipherServiceTests
             .EnsureCanMutateManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>())
             .ThrowsAsync(new NotFoundException());
 
-    private static void RefusesAdminMutation(SutProvider<CipherService> sutProvider) =>
-        sutProvider.GetDependency<ICipherLeaseGate>()
-            .EnsureCanMutateAsAdminAsync(Arg.Any<Guid>(), Arg.Any<Cipher>())
-            .ThrowsAsync(new NotFoundException());
-
-    private static void RefusesAdminBulkMutation(SutProvider<CipherService> sutProvider) =>
-        sutProvider.GetDependency<ICipherLeaseGate>()
-            .EnsureCanMutateManyAsAdminAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>())
-            .ThrowsAsync(new NotFoundException());
-
     private static void OwnsPersonalCipher(SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid userId)
     {
         cipher.UserId = userId;
@@ -3242,17 +3099,15 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_SkipPermissionCheck_TakesTheAdminDecision(
+    public async Task SaveAsync_SkipPermissionCheck_DoesNotConsultTheGate(
         SutProvider<CipherService> sutProvider, Cipher cipher)
     {
-        // skipPermissionCheck marks an admin save, which reaches the cipher through org-wide permissions.
-        cipher.OrganizationId = Guid.NewGuid();
-        RefusesAdminMutation(sutProvider);
+        // skipPermissionCheck marks an internal/admin flow that has already been authorized out-of-band.
+        cipher.OrganizationId = null;
+        RefusesMutation(sutProvider);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.SaveAsync(cipher, cipher.UserId!.Value, null, skipPermissionCheck: true));
+        await sutProvider.Sut.SaveAsync(cipher, cipher.UserId!.Value, null, skipPermissionCheck: true);
 
-        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
         await DidNotGate(sutProvider).EnsureCanMutateAsync(default, default!);
     }
 
@@ -3272,36 +3127,6 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_PartialShapedWrite_RefusedBeforeTheLeaseGateAndNotPersisted(
-        SutProvider<CipherService> sutProvider, CipherDetails cipher)
-    {
-        // The guard's 400 explains the refusal; the gate's 404 would not.
-        cipher.OrganizationId = null;
-        RefusesMutation(sutProvider);
-        sutProvider.GetDependency<IPartialCipherWriteGuard>()
-            .EnsureNotPartialShapedAsync(cipher)
-            .ThrowsAsync(new BadRequestException("partial-shaped"));
-
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveDetailsAsync(cipher, cipher.UserId!.Value, null));
-
-        await sutProvider.GetDependency<ICipherRepository>()
-            .DidNotReceiveWithAnyArgs().ReplaceAsync(default(CipherDetails)!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveAsync_SkipPermissionCheck_StillConsultsThePartialGuard(
-        SutProvider<CipherService> sutProvider, Cipher cipher)
-    {
-        // Admin saves skip the lease gate, not the partial-shape check.
-        cipher.OrganizationId = null;
-
-        await sutProvider.Sut.SaveAsync(cipher, cipher.UserId!.Value, null, skipPermissionCheck: true);
-
-        await sutProvider.GetDependency<IPartialCipherWriteGuard>().Received(1).EnsureNotPartialShapedAsync(cipher);
-    }
-
-    [Theory, BitAutoData]
     public async Task DeleteAsync_GatedCipher_ThrowsAndDoesNotDelete(
         SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid deletingUserId)
     {
@@ -3316,16 +3141,13 @@ public class CipherServiceTests
     }
 
     [Theory, OrganizationCipherCustomize, BitAutoData]
-    public async Task DeleteAsync_OrgAdmin_TakesTheAdminDecision(
+    public async Task DeleteAsync_OrgAdmin_DoesNotConsultTheGate(
         SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid deletingUserId)
     {
-        // An admin acts through org-wide permissions, so leasing resolves from the organization's collections.
-        RefusesAdminMutation(sutProvider);
+        // An admin acts through org-wide permissions, not a collection-membership path, so leasing — which
+        // only ever gates a collection path — has nothing to say about the delete.
+        await sutProvider.Sut.DeleteAsync(cipher, deletingUserId, orgAdmin: true);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(cipher, deletingUserId, orgAdmin: true));
-
-        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
         await DidNotGate(sutProvider).EnsureCanMutateAsync(default, default!);
     }
 
@@ -3359,6 +3181,7 @@ public class CipherServiceTests
     public async Task SaveCollectionsAsync_GatedCipher_ThrowsAndDoesNotReassign(
         SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, List<Guid> collectionIds)
     {
+        // Re-assigning a leased credential's collections could move it out from under its own rule.
         // Only an org-owned cipher has collections to reassign, and only an org collection can be gated.
         cipher.OrganizationId = Guid.NewGuid();
         sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(savingUserId, cipher.Id).Returns(true);
@@ -3372,25 +3195,12 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveCollectionsAsync_OrgAdmin_GatedCipher_ThrowsAndDoesNotReassign(
-        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, List<Guid> collectionIds)
-    {
-        cipher.OrganizationId = Guid.NewGuid();
-        RefusesAdminMutation(sutProvider);
-
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.SaveCollectionsAsync(cipher, collectionIds, savingUserId, orgAdmin: true));
-
-        await sutProvider.GetDependency<ICollectionCipherRepository>()
-            .DidNotReceiveWithAnyArgs().UpdateCollectionsForAdminAsync(default, default, default!);
-    }
-
-    [Theory, BitAutoData]
     public async Task DeleteAttachmentAsync_GatedCipher_ThrowsAndDoesNotDelete(
         SutProvider<CipherService> sutProvider, CipherDetails cipher, string attachmentId, Guid deletingUserId)
     {
         OwnsPersonalCipher(sutProvider, cipher, deletingUserId);
-        // Must be on the cipher, or the missing-attachment NotFoundException masks the gate check.
+        // The attachment has to really be on the cipher, or the missing-attachment NotFoundException further
+        // down would make this pass whether or not the gate is consulted at all.
         cipher.Attachments = JsonSerializer.Serialize(
             new Dictionary<string, CipherAttachment.MetaData> { { attachmentId, new CipherAttachment.MetaData() } });
         RefusesMutation(sutProvider);
@@ -3411,7 +3221,8 @@ public class CipherServiceTests
         // Attaching a file to a leased credential is a mutation like any other.
         cipher.OrganizationId = null;
         var savingUserId = cipher.UserId!.Value;
-        // Enough storage plumbing that validation succeeds without the gate.
+        // Enough storage plumbing that the validation would succeed outright without the gate — otherwise the
+        // NotFoundException for a missing user would stand in for a refusal that never happened.
         var user = new User { Id = savingUserId, Premium = true, MaxStorageGb = 100, Storage = 0 };
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(savingUserId).Returns(user);
         sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
@@ -3422,15 +3233,17 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task MoveManyAsync_MovesWithoutTheLeaseGate(
-        SutProvider<CipherService> sutProvider, Guid movingUserId, List<Guid> cipherIds)
+    public async Task MoveManyAsync_GatedCipher_ThrowsAndDoesNotMove(
+        SutProvider<CipherService> sutProvider, Guid movingUserId, Guid destinationFolderId, List<Guid> cipherIds)
     {
-        // Folders are per user and leave Data unchanged, so a move needs no lease.
-        await sutProvider.Sut.MoveManyAsync(cipherIds, null, movingUserId);
+        // Re-filing is a mutation of the caller's view of the credential, so it is gated too.
+        RefusesBulkMutation(sutProvider);
 
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).MoveAsync(cipherIds, null, movingUserId);
-        await sutProvider.GetDependency<ICipherLeaseGate>()
-            .DidNotReceiveWithAnyArgs().EnsureCanMutateManyAsync(default, default!);
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.MoveManyAsync(cipherIds, destinationFolderId, movingUserId));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().MoveAsync(default!, default, default);
     }
 
     [Theory, BitAutoData]
@@ -3451,20 +3264,6 @@ public class CipherServiceTests
 
         await sutProvider.GetDependency<ICipherRepository>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default(IEnumerable<Guid>)!, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteManyAsync_OrgAdmin_OneGatedCipher_ThrowsAndDeletesNothing(
-        SutProvider<CipherService> sutProvider, List<Cipher> ciphers, Guid organizationId, Guid deletingUserId)
-    {
-        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organizationId).Returns(ciphers);
-        RefusesAdminBulkMutation(sutProvider);
-
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteManyAsync(
-            ciphers.Select(c => c.Id), deletingUserId, organizationId, orgAdmin: true));
-
-        await sutProvider.GetDependency<ICipherRepository>()
-            .DidNotReceiveWithAnyArgs().DeleteByIdsOrganizationIdAsync(default!, default);
     }
 
     [Theory, BitAutoData]
