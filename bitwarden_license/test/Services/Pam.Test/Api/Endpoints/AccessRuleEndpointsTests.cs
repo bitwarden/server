@@ -18,7 +18,7 @@ namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
 /// Locks the access-rule wire contract that the generated OpenAPI spec — and the client bindings built from it —
-/// depend on. The endpoint bodies are scaffold stubs; the contract (routes, names, methods, return types) is the
+/// depend on. The endpoint bodies just delegate; the contract (routes, names, methods, return types) is the
 /// thing under test. Endpoints are materialized by mapping them onto a minimal host and reading its
 /// <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator inspects.
 /// </summary>
@@ -34,6 +34,7 @@ public class AccessRuleEndpointsTests
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
         builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
+        builder.Services.AddScoped<AuditEndpointsHandler>();
 
         var app = builder.Build();
         app.MapPamEndpoints();
