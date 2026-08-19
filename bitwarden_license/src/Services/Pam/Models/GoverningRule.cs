@@ -33,4 +33,18 @@ public sealed record GoverningRule(
     /// <see cref="AllowsExtensions"/> is true.
     /// </summary>
     public int? MaxExtensionDurationSeconds { get; init; }
+
+    /// <summary>
+    /// The rule's pre-fill duration for a request opened under it, in seconds. Null means the rule stores no default
+    /// and the global one applies. Resolve through <see cref="LeaseDurationBounds"/> rather than reading it raw — a
+    /// rule may store a default that exceeds its own <see cref="MaxLeaseDurationSeconds"/>.
+    /// </summary>
+    public int? DefaultLeaseDurationSeconds { get; init; }
+
+    /// <summary>
+    /// The rule's own ceiling on a single lease, in seconds. Null means no per-rule cap, leaving only the global one.
+    /// Resolve through <see cref="LeaseDurationBounds"/> rather than reading it raw, so the global ceiling is applied
+    /// alongside it.
+    /// </summary>
+    public int? MaxLeaseDurationSeconds { get; init; }
 }

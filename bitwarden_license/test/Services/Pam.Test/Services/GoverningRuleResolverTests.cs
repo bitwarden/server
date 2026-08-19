@@ -367,6 +367,41 @@ public class GoverningRuleResolverTests
         Assert.True(result.RequiresHumanApproval);
     }
 
+    // PM-39858: the resolved rule is what submit and the pre-check both read, so it has to carry the rule's lease
+    // duration bounds. It previously copied only the extension fields, leaving the two lease-duration ones unreadable
+    // downstream.
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_CarriesTheRulesLeaseDurationBounds(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        rule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+        rule.DefaultLeaseDurationSeconds = 900;
+        rule.MaxLeaseDurationSeconds = 1800;
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.Equal(900, result!.DefaultLeaseDurationSeconds);
+        Assert.Equal(1800, result.MaxLeaseDurationSeconds);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_RuleWithoutLeaseDurationBounds_CarriesNulls(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        rule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+        rule.DefaultLeaseDurationSeconds = null;
+        rule.MaxLeaseDurationSeconds = null;
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.Null(result!.DefaultLeaseDurationSeconds);
+        Assert.Null(result.MaxLeaseDurationSeconds);
+    }
+
     private static void SetupReachableCollections(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, params Collection[] collections)
     {
