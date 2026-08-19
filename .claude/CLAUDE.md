@@ -5,7 +5,7 @@
 **Read these files before reviewing to ensure that you fully understand the project and contributing guidelines**
 
 1. `README.md` (read on demand for project overview)
-2. @../CONTRIBUTING.md
+2. `CONTRIBUTING.md` (read on demand for contributing guidelines)
 3. @../.github/PULL_REQUEST_TEMPLATE.md
 
 ## Critical Rules
