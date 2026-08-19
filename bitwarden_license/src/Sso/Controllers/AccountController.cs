@@ -348,6 +348,23 @@ public class AccountController : Controller
 
                 return Redirect(redirectUrl);
             }
+            catch (SsoAuthnStagedOrgUserRequiresInviteAcceptanceException ex)
+            {
+                // Sign out the external auth cookie and redirect to /login with
+                // StagedOrgUserInviteAcceptanceRequired so the client can prompt the user to
+                // check their email for the invite that was just sent by the Staged-user promotion.
+                await HttpContext.SignOutAsync(
+                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+
+                var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+                    _globalSettings.BaseServiceUri.VaultWithHash,
+                    ex.UserEmail,
+                    ex.OrganizationId,
+                    ex.OrganizationDisplayName,
+                    SsoRedirectUrlBuilder.ErrorCodes.StagedOrgUserInviteAcceptanceRequired);
+
+                return Redirect(redirectUrl);
+            }
 #nullable restore
         }
 
@@ -614,16 +631,12 @@ public class AccountController : Controller
                     guaranteedExistingUser.Email);
             }
 
-
             if (guaranteedOrgUser.Status == OrganizationUserStatusType.Staged
                 && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
             {
                 await PromoteStagedOrgUserAndSendInviteAsync(guaranteedOrgUser, organization);
 
-                // TODO: confirm with product they want the same behavior. They might
-                // want to make a dedicated error code for this scenario so they can tell the
-                // user to check their email for the invite.
-                throw new SsoAuthnRequiresInviteAcceptanceException(
+                throw new SsoAuthnStagedOrgUserRequiresInviteAcceptanceException(
                     organization.Id,
                     organization.DisplayName(),
                     guaranteedExistingUser.Email);

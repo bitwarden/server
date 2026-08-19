@@ -985,10 +985,10 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     /*
     * SUCCESS PATH: Test to verify /Account/ExternalCallback promotes a Staged OrganizationUser
     * row to Invited, sends a real invite email via ISendOrganizationInvitesCommand, and redirects
-    * to /login with the standard InviteAcceptanceRequired error when an existing BW user
-    * (matched by email) attempts SSO against a Staged placeholder. Mirrors the JIT-against-Staged
-    * case, but the existing-user path also emits the invite email so the accept flow can
-    * complete via the standard token-based invite acceptance UX.
+    * to /login with the StagedOrgUserInviteAcceptanceRequired error when an existing BW user
+    * (matched by email) attempts SSO against a Staged placeholder. Distinct from the standard
+    * InviteAcceptanceRequired code so the client can tell the user to check their email for
+    * the freshly-sent invite rather than referencing an invite they were expected to have.
     */
     [Fact]
     public async Task ExternalCallback_WithExistingUser_AndStagedOrgUser_PromotesInvitesAndRedirects()
@@ -1013,12 +1013,12 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert — 302 to /login with the standard InviteAcceptanceRequired error code and context.
+        // Assert — 302 to /login with the StagedOrgUserInviteAcceptanceRequired error code and context.
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.NotNull(response.Headers.Location);
         var location = response.Headers.Location!.ToString();
         Assert.Contains("/login?", location);
-        Assert.Contains("error=ssoOrgInviteAcceptanceRequired", location);
+        Assert.Contains("error=ssoStagedOrgUserInviteAcceptanceRequired", location);
         Assert.Contains($"email={Uri.EscapeDataString(testData.User!.Email)}", location);
         Assert.Contains($"organizationId={testData.Organization!.Id}", location);
 
