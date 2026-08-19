@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -160,7 +161,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceive()
-            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory]
@@ -544,7 +545,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         var pushException = new Exception("Push sync failed");
         sutProvider.GetDependency<IPushNotificationService>()
-            .PushSyncOrgKeysAsync(user.Id)
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == user.Id))
             .ThrowsAsync(pushException);
 
         // Act
@@ -711,7 +712,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == user.Id));
 
         await sutProvider.GetDependency<IPushRegistrationService>()
             .Received(1)

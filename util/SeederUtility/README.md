@@ -67,6 +67,9 @@ Loads a named configuration from the embedded catalog. Presets are curated JSON 
 # List available presets
 dotnet run -- preset --list
 
+# Day-to-day dev preset with memorable role logins
+dotnet run -- preset --name dev.playground
+
 # QA preset with known users and relationships
 dotnet run -- preset --name qa.enterprise-basic --mangle
 

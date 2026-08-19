@@ -1,0 +1,213 @@
+{
+  "$schema": "../../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "GitHub",
+      "login": {
+        "username": "dev-org-bot",
+        "password": "ghp_FakeSeederToken4DevOrg2026",
+        "uris": [
+          { "uri": "https://github.com", "match": "domain" },
+          { "uri": "https://github.com/dev-org", "match": "startsWith" }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPDEVGH"
+      },
+      "notes": "Org machine account. Humans sign in through SSO."
+    },
+    {
+      "type": "login",
+      "name": "Docker Hub",
+      "login": {
+        "username": "devorg",
+        "password": "D0ckerHubPu11er2026",
+        "uris": [{ "uri": "https://hub.docker.com", "match": "domain" }]
+      }
+    },
+    {
+      "type": "login",
+      "name": "npm Registry",
+      "login": {
+        "username": "devorg-publish",
+        "password": "npm_FakeSeederPublishToken2026",
+        "uris": [{ "uri": "https://www.npmjs.com", "match": "domain" }]
+      },
+      "notes": "Publish token rotates quarterly."
+    },
+    {
+      "type": "login",
+      "name": "Figma",
+      "cipherEncryption": "cipherKey",
+      "login": {
+        "username": "design@bw.example",
+        "password": "F1gmaSharedSeat2026",
+        "uris": [{ "uri": "https://www.figma.com", "match": "domain" }]
+      }
+    },
+    {
+      "type": "login",
+      "name": "AWS IAM - Developer",
+      "login": {
+        "username": "developer",
+        "password": "AwsIamDevSeeded2026#",
+        "uris": [
+          { "uri": "https://dev-org.signin.aws.amazon.com/console", "match": "startsWith" }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPDEVAW"
+      },
+      "notes": "Shared sandbox-account IAM user. Production access is via SSO roles."
+    },
+    {
+      "type": "login",
+      "name": "PgAdmin (Production)",
+      "cipherEncryption": "cipherKey",
+      "login": {
+        "username": "pgadmin@bw.example",
+        "password": "Pg4dminPr0dRead0nly2026",
+        "uris": [{ "uri": "https://pgadmin.internal.bw.example", "match": "host" }]
+      },
+      "notes": "Read-only reporting account. Writes go through migrations only."
+    },
+    {
+      "type": "login",
+      "name": "Datadog",
+      "login": {
+        "username": "ops@bw.example",
+        "password": "D4tadogSeededLogin2026",
+        "uris": [{ "uri": "https://app.datadoghq.com", "match": "domain" }]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Stripe Dashboard",
+      "login": {
+        "username": "finance@bw.example",
+        "password": "Str1peDashSeeded2026#",
+        "uris": [{ "uri": "https://dashboard.stripe.com", "match": "domain" }],
+        "totp": "JBSWY3DPEHPK3PXPDEVST"
+      },
+      "notes": "Restricted key lives in the deploy secrets store, not here."
+    },
+    {
+      "type": "login",
+      "name": "Xero",
+      "login": {
+        "username": "books@bw.example",
+        "password": "Xer0Ledger2026!",
+        "uris": [{ "uri": "https://go.xero.com", "match": "domain" }]
+      }
+    },
+    {
+      "type": "login",
+      "name": "BambooHR",
+      "login": {
+        "username": "people@bw.example",
+        "password": "B4mbooPeopleOps2026",
+        "uris": [{ "uri": "https://devorg.bamboohr.com", "match": "host" }]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Slack",
+      "login": {
+        "username": "workspace@bw.example",
+        "password": "Sl4ckWorkspace2026",
+        "uris": [{ "uri": "https://dev-org.slack.com", "match": "host" }]
+      },
+      "notes": "Workspace primary owner account."
+    },
+    {
+      "type": "login",
+      "name": "Google Workspace Admin",
+      "login": {
+        "username": "gw-admin@bw.example",
+        "password": "GwAdminBreakGlass2026#",
+        "uris": [{ "uri": "https://admin.google.com", "match": "domain" }],
+        "totp": "JBSWY3DPEHPK3PXPDEVGW"
+      },
+      "notes": "Break-glass super admin. Page the IT director before using."
+    },
+    {
+      "type": "login",
+      "name": "AWS Console (Root)",
+      "cipherEncryption": "cipherKey",
+      "login": {
+        "username": "root@bw.example",
+        "password": "AwsR00tBreakGlass2026#",
+        "uris": [{ "uri": "https://console.aws.amazon.com", "match": "domain" }],
+        "totp": "JBSWY3DPEHPK3PXPDEVRT"
+      },
+      "notes": "Root account - break glass only. Billing alarms notify #ops."
+    },
+    {
+      "type": "login",
+      "name": "Office Wi-Fi",
+      "login": {
+        "username": "DevOrg-5G",
+        "password": "correct-horse-battery-staple"
+      },
+      "notes": "Guest network: DevOrg-Guest / welcome-2026"
+    },
+    {
+      "type": "secureNote",
+      "name": "Office Door Codes",
+      "notes": "Front door: 4821#\nServer room: 7350# (Engineering only)\nMail room: 1109#\nCodes rotate on the first Monday of each quarter."
+    },
+    {
+      "type": "secureNote",
+      "name": "Incident Response Runbook",
+      "notes": "1. Declare severity in #incidents.\n2. Page the on-call SRE (Datadog escalation policy).\n3. Break-glass credentials live in Leadership/Break Glass.\n4. Post-mortem within 5 business days."
+    },
+    {
+      "type": "secureNote",
+      "name": "Release Signing Checklist",
+      "notes": "1. CI green on the release tag.\n2. Verify SBOM attached to the draft release.\n3. Sign with the deploy key (Engineering/Cloud Infrastructure).\n4. Compliance sign-off from Casey before publishing."
+    },
+    {
+      "type": "secureNote",
+      "name": "Onboarding Checklist",
+      "notes": "1. BambooHR profile + equipment order.\n2. Invite to Dev Org Bitwarden and confirm.\n3. Slack, GitHub, and Figma seats.\n4. Add to the right groups: Engineering, Finance, or People Ops."
+    },
+    {
+      "type": "card",
+      "name": "Corporate Amex",
+      "card": {
+        "cardholderName": "DEV ORG LLC",
+        "brand": "Amex",
+        "number": "371449635398431",
+        "expMonth": "4",
+        "expYear": "2029",
+        "code": "1234"
+      },
+      "notes": "Team subscriptions and travel. Receipts to books@bw.example."
+    },
+    {
+      "type": "identity",
+      "name": "Office Shipping Profile",
+      "identity": {
+        "firstName": "Dev",
+        "lastName": "Org",
+        "company": "Dev Org LLC",
+        "address1": "428 Harbor Lane, Suite 300",
+        "city": "Portland",
+        "state": "OR",
+        "postalCode": "97204",
+        "country": "US",
+        "email": "office@bw.example",
+        "phone": "+1-503-555-0142"
+      },
+      "notes": "Use for hardware orders and vendor deliveries."
+    },
+    {
+      "type": "sshKey",
+      "name": "Deploy Key - prod-web-01",
+      "cipherEncryption": "cipherKey",
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nFAKE-EXAMPLE-NOT-A-REAL-KEY-DEV-PLAYGROUND\n-----END OPENSSH PRIVATE KEY-----",
+        "publicKey": "ssh-ed25519 AAAAExampleFakeKeyNotRealForSeedingOnly deploy@bw.example",
+        "keyFingerprint": "SHA256:ExampleFakeFingerprintDevPlayground"
+      },
+      "notes": "Read-only deploy key for the prod-web-01 host."
+    }
+  ]
+}
