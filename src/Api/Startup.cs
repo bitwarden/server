@@ -215,10 +215,10 @@ public class Startup
 #endif
 
         // Billing subscriptions minimal API libraries
+        services.AddUserSubscriptions();
+        services.AddOrganizationSubscriptions();
         if (!globalSettings.SelfHosted)
         {
-            services.AddUserSubscriptions();
-            services.AddOrganizationSubscriptions();
             services.AddOpenApiEndpointDataSource(MapSubscriptionEndpoints);
         }
 
