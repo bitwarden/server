@@ -15,10 +15,11 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 {
     /// <summary>
-    /// The maximum lease window length, applied to both the automatic duration and the human-requested window.
-    /// Global for v0; per-rule configuration is a later concern.
+    /// The global maximum lease window length, applied to both the automatic duration and the human-requested window
+    /// when the governing rule sets no narrower cap of its own. A rule's <c>MaxLeaseDurationSeconds</c> only narrows
+    /// this — see <see cref="LeaseDurationBounds"/>, which folds the two together.
     /// </summary>
-    public const int MaxDurationSeconds = 24 * 60 * 60;
+    public const int MaxDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds;
 
     private readonly ICipherRepository _cipherRepository;
     private readonly IGoverningRuleResolver _resolver;
@@ -108,9 +109,12 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException("A positive duration is required.");
         }
 
-        if (durationSeconds > MaxDurationSeconds)
+        // The governing rule's own cap, narrowed by the global ceiling. Enforced here rather than at activation because
+        // activation mints exactly the window pinned at submit, so this is the only gate the duration passes through.
+        var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
+        if (durationSeconds > maxDurationSeconds)
         {
-            throw new BadRequestException($"The requested duration exceeds the maximum of {MaxDurationSeconds} seconds.");
+            throw new BadRequestException($"The requested duration exceeds the maximum of {maxDurationSeconds} seconds.");
         }
 
         // The cipher must satisfy its access rule's conditions (source IP, time of day, ...) before the request is
@@ -214,9 +218,12 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException("The start date must be before the end date.");
         }
 
-        if ((end - start).TotalSeconds > MaxDurationSeconds)
+        // Same per-rule cap as the automatic path: an approver can only act on the window pinned here, so a window that
+        // exceeds the rule's maximum has to be refused at submit rather than left for the approver to notice.
+        var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
+        if ((end - start).TotalSeconds > maxDurationSeconds)
         {
-            throw new BadRequestException($"The requested window exceeds the maximum of {MaxDurationSeconds} seconds.");
+            throw new BadRequestException($"The requested window exceeds the maximum of {maxDurationSeconds} seconds.");
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;

@@ -85,6 +85,8 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             RuleId = governingRule.Id,
             AllowsExtensions = governingRule.AllowsExtensions,
             MaxExtensionDurationSeconds = governingRule.MaxExtensionDurationSeconds,
+            DefaultLeaseDurationSeconds = governingRule.DefaultLeaseDurationSeconds,
+            MaxLeaseDurationSeconds = governingRule.MaxLeaseDurationSeconds,
         };
     }
 
