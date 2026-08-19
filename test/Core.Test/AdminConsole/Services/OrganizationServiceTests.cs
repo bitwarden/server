@@ -1155,6 +1155,25 @@ public class OrganizationServiceTests
     }
 
     [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task ValidateOrganizationUserUpdatePermissions_WhenCallerHasNoUserId_AndRoleAuthorizes_Passes(
+        OrganizationUserType inviteeType,
+        Guid organizationId,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        // Simulates POST /public/organization/import: no UserId (org API key auth), synthetic Owner context entry.
+        UseRealValidationService(sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.Owner });
+
+        // Should not throw — Owner role authority alone is sufficient even without a UserId.
+        await sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, inviteeType, null, null);
+    }
+
+    [Theory]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.User)]

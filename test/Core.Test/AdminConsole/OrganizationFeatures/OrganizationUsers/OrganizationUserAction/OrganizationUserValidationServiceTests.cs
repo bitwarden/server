@@ -321,6 +321,44 @@ public class OrganizationUserValidationServiceTests
     }
 
     [Theory]
+    // An org API key carries no UserId. The synthetic org context entry has Type = Owner, so role authority alone
+    // should permit managing any member role without requiring IsProviderAsync.
+    [InlineData(OrganizationUserType.User)]
+    [InlineData(OrganizationUserType.Admin)]
+    [InlineData(OrganizationUserType.Custom)]
+    public async Task CanManageRoleChangeAsync_WhenActingUserIdIsNull_AndRoleAuthorizes_ReturnsNull(
+        OrganizationUserType targetRole)
+    {
+        // actingUserId is null (org API key), actingUser is Owner (synthetic context entry).
+        var result = await _sut.CanManageRoleChangeAsync(
+            actingUserId: null,
+            ActingUser(OrganizationUserType.Owner),
+            TargetUser(targetRole),
+            NewRole(OrganizationUserType.User));
+
+        Assert.Null(result);
+        // IsProviderAsync must not be called when actingUserId is null.
+        await _providerUserRepository.Received(0)
+            .GetManyOrganizationDetailsByUserAsync(Arg.Any<Guid>(), Arg.Any<ProviderUserStatusType>());
+    }
+
+    [Fact]
+    public async Task CanManageRoleChangeAsync_WhenActingUserIdIsNull_AndRoleDoesNotAuthorize_ReturnsError()
+    {
+        // actingUserId is null, actingUser has no authority (e.g. null = non-member). Provider check is skipped,
+        // so the denial falls through to the role-based error rather than calling IsProviderAsync.
+        var result = await _sut.CanManageRoleChangeAsync(
+            actingUserId: null,
+            actingUser: null,
+            TargetUser(OrganizationUserType.Admin),
+            NewRole(OrganizationUserType.User));
+
+        Assert.NotNull(result);
+        await _providerUserRepository.Received(0)
+            .GetManyOrganizationDetailsByUserAsync(Arg.Any<Guid>(), Arg.Any<ProviderUserStatusType>());
+    }
+
+    [Theory]
     [InlineData(PlanType.EnterpriseAnnually, OrganizationUserType.User, OrganizationUserType.Admin)]
     [InlineData(PlanType.Free, OrganizationUserType.User, OrganizationUserType.User)]
     public async Task ValidateFreeOrgAdminLimitAsync_WhenLimitDoesNotApply_ReturnsNull(

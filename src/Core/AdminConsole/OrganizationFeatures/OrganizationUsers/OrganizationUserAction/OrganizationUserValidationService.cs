@@ -39,14 +39,17 @@ public class OrganizationUserValidationService(
                 : CannotManageError(kvp.Value.Type));
     }
 
-    public async Task<Error?> CanManageRoleChangeAsync(Guid actingUserId, IOrganizationUserRole? actingUser,
+    public async Task<Error?> CanManageRoleChangeAsync(Guid? actingUserId, IOrganizationUserRole? actingUser,
         IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
     {
         // Must be able to manage both the current and requested role.
         var authorizedByRole = IsAuthorizedByRole(actingUser, targetUser.Type)
                                && IsAuthorizedByRole(actingUser, newTargetUser.Type);
 
-        if (!authorizedByRole && !await IsProviderAsync(actingUserId, targetUser.OrganizationId))
+        // Provider authority is only resolvable when there is an individual user identity. Callers authenticated
+        // via an organization API key have no UserId, so we skip IsProviderAsync and rely solely on role authority.
+        if (!authorizedByRole &&
+            (actingUserId is null || !await IsProviderAsync(actingUserId.Value, targetUser.OrganizationId)))
         {
             return CannotManageError(targetUser.Type, newTargetUser.Type);
         }

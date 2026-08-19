@@ -942,13 +942,10 @@ public class OrganizationService : IOrganizationService
         var targetUser = new OrganizationUserRole(oldType ?? newType, organizationId);
         var newTargetUser = new OrganizationUserRole(newType, organizationId, permissions);
 
-        if (_currentContext.UserId is not { } actingUserId)
-        {
-            throw new BadRequestException("Your account does not have permission to manage users.");
-        }
-
+        // UserId is null when the caller authenticates via an organization API key (e.g. POST /public/organization/import).
+        // CanManageRoleChangeAsync handles the null case by skipping provider-user authority and relying on role authority.
         var error = await _organizationUserValidationService.CanManageRoleChangeAsync(
-            actingUserId, actingOrganization, targetUser, newTargetUser);
+            _currentContext.UserId, actingOrganization, targetUser, newTargetUser);
 
         if (error is not null)
         {

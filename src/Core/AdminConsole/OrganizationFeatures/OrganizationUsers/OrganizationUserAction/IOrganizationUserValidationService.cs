@@ -71,12 +71,16 @@ public interface IOrganizationUserValidationService
     /// user must be able to manage both the target's current and requested role, and a Custom user may only grant
     /// custom permissions they hold themselves.
     /// </summary>
-    /// <param name="actingUserId">The acting user's id, used to resolve provider authority.</param>
+    /// <param name="actingUserId">
+    /// The acting user's id, used to resolve provider authority. May be <c>null</c> when the caller authenticates
+    /// via an organization API key (no individual user identity), in which case provider-user authority is skipped
+    /// and only role-based authority is evaluated.
+    /// </param>
     /// <param name="actingUser">The acting user's role, or <c>null</c> if not a confirmed member.</param>
     /// <param name="targetUser">The member being managed, with their current role.</param>
     /// <param name="newTargetUser">The updated member being managed (desired role and permissions).</param>
     /// <returns><c>null</c> when allowed, otherwise the error describing the denial.</returns>
-    Task<Error?> CanManageRoleChangeAsync(Guid actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser,
+    Task<Error?> CanManageRoleChangeAsync(Guid? actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser,
         IOrganizationUserRole newTargetUser);
 
     /// <summary>
