@@ -519,11 +519,14 @@ public class OrganizationServiceTests
         // so overriding under a different (e.g. default empty) name would be shadowed by it.
         sutProvider.SetDependency<IOrganizationUserValidationService>(validationService, "organizationUserValidationService");
         sutProvider.Create();
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(Guid.NewGuid());
     }
 
     private void InviteUser_ArrangeCurrentContextPermissions(Organization organization, SutProvider<OrganizationService> sutProvider)
     {
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        currentContext.UserId.Returns(Guid.NewGuid());
         currentContext.ManageUsers(organization.Id).Returns(true);
         currentContext.AccessReports(organization.Id).Returns(true);
         currentContext.ManageGroups(organization.Id).Returns(true);
