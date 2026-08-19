@@ -54,26 +54,26 @@ jobs:
             base_path: ./src
             dotnet: true
             node: true
-            description: Bitwarden admin portal
+            description: Admin portal
           - project_name: Api
             base_path: ./src
             dotnet: true
-            description: Bitwarden core backend API
+            description: Core backend API
           - project_name: Attachments
             base_path: ./util
             description: Attachment file storage container
           - project_name: Billing
             base_path: ./src
             dotnet: true
-            description: Bitwarden billing and subscription service
+            description: Billing and subscription service
           - project_name: Events
             base_path: ./src
             dotnet: true
-            description: Bitwarden audit event collection API
+            description: Audit event collection API
           - project_name: EventsProcessor
             base_path: ./src
             dotnet: true
-            description: Background processor for queued Bitwarden audit events
+            description: Background processor for queued audit events
           - project_name: Icons
             base_path: ./src
             dotnet: true
@@ -81,25 +81,25 @@ jobs:
           - project_name: Identity
             base_path: ./src
             dotnet: true
-            description: Bitwarden identity and authentication server
+            description: Identity and authentication server
           - project_name: MsSql
             base_path: ./util
-            description: Microsoft SQL Server for Bitwarden, with backup tooling
+            description: Microsoft SQL Server with backup tooling
           - project_name: MsSqlMigratorUtility
             base_path: ./util
             dotnet: true
-            description: Command-line utility for performing MSSQL database migrations for Bitwarden deployments
+            description: Command-line utility for performing MSSQL database migrations
           - project_name: Nginx
             base_path: ./util
-            description: Nginx reverse proxy with Bitwarden TLS and security-header configuration
+            description: Nginx reverse proxy with TLS and security-header configuration
           - project_name: Notifications
             base_path: ./src
             dotnet: true
-            description: Real-time notification hub for Bitwarden clients
+            description: Real-time notification hub for client applications
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
-            description: SCIM directory provisioning service for Bitwarden
+            description: SCIM directory provisioning service
           - project_name: SeederApi
             base_path: ./util
             platforms: linux/amd64,linux/arm64
@@ -108,11 +108,11 @@ jobs:
           - project_name: Setup
             base_path: ./util
             dotnet: true
-            description: Bitwarden self-hosted installation and configuration generator
+            description: Self-hosted installation and configuration generator
           - project_name: Sso
             base_path: ./bitwarden_license/src
             dotnet: true
-            description: SAML and OIDC single sign-on service for Bitwarden
+            description: SAML and OIDC single sign-on service
     steps:
       - name: Check secrets
         id: check-secrets
@@ -282,19 +282,15 @@ jobs:
           username: bitwarden
           password: ${{ steps.get-kv-secrets.outputs.DOCKERHUB-OAT }}
 
-      - name: Resolve built revision
-        id: revision
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
       - name: Build custom image metadata
         id: custom-meta
         env:
           PROJECT_TITLE: ${{ matrix.project_name }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           LICENSE_ID: ${{ contains(matrix.base_path, 'bitwarden_license') && 'LicenseRef-Bitwarden-License-1.0' || 'AGPL-3.0-only' }}
-          DESCRIPTION: ${{ matrix.description }}
+          DESCRIPTION: ${{ matrix.description || 'Bitwarden service' }}
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
-          REVISION: ${{ steps.revision.outputs.sha }}
+          REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           {
             echo "items<<METADATA_EOF"
@@ -315,9 +311,6 @@ jobs:
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest
         with:
-          images: |
-            ${{ env._AZ_REGISTRY }}/${{ steps.setup.outputs.project_name }}
-            ${{ env._GHCR_REGISTRY }}/${{ steps.setup.outputs.project_name }}
           labels: ${{ steps.custom-meta.outputs.items }}
           annotations: ${{ steps.custom-meta.outputs.items }}
 
