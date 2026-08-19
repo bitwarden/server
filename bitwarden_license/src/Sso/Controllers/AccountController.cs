@@ -588,7 +588,9 @@ public class AccountController : Controller
             User guaranteedExistingUser = possibleExistingUser;
 
             if (guaranteedExistingUser.UsesKeyConnector &&
-                (possibleOrgUser == null || possibleOrgUser.Status == OrganizationUserStatusType.Invited))
+                (possibleOrgUser == null
+                 || possibleOrgUser.Status == OrganizationUserStatusType.Invited
+                 || possibleOrgUser.Status == OrganizationUserStatusType.Staged))
             {
                 throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
             }

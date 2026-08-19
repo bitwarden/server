@@ -254,6 +254,55 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     }
 
     /*
+    * Test to verify /Account/ExternalCallback returns error when an existing user
+    * uses Key Connector and encounters a Staged OrganizationUser row (created by
+    * directory import) in the SSO-target org. Key Connector users have no master
+    * password and cannot complete the "sign in with master password and accept the
+    * invite" flow that the Staged-promotion path would email them into. The Key
+    * Connector guard must reject them cleanly here — without this branch the flow
+    * would fall through to PromoteStagedOrgUserAndSendInviteAsync, consume a seat,
+    * mail an unactionable invite, and dead-end on UserAlreadyExistsKeyConnector on
+    * the next SSO attempt.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithExistingKeyConnectorUser_AndStagedOrgUser_ReturnsError()
+    {
+        // Arrange — existing KC user (UsesKeyConnector=true) AND a Staged
+        // OrganizationUser row (UserId=null) matching the SSO-claimed email.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser(user =>
+            {
+                user.UsesKeyConnector = true;
+            })
+            .WithStagedOrganizationUser()
+            .WithPM34423StagedStatusFlag()
+            .WithMockedSendOrganizationInvitesCommand()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — Key Connector guard rejects the login before the Staged branch runs.
+        var stringResponse = await response.Content.ReadAsStringAsync();
+        Assert.Contains("You were removed from the organization managing single sign-on for your account", stringResponse);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        // Assert — no invite email was issued (guard must fire before the promotion branch).
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        await inviteCommand.DidNotReceive().SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+
+        // Assert — Staged row was not mutated (still Staged, UserId still null).
+        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var refreshedOrgUser = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
+        Assert.NotNull(refreshedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Staged, refreshedOrgUser.Status);
+        Assert.Null(refreshedOrgUser.UserId);
+    }
+
+    /*
     * Test to verify /Account/ExternalCallback redirects an existing user (not using
     * Key Connector) with no OrganizationUser row back to the web vault's /login with
     * the OrgMembershipRequired errorCode + context. Covers both the user who clicked
