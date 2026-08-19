@@ -983,6 +983,183 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     }
 
     /*
+    * SUCCESS PATH: Test to verify /Account/ExternalCallback JIT-provisions a user against a
+    * Staged OrganizationUser when the org is at seat cap but cloud autoscale can grow. Locks
+    * in the "Staged promotion, at cap, autoscale succeeds" branch — the three sibling Staged
+    * failure tests only exercise the throwing paths. IOrganizationService.AutoAddSeatsAsync
+    * is substituted to bypass the real billing gateway.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithJitProvisioning_AgainstStagedOrgUser_OnCloudAutoscaleSucceeds_PromotesToInvited()
+    {
+        // Arrange — Seats = 5 fills 5 Confirmed OrgUsers (at cap). Staged row does not count
+        // against the cap; promoting it would push us over, but the mocked autoscale grows.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithStagedOrganizationUser()
+            .WithOrganization(org =>
+            {
+                org.Seats = 5;
+            })
+            .WithAutoscaleSucceeds()
+            .WithPM34423StagedStatusFlag()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — SSO callback succeeded end-to-end.
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+
+        // Assert — autoscale was actually invoked (proves we went through the "at cap →
+        // autoscale → promote" branch, not the "seats available" shortcut).
+        var orgService = testData.Factory.Services.GetRequiredService<IOrganizationService>();
+        await orgService.Received(1).AutoAddSeatsAsync(Arg.Any<Organization>(), 1);
+
+        // Assert — Staged row promoted to Invited and back-linked to the newly-provisioned user.
+        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var refreshedOrgUser = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
+        Assert.NotNull(refreshedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Invited, refreshedOrgUser.Status);
+        Assert.NotNull(refreshedOrgUser.UserId);
+    }
+
+    /*
+    * FALL-THROUGH PATH: Test to verify /Account/ExternalCallback does NOT promote a Staged
+    * OrganizationUser when the PM34423StagedStatus feature flag is off, even at seat cap.
+    * With the flag off, the Staged branch is skipped, no seat check runs for the promotion,
+    * and the request falls through to PreventOrgUserLoginIfStatusInvalidAsync which trips
+    * on the still-Staged status (the pre-existing pre-PM-42167 behavior).
+    *
+    * Locks in the flag-gated boundary: if the flag check is ever forgotten from the promotion
+    * condition, this test flips because the row gets promoted. If it is ever forgotten from
+    * an earlier gate that fires a seat check, this test flips because the error message
+    * becomes "No seats available" instead of the unknown-status message.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithJitProvisioning_AgainstStagedOrgUser_WithFeatureFlagOff_AtSeatCap_FallsThroughToUnknownStatus()
+    {
+        // Arrange — Seats = 5 + MaxAutoscaleSeats = 5 so any accidental seat check would
+        // trip on "No seats available." Feature flag is explicitly off so the promotion
+        // branch is skipped.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithStagedOrganizationUser()
+            .WithOrganization(org =>
+            {
+                org.Seats = 5;
+                org.MaxAutoscaleSeats = 5;
+            })
+            .WithPM34423StagedStatusFlag(enabled: false)
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — 500 with the unknown-status message (proves fall-through to the status
+        // filter throw, NOT a seat-check throw).
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        var stringResponse = await response.Content.ReadAsStringAsync();
+        Assert.Contains("is in an unknown state", stringResponse);
+        Assert.DoesNotContain("No seats available for organization", stringResponse);
+
+        // Assert — Staged row status is unchanged (promotion did not run).
+        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var refreshedOrgUser = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
+        Assert.NotNull(refreshedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Staged, refreshedOrgUser.Status);
+    }
+
+    /*
+    * REGRESSION GUARD: Two-phase test verifying that when the seat check throws while
+    * JIT-provisioning a BW User against a Staged OrganizationUser row, no BW User row
+    * is persisted (Phase 1), and that after an admin adds seats the retry proceeds
+    * cleanly through the standard JIT flow (Phase 2). Locks in the pre-user-creation
+    * seat check ordering — if that ordering ever regresses, Phase 1 flips because a BW
+    * User row appears despite the 500.
+    */
+    [Fact]
+    public async Task ExternalCallback_JitAgainstStagedOrgUser_WhenSeatCheckThrows_RejectsCleanlyAndRecoversAfterCapIncrease()
+    {
+        // Phase 1 arrange — cloud org at cap, autoscale maxed (Seats == MaxAutoscaleSeats).
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithStagedOrganizationUser()
+            .WithOrganization(org =>
+            {
+                org.Seats = 5;
+                org.MaxAutoscaleSeats = 5;
+            })
+            .WithPM34423StagedStatusFlag()
+            .WithMockedSendOrganizationInvitesCommand()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var ssoClaimedEmail = testData.OrganizationUser!.Email!;
+
+        // Phase 1 act — first SSO attempt should be rejected.
+        var response1 = await client.GetAsync("/Account/ExternalCallback");
+
+        // Phase 1 assert — 500 with NoSeatsAvailable message.
+        Assert.Equal(HttpStatusCode.InternalServerError, response1.StatusCode);
+        var body1 = await response1.Content.ReadAsStringAsync();
+        Assert.Contains("No seats available for organization", body1);
+
+        // Phase 1 assert — no BW User row was persisted. This is the fix's contract:
+        // the seat check runs before RegisterSSOAutoProvisionedUserAsync so a rejection
+        // does not leave account state behind for a login that never completed.
+        var userRepo = testData.Factory.Services.GetRequiredService<IUserRepository>();
+        var userAfterPhase1 = await userRepo.GetByEmailAsync(ssoClaimedEmail);
+        Assert.Null(userAfterPhase1);
+
+        // Phase 1 assert — Staged row unchanged and no SsoUser link exists.
+        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var stagedRowAfterPhase1 = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
+        Assert.Equal(OrganizationUserStatusType.Staged, stagedRowAfterPhase1!.Status);
+        Assert.Null(stagedRowAfterPhase1.UserId);
+
+        // Phase 2 arrange — admin bumps seats and autoscale cap so the retry has headroom.
+        var orgRepo = testData.Factory.Services.GetRequiredService<IOrganizationRepository>();
+        var org = await orgRepo.GetByIdAsync(testData.Organization!.Id);
+        org!.Seats = 6;
+        org.MaxAutoscaleSeats = 6;
+        await orgRepo.ReplaceAsync(org);
+
+        // Phase 2 act — user retries SSO.
+        var response2 = await client.GetAsync("/Account/ExternalCallback");
+
+        // Phase 2 assert — standard successful SSO redirect (not a /login redirect with
+        // an error code; the retry runs through fresh-JIT and passes the status filter).
+        Assert.Equal(HttpStatusCode.Redirect, response2.StatusCode);
+        Assert.NotNull(response2.Headers.Location);
+
+        // Phase 2 assert — BW User row now exists, Staged row promoted to Invited and
+        // back-linked to it, SsoUser link established.
+        var userAfterPhase2 = await userRepo.GetByEmailAsync(ssoClaimedEmail);
+        Assert.NotNull(userAfterPhase2);
+
+        var stagedRowAfterPhase2 = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
+        Assert.Equal(OrganizationUserStatusType.Invited, stagedRowAfterPhase2!.Status);
+        Assert.Equal(userAfterPhase2!.Id, stagedRowAfterPhase2.UserId);
+
+        var ssoUserRepo = testData.Factory.Services.GetRequiredService<ISsoUserRepository>();
+        var ssoLinkAfterPhase2 = await ssoUserRepo.GetByUserIdOrganizationIdAsync(testData.Organization.Id, userAfterPhase2.Id);
+        Assert.NotNull(ssoLinkAfterPhase2);
+    }
+
+    /*
     * SUCCESS PATH: Test to verify /Account/ExternalCallback promotes a Staged OrganizationUser
     * row to Invited, sends a real invite email via ISendOrganizationInvitesCommand, and redirects
     * to /login with the StagedOrgUserInviteAcceptanceRequired error when an existing BW user

@@ -661,8 +661,14 @@ public class AccountController : Controller
             return (guaranteedExistingUser, organization, guaranteedOrgUser);
         }
 
-        // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
-        if (possibleOrgUser == null)
+        // Run before user creation so a NoSeatsAvailable throw doesn't persist a
+        // new BW User row + fire its welcome email for an SSO login that
+        // won't complete. Staged rows aren't seat-counted; a Staged→Invited promotion
+        // consumes a seat and must gate here alongside the fresh-JIT case.
+        var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged
+                                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus);
+
+        if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
             await EnsureSeatAvailableAsync(organization);
         }
@@ -741,11 +747,7 @@ public class AccountController : Controller
             if (possibleOrgUser.Status == OrganizationUserStatusType.Staged
                 && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
             {
-                // Staged rows are uncounted by the occupied-seat query; promoting to
-                // Invited (which is counted) consumes one seat. The prior seat check
-                // in this method is gated on `possibleOrgUser == null` and does not
-                // fire when a Staged row is being promoted, so we run it here.
-                await EnsureSeatAvailableAsync(organization);
+                // Seat availability was verified up-front before user creation so safe to consume this seat.
                 possibleOrgUser.Status = OrganizationUserStatusType.Invited;
             }
 
