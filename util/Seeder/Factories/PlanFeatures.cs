@@ -119,18 +119,20 @@ public static class PlanFeatures
     /// </summary>
     internal static void EnableSecretsManager(Organization org, int? smSeats, int? smServiceAccounts)
     {
-        var baseServiceAccounts = org.PlanType switch
+        var (baseSeats, baseServiceAccounts) = org.PlanType switch
         {
             PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually
-                or PlanType.TeamsAnnually => 50,
-            PlanType.TeamsMonthly or PlanType.TeamsStarter => 20,
+                or PlanType.TeamsAnnually => (org.Seats, 50),
+            PlanType.TeamsMonthly or PlanType.TeamsStarter => (org.Seats, 20),
+            // Free Secrets Manager tier: 2 seats, 3 service accounts (see FreePlan mock).
+            PlanType.Free => (2, 3),
             _ => throw new ArgumentException(
                 $"PlanType '{org.PlanType}' does not support Secrets Manager. " +
-                "Supported: TeamsMonthly, TeamsAnnually, TeamsStarter, EnterpriseMonthly, EnterpriseAnnually.")
+                "Supported: Free, TeamsMonthly, TeamsAnnually, TeamsStarter, EnterpriseMonthly, EnterpriseAnnually.")
         };
 
         org.UseSecretsManager = true;
-        org.SmSeats = smSeats ?? org.Seats;
+        org.SmSeats = smSeats ?? baseSeats;
         org.SmServiceAccounts = smServiceAccounts ?? baseServiceAccounts;
     }
 

@@ -126,7 +126,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem("premium-old-seat", 1));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-grandfather-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-grandfather-discount" } } }
         ];
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -173,8 +173,8 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem("premium-old-seat", 1));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-grandfather-discount" } },
-            new Discount { Coupon = new Coupon { Id = "existing-nfr-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-grandfather-discount" } } },
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-nfr-discount" } } }
         ];
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -223,7 +223,7 @@ public class PriceIncreaseSchedulerTests
         subscription.Customer = new Customer
         {
             Id = "cus_1",
-            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
         };
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -348,7 +348,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(families2019.PasswordManager.StripePlanId, 1));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-partner-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-partner-discount" } } }
         ];
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -389,7 +389,7 @@ public class PriceIncreaseSchedulerTests
         subscription.Customer = new Customer
         {
             Id = "cus_1",
-            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
         };
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -430,7 +430,7 @@ public class PriceIncreaseSchedulerTests
         subscription.Customer = new Customer
         {
             Id = "cus_1",
-            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
         };
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -510,7 +510,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(families2025.PasswordManager.StripePlanId, 1));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-retention-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-retention-discount" } } }
         ];
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -662,6 +662,66 @@ public class PriceIncreaseSchedulerTests
         await _pricingClient.DidNotReceiveWithAnyArgs().GetPlanOrThrow(Arg.Any<PlanType>());
         await _stripeAdapter.DidNotReceiveWithAnyArgs()
             .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
+    public async Task SchedulePersonalPriceIncrease_SubscriptionDiscountMissingSourceCoupon_DoesNotCreateSchedule()
+    {
+        // A discount expanded without "discounts.source.coupon" comes back with a null Source.Coupon;
+        // the scheduler must decline rather than NRE on the Source.Coupon.Id read.
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            new Dictionary<string, string> { { "userId", Guid.NewGuid().ToString() } },
+            CreateSubscriptionItem("some-price-id", 1));
+        subscription.Discounts = [new Discount { Id = "di_abc" }];
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        var sut = CreateSut();
+
+        await sut.SchedulePersonalPriceIncrease(subscription);
+
+        await _pricingClient.DidNotReceiveWithAnyArgs().ListPremiumPlans();
+        await _pricingClient.DidNotReceiveWithAnyArgs().GetPlanOrThrow(Arg.Any<PlanType>());
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_SubscriptionDiscountMissingSourceCoupon_DoesNotCreateSchedule()
+    {
+        // Business-tier equivalent of the guard: a subscription-level discount whose Source.Coupon is
+        // null (missing "discounts.source.coupon" expand) must make the scheduler decline, not NRE.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+        subscription.Discounts = [new Discount { Id = "di_abc" }];
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        });
+
+        var sut = CreateSut();
+
+        await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
     }
 
     [Fact]
@@ -1134,8 +1194,10 @@ public class PriceIncreaseSchedulerTests
 
         _pricingClient.ListPremiumPlans().Returns([oldPremium, newPremium]);
 
+        var currentPeriodEnd = DateTime.UtcNow.AddYears(1);
         var subscription = CreateSubscription("sub_1", "cus_1",
             CreateSubscriptionItem("premium-old-seat", 1));
+        subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
@@ -1268,7 +1330,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "grandfather" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "grandfather" } } }
         ];
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
 
@@ -1316,12 +1378,12 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "grandfather" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "grandfather" } } }
         ];
         subscription.Customer = new Customer
         {
             Id = "cus_1",
-            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
         };
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
 
@@ -1371,7 +1433,7 @@ public class PriceIncreaseSchedulerTests
         subscription.Customer = new Customer
         {
             Id = "cus_1",
-            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
         };
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
 
@@ -1418,11 +1480,11 @@ public class PriceIncreaseSchedulerTests
         var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
             CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
         // Same coupon id is on BOTH the customer discount and the subscription discounts.
-        subscription.Discounts = [new Discount { Coupon = new Coupon { Id = "retention" } }];
+        subscription.Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }];
         subscription.Customer = new Customer
         {
             Id = "cus_1",
-            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
         };
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
 
@@ -1470,7 +1532,7 @@ public class PriceIncreaseSchedulerTests
         subscription.Customer = new Customer
         {
             Id = "cus_1",
-            Discount = new Discount { Coupon = new Coupon { Id = "retention", Valid = false } }
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention", Valid = false } } }
         };
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
 
@@ -1515,7 +1577,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "grandfather" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "grandfather" } } }
         ];
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent, proactiveCoupon: "PROACT-25");
 
@@ -1564,7 +1626,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "grandfather" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "grandfather" } } }
         ];
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent, proactiveCoupon: null);
 

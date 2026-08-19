@@ -428,8 +428,8 @@
       },
       "Microsoft.AspNetCore.DataProtection": {
         "type": "Transitive",
-        "resolved": "10.0.8",
-        "contentHash": "Rlbrr3XSGB4dwnUY/pA70TpVyrQhelDAUkIiGfJ2Tm32mscTYxrRnk9Ooy1rRhGZ1g7rliJPuNzhyMMKmRH5pw=="
+        "resolved": "10.0.10",
+        "contentHash": "5sfrNrBShTlJeXvWNxjPS7ilLY4H6MICZPMZr/2vjoDoBH5Z8sQYJwbhulqfXh4yIpxIto0TcmOQHOElvpq+iQ=="
       },
       "Microsoft.Azure.Amqp": {
         "type": "Transitive",
@@ -648,8 +648,8 @@
       },
       "Microsoft.Extensions.Caching.SqlServer": {
         "type": "Transitive",
-        "resolved": "10.0.8",
-        "contentHash": "GSP1UIw/VFiLOWBOCQYwLHsLnkqqqqEC9sc8IqCXpbSkwz03EZ9u4jcFORTE4TJ/gkKXKP6L3AO+ZFZ5MFX4Gg==",
+        "resolved": "10.0.10",
+        "contentHash": "c5dyhJoeDapja0D3qbt+7iMsG3BFITaM77HCWHW/Yef4zgQSuKkooPw4/SWwc2HfZocbMp0mDvh40U9/iO1p/Q==",
         "dependencies": {
           "Azure.Identity": "1.11.4",
           "Microsoft.Data.SqlClient": "5.2.2"
@@ -657,21 +657,21 @@
       },
       "Microsoft.Extensions.Caching.StackExchangeRedis": {
         "type": "Transitive",
-        "resolved": "10.0.8",
-        "contentHash": "fle9ns3q2kk63vt/wHFtLw1U9kiEbM42vTk2Sar8VBjiGJFkXAgm0QEKFx15YMHkJIPRVdknWaovpvgGEgn10g==",
+        "resolved": "10.0.10",
+        "contentHash": "E+3pfEY68WQh1ZVFTGDNK0JCoayzL3aIDgVHHM85HIbQO7MiABG14A7+ajHH2P/y3a4W2Rla5p2nzut3+mzoyQ==",
         "dependencies": {
           "StackExchange.Redis": "2.7.27"
         }
       },
       "Microsoft.Extensions.Configuration.EnvironmentVariables": {
         "type": "Transitive",
-        "resolved": "10.0.8",
-        "contentHash": "bVGqctAfPGfTxJvNp8pMshtvpsUj6r6JkeiCNVIGVYO5gBxuxdN0Lbr25kEvE/zXdctkEc44g8HssnPgDnFGVA=="
+        "resolved": "10.0.10",
+        "contentHash": "KRfFSSCV58vEdU7mPED/YMzeovIWF5P0g8s9K8n9HEfy0/WzMq37SrPdXdFN5/dFT/rPMHpF7AvpoXHckbcBFg=="
       },
       "Microsoft.Extensions.Configuration.UserSecrets": {
         "type": "Transitive",
-        "resolved": "10.0.8",
-        "contentHash": "6XTfFOnf27WY8kEeZkTZ4YNn0t+imgvdQ0YaAdR4vgURKATo9bCaVJ1KB71IOJAQtJP7Elb53VHlTNXg2CtSsA=="
+        "resolved": "10.0.10",
+        "contentHash": "1s1sKFTk/Foam64JY6+m/diH8drL3Wx6V3gtSd5v1IEZtszZYyc1pW8uRnMblzpNiR0l0t8gGk7tXj3xHzFgdg=="
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "Transitive",
@@ -1008,11 +1008,11 @@
       },
       "Stripe.net": {
         "type": "Transitive",
-        "resolved": "48.5.0",
-        "contentHash": "wOAZYR0EnrLMok/ScfVOpTxjci+n3vFP0A7w/BE63yJdkRSDwZVCJIhlOjeJvgyQnMX8ZbwDAHMaxaiDa0Z5TA==",
+        "resolved": "52.1.0",
+        "contentHash": "xzYOMenSrhR2UIgk+zBOjfzADSFe9NnCuhffs2FMpWSJst4M19m6QS7GAxq4cLeBdWvUoUo3RuHNc5uzI5eOFg==",
         "dependencies": {
           "Newtonsoft.Json": "13.0.3",
-          "System.Configuration.ConfigurationManager": "8.0.0"
+          "System.Configuration.ConfigurationManager": "9.0.0"
         }
       },
       "Swashbuckle.AspNetCore.Swagger": {
@@ -1138,7 +1138,7 @@
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "MailKit": "[4.17.0, 4.17.0]",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.8, 10.0.8]",
-          "Microsoft.AspNetCore.DataProtection": "[10.0.8, 10.0.8]",
+          "Microsoft.AspNetCore.DataProtection": "[10.0.10, 10.0.10]",
           "Microsoft.Azure.Cosmos": "[3.52.0, 3.52.0]",
           "Microsoft.Azure.NotificationHubs": "[4.2.0, 4.2.0]",
           "Microsoft.Bot.Builder": "[4.23.0, 4.23.0]",
@@ -1146,10 +1146,10 @@
           "Microsoft.Bot.Connector": "[4.23.0, 4.23.0]",
           "Microsoft.Data.SqlClient": "[7.0.0, 7.0.0]",
           "Microsoft.Extensions.Caching.Cosmos": "[1.8.0, 1.8.0]",
-          "Microsoft.Extensions.Caching.SqlServer": "[10.0.8, 10.0.8]",
-          "Microsoft.Extensions.Caching.StackExchangeRedis": "[10.0.8, 10.0.8]",
-          "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.8, 10.0.8]",
-          "Microsoft.Extensions.Configuration.UserSecrets": "[10.0.8, 10.0.8]",
+          "Microsoft.Extensions.Caching.SqlServer": "[10.0.10, 10.0.10]",
+          "Microsoft.Extensions.Caching.StackExchangeRedis": "[10.0.10, 10.0.10]",
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.10, 10.0.10]",
+          "Microsoft.Extensions.Configuration.UserSecrets": "[10.0.10, 10.0.10]",
           "Microsoft.Extensions.Identity.Stores": "[10.0.8, 10.0.8]",
           "Newtonsoft.Json": "[13.0.3, 13.0.3]",
           "OneOf": "[3.0.271, 3.0.271]",
@@ -1161,7 +1161,7 @@
           "SendGrid": "[9.29.3, 9.29.3]",
           "SerilogFileLogging": "[0.0.1, )",
           "SsrfProtection": "[0.0.1, )",
-          "Stripe.net": "[48.5.0, 48.5.0]",
+          "Stripe.net": "[52.1.0, 52.1.0]",
           "YubicoDotNetClient": "[1.2.0, 1.2.0]",
           "ZiggyCreatures.FusionCache": "[2.0.2, 2.0.2]",
           "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.0.2, 2.0.2]",
