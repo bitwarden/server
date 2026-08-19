@@ -1543,6 +1543,8 @@
       "invoicing": {
         "type": "Project",
         "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
+          "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
           "Core": "[2026.8.1, )"
         }
       },

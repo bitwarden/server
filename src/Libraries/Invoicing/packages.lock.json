@@ -2,6 +2,22 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "Bitwarden.Server.Sdk.Environment": {
+        "type": "Direct",
+        "requested": "[0.1.0, )",
+        "resolved": "0.1.0",
+        "contentHash": "yLK3ik/+zQ4w41iDObvv4vq2QwWPaVMuyKFpzlgsukClOOuZUxJAivwnnZZDMXbp2wipWgaW4yeEY+yLdLVaVQ=="
+      },
+      "Bitwarden.Server.Sdk.Features": {
+        "type": "Direct",
+        "requested": "[1.4.0, )",
+        "resolved": "1.4.0",
+        "contentHash": "74Ir68CSZSUvZvVkb2CaUNHSAZcFMtZY5pReHz+K1eQX6+Am29iWS1i8DbQWq9F6KmCAEbqcGDyfAo4gRCurbg==",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "0.1.0",
+          "LaunchDarkly.ServerSdk": "8.14.1"
+        }
+      },
       "AdaptiveCards": {
         "type": "Transitive",
         "resolved": "3.1.0",
@@ -148,20 +164,6 @@
         "contentHash": "QTTIgXakHrRNQPxNyH7bZ7frm0bI8N6gRDtiqVyKG/QYQ+KfjN70xt0zQ0kO0zf8UBaKuwcV5B7vvpXtzR9ijg==",
         "dependencies": {
           "Newtonsoft.Json": "12.0.2"
-        }
-      },
-      "Bitwarden.Server.Sdk.Environment": {
-        "type": "Transitive",
-        "resolved": "0.1.0",
-        "contentHash": "yLK3ik/+zQ4w41iDObvv4vq2QwWPaVMuyKFpzlgsukClOOuZUxJAivwnnZZDMXbp2wipWgaW4yeEY+yLdLVaVQ=="
-      },
-      "Bitwarden.Server.Sdk.Features": {
-        "type": "Transitive",
-        "resolved": "1.4.0",
-        "contentHash": "74Ir68CSZSUvZvVkb2CaUNHSAZcFMtZY5pReHz+K1eQX6+Am29iWS1i8DbQWq9F6KmCAEbqcGDyfAo4gRCurbg==",
-        "dependencies": {
-          "Bitwarden.Server.Sdk.Environment": "0.1.0",
-          "LaunchDarkly.ServerSdk": "8.14.1"
         }
       },
       "BouncyCastle.Cryptography": {

@@ -27,7 +27,6 @@ This library depends on `Core` as a documented deviation from the rule restricti
 
 | From Core | Used for |
 | --- | --- |
-| `FeatureFlagKeys` | Gating the endpoint group behind `PM36631_PreviewDrivenCart` |
 | `Policies.Application` (`Bit.Core.Auth.Identity`) | Requiring the standard user authorization policy on the group |
 
 Depending on `Core` for these is fine for now; this table exists so they're known, not because

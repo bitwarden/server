@@ -1,6 +1,6 @@
-﻿using Bit.Core;
-using Bit.Core.Auth.Identity;
+﻿using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
+using Bit.Invoicing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -18,7 +18,7 @@ public static class UserSubscriptionEndpointsExtensions
         group.WithGroupName("internal");
         group.RequireAuthorization(Policies.Application);
         group.WithBasicExceptionHandling();
-        group.RequireFeature(FeatureFlagKeys.PM36631_PreviewDrivenCart);
+        group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
         return group;
     }
 }

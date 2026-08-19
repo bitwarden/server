@@ -7,8 +7,10 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 
 ## Public surface
 
-`AddInvoicing()` registers everything the library needs. Nothing else is public yet — this is the
-empty shell; the projection types land in a later change.
+`AddInvoicing()` registers everything the library needs, including the feature flag keys the library
+owns (`InvoicingFeatureFlags`) as known flags. The feature
+libraries above gate on those keys without depending on Core for them. The projection types land in
+a later change.
 
 ## Stripe boundary
 
