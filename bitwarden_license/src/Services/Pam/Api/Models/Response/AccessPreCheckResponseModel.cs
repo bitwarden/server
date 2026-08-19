@@ -28,6 +28,8 @@ public class AccessPreCheckResponseModel : ResponseModel
         CipherId = cipherId;
         ApprovalMode = result.ApprovalMode;
         HasActiveLease = result.HasActiveLease;
+        DefaultDurationSeconds = result.DefaultDurationSeconds;
+        MaxDurationSeconds = result.MaxDurationSeconds;
     }
 
     public Guid CipherId { get; set; }
@@ -42,4 +44,17 @@ public class AccessPreCheckResponseModel : ResponseModel
     /// True when the caller already holds an active lease: reveal the credential, no request needed.
     /// </summary>
     public bool HasActiveLease { get; set; }
+
+    /// <summary>
+    /// The duration, in seconds, the request form should pre-select — the governing rule's default when it sets one,
+    /// otherwise the global default, clamped to <see cref="MaxDurationSeconds"/>.
+    /// </summary>
+    public int DefaultDurationSeconds { get; set; }
+
+    /// <summary>
+    /// The longest duration (automatic path) or window span (human path), in seconds, that a request for this cipher
+    /// may ask for: the governing rule's cap narrowed by the global ceiling. Clients should offer nothing above it —
+    /// submit enforces the same number.
+    /// </summary>
+    public int MaxDurationSeconds { get; set; }
 }
