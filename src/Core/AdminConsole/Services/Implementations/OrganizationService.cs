@@ -942,8 +942,13 @@ public class OrganizationService : IOrganizationService
         var targetUser = new OrganizationUserRole(oldType ?? newType, organizationId);
         var newTargetUser = new OrganizationUserRole(newType, organizationId, permissions);
 
+        if (_currentContext.UserId is not { } actingUserId)
+        {
+            throw new BadRequestException("Your account does not have permission to manage users.");
+        }
+
         var error = await _organizationUserValidationService.CanManageRoleChangeAsync(
-            _currentContext.UserId ?? Guid.Empty, actingOrganization, targetUser, newTargetUser);
+            actingUserId, actingOrganization, targetUser, newTargetUser);
 
         if (error is not null)
         {
