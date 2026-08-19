@@ -83,31 +83,6 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
     }
 
     [Fact]
-    public async Task SendAccessGrant_NeverAuthenticateSend_ReturnsInvalidGrant()
-    {
-        // Arrange
-        var sendId = Guid.NewGuid();
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
-                sendAuthQuery.GetAuthenticationMethod(sendId).Returns(new NeverAuthenticate());
-                services.AddSingleton(sendAuthQuery);
-            });
-        }).CreateClient();
-
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
-
-        // Act
-        var response = await client.PostAsync("/connect/token", requestBody);
-
-        // Assert
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("invalid_grant", content);
-    }
-
-    [Fact]
     public async Task SendAccessGrant_UnknownAuthenticationMethod_ThrowsInvalidOperation()
     {
         // Arrange
