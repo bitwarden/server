@@ -600,9 +600,9 @@ public class AccountController : Controller
 
             /*
              * ----------------------------------------------------
-             *              Critical Code Check Here
+             *              Critical Code Checks Here
              *
-             * We want to ensure a user is not in the invited state
+             * We want to ensure a user is not in the invited or staged state
              * explicitly. Users in the invited state cannot complete
              * SSO authentication. Instead of failing with a server
              * error page, we throw a typed exception so the SSO
@@ -807,13 +807,10 @@ public class AccountController : Controller
 
     /// <summary>
     /// Promotes a Staged <see cref="OrganizationUser"/> row to
-    /// <see cref="OrganizationUserStatusType.Invited"/> as if the organization admin had just
-    /// issued a fresh invite: verifies seat availability (autoscales on cloud when possible),
-    /// flips status, bumps <see cref="OrganizationUser.RevisionDate"/>, logs
-    /// <see cref="EventType.OrganizationUser_Invited"/>, and dispatches the standard invite
-    /// email via <see cref="ISendOrganizationInvitesCommand"/>. Does not set
-    /// <see cref="OrganizationUser.UserId"/> — matches the standard admin-invite shape;
-    /// the accept endpoint sets it at acceptance time.
+    /// <see cref="OrganizationUserStatusType.Invited"/> and sends the org invite email.
+    /// Mutates only <see cref="OrganizationUser.Status"/> and
+    /// <see cref="OrganizationUser.RevisionDate"/>; <see cref="OrganizationUser.UserId"/>
+    /// is left null.
     /// </summary>
     private async Task PromoteStagedOrgUserAndSendInviteAsync(
         OrganizationUser orgUser,
