@@ -18,8 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
-    <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\Libraries\GlobalSettingsBridge\GlobalSettingsBridge.csproj" />
+    <ProjectReference Include="..\Libraries\SerilogFileLogging\SerilogFileLogging.csproj" />
+    <ProjectReference Include="..\Libraries\SsrfProtection\SsrfProtection.csproj" />
   </ItemGroup>
 
   <ItemGroup>

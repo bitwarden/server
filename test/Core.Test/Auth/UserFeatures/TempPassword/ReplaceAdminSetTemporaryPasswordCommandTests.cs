@@ -5,6 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -47,7 +48,7 @@ public class ReplaceAdminSetTemporaryPasswordCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -94,8 +95,8 @@ public class ReplaceAdminSetTemporaryPasswordCommandTests
             .SendUpdatedTempPasswordEmailAsync(default!, default!);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogUserEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
-            .PushLogOutAsync(default);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
     }
 
     [Theory]

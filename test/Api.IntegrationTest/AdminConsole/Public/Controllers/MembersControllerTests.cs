@@ -230,6 +230,36 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             orgUser.GetPermissions());
     }
 
+    /// <summary>
+    /// The public member model exposes neither AccessPam nor AccessSecretsManager, so an update through this
+    /// API must leave the member's PAM access as it found it rather than resetting it to the default.
+    /// </summary>
+    [Fact]
+    public async Task Put_ExistingMemberWithPamAccess_DoesNotRevokeIt()
+    {
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        orgUser.AccessPam = true;
+        await organizationUserRepository.ReplaceAsync(orgUser);
+
+        var request = new MemberUpdateRequestModel
+        {
+            Type = OrganizationUserType.User,
+            ExternalId = "example",
+            Collections = []
+        };
+
+        var response = await _client.PutAsync($"/public/members/{orgUser.Id}", JsonContent.Create(request));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.True(updatedOrgUser.AccessPam);
+    }
+
     [Fact]
     public async Task Revoke_Member_Success()
     {

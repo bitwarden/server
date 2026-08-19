@@ -19,6 +19,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Repositories;
+using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -190,7 +191,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
             _passwordHasher.VerifyHashedPassword(user, user.MasterPassword!, _newMasterPasswordHash));
 
         // Validate push notification
-        await _pushNotificationService.Received(1).PushLogOutAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -236,8 +237,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         // Validate push notification
         await _pushNotificationService.Received(1)
-            .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KdfChange);
-        await _pushNotificationService.Received(1).PushSyncSettingsAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == PushNotificationLogOutReason.KdfChange));
+        await _pushNotificationService.Received(1)
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == user.Id));
     }
 
     [Fact]
@@ -557,7 +559,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         // Other devices are logged out, current session is preserved
         // (excludeCurrentContextFromPush: true) — self-service-specific behavior.
-        await _pushNotificationService.Received(1).PushLogOutAsync(updatedUser.Id, true);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == updatedUser.Id && n.ExcludeCurrentContext));
 
         // User_ChangedPassword event was logged.
         var events = await _eventRepository.GetManyByUserAsync(
@@ -723,7 +725,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         // All sessions (including the current one) are logged out
         // (excludeCurrentContextFromPush: false, the default) — admin-set temp
         // password flow.
-        await _pushNotificationService.Received(1).PushLogOutAsync(updatedUser.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == updatedUser.Id));
 
         var events = await _eventRepository.GetManyByUserAsync(
             updatedUser.Id, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddMinutes(1),
@@ -1712,9 +1714,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(originalMasterPassword, updatedUser.MasterPassword);
         Assert.Equal(originalSecurityStamp, updatedUser.SecurityStamp);
 
-        await _pushNotificationService.Received(1).PushSyncSettingsAsync(updatedUser.Id);
+        await _pushNotificationService.Received(1)
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == updatedUser.Id));
         await _pushNotificationService.DidNotReceive()
-            .PushLogOutAsync(updatedUser.Id, Arg.Any<bool>(), Arg.Any<PushNotificationLogOutReason?>());
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.TargetId == updatedUser.Id));
     }
 
     [Fact]

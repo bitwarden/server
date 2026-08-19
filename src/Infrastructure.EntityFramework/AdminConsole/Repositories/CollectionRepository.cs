@@ -765,6 +765,48 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    public async Task SetAccessRuleAssociationsAsync(Guid organizationId, Guid accessRuleId,
+        IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear)
+    {
+        var assignIds = collectionIdsToAssign.ToList();
+        var clearIds = collectionIdsToClear.ToList();
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var now = DateTime.UtcNow;
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        if (clearIds.Count > 0)
+        {
+            await dbContext.Collections
+                .Where(c => c.OrganizationId == organizationId
+                    && c.AccessRuleId == accessRuleId
+                    && clearIds.Contains(c.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(c => c.AccessRuleId, (Guid?)null)
+                    .SetProperty(c => c.RevisionDate, now));
+        }
+
+        if (assignIds.Count > 0)
+        {
+            // The foreign key only proves the rule exists, not that it belongs to this organization. Without this
+            // the caller could govern its own collections with another organization's rule, handing that
+            // organization control of the conditions gating access to data it cannot see.
+            await dbContext.Collections
+                .Where(c => c.OrganizationId == organizationId
+                    && assignIds.Contains(c.Id)
+                    && dbContext.AccessRules.Any(ar => ar.Id == accessRuleId
+                        && ar.OrganizationId == organizationId))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(c => c.AccessRuleId, accessRuleId)
+                    .SetProperty(c => c.RevisionDate, now));
+        }
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+        await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
+    }
 
     private static async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
