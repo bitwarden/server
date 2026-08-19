@@ -11,16 +11,32 @@ public class PolicyResponseModelTests
     public static IEnumerable<object[]> PolicyDataByType => new List<object[]>
     {
         new object[] { PolicyType.TwoFactorAuthentication, null },
-        new object[] { PolicyType.MasterPassword, "{\"minComplexity\":3,\"minLength\":14,\"requireLower\":true,\"requireUpper\":true,\"requireNumbers\":false,\"requireSpecial\":false,\"enforceOnLogin\":true}" },
-        new object[] { PolicyType.PasswordGenerator, "{\"defaultType\":\"password\",\"minLength\":16}" },
+        new object[]
+        {
+            PolicyType.MasterPassword,
+            """{"minComplexity":3,"minLength":14,"requireLower":true,"requireUpper":true,"requireNumbers":false,"requireSpecial":false,"enforceOnLogin":true}"""
+        },
+        new object[]
+        {
+            PolicyType.PasswordGenerator,
+            """{"defaultType":"password","minLength":16}"""
+        },
         new object[] { PolicyType.SingleOrg, null },
-        new object[] { PolicyType.SendOptions, "{\"disableHideEmail\":true}" },
-        new object[] { PolicyType.ResetPassword, "{\"autoEnrollEnabled\":true}" },
+        new object[]
+        {
+            PolicyType.SendOptions,
+            """{"disableHideEmail":true}"""
+        },
+        new object[]
+        {
+            PolicyType.ResetPassword,
+            """{"autoEnrollEnabled":true}"""
+        },
     };
 
     [Theory]
     [MemberData(nameof(PolicyDataByType))]
-    public void Constructor_SerializesIdenticallyToLegacyDictionaryApproach(PolicyType type, string? data)
+    public void Constructor_SerializesIdenticallyToDictionaryDeserializeApproach(PolicyType type, string? data)
     {
         var policy = new Policy
         {
@@ -31,10 +47,10 @@ public class PolicyResponseModelTests
             Data = data,
         };
 
-        var legacyJson = JsonSerializer.Serialize(new LegacyPolicyResponseModel(policy));
+        var dictionaryJson = JsonSerializer.Serialize(new DictionaryDeserializePolicyResponseModel(policy));
         var currentJson = JsonSerializer.Serialize(new PolicyResponseModel(policy));
 
-        Assert.Equal(legacyJson, currentJson);
+        Assert.Equal(dictionaryJson, currentJson);
     }
 
     [Theory]
@@ -65,12 +81,12 @@ public class PolicyResponseModelTests
     }
 
     /// <summary>
-    /// Mirrors the pre-refactor implementation (Dictionary&lt;string, object&gt; deserialize/serialize round trip)
-    /// so we can prove the raw string pass-through produces byte-for-byte identical JSON.
+    /// A <see cref="PolicyResponseModel"/> equivalent that deserializes <see cref="Policy.Data"/> into a
+    /// <see cref="Dictionary{TKey,TValue}"/> before serializing, used as a baseline for JSON output comparison.
     /// </summary>
-    private class LegacyPolicyResponseModel
+    private class DictionaryDeserializePolicyResponseModel
     {
-        public LegacyPolicyResponseModel(Policy policy)
+        public DictionaryDeserializePolicyResponseModel(Policy policy)
         {
             Id = policy.Id;
             Type = policy.Type;
@@ -86,8 +102,6 @@ public class PolicyResponseModelTests
         public PolicyType? Type { get; set; }
         public Dictionary<string, object> Data { get; set; }
 
-        // Inherited from PolicyBaseModel; System.Text.Json reflection places inherited base
-        // members after the derived type's own declared members.
         public bool? Enabled { get; set; }
     }
 }
