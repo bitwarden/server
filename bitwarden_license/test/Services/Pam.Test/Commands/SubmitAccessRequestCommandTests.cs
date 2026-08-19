@@ -117,6 +117,59 @@ public class SubmitAccessRequestCommandTests
         Assert.Contains("maximum", ex.Message);
     }
 
+    // PM-39858: the rule's own MaxLeaseDurationSeconds was persisted and shown in the admin console but never read at
+    // submit, so only the global 24h ceiling applied and an over-cap duration was granted in full.
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_AutomaticDurationExceedsRuleMax_ThrowsBadRequestAndCreatesNoRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false,
+            maxLeaseDurationSeconds: 900);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
+
+        Assert.Contains("maximum of 900 seconds", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAutoApprovedAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_AutomaticDurationEqualToRuleMax_CreatesRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false,
+            maxLeaseDurationSeconds: 900);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 900 });
+
+        Assert.Equal(_now.AddSeconds(900), result.Request.NotAfter);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_AutomaticRuleCapAboveGlobalCeiling_StillEnforcesGlobalCeiling(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false,
+            maxLeaseDurationSeconds: 7 * 24 * 60 * 60);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { DurationSeconds = SubmitAccessRequestCommand.MaxDurationSeconds + 1 }));
+
+        Assert.Contains($"maximum of {SubmitAccessRequestCommand.MaxDurationSeconds} seconds", ex.Message);
+    }
+
     [Theory, BitAutoData]
     public async Task SubmitAsync_AutomaticPolicyDenied_ThrowsBadRequestAndIssuesNoLease(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
@@ -162,6 +215,52 @@ public class SubmitAccessRequestCommandTests
             .NotifyCollectionApproversAsync(collectionId);
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
             .NotifyRequesterAsync(userId);
+    }
+
+    // The human path pins the window at submit and the approver can only act on what was pinned, so the rule's cap has
+    // to be refused here too — not left for the approver to catch.
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_HumanWindowExceedsRuleMax_ThrowsBadRequestAndCreatesNoRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true,
+            maxLeaseDurationSeconds: 1800);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission
+            {
+                Start = _now.AddHours(1),
+                End = _now.AddHours(3),
+                Reason = "audit",
+            }));
+
+        Assert.Contains("maximum of 1800 seconds", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_HumanWindowWithinRuleMax_CreatesPendingRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true,
+            maxLeaseDurationSeconds: 1800);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CreateAsync(Arg.Any<AccessRequest>())
+            .Returns(callInfo => callInfo.Arg<AccessRequest>());
+
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission
+        {
+            Start = _now.AddHours(1),
+            End = _now.AddHours(1).AddSeconds(1800),
+            Reason = "audit",
+        });
+
+        Assert.Equal(AccessRequestStatus.Pending, result.Request!.Status);
     }
 
     [Theory, BitAutoData]
@@ -293,12 +392,17 @@ public class SubmitAccessRequestCommandTests
     }
 
     private static void SetupResolution(SutProvider<SubmitAccessRequestCommand> sutProvider, Guid userId, Guid cipherId,
-        Guid orgId, Guid collectionId, bool requiresHuman, Guid ruleId = default)
+        Guid orgId, Guid collectionId, bool requiresHuman, Guid ruleId = default,
+        int? maxLeaseDurationSeconds = null)
     {
         var condition = requiresHuman ? new HumanApprovalCondition() : (AccessCondition)new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] };
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
-            .Returns(new GoverningRule(orgId, collectionId, requiresHuman, [condition]) { RuleId = ruleId });
+            .Returns(new GoverningRule(orgId, collectionId, requiresHuman, [condition])
+            {
+                RuleId = ruleId,
+                MaxLeaseDurationSeconds = maxLeaseDurationSeconds,
+            });
     }
 
     private static void SetupEvaluation(SutProvider<SubmitAccessRequestCommand> sutProvider, AccessEvaluation evaluation)

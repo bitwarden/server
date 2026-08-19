@@ -56,6 +56,17 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
             ? AccessApprovalMode.Human
             : AccessApprovalMode.Automatic;
 
-        return new AccessPreCheckResult(approvalMode);
+        // Publish the same bounds SubmitAccessRequestCommand enforces, so the client's duration picker offers only
+        // durations that will be accepted. An ungated cipher resolves to no rule and falls back to the global bounds;
+        // there is nothing to request against it anyway, so the values are inert rather than wrong.
+        var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule?.MaxLeaseDurationSeconds);
+        var defaultDurationSeconds =
+            LeaseDurationBounds.EffectiveDefault(governingRule?.DefaultLeaseDurationSeconds, maxDurationSeconds);
+
+        return new AccessPreCheckResult(
+            approvalMode,
+            HasActiveLease: false,
+            DefaultDurationSeconds: defaultDurationSeconds,
+            MaxDurationSeconds: maxDurationSeconds);
     }
 }

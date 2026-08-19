@@ -39,6 +39,23 @@ public class AccessRuleWriteValidator : IAccessRuleWriteValidator
             throw new BadRequestException("A maximum extension length is required when extensions are allowed.");
         }
 
+        if (rule.DefaultLeaseDurationSeconds is <= 0)
+        {
+            throw new BadRequestException("The default lease duration must be a positive value.");
+        }
+
+        if (rule.MaxLeaseDurationSeconds is <= 0)
+        {
+            throw new BadRequestException("The maximum lease duration must be a positive value.");
+        }
+
+        // A default above the rule's own cap is unsatisfiable: every request pre-filled with it would be refused at
+        // submit. The edit form already couples its two pickers, so this closes the same gap for a direct API write.
+        if (rule.DefaultLeaseDurationSeconds > rule.MaxLeaseDurationSeconds)
+        {
+            throw new BadRequestException("The default lease duration cannot exceed the maximum lease duration.");
+        }
+
         var conditions = _conditionsValidator.Validate(rule.Conditions);
         if (!conditions.IsValid)
         {
