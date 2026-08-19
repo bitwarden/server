@@ -825,12 +825,6 @@ public class AccountController : Controller
         orgUser.RevisionDate = DateTime.UtcNow;
         await _organizationUserRepository.ReplaceAsync(orgUser);
 
-        // TODO: Confirm with product / AC whether OrganizationUser_Invited is the right
-        // event type here. Standard admin-invite flow emits it, but that event is
-        // admin-initiated; ours is triggered by a user's SSO login. A distinct event
-        // (e.g. OrganizationUser_SsoStagedPromotedToInvited) may reflect the semantic difference better.
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Invited);
-
         await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(
             users: [orgUser],
             organization: organization,
