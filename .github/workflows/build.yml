@@ -50,8 +50,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # `description` becomes org.opencontainers.image.description on the built image. Without
-          # it, metadata-action falls back to the repo description, which is identical for all 16.
           - project_name: Admin
             base_path: ./src
             dotnet: true
@@ -284,31 +282,10 @@ jobs:
           username: bitwarden
           password: ${{ steps.get-kv-secrets.outputs.DOCKERHUB-OAT }}
 
-      # On pull_request, `github.sha` is the ephemeral merge commit, but the checkout above uses
-      # the PR head sha. Read the actual checked-out HEAD so org.opencontainers.image.revision
-      # always names the commit that produced the image.
       - name: Resolve built revision
         id: revision
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      # metadata-action builds its `labels` and `annotations` outputs independently, each merging
-      # only its own input over the same generated defaults. Supplying just `labels` leaves the
-      # annotations at the raw defaults (title=server, version=<branch>, revision=github.sha).
-      # Build the custom set once here and feed it to both inputs so they cannot drift.
-      #
-      # source/created are left to the action's defaults, which derive from the repo itself.
-      # The rest are set here because those defaults are wrong for this repo:
-      #   title       - defaults to the repo name ("server"), not the individual service
-      #   description - defaults to the repo description, identical for all 16 images. Per-service
-      #                 text comes from the `description` key on each matrix entry.
-      #   url         - defaults to the repo URL, duplicating `source`. Per the OCI spec `url` is
-      #                 "more information on the image", so it points at the product page instead.
-      #   licenses    - defaults to the repo SPDX id, which GitHub reports as NOASSERTION because
-      #                 this repo is dual-licensed. Per LICENSE.txt, AGPL-3.0 is the default and
-      #                 Bitwarden Licensed code lives only in /bitwarden_license. The Bitwarden
-      #                 License is not on the SPDX License List, so it needs the LicenseRef- form.
-      #   version     - derived from the git ref, not our resolved image tag
-      #   revision    - github.sha, not the commit actually checked out
       - name: Build custom image metadata
         id: custom-meta
         env:
@@ -336,12 +313,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         env:
-          # Annotate the manifest list too, not just the per-arch manifests, so the metadata is
-          # visible on the multi-arch index that clients resolve first.
           DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest
         with:
-          # Tags come from the `image-tags` step, which encodes the ACR/GHCR publish rules.
-          # The `tags` output of this action is intentionally unused.
           images: |
             ${{ env._AZ_REGISTRY }}/${{ steps.setup.outputs.project_name }}
             ${{ env._GHCR_REGISTRY }}/${{ steps.setup.outputs.project_name }}
