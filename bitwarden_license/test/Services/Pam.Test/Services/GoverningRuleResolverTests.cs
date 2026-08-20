@@ -16,9 +16,9 @@ namespace Bit.Services.Pam.Test.Services;
 [SutProviderCustomize]
 public class GoverningRuleResolverTests
 {
-    // Selection is structural (oldest rule wins); the resolver still evaluates the chosen rule's conditions to report
-    // whether it needs human approval, so the tests drive the real engine through the substitute for that step.
-    private static readonly IAccessRuleEngine _engine = new AccessRuleEngine();
+    // Resolution is structural throughout: the oldest rule wins, and its human-approval gate is read off its
+    // conditions. Nothing here evaluates them, so the tests assert on the rule the resolver picks and the gate it
+    // reports, never on a verdict.
 
     // An in-range IP for the 10.0.0.0/8 allowlists below; out-of-range for the 192.168/172.16 allowlists, which
     // therefore deny.
@@ -94,6 +94,42 @@ public class GoverningRuleResolverTests
         Assert.True(result!.RequiresHumanApproval);
         Assert.Equal(2, result.Conditions.Count);
         Assert.Contains(result.Conditions, condition => condition is HumanApprovalCondition);
+    }
+
+    // PM-42256: the gate used to be read off the engine's verdict, and Combine gives deny precedence over
+    // requires-approval, so a denying condition alongside the human-approval one folded the rule to Deny and reported
+    // "no approval needed". Submit then took the automatic path and refused the request outright, and the pre-check
+    // advertised Automatic, so the caller never reached the approver whose decision the rule exists to require.
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_HumanApprovalWithDenyingIpAllowlist_StillRequiresHumanApproval(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // 192.168.0.0/16 does not contain the caller's 10.0.0.5, so this allowlist denies.
+        rule.Conditions = """[{"kind":"ip_allowlist","cidrs":["192.168.0.0/16"]},{"kind":"human_approval"}]""";
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.True(result!.RequiresHumanApproval);
+        Assert.Equal(2, result.Conditions.Count);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_HumanApprovalGate_DoesNotVaryWithTheCallersSignals(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // The same rule has to resolve the same way for a caller its allowlist admits and one it denies: the gate is a
+        // property of the rule, not of who is asking or from where.
+        rule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]},{"kind":"human_approval"}]""";
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+        var outOfRange = _signals with { IpAddress = IPAddress.Parse("192.168.1.1") };
+
+        var admitted = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+        var denied = await sutProvider.Sut.ResolveAsync(userId, cipherId, outOfRange);
+
+        Assert.True(admitted!.RequiresHumanApproval);
+        Assert.True(denied!.RequiresHumanApproval);
     }
 
     [Theory, BitAutoData]
@@ -323,7 +359,6 @@ public class GoverningRuleResolverTests
         SetupReachableCollections(sutProvider, userId, cipherId, olderCollection, newerCollection);
         // Only the newer rule loads; GetByIdAsync(olderRule.Id) is left unstubbed so the deleted oldest returns null.
         sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(newerRule.Id).Returns(newerRule);
-        DriveRealEngine(sutProvider);
 
         var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
 
@@ -434,15 +469,5 @@ public class GoverningRuleResolverTests
         {
             sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
         }
-
-        DriveRealEngine(sutProvider);
-    }
-
-    private static void DriveRealEngine(SutProvider<GoverningRuleResolver> sutProvider)
-    {
-        // Drive the real engine through the substitute so resolution exercises true IP/time evaluation.
-        sutProvider.GetDependency<IAccessRuleEngine>()
-            .Evaluate(Arg.Any<IReadOnlyList<AccessCondition>>(), Arg.Any<AccessSignals>())
-            .Returns(ci => _engine.Evaluate(ci.ArgAt<IReadOnlyList<AccessCondition>>(0), ci.ArgAt<AccessSignals>(1)));
     }
 }
