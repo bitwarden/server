@@ -822,15 +822,34 @@ public class AccountController : Controller
     {
         await EnsureSeatAvailableAsync(organization);
 
+        var previousStatus = orgUser.Status;
+        var previousRevisionDate = orgUser.RevisionDate;
+
         orgUser.Status = OrganizationUserStatusType.Invited;
         orgUser.RevisionDate = DateTime.UtcNow;
         await _organizationUserRepository.ReplaceAsync(orgUser);
 
-        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(
-            users: [orgUser],
-            organization: organization,
-            initOrganization: false,
-            invitingUserId: null));
+        try
+        {
+            await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(
+                users: [orgUser],
+                organization: organization,
+                initOrganization: false,
+                invitingUserId: null));
+        }
+        catch (Exception e)
+        {
+            // Revert the promotion so the seat isn't consumed and the next SSO attempt
+            // re-runs the full promote-and-invite instead of dead-ending on the
+            // "accept your invite" redirect for an invite that was never delivered.
+            _logger.LogError(e, "Failed to send org invite for SSO Staged org user promotion");
+
+            orgUser.Status = previousStatus;
+            orgUser.RevisionDate = previousRevisionDate;
+            await _organizationUserRepository.ReplaceAsync(orgUser);
+
+            throw;
+        }
     }
 
     /// <summary>

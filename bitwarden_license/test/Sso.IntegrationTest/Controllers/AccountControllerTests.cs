@@ -1357,6 +1357,56 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     }
 
     /*
+    * FAILURE PATH: When SendInvitesAsync throws after the Staged row has already been
+    * flipped to Invited, the promotion must roll back so the row stays Staged. Otherwise
+    * a seat is consumed (Invited counts against the cap; Staged does not) for an invite
+    * the user never received, and the next SSO attempt would dead-end on the "accept your
+    * invite" redirect for an invite that was never delivered.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithExistingUser_AndStagedOrgUser_WhenInviteSendFails_RollsBackPromotion()
+    {
+        // Arrange — existing BW user AND a Staged OrganizationUser row sharing the SSO-claimed email.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithStagedOrganizationUser()
+            .WithPM34423StagedStatusFlag()
+            .WithMockedSendOrganizationInvitesCommand()
+            .BuildAsync();
+
+        // Configure the mocked invite command to throw a plain Exception, simulating a
+        // transient failure downstream of HandlebarsMailService (which is not one of the
+        // typed exceptions caught by ExternalCallback).
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        inviteCommand
+            .When(x => x.SendInvitesAsync(Arg.Any<SendInvitesRequest>()))
+            .Do(_ => throw new Exception("simulated invite send failure"));
+
+        var client = testData.Factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert — plain Exception is not caught by any typed handler in ExternalCallback,
+        // so it surfaces as a 500.
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        // Assert — SendInvitesAsync was reached (proves the promotion cleared the seat
+        // check and the ReplaceAsync before failing on the invite send).
+        await inviteCommand.Received(1).SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+
+        // Assert — the Staged row was rolled back. Without rollback the row is left as
+        // Invited and the next SSO attempt hits SsoAuthnRequiresInviteAcceptanceException,
+        // stranding the user on /login for an invite that was never delivered.
+        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var refreshedOrgUser = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
+        Assert.NotNull(refreshedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Staged, refreshedOrgUser.Status);
+        Assert.Null(refreshedOrgUser.UserId);
+    }
+
+    /*
     * SUCCESS PATH: Test to verify /Account/ExternalCallback succeeds when an existing user
     * with a valid (Confirmed) organization user status logs in via SSO for the first time.
     */
