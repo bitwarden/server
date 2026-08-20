@@ -76,7 +76,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         foreach (var subscriptionItem in subscription.Items?.Data ?? [])
         {
             // Every item counts toward the total, even one we cannot place, so the total is never understated.
-            var cost = subscriptionItem.Quantity * (subscriptionItem.Price?.UnitAmount ?? 0) / 100m;
+            var cost = subscriptionItem.Quantity * (subscriptionItem.Price?.UnitAmountDecimal ?? 0) / 100m;
             total += cost;
 
             var reference = ResolvePurchasableReference(subscriptionItem.Price);
