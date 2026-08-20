@@ -45,6 +45,7 @@ ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 RUN apk add --no-cache curl \
+    krb5 \
     openssl \
     icu-libs \
     tzdata \
