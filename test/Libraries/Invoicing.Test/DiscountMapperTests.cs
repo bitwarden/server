@@ -178,6 +178,29 @@ public class DiscountMapperTests
     }
 
     [Fact]
+    public void Partition_TotalDiscountWithoutDiscountId_LogsAndDrops()
+    {
+        // total_discount_amounts[].discount has a coupon but no id -> DiscountId is null; must log and drop, not throw.
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 11982,
+          "total_discount_amounts": [
+            { "amount": 1279, "discount": { "source": { "coupon": { "id": "cp_noid", "name": "NOID10", "percent_off": 10 } } } }
+          ],
+          "lines": { "data": [] }
+        }
+        """);
+
+        var logger = new RecordingLogger<DiscountMapperTests>();
+        var result = DiscountMapper.Partition(invoice, logger);
+
+        Assert.Empty(result.CartLevel);
+        Assert.Empty(result.ItemLevel);
+        Assert.Single(logger.Errors);
+    }
+
+    [Fact]
     public void Partition_ItemScopedCouponMatchingNoLine_LogsAndDrops()
     {
         // item-scoped coupon present in total_discount_amounts, but no line references it.
