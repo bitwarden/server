@@ -57,6 +57,7 @@ public class ReportsController : Controller
     /// <returns>IEnumerable of MemberCipherDetailsResponseModel</returns>
     /// <exception cref="NotFoundException">If Access reports permission is not assigned</exception>
     [HttpGet("member-cipher-details/{orgId}")]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IEnumerable<MemberCipherDetailsResponseModel>> GetMemberCipherDetails(Guid orgId)
     {
         // Using the AccessReports permission here until new permissions
@@ -123,6 +124,7 @@ public class ReportsController : Controller
     /// <exception cref="NotFoundException">If the user lacks access</exception>
     /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
     [HttpGet("password-health-report-applications/{orgId}")]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IEnumerable<PasswordHealthReportApplication>> GetPasswordHealthReportApplications(Guid orgId)
     {
         if (!await _currentContext.AccessReports(orgId))
@@ -141,6 +143,7 @@ public class ReportsController : Controller
     /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
     /// <exception cref="NotFoundException">If the user lacks access</exception>
     [HttpPost("password-health-report-application")]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<PasswordHealthReportApplication> AddPasswordHealthReportApplication(
         [FromBody] PasswordHealthReportApplicationModel request)
     {
@@ -166,6 +169,7 @@ public class ReportsController : Controller
     /// <exception cref="NotFoundException">If user does not have access to the OrganizationId</exception>
     /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
     [HttpPost("password-health-report-applications")]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IEnumerable<PasswordHealthReportApplication>> AddPasswordHealthReportApplications(
         [FromBody] IEnumerable<PasswordHealthReportApplicationModel> request)
     {
@@ -194,6 +198,7 @@ public class ReportsController : Controller
     /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
     /// <exception cref="BadRequestException">If the organization does not have any records</exception>
     [HttpDelete("password-health-report-application")]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task DropPasswordHealthReportApplication(
         [FromBody] DropPasswordHealthReportApplicationRequest request)
     {

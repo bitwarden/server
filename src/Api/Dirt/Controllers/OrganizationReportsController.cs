@@ -90,6 +90,7 @@ public class OrganizationReportsController : Controller
     /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with upload URL when the request
     /// includes a file size, or an <see cref="OrganizationReportResponseModel"/> otherwise.</returns>
     [HttpPost("{organizationId}")]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IActionResult> CreateOrganizationReportAsync(
         Guid organizationId,
         [FromBody] AddOrganizationReportRequestModel request)
@@ -140,6 +141,7 @@ public class OrganizationReportsController : Controller
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <returns>An <see cref="OrganizationReportResponseModel"/> for the most recent report.</returns>
     [HttpGet("{organizationId}/latest")]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid organizationId)
     {
         EnsureValidIds(organizationId);
@@ -176,6 +178,7 @@ public class OrganizationReportsController : Controller
     /// <param name="reportId">The unique identifier of the report to retrieve.</param>
     /// <returns>An <see cref="OrganizationReportResponseModel"/> matching the specified IDs.</returns>
     [HttpGet("{organizationId}/{reportId}")]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IActionResult> GetOrganizationReportAsync(Guid organizationId, Guid reportId)
     {
         var report = await GetAuthorizedReportAsync(organizationId, reportId);
@@ -208,6 +211,7 @@ public class OrganizationReportsController : Controller
     /// <returns>An <see cref="OrganizationReportResponseModel"/> with the updated report.</returns>
     [HttpPatch("{organizationId}/{reportId}")]
     [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IActionResult> UpdateOrganizationReportAsync(
         Guid organizationId,
         Guid reportId,
@@ -236,6 +240,7 @@ public class OrganizationReportsController : Controller
     [ProducesResponseType<IEnumerable<OrganizationReportSummaryDataResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
         Guid organizationId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
@@ -256,6 +261,7 @@ public class OrganizationReportsController : Controller
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="reportId">The unique identifier of the report to delete.</param>
     [HttpDelete("{organizationId}/{reportId}")]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task DeleteOrganizationReportAsync(Guid organizationId, Guid reportId)
     {
         var report = await GetAuthorizedReportAsync(organizationId, reportId);
@@ -382,6 +388,7 @@ public class OrganizationReportsController : Controller
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
     [DisableFormValueModelBinding]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task UploadReportFileAsync(Guid organizationId, Guid reportId, [FromQuery] string reportFileId)
     {
         var report = await GetAuthorizedReportAsync(organizationId, reportId);
@@ -443,6 +450,7 @@ public class OrganizationReportsController : Controller
     /// <returns>A <see cref="FileStreamResult"/> containing the report file with content type application/octet-stream.</returns>
     [SelfHosted(SelfHostedOnly = true)]
     [HttpGet("{organizationId}/{reportId}/file/download")]
+    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IActionResult> DownloadReportFileAsync(Guid organizationId, Guid reportId)
     {
         var report = await GetAuthorizedReportAsync(organizationId, reportId);
@@ -472,12 +480,6 @@ public class OrganizationReportsController : Controller
         if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
-        }
-
-        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (orgAbility is null || !orgAbility.UseRiskInsights)
-        {
-            throw new BadRequestException("Your organization's plan does not support this feature.");
         }
     }
 
