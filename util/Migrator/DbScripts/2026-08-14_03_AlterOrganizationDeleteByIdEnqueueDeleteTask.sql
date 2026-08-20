@@ -1,4 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
+-- Add optional OrganizationDeleteTask enqueue to Organization_DeleteById so the delete
+-- and the cleanup-task inserts commit atomically. Tasks are supplied as a JSON array of
+-- { Id, TaskType, CreationDate } objects, so any number of task types can be enqueued in
+-- the same transaction as the delete. When no tasks are supplied the existing delete
+-- behavior is preserved.
+
+CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER,
     @OrganizationDeleteTasks NVARCHAR(MAX) = NULL
 WITH RECOMPILE
@@ -202,3 +208,10 @@ BEGIN
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+GO
+
+-- Clean up the user-defined table type from an earlier revision of this script, now that
+-- the procedure no longer references it. New user-defined types are not permitted; JSON
+-- is the preferred way to pass structured data.
+DROP TYPE IF EXISTS [dbo].[OrganizationDeleteTaskArray]
+GO
