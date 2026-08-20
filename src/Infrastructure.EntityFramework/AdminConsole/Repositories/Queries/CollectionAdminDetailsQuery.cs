@@ -90,6 +90,8 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
             Manage = (bool?)x.cu.Manage ?? (bool?)x.cg.Manage ?? false,
             Assigned = x.cu != null || x.cg != null,
             Unmanaged = !activeUserManageRights.Contains(x.c.Id) && !activeGroupManageRights.Contains(x.c.Id),
+            // A disabled rule gates nothing, so the association alone is not enough.
+            HasEnabledAccessRule = dbContext.AccessRules.Any(ar => ar.Id == x.c.AccessRuleId && ar.Enabled),
         });
     }
 
