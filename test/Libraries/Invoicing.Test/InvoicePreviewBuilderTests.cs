@@ -281,8 +281,8 @@ public class InvoicePreviewBuilderTests
         {
           "id": "sub_test",
           "items": { "data": [
-            { "id": "si_1", "quantity": 5, "price": { "id": "price_pm_seat", "unit_amount": 2558, "metadata": { "purchasable_reference": "pm-seat" } } },
-            { "id": "si_2", "quantity": 2, "price": { "id": "price_pm_storage", "unit_amount": 599, "metadata": { "purchasable_reference": "pm-storage" } } }
+            { "id": "si_1", "quantity": 5, "price": { "id": "price_pm_seat", "unit_amount": 2558, "unit_amount_decimal": "2558", "metadata": { "purchasable_reference": "pm-seat" } } },
+            { "id": "si_2", "quantity": 2, "price": { "id": "price_pm_storage", "unit_amount": 599, "unit_amount_decimal": "599", "metadata": { "purchasable_reference": "pm-storage" } } }
           ] }
         }
         """);
@@ -308,7 +308,7 @@ public class InvoicePreviewBuilderTests
         {
           "id": "sub_test",
           "items": { "data": [
-            { "id": "si_1", "quantity": 3, "price": { "id": "price_sm_seat", "unit_amount": 4567, "metadata": { "purchasable_reference": "sm-seat" } } }
+            { "id": "si_1", "quantity": 3, "price": { "id": "price_sm_seat", "unit_amount": 4567, "unit_amount_decimal": "4567", "metadata": { "purchasable_reference": "sm-seat" } } }
           ] }
         }
         """);
@@ -325,8 +325,8 @@ public class InvoicePreviewBuilderTests
         {
           "id": "sub_test",
           "items": { "data": [
-            { "id": "si_1", "quantity": 5, "price": { "id": "price_pm_seat", "unit_amount": 2558, "metadata": { "purchasable_reference": "pm-seat" } } },
-            { "id": "si_2", "quantity": 2, "price": { "id": "price_mystery", "unit_amount": 500, "metadata": {} } }
+            { "id": "si_1", "quantity": 5, "price": { "id": "price_pm_seat", "unit_amount": 2558, "unit_amount_decimal": "2558", "metadata": { "purchasable_reference": "pm-seat" } } },
+            { "id": "si_2", "quantity": 2, "price": { "id": "price_mystery", "unit_amount": 500, "unit_amount_decimal": "500", "metadata": {} } }
           ] }
         }
         """);
@@ -350,8 +350,8 @@ public class InvoicePreviewBuilderTests
         {
           "id": "sub_test",
           "items": { "data": [
-            { "id": "si_1", "quantity": 5, "price": { "id": "price_pm_seat_1", "unit_amount": 2558, "metadata": { "purchasable_reference": "pm-seat" } } },
-            { "id": "si_2", "quantity": 9, "price": { "id": "price_pm_seat_2", "unit_amount": 100, "metadata": { "purchasable_reference": "pm-seat" } } }
+            { "id": "si_1", "quantity": 5, "price": { "id": "price_pm_seat_1", "unit_amount": 2558, "unit_amount_decimal": "2558", "metadata": { "purchasable_reference": "pm-seat" } } },
+            { "id": "si_2", "quantity": 9, "price": { "id": "price_pm_seat_2", "unit_amount": 100, "unit_amount_decimal": "100", "metadata": { "purchasable_reference": "pm-seat" } } }
           ] }
         }
         """);
@@ -359,5 +359,26 @@ public class InvoicePreviewBuilderTests
         var builder = Builder(out _);
 
         Assert.Throws<InvalidOperationException>(() => builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly));
+    }
+
+    [Fact]
+    public void BuildFromSubscription_FractionalCentPrice_UsesDecimalAmount_NotZero()
+    {
+        // Stripe omits unit_amount for fractional-cent per-unit prices; only unit_amount_decimal is set.
+        var subscription = DeserializeSubscription("""
+        {
+          "id": "sub_test",
+          "items": { "data": [
+            { "id": "si_1", "quantity": 300, "price": { "id": "price_pm_seat", "unit_amount_decimal": "0.5", "metadata": { "purchasable_reference": "pm-seat" } } }
+          ] }
+        }
+        """);
+
+        var builder = Builder(out _);
+        var preview = builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly);
+
+        Assert.Equal(300, preview.PasswordManager.Seats.Quantity);
+        Assert.Equal(1.50m, preview.PasswordManager.Seats.Cost); // 300 × 0.5¢ ÷ 100 — would be 0 under the old UnitAmount read
+        Assert.Equal(1.50m, preview.Total);
     }
 }
