@@ -14,18 +14,15 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAccessRuleRepository _accessRuleRepository;
-    private readonly IAccessRuleEngine _ruleEngine;
 
     public GoverningRuleResolver(
         ICollectionCipherRepository collectionCipherRepository,
         ICollectionRepository collectionRepository,
-        IAccessRuleRepository accessRuleRepository,
-        IAccessRuleEngine ruleEngine)
+        IAccessRuleRepository accessRuleRepository)
     {
         _collectionCipherRepository = collectionCipherRepository;
         _collectionRepository = collectionRepository;
         _accessRuleRepository = accessRuleRepository;
-        _ruleEngine = ruleEngine;
     }
 
     public async Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId, AccessSignals signals)
@@ -66,20 +63,27 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         // and stable. Selection is purely structural — it does NOT depend on how a rule's conditions evaluate for the
         // current signals — so a newer path never pre-empts an older one, whichever is the more permissive. This is a
         // deliberate trade of determinism over least-restriction: a member may be routed to an approver even though a
-        // newer path would have auto-granted, because the older rule governs. The chosen rule's conditions are then
-        // evaluated below only to decide whether it routes to a human or resolves automatically.
+        // newer path would have auto-granted, because the older rule governs.
         var (governingCollection, governingRule) = candidates
             .OrderBy(c => c.Rule.CreationDate)
             .ThenBy(c => c.Rule.Id)
             .First();
 
         var conditions = Parse(governingRule.Conditions);
-        var outcome = _ruleEngine.Evaluate(conditions, signals).Outcome;
+
+        // Whether the rule routes to a human is structural too: it is carried by a HumanApprovalCondition among the
+        // rule's conditions, not by how those conditions evaluate for these signals. Reading it off the engine's
+        // verdict asked the wrong question — Combine gives deny precedence over requires-approval, so one denying
+        // condition (an IP outside the allowlist, a request outside the time windows) folded the whole rule to Deny
+        // and reported "no approval needed", sending a human-gated rule down the automatic path to be refused
+        // outright instead of to an approver (PM-42256). The conditions ride along on the returned rule; the
+        // automatic path is where they are evaluated.
+        var requiresHumanApproval = conditions.Any(c => c is HumanApprovalCondition);
 
         return new GoverningRule(
             governingCollection.OrganizationId,
             governingCollection.Id,
-            outcome == AccessEvaluationOutcome.RequiresApproval,
+            requiresHumanApproval,
             conditions)
         {
             RuleId = governingRule.Id,
