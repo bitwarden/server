@@ -11,7 +11,7 @@ namespace Bit.Core.Utilities;
 /// Specifies that the class or method that this attribute is applied to requires the specified organization ability
 /// to be enabled. If the organization ability is not enabled, a <see cref="FeatureUnavailableException"/> is thrown
 // </summary>
-public class RequireOrganizationAbilityAttribute : ActionFilterAttribute
+public class RequireOrganizationAbilityAttribute : Attribute, IAsyncActionFilter
 {
   private readonly string _abilityKey;
 
@@ -25,7 +25,13 @@ public class RequireOrganizationAbilityAttribute : ActionFilterAttribute
     _abilityKey = abilityKey;
   }
 
-  public async override void OnActionExecuting(ActionExecutingContext context)
+  public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+  {
+    await OnActionExecutingAsync(context);
+    await next();
+  }
+
+  private async Task OnActionExecutingAsync(ActionExecutingContext context)
   {
     var orgId = context.HttpContext.GetOrganizationId();
     if (orgId == Guid.Empty)
