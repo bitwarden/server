@@ -67,4 +67,36 @@ public class InvoicePreviewBuilderSmRemovalTests
 
         Assert.Null(preview.SecretsManager);
     }
+
+    // A resolved sm-service-account line with no sm-seat line and no proration must keep the section,
+    // otherwise the service-account cost would silently drop out of the reconciled total.
+    [Fact]
+    public void BuildFromInvoice_ServiceAccountsWithoutSeatsLine_KeepsSectionAndReconciles()
+    {
+        var invoice = Invoice.FromJson("""
+        {
+          "id": "in_sm_service_accounts_only", "total": 6000, "amount_due": 6000,
+          "lines": { "data": [
+            { "amount": 5000, "quantity": 5,
+              "parent": { "subscription_item_details": { "proration": false }, "type": "subscription_item_details" },
+              "pricing": { "price_details": { "price": { "id": "price_pm_seat", "metadata": { "purchasable_reference": "pm-seat" } } } } },
+            { "amount": 1000, "quantity": 2,
+              "parent": { "subscription_item_details": { "proration": false }, "type": "subscription_item_details" },
+              "pricing": { "price_details": { "price": { "id": "price_sm_service_account", "metadata": { "purchasable_reference": "sm-service-account" } } } } }
+          ] }
+        }
+        """);
+
+        var preview = Builder().Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Monthly);
+
+        Assert.NotNull(preview.SecretsManager);
+        Assert.Null(preview.SecretsManager!.Seats);
+        Assert.Null(preview.SecretsManager.Prorations);
+        var serviceAccounts = preview.SecretsManager.AdditionalServiceAccounts;
+        Assert.NotNull(serviceAccounts);
+        Assert.Equal(10.00m, serviceAccounts!.Cost);
+
+        // The service-account row reconciles into the total alongside Password Manager seats.
+        Assert.Equal(preview.Total, preview.PasswordManager.Seats.Cost + serviceAccounts.Cost);
+    }
 }
