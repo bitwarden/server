@@ -130,6 +130,23 @@ jobs:
             description: SAML and OIDC single sign-on service
             license: "AGPL-3.0-only AND LicenseRef-Bitwarden-License-1.0"
     steps:
+      - name: Validate image license metadata
+        env:
+          PROJECT_NAME: ${{ matrix.project_name }}
+          LICENSE_ID: ${{ matrix.license }}
+        run: |
+          case "${LICENSE_ID}" in
+            "AGPL-3.0-only" | "AGPL-3.0-only AND LicenseRef-Bitwarden-License-1.0")
+              echo "${PROJECT_NAME} license: ${LICENSE_ID}"
+              echo "### :balance_scale: License: ${LICENSE_ID}" >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "::error::Matrix entry '${PROJECT_NAME}' has an unrecognized license '${LICENSE_ID}'. Add an approved SPDX expression to the build matrix."
+              echo "### :x: Unrecognized license for ${PROJECT_NAME}: '${LICENSE_ID}'" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+              ;;
+          esac
+
       - name: Check secrets
         id: check-secrets
         run: |
@@ -304,7 +321,7 @@ jobs:
           PROJECT_TITLE: ${{ matrix.project_name }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           DESCRIPTION: ${{ matrix.description || 'Bitwarden service' }}
-          LICENSE_ID: ${{ matrix.license || 'NOASSERTION' }}
+          LICENSE_ID: ${{ matrix.license }}
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
