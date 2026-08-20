@@ -9,8 +9,8 @@ namespace Bit.Core.Utilities;
 /// intermediate object graph.
 /// </summary>
 /// <remarks>
-/// On write, the string's contents are written directly to the output as raw JSON, with no
-/// re-escaping or reformatting. On read, the value is validated as well-formed JSON via
+/// On write, the string's contents are written directly to the output as raw JSON. On read,
+/// the value is validated as well-formed JSON via
 /// <see cref="JsonDocument"/> and captured as its raw text.
 /// </remarks>
 public class RawJsonConverter : JsonConverter<string>

@@ -6,8 +6,8 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 namespace Bit.SharedWeb.Swagger;
 
 /// <summary>
-/// Rewrites properties decorated with <see cref="RawJsonConverter"/> from the reflected <c>string</c> schema
-/// to a free-form object schema so the generated spec and SDK bindings reflect the actual wire format.
+/// Allows for generated spec/SDK bindings to reflect actual JSON schema for properties decorated
+/// with <see cref="RawJsonConverter"/>.
 /// </summary>
 public class RawJsonSchemaFilter : ISchemaFilter
 {

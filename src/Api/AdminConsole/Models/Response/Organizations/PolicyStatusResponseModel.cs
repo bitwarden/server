@@ -12,9 +12,8 @@ public class PolicyStatusResponseModel : ResponseModel
     {
         OrganizationId = policy.OrganizationId;
         Type = policy.Type;
-        // Preserve the legacy "{}" wire format for policies with no stored data (SingleOrg,
-        // TwoFactorAuthentication, etc.). Clients treat a non-null `data` (even {}) as a signal
-        // to run policy-specific load logic, so serializing `null` here breaks that initialization.
+        // Return an empty JSON object instead of null when no data is stored, as a null value
+        // would break policy-specific initialization logic that depends on a non-null data field.
         Data = string.IsNullOrWhiteSpace(policy.Data) ? "{}" : policy.Data;
         Enabled = policy.Enabled;
         CanToggleState = canToggleState;
