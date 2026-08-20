@@ -1,8 +1,12 @@
-﻿using Bit.Core.Auth.Identity;
+using Bit.Core;
+using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
 using Bit.Invoicing;
+using Bit.Subscriptions.Organization.Handlers;
+using Bit.Subscriptions.Organization.Requirements;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Bit.Subscriptions.Organization;
@@ -21,8 +25,15 @@ public static class OrganizationSubscriptionEndpointsExtensions
         group.WithTags("OrganizationSubscriptions");
         group.WithGroupName("internal");
         group.RequireAuthorization(Policies.Application);
+        group.RequireAuthorization(new AuthorizeAttribute<OrganizationBillingRequirement>());
         group.WithBasicExceptionHandling();
         group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
+
+        group.MapGet("preview",
+                async (Guid organizationId, [FromServices] OrganizationSubscriptionEndpointsHandler handler) => await handler.GetPreviewAsync(organizationId))
+            .WithName("GetOrganizationSubscriptionPreview")
+            .WithDescription("Previews the organization's upcoming subscription renewal.");
+
         return group;
     }
 }
