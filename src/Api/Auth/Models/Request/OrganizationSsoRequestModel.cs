@@ -54,6 +54,9 @@ public class SsoConfigurationDataRequest : IValidatableObject
     }
     public string KeyConnectorUrl { get; set; }
 
+    // Provisioning
+    public bool? DisableJitProvisioning { get; set; }
+
     // OIDC
     public string Authority { get; set; }
     public string ClientId { get; set; }
@@ -179,6 +182,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
             ConfigType = ConfigType,
             MemberDecryptionType = MemberDecryptionType,
             KeyConnectorUrl = KeyConnectorUrl,
+            DisableJitProvisioning = DisableJitProvisioning.GetValueOrDefault(),
             Authority = Authority,
             ClientId = ClientId,
             ClientSecret = ClientSecret,
