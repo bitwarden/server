@@ -36,7 +36,7 @@ public class PolicyResponseModel : ResponseModel
     public PolicyType Type { get; set; }
 
     [JsonConverter(typeof(RawJsonConverter))]
-    public string Data { get; private set; }
+    public string Data { get; set; }
     public bool Enabled { get; set; }
     public DateTime RevisionDate { get; set; }
 }
