@@ -423,6 +423,8 @@ public class CipherService : ICipherService
             Url = url,
         };
 
+        await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentDownloaded);
+
         return response;
     }
 
