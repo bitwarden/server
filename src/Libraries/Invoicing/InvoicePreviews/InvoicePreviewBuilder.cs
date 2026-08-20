@@ -146,15 +146,16 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration? proration)
     {
         var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.SecretsManagerSeat);
-        // A mid-cycle removal leaves an SM proration but no seats line; keep the section so the total reconciles.
-        if (seats is null && proration is null)
+        var serviceAccounts = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.SecretsManagerServiceAccount);
+        // Keep the section whenever any line or proration resolved, so no resolved line drops out of the total.
+        if (seats is null && serviceAccounts is null && proration is null)
         {
             return null;
         }
         return new SecretsManagerInvoiceItems
         {
             Seats = seats,
-            AdditionalServiceAccounts = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.SecretsManagerServiceAccount),
+            AdditionalServiceAccounts = serviceAccounts,
             Prorations = proration is { } p ? [p] : null,
         };
     }
