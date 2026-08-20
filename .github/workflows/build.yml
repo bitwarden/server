@@ -76,6 +76,7 @@ jobs:
             dotnet: true
           - project_name: MsSql
             base_path: ./util
+            platforms: linux/amd64
           - project_name: MsSqlMigratorUtility
             base_path: ./util
             dotnet: true
