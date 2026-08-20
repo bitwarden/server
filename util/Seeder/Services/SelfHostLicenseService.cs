@@ -81,6 +81,6 @@ internal static class SelfHostLicenseService
     {
         logger.LogWarning(ex,
             "Premium user license write failed due to {Reason}. Skipping premium license generation.", reason);
-        return LicenseWriteOutcome.Skipped($"Premium user license write failed due to {reason}: {ex.Message}");
+        return LicenseWriteOutcome.Skipped($"Premium user license write failed due to {reason}. Skipping premium license generation.");
     }
 }

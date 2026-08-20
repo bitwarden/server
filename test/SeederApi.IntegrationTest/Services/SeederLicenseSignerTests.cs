@@ -5,6 +5,7 @@ using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Seeder.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
@@ -12,7 +13,7 @@ using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Services;
 
-/// <summary>Guards JWT parity between <see cref="SeederLicenseSigner"/> and production code <c>LicensingService.GenerateToken</c>.</summary>
+/// <summary>Guards JWT parity between <see cref="SeederLicenseSigner"/> and production code <c>LicensingService.GenerateToken</c>, and covers the skip branches.</summary>
 public sealed class SeederLicenseSignerTests : IDisposable
 {
     private const string _password = "test-cert-password";
@@ -75,17 +76,98 @@ public sealed class SeederLicenseSignerTests : IDisposable
         Assert.Contains(jwt.Claims, c => c.Type == nameof(UserLicenseConstants.Premium) && c.Value == "True");
     }
 
-    private SeederLicenseSigner NewSigner()
+    [Fact]
+    public async Task CreateUserTokenAsync_NoCertificateConfigured_SkipsWithWarning()
+    {
+        using var signer = NewSigner(path: string.Empty, password: string.Empty);
+
+        var result = await signer.CreateUserTokenAsync(LicenseTestHelpers.NewPremiumOwner());
+
+        Assert.Null(result.Token);
+        Assert.False(string.IsNullOrEmpty(result.Warning));
+    }
+
+    [Fact]
+    public async Task CreateUserTokenAsync_CertificateFileMissing_SkipsWithWarning()
+    {
+        var missingPath = Path.Join(Path.GetTempPath(), $"seeder-missing-{Guid.NewGuid():N}.pfx");
+        using var signer = NewSigner(path: missingPath);
+
+        var result = await signer.CreateUserTokenAsync(LicenseTestHelpers.NewPremiumOwner());
+
+        Assert.Null(result.Token);
+        Assert.False(string.IsNullOrEmpty(result.Warning));
+    }
+
+    [Fact]
+    public async Task CreateUserTokenAsync_CertificateLoadFails_SkipsWithWarningThatDoesNotLeakDetail()
+    {
+        using var signer = NewSigner(password: "wrong-password");
+
+        var result = await signer.CreateUserTokenAsync(LicenseTestHelpers.NewPremiumOwner());
+
+        Assert.Null(result.Token);
+        Assert.False(string.IsNullOrEmpty(result.Warning));
+        Assert.DoesNotContain(_certPath, result.Warning);
+    }
+
+    [Fact]
+    public async Task CreateUserTokenAsync_CertificateHasNoPrivateKey_SkipsWithWarning()
+    {
+        var publicOnlyPath = Path.Join(Path.GetTempPath(), $"seeder-public-{Guid.NewGuid():N}.cer");
+        File.WriteAllBytes(publicOnlyPath, _certificate.Export(X509ContentType.Cert));
+        try
+        {
+            using var signer = NewSigner(path: publicOnlyPath, password: string.Empty,
+                allowed: AllowedFor(_certificate));
+
+            var result = await signer.CreateUserTokenAsync(LicenseTestHelpers.NewPremiumOwner());
+
+            Assert.Null(result.Token);
+            Assert.False(string.IsNullOrEmpty(result.Warning));
+        }
+        finally
+        {
+            File.Delete(publicOnlyPath);
+        }
+    }
+
+    [Fact]
+    public async Task CreateUserTokenAsync_UntrustedThumbprint_SkipsWithWarning()
     {
         var globalSettings = new GlobalSettings
         {
             LicenseCertificatePath = _certPath,
             LicenseCertificatePassword = _password,
         };
+        using var signer = new SeederLicenseSigner(
+            globalSettings, new UserLicenseClaimsFactory(), NullLogger<SeederLicenseSigner>.Instance);
+
+        var result = await signer.CreateUserTokenAsync(LicenseTestHelpers.NewPremiumOwner());
+
+        Assert.Null(result.Token);
+        Assert.False(string.IsNullOrEmpty(result.Warning));
+    }
+
+    private static IReadOnlySet<string> AllowedFor(X509Certificate2 certificate) =>
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            CoreHelpers.CleanCertificateThumbprint(certificate.Thumbprint),
+        };
+
+    private SeederLicenseSigner NewSigner(
+        string? path = null, string? password = null, IReadOnlySet<string>? allowed = null)
+    {
+        var globalSettings = new GlobalSettings
+        {
+            LicenseCertificatePath = path ?? _certPath,
+            LicenseCertificatePassword = password ?? _password,
+        };
 
         return new SeederLicenseSigner(
             globalSettings,
             new UserLicenseClaimsFactory(),
-            NullLogger<SeederLicenseSigner>.Instance);
+            NullLogger<SeederLicenseSigner>.Instance,
+            allowed ?? AllowedFor(_certificate));
     }
 }

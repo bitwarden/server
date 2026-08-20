@@ -90,16 +90,38 @@ public sealed class DestroySceneCommandTests : IDisposable
     {
         var playId = Guid.NewGuid().ToString();
         var user = await SeedUserWithPlayItemAsync(playId);
+        var licenseFile = WriteLicenseFile(user.Id);
+        var userDirectory = Path.Combine(_licenseDirectory, "user");
 
-        // A directory at the license file path forces File.Delete to throw; the best-effort cleanup must
-        // swallow it so the database teardown still succeeds.
-        var blockingPath = Path.Combine(_licenseDirectory, "user", $"{user.Id}.json");
-        Directory.CreateDirectory(blockingPath);
+        // The file genuinely exists, so File.Delete is reached and throws; the best-effort cleanup must
+        // swallow it so the database teardown still succeeds. Windows blocks delete via an exclusive
+        // handle; POSIX blocks it by removing write permission from the containing directory.
+        FileStream? exclusiveHandle = null;
+        if (OperatingSystem.IsWindows())
+        {
+            exclusiveHandle = new FileStream(licenseFile, FileMode.Open, FileAccess.Read, FileShare.None);
+        }
+        else
+        {
+            File.SetUnixFileMode(userDirectory, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        }
 
-        await BuildCommand(selfHosted: true).DestroyAsync(playId);
+        try
+        {
+            await BuildCommand(selfHosted: true).DestroyAsync(playId);
 
-        Assert.False(UserExists(user.Id));
-        Assert.True(Directory.Exists(blockingPath));
+            Assert.False(UserExists(user.Id));
+            Assert.True(File.Exists(licenseFile));
+        }
+        finally
+        {
+            exclusiveHandle?.Dispose();
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(userDirectory,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            }
+        }
     }
 
     private DestroySceneCommand BuildCommand(bool selfHosted)

@@ -48,7 +48,7 @@ public class SelfHostLicenseServiceTests
 
     [Theory]
     [MemberData(nameof(ExpectedWriteExceptions))]
-    public async Task WriteLicenseAsync_WriteThrowsExpectedException_ReportsWarningWithoutPropagating(Exception thrown)
+    public async Task WriteLicenseAsync_WriteThrowsExpectedException_ReportsGenericWarningWithoutLeakingDetail(Exception thrown)
     {
         var licensing = new StubLicensingService((_, _) => throw thrown);
         var signer = new StubSeederLicenseSigner(_ => Task.FromResult(LicenseSigningResult.Signed("signed.jwt.token")));
@@ -56,7 +56,8 @@ public class SelfHostLicenseServiceTests
         var outcome = await SelfHostLicenseService.WriteLicenseAsync(licensing, signer, NewPremiumOwner(), NullLogger.Instance);
 
         Assert.False(outcome.Written);
-        Assert.Contains(thrown.Message, outcome.Warning);
+        Assert.False(string.IsNullOrEmpty(outcome.Warning));
+        Assert.DoesNotContain(thrown.Message, outcome.Warning);
     }
 
     [Fact]
