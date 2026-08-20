@@ -12,8 +12,9 @@ public interface IGoverningRuleResolver
     /// the choice is total and stable. Selection is purely structural and does NOT depend on how a rule's conditions
     /// evaluate for the current <paramref name="signals"/>: a newer path never pre-empts an older one, whichever is
     /// the more permissive, so a caller may be routed to an approver even though a newer path would have auto-granted.
-    /// The resolved rule's conditions are still evaluated against <paramref name="signals"/> to report whether it
-    /// requires human approval.
+    /// Whether the resolved rule requires human approval is structural in the same way — it is carried by a
+    /// human-approval condition on the rule rather than derived from a verdict — so it does not vary with
+    /// <paramref name="signals"/> either. The rule's conditions are returned unevaluated for the caller to apply.
     /// </summary>
     Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId, AccessSignals signals);
 }
