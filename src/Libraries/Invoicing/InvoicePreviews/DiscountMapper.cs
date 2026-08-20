@@ -79,12 +79,17 @@ internal static class DiscountMapper
         var resolved = new Dictionary<string, ResolvedDiscount>();
         foreach (var total in invoice.TotalDiscountAmounts ?? [])
         {
+            if (string.IsNullOrEmpty(total.DiscountId))
+            {
+                logger.LogError("Discount amount ({Amount}) has no discount id; dropped.", total.Amount);
+                continue;
+            }
             if (total.Discount?.Source?.Coupon is not { } coupon)
             {
                 logger.LogError("Discount {DiscountId} has no expanded coupon; dropped.", total.DiscountId);
                 continue;
             }
-            resolved.Add(total.DiscountId, new ResolvedDiscount(coupon, total.Amount / 100m));
+            resolved[total.DiscountId] = new ResolvedDiscount(coupon, total.Amount / 100m);
         }
         return resolved;
     }
