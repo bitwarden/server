@@ -6,6 +6,12 @@
     <RootNamespace>Bit.RustSDK</RootNamespace>
     <UserSecretsId>Bit.RustSDK</UserSecretsId>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!--
+      Pinned to 0.0.1: this project is only consumed as a library, so its assembly version is never
+      reported anywhere. Keeping it fixed avoids regenerating every consumer's packages.lock.json
+      on each service version bump.
+    -->
+    <Version>0.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>

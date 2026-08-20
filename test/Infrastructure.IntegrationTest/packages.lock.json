@@ -1581,7 +1581,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.8.0, )"
+          "HttpExtensions": "[0.0.1, )"
         }
       },
       "httpextensions": {
@@ -1590,21 +1590,21 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.0, )",
+          "Core": "[0.0.1, )",
           "Dapper": "[2.1.66, 2.1.66]",
-          "Pam.Domain": "[2026.8.0, )"
+          "Pam.Domain": "[0.0.1, )"
         }
       },
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.8.0, )",
+          "Core": "[0.0.1, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.4, 8.0.4]",
-          "Pam.Domain": "[2026.8.0, )",
+          "Pam.Domain": "[0.0.1, )",
           "Pomelo.EntityFrameworkCore.MySql": "[8.0.2, 8.0.2]",
           "linq2db": "[5.4.1, 5.4.1]",
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
@@ -1613,7 +1613,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.0, )",
+          "Core": "[0.0.1, )",
           "Microsoft.Extensions.Logging": "[10.0.10, 10.0.10]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -1621,8 +1621,8 @@
       "mysqlmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.0, )",
-          "Infrastructure.EntityFramework": "[2026.8.0, )"
+          "Core": "[0.0.1, )",
+          "Infrastructure.EntityFramework": "[0.0.1, )"
         }
       },
       "pam.domain": {
@@ -1634,8 +1634,8 @@
       "postgresmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.0, )",
-          "Infrastructure.EntityFramework": "[2026.8.0, )"
+          "Core": "[0.0.1, )",
+          "Infrastructure.EntityFramework": "[0.0.1, )"
         }
       },
       "serilogfilelogging": {
@@ -1647,8 +1647,8 @@
       "sqlitemigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.0, )",
-          "Infrastructure.EntityFramework": "[2026.8.0, )"
+          "Core": "[0.0.1, )",
+          "Infrastructure.EntityFramework": "[0.0.1, )"
         }
       },
       "ssrfprotection": {
