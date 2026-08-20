@@ -12,6 +12,8 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -215,7 +217,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         await _stripeAdapter.Received(1).CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -317,7 +319,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
                 opts.Expand.Contains("customer")));
         await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), mockInvoice);
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -382,7 +384,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.Equal(20, user.LicenseKey.Length);
         Assert.NotEqual(default, user.RevisionDate);
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -516,7 +518,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Verify user was updated correctly
         Assert.True(user.Premium);
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -1193,7 +1195,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             opts.Discounts.Count == 1 &&
             opts.Discounts[0].Coupon == "VALID_COUPON"));
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -1226,7 +1228,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             user, Arg.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "INVALID_COUPON" })), DiscountTierType.Premium);
         await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
-        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(Arg.Any<Guid>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -1261,7 +1263,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             user, Arg.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "NEW_USER_ONLY_COUPON" })), DiscountTierType.Premium);
         await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
-        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(Arg.Any<Guid>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]

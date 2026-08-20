@@ -46,6 +46,7 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
     private static readonly Guid _orgId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static readonly Guid _installationId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     private static readonly Guid _notifId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+    private static readonly Guid _authRequestId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
     private const string TestContextId = "test-device-id";
 
     // Each supported wire format paired with the SignalR routing call it must trigger.
@@ -66,7 +67,7 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
     /// entry is never tested against a Notifications build that lacks the new handling code, so
     /// you cannot tell from CI alone whether the deployment order matters.</para>
     /// </summary>
-    private sealed record RoutingCase(string Json, string? ExpectedUserId, string? ExpectedGroup);
+    private sealed record RoutingCase(string Json, string? ExpectedUserId, string? ExpectedGroup, string? ExpectedAnonymousGroup = null);
 
     private static readonly RoutingCase[] RoutingCases =
     [
@@ -97,6 +98,9 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
         // Installation — Notification (ClientType.Mobile), routes to client-type-specific group
         new("""{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":0,"global":false,"clientType":4,"userId":null,"organizationId":null,"installationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","taskId":null,"title":null,"body":null,"creationDate":"0001-01-01T00:00:00","revisionDate":"0001-01-01T00:00:00","readDate":null,"deletedDate":null},"contextId":null}""",
             null, NotificationsHub.GetInstallationGroup(_installationId, ClientType.Mobile)),
+        // AuthRequestResponse — routes to anonymous hub Group(authRequestId)
+        new("""{"type":16,"payload":{"userId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","id":"dddddddd-dddd-dddd-dddd-dddddddddddd"},"contextId":"test-device-id"}""",
+            null, null, _authRequestId.ToString()),
     ];
 
     private static readonly string[] SupportedPayloads = RoutingCases.Select(c => c.Json).ToArray();
@@ -121,7 +125,7 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
         select new object[] { target, ClientType.Mobile };
 
     public static IEnumerable<object?[]> RoutingCaseArgs() =>
-        RoutingCases.Select(c => new object?[] { c.Json, c.ExpectedUserId, c.ExpectedGroup });
+        RoutingCases.Select(c => new object?[] { c.Json, c.ExpectedUserId, c.ExpectedGroup, c.ExpectedAnonymousGroup });
 
     /// <summary>
     /// Verifies that the JSON currently produced by <see cref="NotificationsApiPushEngine.PushAsync"/>
@@ -150,7 +154,7 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
     [Theory]
     [MemberData(nameof(RoutingCaseArgs))]
     public async Task PostSend_RoutesPayloadToCorrectHubGroup(
-        string json, string? expectedUserId, string? expectedGroup)
+        string json, string? expectedUserId, string? expectedGroup, string? expectedAnonymousGroup)
     {
         using var client = await _factory.CreateAuthenticatedClientAsync();
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -162,9 +166,13 @@ public sealed class PostSendEndpointTests : IAsyncDisposable
         {
             _factory.NotificationsHubClients.Received(1).User(expectedUserId);
         }
+        else if (expectedGroup is not null)
+        {
+            _factory.NotificationsHubClients.Received(1).Group(expectedGroup);
+        }
         else
         {
-            _factory.NotificationsHubClients.Received(1).Group(expectedGroup!);
+            _factory.AnonymousHubClients.Received(1).Group(expectedAnonymousGroup!);
         }
     }
 
