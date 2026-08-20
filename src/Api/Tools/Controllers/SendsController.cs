@@ -40,6 +40,7 @@ public class SendsController : Controller
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IEventService _eventService;
     private readonly ISendEventClassifier _sendEventClassifier;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -52,7 +53,8 @@ public class SendsController : Controller
         IPushNotificationService pushNotificationService,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         IEventService eventService,
-        ISendEventClassifier sendEventClassifier
+        ISendEventClassifier sendEventClassifier,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService
     )
     {
         _sendRepository = sendRepository;
@@ -66,6 +68,7 @@ public class SendsController : Controller
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _eventService = eventService;
         _sendEventClassifier = sendEventClassifier;
+        _featureService = featureService;
     }
 
     #region Anonymous endpoints
@@ -118,6 +121,10 @@ public class SendsController : Controller
     {
         var sendId = new Guid(id);
         var send = await _sendOwnerQuery.Get(sendId, User);
+        if (send.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            throw new NotFoundException();
+        }
         return new SendResponseModel(send);
     }
 
@@ -125,10 +132,13 @@ public class SendsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<SendResponseModel>> GetAll()
     {
-        var sends = await _sendOwnerQuery.GetOwned(User);
+        var sends = (await _sendOwnerQuery.GetOwned(User)).AsEnumerable();
+        if (!_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            sends = sends.Where(s => s.Type != SendType.Item);
+        }
         var responses = sends.Select(s => new SendResponseModel(s));
         var result = new ListResponseModel<SendResponseModel>(responses);
-
         return result;
     }
 
@@ -146,7 +156,7 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
+        if (!INonAnonymousSendCommand.SendCanBeAccessed(send) || (send.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing)))
         {
             throw new NotFoundException();
         }
@@ -233,7 +243,15 @@ public class SendsController : Controller
     {
         model.ValidateCreation();
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        if (model.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            throw new BadRequestException("Item type Sends are not yet enabled");
+        }
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
+        if (!hasPremium && model.Type == SendType.Item)
+        {
+            throw new BadRequestException("Item type Sends require a premium membership");
+        }
 
         if (!hasPremium && !string.IsNullOrWhiteSpace(model.Emails))
         {
@@ -340,9 +358,17 @@ public class SendsController : Controller
     public async Task<SendResponseModel> Put(string id, [FromBody] SendRequestModel model)
     {
         model.ValidateEdit();
+        if (model.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            throw new BadRequestException("Item type Sends are not yet enabled");
+        }
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
 
+        if (!hasPremium && model.Type == SendType.Item)
+        {
+            throw new BadRequestException("Item type Sends require a premium membership");
+        }
         if (!hasPremium && !string.IsNullOrWhiteSpace(model.Emails))
         {
             throw new BadRequestException("Email verified Sends require a premium membership");
@@ -352,6 +378,10 @@ public class SendsController : Controller
         if (send == null || send.UserId != userId)
         {
             throw new NotFoundException();
+        }
+        if (send.Type != model.Type)
+        {
+            throw new BadRequestException("Cannot change a Send's type");
         }
 
         await _nonAnonymousSendCommand.SaveSendAsync(model.UpdateSend(send, _sendAuthorizationService));
