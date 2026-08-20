@@ -6,10 +6,10 @@ using Bit.Notifications;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 
 namespace Notifications.Test;
 
@@ -25,9 +25,13 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable
     // accepts client_credentials requests for the "internal" scope.
     private const string InternalIdentityKey = "test-internal-identity-key-notifications";
 
+    // IHubProtocol.Name of the MessagePack protocol the service registers in Startup.
+    private const string MessagePackProtocolName = "messagepack";
+
     private readonly IdentityApplicationFactory _identityFactory;
     private readonly WebApplicationFactory<Bit.Notifications.Program> _notificationsFactory;
     private readonly Lazy<Task<string>> _cachedToken;
+    private readonly HubInvocationRecorder _recorder = new();
 
     /// <summary>
     /// The mock <see cref="IHubClients"/> wired into <see cref="NotificationsHub"/>. Use this to
@@ -57,9 +61,9 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable
             });
         });
 
-        var (notificationsHubContext, notificationsClients) = BuildHubContext<NotificationsHub>();
+        var (notificationsHubContext, notificationsClients) = _recorder.CreateHubContext<NotificationsHub>();
         NotificationsHubClients = notificationsClients;
-        var (anonymousHubContext, anonymousClients) = BuildHubContext<AnonymousNotificationsHub>();
+        var (anonymousHubContext, anonymousClients) = _recorder.CreateHubContext<AnonymousNotificationsHub>();
         AnonymousHubClients = anonymousClients;
 
         _notificationsFactory = new WebApplicationFactory<Bit.Notifications.Program>().WithWebHostBuilder(builder =>
@@ -137,18 +141,27 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable
         return doc!.RootElement.GetProperty("access_token").GetString()!;
     }
 
-    // Builds a substitute IHubContext<THub> whose Clients property captures routing calls so
-    // tests can assert on which user or group received a notification.
-    private static (IHubContext<THub> Context, IHubClients Clients) BuildHubContext<THub>()
-        where THub : Hub
-    {
-        var proxy = Substitute.For<IClientProxy>();
-        var clients = Substitute.For<IHubClients>();
-        clients.User(Arg.Any<string>()).Returns(proxy);
-        clients.Group(Arg.Any<string>()).Returns(proxy);
+    /// <summary>
+    /// Waits for the next notification the service routes to either hub and returns it, including
+    /// the arguments that would have been serialized and sent to connected clients.
+    /// </summary>
+    internal Task<HubInvocation> AwaitNextHubInvocationAsync(CancellationToken cancellationToken = default)
+        => _recorder.AwaitNextAsync(cancellationToken);
 
-        var context = Substitute.For<IHubContext<THub>>();
-        context.Clients.Returns(clients);
-        return (context, clients);
+    /// <summary>
+    /// Encodes a notification into the exact bytes the service would put on a client connection,
+    /// using the hub protocol the service itself is configured with. Use this to assert on the wire
+    /// format clients observe rather than on the intermediate CLR objects.
+    /// </summary>
+    /// <remarks>
+    /// The invocation ID is left unset because hub sends are fire-and-forget — this mirrors the
+    /// message SignalR's own lifetime manager builds for <c>SendCoreAsync</c>.
+    /// </remarks>
+    internal byte[] EncodeForClients(HubInvocation invocation)
+    {
+        var protocol = _notificationsFactory.Services.GetServices<IHubProtocol>()
+            .Single(candidate => candidate.Name == MessagePackProtocolName);
+
+        return protocol.GetMessageBytes(new InvocationMessage(invocation.Method, invocation.Arguments)).ToArray();
     }
 }
