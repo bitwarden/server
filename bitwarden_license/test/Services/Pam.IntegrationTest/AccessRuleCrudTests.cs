@@ -17,13 +17,13 @@ namespace Bit.Services.Pam.IntegrationTest;
 
 /// <summary>
 /// The access-rule CRUD contract over the real request pipeline: routing, the feature gate, model validation, the
-/// exception → <c>ErrorResponseModel</c> translation, and the round trip through SQLite.
+/// domain error → RFC 7807 problem translation, and the round trip through SQLite.
 /// </summary>
 /// <remarks>
 /// These tests cover the seams that the Pam.Test unit tests necessarily mock away — the conditions document surviving
 /// HTTP binding and storage unchanged, the collection links actually being written, and validator failures arriving as
-/// the documented 400 body. Authorization is <see cref="AccessRuleAuthorizationTests"/>'s subject; every test here
-/// acts as the organization owner.
+/// the documented coded 400 while model-state failures keep the uncoded one. Authorization is
+/// <see cref="AccessRuleAuthorizationTests"/>'s subject; every test here acts as the organization owner.
 /// </remarks>
 public class AccessRuleCrudTests(ApiApplicationFactory factory)
     : AccessRuleIntegrationTestBase(factory, "pam-access-rule-crud")
@@ -101,25 +101,48 @@ public class AccessRuleCrudTests(ApiApplicationFactory factory)
     }
 
     /// <summary>
-    /// A validator failure has to surface as Bitwarden's <c>ErrorResponseModel</c> 400 rather than a 500, which is
-    /// what the exception filter being outermost in the PAM group's chain buys.
+    /// A validator failure has to surface as a coded 400 problem rather than a 500, and the code has to survive the
+    /// whole pipeline — this is the only test that proves what a client actually receives on the wire.
     /// </summary>
     [Fact]
-    public async Task Post_WithACidrThatDoesNotParse_ReturnsBadRequestWithTheValidatorMessage()
+    public async Task Post_WithACidrThatDoesNotParse_ReturnsCodedProblemNamingTheConditionsField()
     {
         var response = await Client.PostAsJsonAsync(AccessRulesUrl,
             NewRule("Bad allowlist", """[{"kind":"ip_allowlist","cidrs":["not-a-cidr"]}]"""));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType!.MediaType);
 
         var body = await ReadJsonAsync(response);
-        Assert.Equal("error", body["object"]!.GetValue<string>());
-        Assert.Contains("not-a-cidr", body["message"]!.GetValue<string>());
+        Assert.Equal("validation_error", body["type"]!.GetValue<string>());
+
+        var entry = body["errors"]!["conditions"]!.AsArray().Single()!;
+        Assert.Equal("rule_invalid_conditions", entry["type"]!.GetValue<string>());
+        Assert.Contains("not-a-cidr", entry["detail"]!.GetValue<string>());
+    }
+
+    /// <summary>
+    /// The name-uniqueness failure a client shows against the name control, proving the code and the property key
+    /// arrive together over HTTP.
+    /// </summary>
+    [Fact]
+    public async Task Post_WithANameAnotherRuleAlreadyHas_ReturnsCodedProblemNamingTheNameField()
+    {
+        await PostRuleAsync(NewRule("Production database"));
+
+        var response = await Client.PostAsJsonAsync(AccessRulesUrl, NewRule("production DATABASE"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await ReadJsonAsync(response);
+        Assert.Equal("rule_name_taken", body["errors"]!["name"]!.AsArray().Single()!["type"]!.GetValue<string>());
     }
 
     /// <summary>
     /// Conditions is declared required, so an omitted value has to be rejected by the group's validation filter
-    /// before any handler runs — not dereferenced into a 500.
+    /// before any handler runs — not dereferenced into a 500. Model-state failures deliberately keep the
+    /// <c>ErrorResponseModel</c> body rather than the coded problem a rejected command returns: they carry no code
+    /// a client acts on, and coding them would shadow the domain errors that name the same failures precisely.
     /// </summary>
     [Fact]
     public async Task Post_WithoutConditions_ReturnsBadRequestFromModelValidation()

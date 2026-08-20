@@ -24,11 +24,8 @@ internal static class LeaseEndpoints
             .WithName("Pam_Leases_GetMine");
 
         group.MapPost("{id:guid}/revoke",
-            async (Guid id, AccessLeaseRevokeRequestModel model, LeaseEndpointsHandler handler, ClaimsPrincipal user) =>
-            {
-                await handler.Revoke(user, id, model);
-                return TypedResults.NoContent();
-            })
+            (Guid id, AccessLeaseRevokeRequestModel model, LeaseEndpointsHandler handler, ClaimsPrincipal user) =>
+                handler.Revoke(user, id, model))
             .WithName("Pam_Leases_Revoke");
 
         group.MapPost("{id:guid}/extend",

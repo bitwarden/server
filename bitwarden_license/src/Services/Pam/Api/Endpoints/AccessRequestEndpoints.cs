@@ -37,11 +37,7 @@ internal static class AccessRequestEndpoints
             .WithName("Pam_AccessRequests_Activate");
 
         group.MapPost("{id:guid}/revoke",
-            async (Guid id, AccessRequestEndpointsHandler handler, ClaimsPrincipal user) =>
-            {
-                await handler.Revoke(user, id);
-                return TypedResults.NoContent();
-            })
+            (Guid id, AccessRequestEndpointsHandler handler, ClaimsPrincipal user) => handler.Revoke(user, id))
             .WithName("Pam_AccessRequests_Revoke");
 
         return group;

@@ -1,9 +1,11 @@
 ﻿using Bit.Core.Models.Api;
+using Bit.Services.Pam.Api;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -85,7 +87,8 @@ public class CipherLeaseEndpointsTests
     [Theory]
     [InlineData(nameof(CipherLeaseEndpointsHandler.PreCheck), typeof(Task<AccessPreCheckResponseModel>))]
     [InlineData(nameof(CipherLeaseEndpointsHandler.State), typeof(Task<CipherAccessStateResponseModel>))]
-    [InlineData(nameof(CipherLeaseEndpointsHandler.Post), typeof(Task<AccessRequestResultResponseModel>))]
+    [InlineData(nameof(CipherLeaseEndpointsHandler.Post),
+        typeof(Task<Results<Ok<AccessRequestResultResponseModel>, PamErrorResult>>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
         var method = typeof(CipherLeaseEndpointsHandler).GetMethod(methodName);

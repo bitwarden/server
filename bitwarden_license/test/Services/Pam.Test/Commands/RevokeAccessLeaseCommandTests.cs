@@ -1,9 +1,9 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Commands;
-using Bit.Services.Pam.Services;
-using Bit.Core.Exceptions;
-using Bit.Pam.Entities;
+﻿using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
+using Bit.Services.Pam.OrganizationFeatures.Commands;
+using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
@@ -18,16 +18,18 @@ public class RevokeAccessLeaseCommandTests
     private static readonly DateTime _now = new(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
-    public async Task RevokeAsync_LeaseMissing_ThrowsNotFound(Guid userId, Guid leaseId)
+    public async Task RevokeAsync_LeaseMissing_ReturnsNotFound(Guid userId, Guid leaseId)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(leaseId).Returns((AccessLease?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RevokeAsync(userId, leaseId, null));
+        var result = await sutProvider.Sut.RevokeAsync(userId, leaseId, null);
+
+        Assert.IsType<AccessLeaseNotFound>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task RevokeAsync_NeitherHolderNorManageable_ThrowsNotFound(Guid userId, AccessLease lease)
+    public async Task RevokeAsync_NeitherHolderNorManageable_ReturnsNotFound(Guid userId, AccessLease lease)
     {
         var sutProvider = Setup();
         lease.Status = AccessLeaseStatus.Active;
@@ -36,7 +38,9 @@ public class RevokeAccessLeaseCommandTests
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(userId, lease.CollectionId).Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
+        var result = await sutProvider.Sut.RevokeAsync(userId, lease.Id, null);
+
+        Assert.IsType<AccessLeaseNotFound>(result.AssertError());
     }
 
     [Theory, BitAutoData]
@@ -49,7 +53,7 @@ public class RevokeAccessLeaseCommandTests
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(lease.RequesterId, lease.CollectionId).Returns(false);
 
-        await sutProvider.Sut.RevokeAsync(lease.RequesterId, lease.Id, "done with it");
+        (await sutProvider.Sut.RevokeAsync(lease.RequesterId, lease.Id, "done with it")).AssertSuccess();
 
         // Settles to Cancelled (the holder ended their own access) with the holder recorded as the revoker.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
@@ -69,13 +73,15 @@ public class RevokeAccessLeaseCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RevokeAsync_NotActive_ThrowsConflict(Guid userId, AccessLease lease)
+    public async Task RevokeAsync_NotActive_ReturnsConflict(Guid userId, AccessLease lease)
     {
         var sutProvider = Setup();
         lease.Status = AccessLeaseStatus.Revoked;
         SetupManageableLease(sutProvider, userId, lease);
 
-        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
+        var result = await sutProvider.Sut.RevokeAsync(userId, lease.Id, null);
+
+        Assert.IsType<AccessLeaseNotActiveForRevoke>(result.AssertError());
     }
 
     [Theory, BitAutoData]
@@ -85,7 +91,7 @@ public class RevokeAccessLeaseCommandTests
         lease.Status = AccessLeaseStatus.Active;
         SetupManageableLease(sutProvider, userId, lease);
 
-        await sutProvider.Sut.RevokeAsync(userId, lease.Id, "policy change");
+        (await sutProvider.Sut.RevokeAsync(userId, lease.Id, "policy change")).AssertSuccess();
 
         // An operator (manager, not the holder) ended it → settles to Revoked.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(

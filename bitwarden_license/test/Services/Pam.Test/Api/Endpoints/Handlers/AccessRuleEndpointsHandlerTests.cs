@@ -10,6 +10,7 @@ using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using OneOf.Types;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Api.Endpoints.Handlers;
@@ -91,7 +92,7 @@ public class AccessRuleEndpointsHandlerTests
             .CreateAsync(Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>())
             .Returns(created);
 
-        await sutProvider.Sut.Post(organizationId, model);
+        (await sutProvider.Sut.Post(organizationId, model)).AssertOk();
 
         await sutProvider.GetDependency<ICreateAccessRuleCommand>().Received(1)
             .CreateAsync(
@@ -113,7 +114,7 @@ public class AccessRuleEndpointsHandlerTests
             .UpdateAsync(organizationId, id, Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>())
             .Returns(updated);
 
-        await sutProvider.Sut.Put(organizationId, id, model);
+        (await sutProvider.Sut.Put(organizationId, id, model)).AssertOk();
 
         await sutProvider.GetDependency<IUpdateAccessRuleCommand>().Received(1)
             .UpdateAsync(
@@ -132,7 +133,9 @@ public class AccessRuleEndpointsHandlerTests
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
 
-        await sutProvider.Sut.Delete(organizationId, id);
+        sutProvider.GetDependency<IDeleteAccessRuleCommand>().DeleteAsync(organizationId, id, userId).Returns(new None());
+
+        (await sutProvider.Sut.Delete(organizationId, id)).AssertNoContent();
 
         // The caller is passed through because the delete is hard: the audit event is the only record of who did it.
         await sutProvider.GetDependency<IDeleteAccessRuleCommand>().Received(1)

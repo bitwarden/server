@@ -11,6 +11,7 @@ using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using OneOf.Types;
 using Xunit;
 using ApiEnums = Bit.Services.Pam.Api.Models;
 
@@ -102,7 +103,8 @@ public class AccessRequestEndpointsHandlerTests
             .DecideAsync(userId, requestId, Arg.Any<AccessDecisionSubmission>())
             .Returns(updated);
 
-        var result = await sutProvider.Sut.Decide(_user, requestId, new AccessDecisionRequestModel { Verdict = ApiEnums.AccessDecisionVerdict.Approve });
+        var result = (await sutProvider.Sut.Decide(_user, requestId,
+            new AccessDecisionRequestModel { Verdict = ApiEnums.AccessDecisionVerdict.Approve })).AssertOk();
 
         Assert.Equal(updated.Id, result.Id);
         Assert.Equal(ApiEnums.AccessRequestStatus.Approved, result.Status);
@@ -118,7 +120,7 @@ public class AccessRequestEndpointsHandlerTests
             .ActivateAsync(userId, requestId)
             .Returns(lease);
 
-        var result = await sutProvider.Sut.Activate(_user, requestId);
+        var result = (await sutProvider.Sut.Activate(_user, requestId)).AssertOk();
 
         Assert.Equal(lease.Id, result.Id);
         Assert.Equal(ApiEnums.AccessLeaseStatus.Active, result.Status);
@@ -130,7 +132,9 @@ public class AccessRequestEndpointsHandlerTests
     {
         SetupUser(sutProvider, userId);
 
-        await sutProvider.Sut.Revoke(_user, requestId);
+        sutProvider.GetDependency<ICancelAccessRequestCommand>().CancelAsync(userId, requestId).Returns(new None());
+
+        (await sutProvider.Sut.Revoke(_user, requestId)).AssertNoContent();
 
         await sutProvider.GetDependency<ICancelAccessRequestCommand>().Received(1).CancelAsync(userId, requestId);
     }

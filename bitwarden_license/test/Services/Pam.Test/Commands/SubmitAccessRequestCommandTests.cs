@@ -1,15 +1,11 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
-using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Core.Vault.Models.Data;
+﻿using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Enums;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.Models.Conditions;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
@@ -28,26 +24,27 @@ public class SubmitAccessRequestCommandTests
     private static readonly DateTime _now = new(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_CipherNotAccessible_ThrowsNotFound(Guid userId, Guid cipherId)
+    public async Task SubmitAsync_CipherNotAccessible_ReturnsNotFound(Guid userId, Guid cipherId)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId).Returns((CipherDetails?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 });
+
+        Assert.IsType<CipherNotFound>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_NotLeasingGated_ThrowsBadRequest(Guid userId, Guid cipherId)
+    public async Task SubmitAsync_NotLeasingGated_ReturnsBadRequest(Guid userId, Guid cipherId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IGoverningRuleResolver>().ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
-        Assert.Contains("does not require a lease", ex.Message);
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 });
+
+        Assert.IsType<CipherNotGated>(result.AssertError());
     }
 
     [Theory, BitAutoData]
@@ -59,8 +56,8 @@ public class SubmitAccessRequestCommandTests
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false, ruleId);
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
 
-        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
-            new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
+        var result = (await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" })).AssertSuccess();
 
         // The automatic path no longer mints a lease at submit; it produces a startable, already-approved request the
         // requester activates explicitly. The window spans the requested duration from now.
@@ -79,48 +76,49 @@ public class SubmitAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_AutomaticWithWindow_ThrowsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    public async Task SubmitAsync_AutomaticWithWindow_ReturnsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
-                new AccessRequestSubmission { Start = _now, End = _now.AddHours(1) }));
-        Assert.Contains("provide a duration", ex.Message);
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { Start = _now, End = _now.AddHours(1) });
+
+        Assert.IsType<DurationExpected>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_AutomaticMissingDuration_ThrowsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    public async Task SubmitAsync_AutomaticMissingDuration_ReturnsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
 
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission()));
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission());
+
+        Assert.IsType<DurationMustBePositive>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_AutomaticDurationExceedsMax_ThrowsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    public async Task SubmitAsync_AutomaticDurationExceedsMax_ReturnsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
-                new AccessRequestSubmission { DurationSeconds = SubmitAccessRequestCommand.MaxDurationSeconds + 1 }));
-        Assert.Contains("maximum", ex.Message);
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { DurationSeconds = SubmitAccessRequestCommand.MaxDurationSeconds + 1 });
+
+        Assert.IsType<DurationExceedsMax>(result.AssertError());
     }
 
     // PM-39858: the rule's own MaxLeaseDurationSeconds was persisted and shown in the admin console but never read at
     // submit, so only the global 24h ceiling applied and an over-cap duration was granted in full.
     [Theory, BitAutoData]
-    public async Task SubmitAsync_AutomaticDurationExceedsRuleMax_ThrowsBadRequestAndCreatesNoRequest(
+    public async Task SubmitAsync_AutomaticDurationExceedsRuleMax_ReturnsBadRequestAndCreatesNoRequest(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
@@ -129,10 +127,9 @@ public class SubmitAccessRequestCommandTests
             maxLeaseDurationSeconds: 900);
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 });
 
-        Assert.Contains("maximum of 900 seconds", ex.Message);
+        Assert.IsType<DurationExceedsMax>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!);
     }
@@ -147,8 +144,8 @@ public class SubmitAccessRequestCommandTests
             maxLeaseDurationSeconds: 900);
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
 
-        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
-            new AccessRequestSubmission { DurationSeconds = 900 });
+        var result = (await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 900 })).AssertSuccess();
 
         Assert.Equal(_now.AddSeconds(900), result.Request.NotAfter);
     }
@@ -163,15 +160,14 @@ public class SubmitAccessRequestCommandTests
             maxLeaseDurationSeconds: 7 * 24 * 60 * 60);
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
-                new AccessRequestSubmission { DurationSeconds = SubmitAccessRequestCommand.MaxDurationSeconds + 1 }));
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { DurationSeconds = SubmitAccessRequestCommand.MaxDurationSeconds + 1 });
 
-        Assert.Contains($"maximum of {SubmitAccessRequestCommand.MaxDurationSeconds} seconds", ex.Message);
+        Assert.IsType<DurationExceedsMax>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_AutomaticPolicyDenied_ThrowsBadRequestAndIssuesNoLease(
+    public async Task SubmitAsync_AutomaticPolicyDenied_ReturnsBadRequestAndIssuesNoLease(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
@@ -179,9 +175,9 @@ public class SubmitAccessRequestCommandTests
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
         SetupEvaluation(sutProvider, AccessEvaluation.Deny(DenyReason.NotWithinIpRange));
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
-        Assert.Contains("network", ex.Message);
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 });
+
+        Assert.IsType<AccessDeniedByNetwork>(result.AssertError());
         // A rule the caller fails to satisfy must not produce an approved request.
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!);
@@ -199,8 +195,8 @@ public class SubmitAccessRequestCommandTests
 
         var start = _now.AddHours(1);
         var end = _now.AddHours(2);
-        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
-            new AccessRequestSubmission { Start = start, End = end, Reason = "audit" });
+        var result = (await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { Start = start, End = end, Reason = "audit" })).AssertSuccess();
 
         Assert.Equal(AccessApprovalMode.Human, result.ApprovalMode);
         Assert.NotNull(result.Request);
@@ -220,7 +216,7 @@ public class SubmitAccessRequestCommandTests
     // The human path pins the window at submit and the approver can only act on what was pinned, so the rule's cap has
     // to be refused here too — not left for the approver to catch.
     [Theory, BitAutoData]
-    public async Task SubmitAsync_HumanWindowExceedsRuleMax_ThrowsBadRequestAndCreatesNoRequest(
+    public async Task SubmitAsync_HumanWindowExceedsRuleMax_ReturnsBadRequestAndCreatesNoRequest(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
@@ -228,15 +224,14 @@ public class SubmitAccessRequestCommandTests
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true,
             maxLeaseDurationSeconds: 1800);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission
-            {
-                Start = _now.AddHours(1),
-                End = _now.AddHours(3),
-                Reason = "audit",
-            }));
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission
+        {
+            Start = _now.AddHours(1),
+            End = _now.AddHours(3),
+            Reason = "audit",
+        });
 
-        Assert.Contains("maximum of 1800 seconds", ex.Message);
+        Assert.IsType<WindowExceedsMax>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAsync(default!);
     }
@@ -253,12 +248,12 @@ public class SubmitAccessRequestCommandTests
             .CreateAsync(Arg.Any<AccessRequest>())
             .Returns(callInfo => callInfo.Arg<AccessRequest>());
 
-        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission
+        var result = (await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission
         {
             Start = _now.AddHours(1),
             End = _now.AddHours(1).AddSeconds(1800),
             Reason = "audit",
-        });
+        })).AssertSuccess();
 
         Assert.Equal(AccessRequestStatus.Pending, result.Request!.Status);
     }
@@ -271,8 +266,8 @@ public class SubmitAccessRequestCommandTests
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
 
-        await sutProvider.Sut.SubmitAsync(userId, cipherId,
-            new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
+        (await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" })).AssertSuccess();
 
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
@@ -283,46 +278,46 @@ public class SubmitAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_HumanMissingReason_ThrowsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    public async Task SubmitAsync_HumanMissingReason_ReturnsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
-                new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2) }));
-        Assert.Contains("reason is required", ex.Message);
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2) });
+
+        Assert.IsType<ReasonRequired>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_HumanWithDuration_ThrowsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    public async Task SubmitAsync_HumanWithDuration_ReturnsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
-                new AccessRequestSubmission { DurationSeconds = 3600, Reason = "x" }));
-        Assert.Contains("requires human approval", ex.Message);
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { DurationSeconds = 3600, Reason = "x" });
+
+        Assert.IsType<WindowExpected>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_HumanStartNotBeforeEnd_ThrowsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    public async Task SubmitAsync_HumanStartNotBeforeEnd_ReturnsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
-                new AccessRequestSubmission { Start = _now.AddHours(2), End = _now.AddHours(1), Reason = "x" }));
-        Assert.Contains("before the end date", ex.Message);
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { Start = _now.AddHours(2), End = _now.AddHours(1), Reason = "x" });
+
+        Assert.IsType<WindowEndBeforeStart>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_ExistingActiveLease_ThrowsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId, AccessLease lease)
+    public async Task SubmitAsync_ExistingActiveLease_ReturnsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId, AccessLease lease)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
@@ -331,13 +326,13 @@ public class SubmitAccessRequestCommandTests
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(lease);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
-        Assert.Contains("already have active access", ex.Message);
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 });
+
+        Assert.IsType<AccessAlreadyActive>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_ExistingPendingRequest_ThrowsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId, AccessRequest pending)
+    public async Task SubmitAsync_ExistingPendingRequest_ReturnsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId, AccessRequest pending)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
@@ -346,14 +341,14 @@ public class SubmitAccessRequestCommandTests
             .GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId)
             .Returns(pending);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
-                new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "x" }));
-        Assert.Contains("already have a pending request", ex.Message);
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "x" });
+
+        Assert.IsType<AccessRequestAlreadyPending>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_ExistingApprovedUnactivatedRequest_ThrowsBadRequest(
+    public async Task SubmitAsync_ExistingApprovedUnactivatedRequest_ReturnsBadRequest(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId, AccessRequest approved)
     {
         var sutProvider = Setup();
@@ -364,10 +359,10 @@ public class SubmitAccessRequestCommandTests
             .Returns(approved);
 
         // An approved-but-not-yet-activated request already grants startable access; a second request would stack.
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
-                new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "x" }));
-        Assert.Contains("already have an approved request", ex.Message);
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "x" });
+
+        Assert.IsType<AccessRequestAlreadyApproved>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAsync(default!);
     }

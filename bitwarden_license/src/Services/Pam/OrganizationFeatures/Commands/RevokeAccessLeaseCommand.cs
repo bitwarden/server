@@ -1,10 +1,12 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
+using OneOf.Types;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -33,7 +35,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         _timeProvider = timeProvider;
     }
 
-    public async Task RevokeAsync(Guid userId, Guid leaseId, string? reason)
+    public async Task<CommandResult> RevokeAsync(Guid userId, Guid leaseId, string? reason)
     {
         var lease = await _accessLeaseRepository.GetByIdAsync(leaseId);
 
@@ -45,12 +47,12 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         if (lease is null ||
             (!isHolder && !await _approverCollectionAccessQuery.CanManageCollectionAsync(userId, lease.CollectionId)))
         {
-            throw new NotFoundException();
+            return new AccessLeaseNotFound();
         }
 
         if (lease.Status != AccessLeaseStatus.Active)
         {
-            throw new ConflictException("This lease is not active.");
+            return new AccessLeaseNotActiveForRevoke();
         }
 
         var endStatus = isHolder ? AccessLeaseStatus.Cancelled : AccessLeaseStatus.Revoked;
@@ -98,5 +100,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         // Tell the lease holder their access ended, so an open cipher re-locks and the banner/badges drop the lease
         // — whether an operator revoked it or the holder ended it from another device.
         await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
+
+        return new None();
     }
 }

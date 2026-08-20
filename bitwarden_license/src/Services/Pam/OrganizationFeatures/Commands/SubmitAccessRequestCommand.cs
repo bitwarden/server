@@ -1,11 +1,13 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Utilities.v2;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Context;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
@@ -56,12 +58,12 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         _timeProvider = timeProvider;
     }
 
-    public async Task<AccessRequestResult> SubmitAsync(Guid userId, Guid cipherId, AccessRequestSubmission submission)
+    public async Task<CommandResult<AccessRequestResult>> SubmitAsync(Guid userId, Guid cipherId, AccessRequestSubmission submission)
     {
         var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
         if (cipher is null)
         {
-            throw new NotFoundException();
+            return new CipherNotFound();
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -70,24 +72,24 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         var governingRule = await _resolver.ResolveAsync(userId, cipherId, signals);
         if (governingRule is null)
         {
-            throw new BadRequestException("This item does not require a lease.");
+            return new CipherNotGated();
         }
 
         if (await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
         {
-            throw new BadRequestException("You already have active access to this item.");
+            return new AccessAlreadyActive();
         }
 
         if (await _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId) is not null)
         {
-            throw new BadRequestException("You already have a pending request for this item.");
+            return new AccessRequestAlreadyPending();
         }
 
         // An approved-but-not-yet-activated request already grants startable access; a second request would let the
         // caller stack grants. Lapsed approvals don't match here, so they correctly don't block a fresh request.
         if (await _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
         {
-            throw new BadRequestException("You already have an approved request for this item.");
+            return new AccessRequestAlreadyApproved();
         }
 
         return governingRule.RequiresHumanApproval
@@ -95,18 +97,18 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             : await ApproveAutomaticallyAsync(userId, cipherId, governingRule, submission, now, signals);
     }
 
-    private async Task<AccessRequestResult> ApproveAutomaticallyAsync(
+    private async Task<CommandResult<AccessRequestResult>> ApproveAutomaticallyAsync(
         Guid userId, Guid cipherId, GoverningRule governingRule, AccessRequestSubmission submission, DateTime now,
         AccessSignals signals)
     {
         if (submission.Start.HasValue || submission.End.HasValue)
         {
-            throw new BadRequestException("This item is approved automatically; provide a duration, not a window.");
+            return new DurationExpected();
         }
 
         if (submission.DurationSeconds is not { } durationSeconds || durationSeconds <= 0)
         {
-            throw new BadRequestException("A positive duration is required.");
+            return new DurationMustBePositive();
         }
 
         // The governing rule's own cap, narrowed by the global ceiling. Enforced here rather than at activation because
@@ -114,7 +116,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
         if (durationSeconds > maxDurationSeconds)
         {
-            throw new BadRequestException($"The requested duration exceeds the maximum of {maxDurationSeconds} seconds.");
+            return new DurationExceedsMax(maxDurationSeconds);
         }
 
         // The cipher must satisfy its access rule's conditions (source IP, time of day, ...) before the request is
@@ -123,7 +125,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         var evaluation = _ruleEngine.Evaluate(governingRule.Conditions, signals);
         if (evaluation.Outcome != AccessEvaluationOutcome.Allow)
         {
-            throw new BadRequestException(DenyMessage(evaluation));
+            return DenyError(evaluation);
         }
 
         var notAfter = now.AddSeconds(durationSeconds);
@@ -195,27 +197,27 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         return AccessRequestResult.Automatic(request, decision);
     }
 
-    private async Task<AccessRequestResult> RequestHumanApprovalAsync(
+    private async Task<CommandResult<AccessRequestResult>> RequestHumanApprovalAsync(
         Guid userId, Guid cipherId, GoverningRule governingRule, AccessRequestSubmission submission)
     {
         if (submission.DurationSeconds.HasValue)
         {
-            throw new BadRequestException("This item requires human approval; provide a start and end date, not a duration.");
+            return new WindowExpected();
         }
 
         if (string.IsNullOrWhiteSpace(submission.Reason))
         {
-            throw new BadRequestException("A reason is required for items that need human approval.");
+            return new ReasonRequired();
         }
 
         if (submission.Start is not { } start || submission.End is not { } end)
         {
-            throw new BadRequestException("A start and end date are required.");
+            return new WindowRequired();
         }
 
         if (start >= end)
         {
-            throw new BadRequestException("The start date must be before the end date.");
+            return new WindowEndBeforeStart();
         }
 
         // Same per-rule cap as the automatic path: an approver can only act on the window pinned here, so a window that
@@ -223,7 +225,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
         if ((end - start).TotalSeconds > maxDurationSeconds)
         {
-            throw new BadRequestException($"The requested window exceeds the maximum of {maxDurationSeconds} seconds.");
+            return new WindowExceedsMax(maxDurationSeconds);
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -271,10 +273,10 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         return AccessRequestResult.Human(created);
     }
 
-    private static string DenyMessage(AccessEvaluation evaluation) => evaluation.Reason switch
+    private static Error DenyError(AccessEvaluation evaluation) => evaluation.Reason switch
     {
-        DenyReason.NotWithinIpRange => "Access to this item is not permitted from your current network.",
-        DenyReason.NotWithinTimeWindow => "Access to this item is not permitted at this time.",
-        _ => "Access to this item is not permitted right now.",
+        DenyReason.NotWithinIpRange => new AccessDeniedByNetwork(),
+        DenyReason.NotWithinTimeWindow => new AccessDeniedBySchedule(),
+        _ => new AccessDenied(),
     };
 }

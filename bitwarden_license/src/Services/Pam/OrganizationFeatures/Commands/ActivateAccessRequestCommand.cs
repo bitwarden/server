@@ -1,8 +1,9 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 
@@ -36,14 +37,14 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         _timeProvider = timeProvider;
     }
 
-    public async Task<AccessLease> ActivateAsync(Guid userId, Guid requestId)
+    public async Task<CommandResult<AccessLease>> ActivateAsync(Guid userId, Guid requestId)
     {
         var request = await _accessRequestRepository.GetByIdAsync(requestId);
 
         // 404 for both missing and someone else's request, so the caller can't probe for requests they don't own.
         if (request is null || request.RequesterId != userId)
         {
-            throw new NotFoundException();
+            return new AccessRequestNotFound();
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -57,24 +58,24 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             {
                 return existing;
             }
-            throw new ConflictException("This request's access has already been used and is no longer active.");
+            return new AccessLeaseAlreadyUsed();
         }
 
         if (request.Status != AccessRequestStatus.Approved)
         {
-            throw new ConflictException(request.Status == AccessRequestStatus.Pending
-                ? "This request has not been approved yet."
-                : "This request can no longer be activated.");
+            return request.Status == AccessRequestStatus.Pending
+                ? new AccessRequestNotApproved()
+                : new AccessRequestNotActivatable();
         }
 
         if (request.NotBefore > now)
         {
-            throw new BadRequestException("The approved access window has not started yet.");
+            return new ApprovedWindowNotStarted();
         }
 
         if (request.NotAfter <= now)
         {
-            throw new BadRequestException("The approved access window has already ended.");
+            return new ApprovedWindowEnded();
         }
 
         var lease = new AccessLease
@@ -124,7 +125,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         {
             await _accessAuditEventEmitter.EmitAsync(
                 audit with { Kind = AccessAuditEventKind.LeaseActivationRejected, Phase = AccessAuditEventPhase.Outcome, AccessLeaseId = null });
-            throw new ConflictException("Another active lease exists for this item. Try again once it ends.");
+            return new SingleActiveLeaseConflict();
         }
 
         if (outcome == AccessLeaseMintOutcome.PreconditionFailed)
@@ -139,7 +140,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             }
             await _accessAuditEventEmitter.EmitAsync(
                 audit with { Kind = AccessAuditEventKind.LeaseActivationRejected, Phase = AccessAuditEventPhase.Outcome, AccessLeaseId = null });
-            throw new ConflictException("This request can no longer be activated.");
+            return new AccessRequestNotActivatable();
         }
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });

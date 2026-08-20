@@ -1,9 +1,10 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 
@@ -31,16 +32,22 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
         _accessAuditEventEmitter = accessAuditEventEmitter;
     }
 
-    public async Task<AccessRuleDetails> UpdateAsync(Guid organizationId, Guid id, AccessRule update,
+    public async Task<CommandResult<AccessRuleDetails>> UpdateAsync(Guid organizationId, Guid id, AccessRule update,
         IEnumerable<Guid> collectionIds)
     {
         var existing = await _repository.GetDetailsByIdAsync(id);
         if (existing is null || existing.OrganizationId != organizationId)
         {
-            throw new NotFoundException();
+            return new AccessRuleNotFound();
         }
 
-        var desiredCollectionIds = await _validator.ValidateAsync(organizationId, update, collectionIds, id);
+        var validated = await _validator.ValidateAsync(organizationId, update, collectionIds, id);
+        if (validated.IsError)
+        {
+            return validated.AsError;
+        }
+
+        var desiredCollectionIds = validated.AsSuccess;
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 

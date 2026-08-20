@@ -1,4 +1,6 @@
-﻿namespace Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
+
+namespace Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 
 public interface IDeleteAccessRuleCommand
 {
@@ -9,5 +11,6 @@ public interface IDeleteAccessRuleCommand
     /// The caller, recorded as the audit event's actor. Null only if the request had no resolvable user; the event is
     /// then recorded as a system action rather than dropped.
     /// </param>
-    Task DeleteAsync(Guid organizationId, Guid id, Guid? userId);
+    /// <returns>Nothing on success, or <see cref="Errors.AccessRuleNotFound"/>.</returns>
+    Task<CommandResult> DeleteAsync(Guid organizationId, Guid id, Guid? userId);
 }

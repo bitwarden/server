@@ -5,6 +5,7 @@ using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
@@ -53,23 +54,24 @@ public class AccessRequestEndpointsHandler(
         return new AccessRequestDetailsResponseModel(details);
     }
 
-    public async Task<AccessRequestDetailsResponseModel> Decide(ClaimsPrincipal user, Guid id, AccessDecisionRequestModel model)
+    public async Task<Results<Ok<AccessRequestDetailsResponseModel>, PamErrorResult>> Decide(
+        ClaimsPrincipal user, Guid id, AccessDecisionRequestModel model)
     {
         var userId = userService.GetProperUserId(user)!.Value;
         var result = await decideAccessRequestCommand.DecideAsync(userId, id, model.ToSubmission());
-        return new AccessRequestDetailsResponseModel(result);
+        return PamResults.Ok(result, decided => new AccessRequestDetailsResponseModel(decided));
     }
 
-    public async Task<AccessLeaseResponseModel> Activate(ClaimsPrincipal user, Guid id)
+    public async Task<Results<Ok<AccessLeaseResponseModel>, PamErrorResult>> Activate(ClaimsPrincipal user, Guid id)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var lease = await activateAccessRequestCommand.ActivateAsync(userId, id);
-        return new AccessLeaseResponseModel(lease);
+        var result = await activateAccessRequestCommand.ActivateAsync(userId, id);
+        return PamResults.Ok(result, lease => new AccessLeaseResponseModel(lease));
     }
 
-    public async Task Revoke(ClaimsPrincipal user, Guid id)
+    public async Task<Results<NoContent, PamErrorResult>> Revoke(ClaimsPrincipal user, Guid id)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        await cancelAccessRequestCommand.CancelAsync(userId, id);
+        return PamResults.NoContent(await cancelAccessRequestCommand.CancelAsync(userId, id));
     }
 }

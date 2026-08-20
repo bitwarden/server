@@ -1,10 +1,10 @@
-﻿using Bit.Services.Pam.Models;
-using Bit.Services.Pam.OrganizationFeatures.Commands;
-using Bit.Services.Pam.Services;
-using Bit.Core.Exceptions;
-using Bit.Pam.Entities;
+﻿using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
+using Bit.Services.Pam.Models;
+using Bit.Services.Pam.OrganizationFeatures.Commands;
+using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
@@ -19,17 +19,18 @@ public class DecideAccessRequestCommandTests
     private static readonly DateTime _now = new(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
-    public async Task DecideAsync_RequestMissing_ThrowsNotFound(Guid userId, Guid requestId)
+    public async Task DecideAsync_RequestMissing_ReturnsNotFound(Guid userId, Guid requestId)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(requestId).Returns((AccessRequest?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DecideAsync(userId, requestId, Approve()));
+        var result = await sutProvider.Sut.DecideAsync(userId, requestId, Approve());
+
+        Assert.IsType<AccessRequestNotFound>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task DecideAsync_NotManageable_ThrowsNotFound(Guid userId, AccessRequest request)
+    public async Task DecideAsync_NotManageable_ReturnsNotFound(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
         request.Status = AccessRequestStatus.Pending;
@@ -37,8 +38,9 @@ public class DecideAccessRequestCommandTests
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(userId, request.CollectionId).Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
+        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Approve());
+
+        Assert.IsType<AccessRequestNotFound>(result.AssertError());
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
         await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
@@ -46,14 +48,15 @@ public class DecideAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task DecideAsync_NotPending_ThrowsConflict(Guid userId, AccessRequest request)
+    public async Task DecideAsync_NotPending_ReturnsConflict(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
         request.Status = AccessRequestStatus.Approved;
         SetupManageableRequest(sutProvider, userId, request);
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
+        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Approve());
+
+        Assert.IsType<AccessRequestAlreadyResolved>(result.AssertError());
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
         await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
@@ -61,16 +64,16 @@ public class DecideAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task DecideAsync_SelfApproval_ThrowsBadRequest(Guid userId, AccessRequest request)
+    public async Task DecideAsync_SelfApproval_ReturnsBadRequest(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
         request.Status = AccessRequestStatus.Pending;
         request.RequesterId = userId;
         SetupManageableRequest(sutProvider, userId, request);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
-        Assert.Contains("your own request", ex.Message);
+        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Approve());
+
+        Assert.IsType<CannotDecideOwnRequest>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
         await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
@@ -78,7 +81,7 @@ public class DecideAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task DecideAsync_Approve_WindowAlreadyEnded_ThrowsBadRequest(Guid userId, AccessRequest request)
+    public async Task DecideAsync_Approve_WindowAlreadyEnded_ReturnsBadRequest(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
         request.Status = AccessRequestStatus.Pending;
@@ -86,9 +89,9 @@ public class DecideAccessRequestCommandTests
         request.NotAfter = _now.AddHours(-1);
         SetupManageableRequest(sutProvider, userId, request);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
-        Assert.Contains("already ended", ex.Message);
+        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Approve());
+
+        Assert.IsType<RequestedWindowEnded>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
@@ -107,7 +110,7 @@ public class DecideAccessRequestCommandTests
         SetupManageableRequest(sutProvider, userId, request);
 
         // A lapsed window only blocks approval (it could never be activated); denial still closes the request out.
-        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Deny());
+        var result = (await sutProvider.Sut.DecideAsync(userId, request.Id, Deny())).AssertSuccess();
 
         Assert.Equal(AccessRequestStatus.Denied, result.Status);
     }
@@ -120,7 +123,7 @@ public class DecideAccessRequestCommandTests
         SetOpenWindow(request);
         SetupManageableRequest(sutProvider, userId, request);
 
-        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Approve("looks good"));
+        var result = (await sutProvider.Sut.DecideAsync(userId, request.Id, Approve("looks good"))).AssertSuccess();
 
         Assert.Equal(AccessRequestStatus.Approved, result.Status);
         Assert.Equal(_now, result.ResolvedDate);
@@ -154,7 +157,7 @@ public class DecideAccessRequestCommandTests
         SetOpenWindow(request);
         SetupManageableRequest(sutProvider, userId, request);
 
-        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Deny());
+        var result = (await sutProvider.Sut.DecideAsync(userId, request.Id, Deny())).AssertSuccess();
 
         Assert.Equal(AccessRequestStatus.Denied, result.Status);
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).ResolveWithDecisionAsync(

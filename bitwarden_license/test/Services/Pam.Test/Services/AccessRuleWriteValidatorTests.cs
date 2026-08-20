@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.Models.Conditions;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
@@ -18,33 +18,33 @@ public class AccessRuleWriteValidatorTests
     [Theory]
     [BitAutoData("")]
     [BitAutoData("   ")]
-    public async Task ValidateAsync_EmptyName_ThrowsBadRequest(string name, AccessRule rule)
+    public async Task ValidateAsync_EmptyName_ReturnsBadRequest(string name, AccessRule rule)
     {
         var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
         rule.Name = name;
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
-        Assert.Contains("Name is required", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+
+        Assert.IsType<AccessRuleNameRequired>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_AllowsExtensionsWithoutMax_ThrowsBadRequest(AccessRule rule)
+    public async Task ValidateAsync_AllowsExtensionsWithoutMax_ReturnsBadRequest(AccessRule rule)
     {
         var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
         rule.Name = "extendable";
         rule.AllowsExtensions = true;
         rule.MaxExtensionDurationSeconds = null;
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
-        Assert.Contains("maximum extension length", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+
+        Assert.IsType<AccessRuleExtensionLengthRequired>(result.AssertError());
     }
 
     [Theory]
     [BitAutoData(0)]
     [BitAutoData(-1)]
-    public async Task ValidateAsync_AllowsExtensionsWithNonPositiveMax_ThrowsBadRequest(
+    public async Task ValidateAsync_AllowsExtensionsWithNonPositiveMax_ReturnsBadRequest(
         int maxExtensionDurationSeconds, AccessRule rule)
     {
         var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
@@ -52,15 +52,15 @@ public class AccessRuleWriteValidatorTests
         rule.AllowsExtensions = true;
         rule.MaxExtensionDurationSeconds = maxExtensionDurationSeconds;
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
-        Assert.Contains("maximum extension length", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+
+        Assert.IsType<AccessRuleExtensionLengthRequired>(result.AssertError());
     }
 
     [Theory]
     [BitAutoData(0)]
     [BitAutoData(-1)]
-    public async Task ValidateAsync_NonPositiveDefaultLeaseDuration_ThrowsBadRequest(
+    public async Task ValidateAsync_NonPositiveDefaultLeaseDuration_ReturnsBadRequest(
         int defaultLeaseDurationSeconds, AccessRule rule)
     {
         var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
@@ -68,15 +68,15 @@ public class AccessRuleWriteValidatorTests
         rule.AllowsExtensions = false;
         rule.DefaultLeaseDurationSeconds = defaultLeaseDurationSeconds;
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
-        Assert.Contains("default lease duration must be a positive value", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+
+        Assert.IsType<AccessRuleDefaultDurationMustBePositive>(result.AssertError());
     }
 
     [Theory]
     [BitAutoData(0)]
     [BitAutoData(-1)]
-    public async Task ValidateAsync_NonPositiveMaxLeaseDuration_ThrowsBadRequest(
+    public async Task ValidateAsync_NonPositiveMaxLeaseDuration_ReturnsBadRequest(
         int maxLeaseDurationSeconds, AccessRule rule)
     {
         var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
@@ -85,15 +85,15 @@ public class AccessRuleWriteValidatorTests
         rule.DefaultLeaseDurationSeconds = null;
         rule.MaxLeaseDurationSeconds = maxLeaseDurationSeconds;
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
-        Assert.Contains("maximum lease duration must be a positive value", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+
+        Assert.IsType<AccessRuleMaxDurationMustBePositive>(result.AssertError());
     }
 
     // PM-39858's misconfiguration: a rule saved with a 1h default but a 15m cap pre-fills every request under it with
     // a duration submit then refuses. The edit form couples its two pickers; a direct API write bypassed that.
     [Theory, BitAutoData]
-    public async Task ValidateAsync_DefaultLeaseDurationAboveMax_ThrowsBadRequest(AccessRule rule)
+    public async Task ValidateAsync_DefaultLeaseDurationAboveMax_ReturnsBadRequest(AccessRule rule)
     {
         var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
         rule.Name = "rule";
@@ -101,9 +101,9 @@ public class AccessRuleWriteValidatorTests
         rule.DefaultLeaseDurationSeconds = 3600;
         rule.MaxLeaseDurationSeconds = 900;
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
-        Assert.Contains("cannot exceed the maximum lease duration", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+
+        Assert.IsType<AccessRuleDefaultDurationExceedsMax>(result.AssertError());
     }
 
     [Theory, BitAutoData]
@@ -114,26 +114,26 @@ public class AccessRuleWriteValidatorTests
         rule.DefaultLeaseDurationSeconds = 7 * 24 * 60 * 60;
         rule.MaxLeaseDurationSeconds = null;
 
-        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+        var result = (await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [])).AssertSuccess();
 
         Assert.Empty(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_InvalidConditions_ThrowsBadRequestWithValidatorError(AccessRule rule)
+    public async Task ValidateAsync_InvalidConditions_ReturnsBadRequestWithValidatorError(AccessRule rule)
     {
         var sutProvider = SetupSutProvider(rule);
         sutProvider.GetDependency<IAccessRuleValidator>()
             .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Invalid("Unsupported condition kind"));
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
-        Assert.Equal("Unsupported condition kind", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+
+        Assert.IsType<AccessRuleInvalidConditions>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_DuplicateName_ThrowsBadRequest(AccessRule rule, AccessRule sibling)
+    public async Task ValidateAsync_DuplicateName_ReturnsBadRequest(AccessRule rule, AccessRule sibling)
     {
         var sutProvider = SetupSutProvider(rule);
         rule.Name = "duplicate";
@@ -143,9 +143,9 @@ public class AccessRuleWriteValidatorTests
             .GetManyByOrganizationIdAsync(rule.OrganizationId)
             .Returns(new List<AccessRule> { sibling });
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
-        Assert.Contains("already exists", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+
+        Assert.IsType<AccessRuleNameTaken>(result.AssertError());
     }
 
     [Theory, BitAutoData]
@@ -156,13 +156,13 @@ public class AccessRuleWriteValidatorTests
             .GetManyByOrganizationIdAsync(rule.OrganizationId)
             .Returns(new List<AccessRule> { rule });
 
-        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [], rule.Id);
+        var result = (await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [], rule.Id)).AssertSuccess();
 
         Assert.Empty(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_UpdateTakingAnotherRulesName_ThrowsBadRequest(AccessRule rule, AccessRule sibling)
+    public async Task ValidateAsync_UpdateTakingAnotherRulesName_ReturnsBadRequest(AccessRule rule, AccessRule sibling)
     {
         var sutProvider = SetupSutProvider(rule);
         rule.Name = "taken";
@@ -172,9 +172,9 @@ public class AccessRuleWriteValidatorTests
             .GetManyByOrganizationIdAsync(rule.OrganizationId)
             .Returns(new List<AccessRule> { rule, sibling });
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [], rule.Id));
-        Assert.Contains("already exists", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [], rule.Id);
+
+        Assert.IsType<AccessRuleNameTaken>(result.AssertError());
     }
 
     [Theory, BitAutoData]
@@ -182,7 +182,7 @@ public class AccessRuleWriteValidatorTests
     {
         var sutProvider = SetupSutProvider(rule);
 
-        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+        var result = (await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [])).AssertSuccess();
 
         Assert.Empty(result);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
@@ -200,27 +200,27 @@ public class AccessRuleWriteValidatorTests
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { collection });
 
-        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule,
-            [collection.Id, collection.Id]);
+        var result = (await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule,
+            [collection.Id, collection.Id])).AssertSuccess();
 
         Assert.Equal([collection.Id], result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_CollectionNotFound_ThrowsBadRequest(AccessRule rule, Guid missingCollectionId)
+    public async Task ValidateAsync_CollectionNotFound_ReturnsBadRequest(AccessRule rule, Guid missingCollectionId)
     {
         var sutProvider = SetupSutProvider(rule);
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection>());
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [missingCollectionId]));
-        Assert.Contains("could not be found", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [missingCollectionId]);
+
+        Assert.IsType<AccessRuleCollectionsMissing>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_CollectionInDifferentOrg_ThrowsBadRequest(AccessRule rule, Collection collection)
+    public async Task ValidateAsync_CollectionInDifferentOrg_ReturnsBadRequest(AccessRule rule, Collection collection)
     {
         var sutProvider = SetupSutProvider(rule);
         collection.OrganizationId = Guid.NewGuid();
@@ -228,13 +228,13 @@ public class AccessRuleWriteValidatorTests
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { collection });
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [collection.Id]));
-        Assert.Contains("do not belong to this organization", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [collection.Id]);
+
+        Assert.IsType<AccessRuleCollectionsForeign>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_CreateWithGovernedCollection_ThrowsBadRequest(AccessRule rule,
+    public async Task ValidateAsync_CreateWithGovernedCollection_ReturnsBadRequest(AccessRule rule,
         AccessRule otherRule, Collection collection)
     {
         var sutProvider = SetupSutProvider(rule);
@@ -245,13 +245,13 @@ public class AccessRuleWriteValidatorTests
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { collection });
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [collection.Id]));
-        Assert.Contains("already governed by another access rule", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [collection.Id]);
+
+        Assert.IsType<AccessRuleCollectionsAlreadyGoverned>(result.AssertError());
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_UpdateWithCollectionGovernedByAnotherRule_ThrowsBadRequest(AccessRule rule,
+    public async Task ValidateAsync_UpdateWithCollectionGovernedByAnotherRule_ReturnsBadRequest(AccessRule rule,
         AccessRule otherRule, Collection collection)
     {
         var sutProvider = SetupSutProvider(rule);
@@ -262,9 +262,9 @@ public class AccessRuleWriteValidatorTests
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { collection });
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [collection.Id], rule.Id));
-        Assert.Contains("already governed by another access rule", ex.Message);
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [collection.Id], rule.Id);
+
+        Assert.IsType<AccessRuleCollectionsAlreadyGoverned>(result.AssertError());
     }
 
     [Theory, BitAutoData]
@@ -278,7 +278,7 @@ public class AccessRuleWriteValidatorTests
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { collection });
 
-        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [collection.Id], rule.Id);
+        var result = (await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, [collection.Id], rule.Id)).AssertSuccess();
 
         Assert.Equal([collection.Id], result);
     }

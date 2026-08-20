@@ -1,8 +1,9 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
@@ -34,26 +35,26 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         _timeProvider = timeProvider;
     }
 
-    public async Task<AccessRequestDetails> DecideAsync(Guid userId, Guid requestId, AccessDecisionSubmission submission)
+    public async Task<CommandResult<AccessRequestDetails>> DecideAsync(Guid userId, Guid requestId, AccessDecisionSubmission submission)
     {
         var request = await _accessRequestRepository.GetByIdAsync(requestId);
 
         // 404 for both missing and not-visible, so the caller can't probe for requests they don't manage.
         if (request is null || !await _approverCollectionAccessQuery.CanManageCollectionAsync(userId, request.CollectionId))
         {
-            throw new NotFoundException();
+            return new AccessRequestNotFound();
         }
 
         if (request.Status != AccessRequestStatus.Pending)
         {
-            throw new ConflictException("This request has already been resolved.");
+            return new AccessRequestAlreadyResolved();
         }
 
         // Self-approval is blocked server-side even though the client disables the buttons. Surfaced as 400 rather
         // than 403 because Bitwarden clients treat 403 as a forced logout.
         if (request.RequesterId == userId)
         {
-            throw new BadRequestException("You cannot decide your own request.");
+            return new CannotDecideOwnRequest();
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -64,7 +65,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         // "approved" state, so reject it. Denial is still allowed so the audit trail can close the request out.
         if (approved && request.NotAfter <= now)
         {
-            throw new BadRequestException("The requested access window has already ended.");
+            return new RequestedWindowEnded();
         }
 
         var decision = new AccessDecision

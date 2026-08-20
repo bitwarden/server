@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Identity;
 using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
+using Bit.Services.Pam.Api;
 using Bit.Services.Pam.Api.Authorization;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
@@ -9,6 +10,7 @@ using Bit.Services.Pam.Api.Models.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -165,9 +167,11 @@ public class AccessRuleEndpointsTests
     [Theory]
     [InlineData(nameof(AccessRuleEndpointsHandler.GetAll), typeof(Task<ListResponseModel<AccessRuleResponseModel>>))]
     [InlineData(nameof(AccessRuleEndpointsHandler.Get), typeof(Task<AccessRuleResponseModel>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Post), typeof(Task<AccessRuleResponseModel>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Put), typeof(Task<AccessRuleResponseModel>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Delete), typeof(Task))]
+    [InlineData(nameof(AccessRuleEndpointsHandler.Post),
+        typeof(Task<Results<Ok<AccessRuleResponseModel>, PamErrorResult>>))]
+    [InlineData(nameof(AccessRuleEndpointsHandler.Put),
+        typeof(Task<Results<Ok<AccessRuleResponseModel>, PamErrorResult>>))]
+    [InlineData(nameof(AccessRuleEndpointsHandler.Delete), typeof(Task<Results<NoContent, PamErrorResult>>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
         var method = typeof(AccessRuleEndpointsHandler).GetMethod(methodName);

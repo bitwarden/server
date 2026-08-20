@@ -1,7 +1,9 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Utilities.v2;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 
 namespace Bit.Services.Pam.Services;
 
@@ -26,58 +28,60 @@ public class AccessRuleWriteValidator : IAccessRuleWriteValidator
         _conditionsValidator = conditionsValidator;
     }
 
-    public async Task<List<Guid>> ValidateAsync(Guid organizationId, AccessRule rule,
+    public async Task<CommandResult<List<Guid>>> ValidateAsync(Guid organizationId, AccessRule rule,
         IEnumerable<Guid> collectionIds, Guid? existingRuleId = null)
     {
         if (string.IsNullOrWhiteSpace(rule.Name))
         {
-            throw new BadRequestException("Name is required.");
+            return new AccessRuleNameRequired();
         }
 
         if (rule.AllowsExtensions && rule.MaxExtensionDurationSeconds is not > 0)
         {
-            throw new BadRequestException("A maximum extension length is required when extensions are allowed.");
+            return new AccessRuleExtensionLengthRequired();
         }
 
         if (rule.DefaultLeaseDurationSeconds is <= 0)
         {
-            throw new BadRequestException("The default lease duration must be a positive value.");
+            return new AccessRuleDefaultDurationMustBePositive();
         }
 
         if (rule.MaxLeaseDurationSeconds is <= 0)
         {
-            throw new BadRequestException("The maximum lease duration must be a positive value.");
+            return new AccessRuleMaxDurationMustBePositive();
         }
 
         // A default above the rule's own cap is unsatisfiable: every request pre-filled with it would be refused at
         // submit. The edit form already couples its two pickers, so this closes the same gap for a direct API write.
         if (rule.DefaultLeaseDurationSeconds > rule.MaxLeaseDurationSeconds)
         {
-            throw new BadRequestException("The default lease duration cannot exceed the maximum lease duration.");
+            return new AccessRuleDefaultDurationExceedsMax();
         }
 
         var conditions = _conditionsValidator.Validate(rule.Conditions);
         if (!conditions.IsValid)
         {
-            throw new BadRequestException(conditions.Error!);
+            return new AccessRuleInvalidConditions(conditions.Error!);
         }
 
-        await ValidateNameIsUniqueAsync(organizationId, rule.Name, existingRuleId);
+        if (await ValidateNameIsUniqueAsync(organizationId, rule.Name, existingRuleId) is { } nameError)
+        {
+            return nameError;
+        }
 
         return await ValidateCollectionsAsync(organizationId, collectionIds, existingRuleId);
     }
 
-    private async Task ValidateNameIsUniqueAsync(Guid organizationId, string name, Guid? existingRuleId)
+    private async Task<Error?> ValidateNameIsUniqueAsync(Guid organizationId, string name, Guid? existingRuleId)
     {
         var siblings = await _repository.GetManyByOrganizationIdAsync(organizationId);
-        if (siblings.Any(r => r.Id != existingRuleId && string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)))
-        {
-            throw new BadRequestException("A rule with that name already exists.");
-        }
+        return siblings.Any(r => r.Id != existingRuleId && string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))
+            ? new AccessRuleNameTaken()
+            : null;
     }
 
-    private async Task<List<Guid>> ValidateCollectionsAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
-        Guid? existingRuleId)
+    private async Task<CommandResult<List<Guid>>> ValidateCollectionsAsync(Guid organizationId,
+        IEnumerable<Guid> collectionIds, Guid? existingRuleId)
     {
         var distinctIds = collectionIds.Distinct().ToList();
         if (distinctIds.Count == 0)
@@ -88,12 +92,12 @@ public class AccessRuleWriteValidator : IAccessRuleWriteValidator
         var collections = await _collectionRepository.GetManyByManyIdsAsync(distinctIds);
         if (collections.Count != distinctIds.Count)
         {
-            throw new BadRequestException("One or more collections could not be found.");
+            return new AccessRuleCollectionsMissing();
         }
 
         if (collections.Any(c => c.OrganizationId != organizationId))
         {
-            throw new BadRequestException("One or more collections do not belong to this organization.");
+            return new AccessRuleCollectionsForeign();
         }
 
         // Deletes clear Collection.AccessRuleId and the FK forbids dangling links, so any set link points at an
@@ -101,7 +105,7 @@ public class AccessRuleWriteValidator : IAccessRuleWriteValidator
         // any link at all conflicts.
         if (collections.Any(c => c.AccessRuleId.HasValue && c.AccessRuleId != existingRuleId))
         {
-            throw new BadRequestException("One or more collections are already governed by another access rule.");
+            return new AccessRuleCollectionsAlreadyGoverned();
         }
 
         return distinctIds;
