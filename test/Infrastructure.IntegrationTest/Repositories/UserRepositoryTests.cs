@@ -8,7 +8,6 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
-using Microsoft.Data.SqlClient;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -507,7 +506,8 @@ public class UserRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task SetKeyConnectorUserKey_UpdatesUserKey(IUserRepository userRepository, Database database)
+    public async Task SetKeyConnectorUserKey_UpdatesUserKey(IUserRepository userRepository, Database database,
+        IServiceProvider serviceProvider)
     {
         var user = await userRepository.CreateTestUserAsync();
 
@@ -515,7 +515,7 @@ public class UserRepositoryTests
 
         var setKeyConnectorUserKeyDelegate = userRepository.SetKeyConnectorUserKey(user.Id, keyConnectorWrappedKey);
 
-        await RunUpdateUserDataAsync(setKeyConnectorUserKeyDelegate, database);
+        await RunUpdateUserDataAsync(setKeyConnectorUserKeyDelegate, database, serviceProvider);
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
 
@@ -674,7 +674,7 @@ public class UserRepositoryTests
     /// </summary>
     [Theory, DatabaseData]
     public async Task UpdateMasterPassword_MasterPasswordSaltIsUpdated(
-        IUserRepository userRepository, Database database)
+        IUserRepository userRepository, Database database, IServiceProvider serviceProvider)
     {
         // Arrange
         var originalEmail = $"OriGinaL+{Guid.NewGuid()}@example.com";
@@ -706,7 +706,7 @@ public class UserRepositoryTests
         // Act
         var result = userRepository.SetMasterPassword(user.Id, masterPasswordUnlockData, "newMasterPasswordHash", "hint");
         Assert.NotNull(result);
-        await RunUpdateUserDataAsync(result, database);
+        await RunUpdateUserDataAsync(result, database, serviceProvider);
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(updatedUser);
@@ -940,29 +940,13 @@ public class UserRepositoryTests
         }
     };
 
-    private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
-    {
-        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
-        {
-            await using var connection = new SqlConnection(database.ConnectionString);
-            connection.Open();
-
-            await using var transaction = connection.BeginTransaction();
-            try
-            {
-                await task(connection, transaction);
-
-                transaction.Commit();
-            }
-            catch
-            {
-                transaction.Rollback();
-                throw;
-            }
-        }
-        else
-        {
-            await task();
-        }
-    }
+    /// <summary>
+    /// <see cref="UpdateUserData"/> declares its connection and transaction as optional, so it needs a cast to bind
+    /// to <see cref="DatabaseTransactionAction"/>.
+    /// </summary>
+    private static Task RunUpdateUserDataAsync(UpdateUserData task, Database database,
+        IServiceProvider serviceProvider)
+        => DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            new DatabaseTransactionAction((connection, transaction) => task(connection, transaction)),
+            serviceProvider);
 }
