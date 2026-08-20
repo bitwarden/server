@@ -36,6 +36,8 @@ jobs:
       - name: Verify format
         run: dotnet format --verify-no-changes
 
+# comment
+
   build-artifacts:
     name: Build Docker images
     runs-on: ubuntu-22.04
