@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -64,11 +65,11 @@ public class RevokeOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(orgUser1.UserId!.Value);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == orgUser1.UserId!.Value));
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(orgUser2.UserId!.Value);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == orgUser2.UserId!.Value));
     }
 
     [Theory]
@@ -171,7 +172,7 @@ public class RevokeOrganizationUserCommandTests
         SetupValidatorMock(sutProvider, [ValidationResultHelpers.Valid(orgUser)]);
 
         sutProvider.GetDependency<IPushNotificationService>()
-            .PushSyncOrgKeysAsync(orgUser.UserId!.Value)
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == orgUser.UserId!.Value))
             .Returns(Task.FromException(new Exception("Push notification failed")));
 
         // Act

@@ -166,7 +166,7 @@ public class CiphersController : Controller
         var user = await _userService.GetUserByPrincipalAsync(User);
 
         // Validate the model was encrypted by the posting user
-        ValidateCipherEncryptedByUser(model, user);
+        ValidateCipherEncryptedByUser(model, user, model.IsOrganizationCipher);
 
         var cipher = model.ToCipherDetails(user.Id);
         if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
@@ -185,7 +185,7 @@ public class CiphersController : Controller
         var user = await _userService.GetUserByPrincipalAsync(User);
 
         // Validate the model was encrypted by the posting user
-        ValidateCipherEncryptedByUser(model.Cipher, user);
+        ValidateCipherEncryptedByUser(model.Cipher, user, model.Cipher.IsOrganizationCipher);
 
         var cipher = model.Cipher.ToCipherDetails(user.Id);
         if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
@@ -229,8 +229,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Validate the model was encrypted by the posting user
-        ValidateCipherEncryptedByUser(model, user, id);
+        // Validate the model was encrypted by the posting user, against the cipher we hold rather than
+        // the organization the client claims.
+        ValidateCipherEncryptedByUser(model, user, cipher.OrganizationId.HasValue, id);
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
@@ -697,8 +698,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Validate the model was encrypted by the posting user
-        ValidateCipherEncryptedByUser(model.Cipher, user, id);
+        // Validate the model was encrypted by the posting user. Sharing always re-encrypts under the
+        // organization key, so there is no user key id to compare against.
+        ValidateCipherEncryptedByUser(model.Cipher, user, isOrganizationCipher: true, id);
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
@@ -1638,17 +1640,28 @@ public class CiphersController : Controller
     }
 
     /// <summary>
-    /// Validates that the cipher in <paramref name="model"/> was encrypted by the acting user, with that
-    /// user's current user key.
+    /// Validates that the cipher in <paramref name="model"/> was encrypted by the acting user, with the
+    /// key that owns it.
     /// <para>
-    /// The key id is only compared when both sides are present: the client may predate the field, and the
-    /// user may not have a key id recorded yet. This mirrors
+    /// The key id check only applies to user-owned ciphers. An organization cipher is encrypted with the
+    /// organization key, and organizations carry no key id yet, so there is nothing to compare against.
+    /// Once organizations have a key id, compare against it here.
+    /// </para>
+    /// <para>
+    /// Even for a user-owned cipher the key id is only compared when both sides are present: the client
+    /// may predate the field, and the user may not have a key id recorded yet. This mirrors
     /// <see cref="Core.KeyManagement.Models.Data.MasterPasswordUnlockData.ValidateKeyIdUnchangedForUser"/>.
     /// </para>
     /// </summary>
-    private void ValidateCipherEncryptedByUser(CipherRequestModel model, User user, Guid? cipherId = null)
+    private void ValidateCipherEncryptedByUser(CipherRequestModel model, User user, bool isOrganizationCipher,
+        Guid? cipherId = null)
     {
         ValidateCipherEncryptedForUser(model, user.Id, cipherId);
+
+        if (isOrganizationCipher)
+        {
+            return;
+        }
 
         var currentUserKeyId = user.GetUserKeyId();
         var encryptedByKeyId = model.GetEncryptedByKeyId();

@@ -148,7 +148,7 @@ public class AnnualUpgradeLineMapperTests
     {
         // Stricter than the page-load path was before: a discount with no usable coupon id is as
         // unquotable as an unexpanded one.
-        Assert.Null(Map(SubscriptionWith(discounts: [new Discount { Coupon = null }])));
+        Assert.Null(Map(SubscriptionWith(discounts: [new Discount { Source = new DiscountSource() }])));
 
         AssertLogged(LogLevel.Error, "unexpanded or couponless discount");
     }
