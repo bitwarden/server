@@ -1,5 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
+using Bit.OrganizationAuthorization;
 using Bit.Services.Pam.Api.Authorization;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Request;

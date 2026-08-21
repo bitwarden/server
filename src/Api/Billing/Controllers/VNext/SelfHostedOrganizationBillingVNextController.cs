@@ -4,6 +4,7 @@ using Bit.Api.Billing.Attributes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;

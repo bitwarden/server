@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Entities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;

@@ -1,7 +1,7 @@
-using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
 using Bit.Invoicing;
+using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Requirements;
 using Microsoft.AspNetCore.Builder;
