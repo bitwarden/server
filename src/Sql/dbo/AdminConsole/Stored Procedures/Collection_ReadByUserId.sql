@@ -4,8 +4,6 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Columns are qualified with UCD because the [AccessRule] join below also has [Id],
-    -- [OrganizationId] and [Name].
     SELECT
         UCD.[Id],
         UCD.[OrganizationId],
