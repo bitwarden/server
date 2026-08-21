@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
-using static Microsoft.AspNetCore.Http.HttpResults.BitwardenTypedResultsExtensions;
 
 namespace Bit.HttpExtensions.Test;
 
@@ -60,5 +60,17 @@ public class BitwardenValidationProblemResultTests
         var firstError = emailErrors[0];
         Assert.Equal("memberNotClaimed", firstError.GetProperty("type").GetString());
         Assert.Equal("Member not claimed", firstError.GetProperty("detail").GetString());
+    }
+
+    [Fact]
+    public void ReturningIt_DocumentsTheProblemDocumentOnTheEndpoint()
+    {
+        var handler = RequestDelegateFactory.Create(() =>
+            TypedResults.BitwardenValidationProblem(new Dictionary<string, ErrorCode[]>()));
+
+        var response = Assert.Single(handler.EndpointMetadata.OfType<IProducesResponseTypeMetadata>());
+        Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
+        Assert.Equal(typeof(BitwardenValidationProblemDetails), response.Type);
+        Assert.Equal(["application/problem+json"], response.ContentTypes);
     }
 }
