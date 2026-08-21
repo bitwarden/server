@@ -9,6 +9,7 @@ using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Exceptions;
+using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -25,17 +26,20 @@ public class EmergencyAccessController : Controller
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
     private readonly IEmergencyAccessService _emergencyAccessService;
     private readonly IGlobalSettings _globalSettings;
+    private readonly ICipherLeaseGate _cipherLeaseGate;
 
     public EmergencyAccessController(
         IUserService userService,
         IEmergencyAccessRepository emergencyAccessRepository,
         IEmergencyAccessService emergencyAccessService,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        ICipherLeaseGate cipherLeaseGate)
     {
         _userService = userService;
         _emergencyAccessRepository = emergencyAccessRepository;
         _emergencyAccessService = emergencyAccessService;
         _globalSettings = globalSettings;
+        _cipherLeaseGate = cipherLeaseGate;
     }
 
     [HttpGet("trusted")]
@@ -203,7 +207,8 @@ public class EmergencyAccessController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var viewResult = await _emergencyAccessService.ViewAsync(id, user);
-        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers, user);
+        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers, user,
+            _cipherLeaseGate.Unrestricted());
     }
 
     [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]
