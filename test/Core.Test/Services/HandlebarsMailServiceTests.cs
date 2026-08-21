@@ -348,16 +348,17 @@ public class HandlebarsMailServiceTests
     public async Task SendOrganizationMaxSeatLimitReachedEmailAsync_RendersOrganizationName()
     {
         // Arrange
-        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme Corp" };
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme.Corp" };
 
         // Act
         await _sut.SendOrganizationMaxSeatLimitReachedEmailAsync(organization, 5, new[] { "owner@example.com" });
 
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
-            m.Subject == "Acme Corp seat limit reached" &&
-            m.HtmlContent.Contains("Acme Corp has reached the seat limit of 5") &&
-            m.TextContent.Contains("Acme Corp has reached the seat limit of 5") &&
+            m.Subject == "Acme.Corp seat limit reached" &&
+            m.HtmlContent.Contains("Acme.Corp has reached the seat limit of 5") &&
+            m.TextContent.Contains("Acme.Corp has reached the seat limit of 5") &&
+            !m.HtmlContent.Contains("[dot]") &&
             !m.HtmlContent.Contains("Your organization has reached") &&
             m.Category == "OrganizationSeatsMaxReached"));
     }
@@ -366,16 +367,17 @@ public class HandlebarsMailServiceTests
     public async Task SendSecretsManagerMaxSeatLimitReachedEmailAsync_RendersOrganizationName()
     {
         // Arrange
-        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme Corp" };
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme.Corp" };
 
         // Act
         await _sut.SendSecretsManagerMaxSeatLimitReachedEmailAsync(organization, 5, new[] { "owner@example.com" });
 
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
-            m.Subject == "Acme Corp Secrets Manager seat limit reached" &&
-            m.HtmlContent.Contains("Acme Corp has reached the Secrets Manager seat limit of 5") &&
-            m.TextContent.Contains("Acme Corp has reached the Secrets Manager seat limit of 5") &&
+            m.Subject == "Acme.Corp Secrets Manager seat limit reached" &&
+            m.HtmlContent.Contains("Acme.Corp has reached the Secrets Manager seat limit of 5") &&
+            m.TextContent.Contains("Acme.Corp has reached the Secrets Manager seat limit of 5") &&
+            !m.HtmlContent.Contains("[dot]") &&
             !m.HtmlContent.Contains("Your organization has reached") &&
             m.Category == "OrganizationSmSeatsMaxReached"));
     }
@@ -384,16 +386,19 @@ public class HandlebarsMailServiceTests
     public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync_RendersOrganizationName()
     {
         // Arrange
-        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme Corp" };
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme.Corp" };
+        var currentYear = DateTime.UtcNow.Year.ToString();
 
         // Act
         await _sut.SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(organization, 5, new[] { "owner@example.com" });
 
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
-            m.Subject == "Acme Corp Secrets Manager machine accounts limit reached" &&
-            m.HtmlContent.Contains("Acme Corp has reached the Secrets Manager machine accounts limit of 5") &&
-            m.TextContent.Contains("Acme Corp has reached the Secrets Manager machine accounts limit of 5") &&
+            m.Subject == "Acme.Corp Secrets Manager machine accounts limit reached" &&
+            m.HtmlContent.Contains("Acme.Corp has reached the Secrets Manager machine accounts limit of 5") &&
+            m.TextContent.Contains("Acme.Corp has reached the Secrets Manager machine accounts limit of 5") &&
+            !m.HtmlContent.Contains("[dot]") &&
+            m.HtmlContent.Contains("&copy; " + currentYear + " Bitwarden Inc.") &&
             !m.HtmlContent.Contains("Your organization has reached") &&
             m.Category == "OrganizationSmServiceAccountsMaxReached"));
     }
@@ -421,14 +426,19 @@ public class HandlebarsMailServiceTests
             m.HtmlContent.Contains("Your Bitwarden organization, Acme Corp, is no longer managed by Best MSP.") &&
             m.HtmlContent.Contains("going to Admin Console in the web app, then selecting your organization, Billing, and") &&
             m.HtmlContent.Contains(">Payment Details</a>") &&
+            m.HtmlContent.Contains("/billing/payment-details") &&
+            !m.HtmlContent.Contains("/billing/payment-method") &&
+            m.HtmlContent.Contains("https://bitwarden.com/help/update-billing-info/#update-billing-for-organizations") &&
             m.TextContent.Contains("Your Bitwarden organization, Acme Corp, is no longer managed by Best MSP.") &&
             m.TextContent.Contains("Or click the following link:") &&
+            m.TextContent.Contains("/billing/payment-details") &&
+            !m.TextContent.Contains("<a ") &&
             m.Category == "ProviderUpdatePaymentMethod"));
     }
 
     [Theory]
-    [InlineData(true, "click the link below")]
-    [InlineData(false, "you will need to create an account with this email")]
+    [InlineData(true, "Accept the offer to activate your complimentary plan.")]
+    [InlineData(false, "create a Bitwarden account with your personal email address")]
     public async Task SendFamiliesForEnterpriseOfferEmailAsync_RendersUpdatedSubjectAndCopy(bool existingAccount, string expectedCopy)
     {
         // Arrange
@@ -438,19 +448,21 @@ public class HandlebarsMailServiceTests
                 callInfo.Arg<IEnumerable<IMailQueueMessage>>().Select(callInfo.Arg<Func<IMailQueueMessage, Task>>())));
 
         // Act
-        await _sut.SendFamiliesForEnterpriseOfferEmailAsync("Acme Corp", "user@example.com", existingAccount, "token");
+        await _sut.SendFamiliesForEnterpriseOfferEmailAsync("Acme.Corp", "user@example.com", existingAccount, "token");
 
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
             m.Subject == "Accept your Sponsored Families Plan" &&
-            m.HtmlContent.Contains("Acme Corp has sponsored a Bitwarden Family plan for you!") &&
+            m.HtmlContent.Contains("Acme.Corp has sponsored a free Families plan for you!") &&
             m.HtmlContent.Contains(expectedCopy) &&
             m.HtmlContent.Contains("If you do not recognize this account, please ignore this message.") &&
             m.HtmlContent.Contains("/accept-families-for-enterprise?token=token") &&
-            m.TextContent.Contains("Acme Corp has sponsored a Bitwarden Family plan for you!") &&
+            !m.HtmlContent.Contains("[dot]") &&
+            m.TextContent.Contains("Acme.Corp has sponsored a free Families plan for you!") &&
             m.TextContent.Contains(expectedCopy) &&
             m.TextContent.Contains("If you do not recognize this account, please ignore this message.") &&
-            m.TextContent.Contains("/accept-families-for-enterprise?token=token") &&
+            m.TextContent.Contains("/accept-families-for-enterprise?token=token&email=") &&
+            !m.TextContent.Contains("&amp;") &&
             m.Category == "FamiliesForEnterpriseOffer"));
     }
 

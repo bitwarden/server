@@ -320,7 +320,7 @@ public class HandlebarsMailService : IMailService
         {
             MaxSeatCount = maxSeatCount,
             VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id),
-            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName())
+            OrganizationName = organization.DisplayName()
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsMaxReached", model);
@@ -1434,7 +1434,7 @@ public class HandlebarsMailService : IMailService
             message.Category = "FamiliesForEnterpriseOffer";
             var model = new FamiliesForEnterpriseOfferViewModel
             {
-                SponsorOrgName = CoreHelpers.SanitizeForEmail(sponsorOrgName),
+                SponsorOrgName = sponsorOrgName,
                 SponsoredEmail = WebUtility.UrlEncode(invite.Email),
                 ExistingAccount = invite.ExistingAccount,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -1524,7 +1524,7 @@ public class HandlebarsMailService : IMailService
         {
             MaxSeatCount = maxSeatCount,
             VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id),
-            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName())
+            OrganizationName = organization.DisplayName()
         };
 
         await AddMessageContentAsync(message, "OrganizationSmSeatsMaxReached", model);
@@ -1540,7 +1540,7 @@ public class HandlebarsMailService : IMailService
         {
             MaxServiceAccountsCount = maxSeatCount,
             VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id),
-            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName())
+            OrganizationName = organization.DisplayName()
         };
 
         await AddMessageContentAsync(message, "OrganizationSmServiceAccountsMaxReached", model);
