@@ -26,7 +26,7 @@ public class InvoicePreviewBuilderTests
         {
           "id": "in_test", "total": 12790, "amount_due": 12790,
           "lines": { "data": [
-            { "amount": 12790, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm", "metadata": { "purchasable_reference": "pm-seat" } } } } },
+            { "amount": 12790, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm", "unit_amount_decimal": "2558", "metadata": { "purchasable_reference": "pm-seat" } } } } },
             { "amount": 500, "quantity": 1, "pricing": { "price_details": { "price": { "id": "price_mystery", "metadata": {} } } } }
           ] }
         }
@@ -36,7 +36,7 @@ public class InvoicePreviewBuilderTests
         var preview = builder.Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually);
 
         Assert.Equal("pm-seat", preview.PasswordManager.Seats.Reference);
-        Assert.Equal(127.90m, preview.PasswordManager.Seats.Cost);
+        Assert.Equal(25.58m, preview.PasswordManager.Seats.Cost);
         Assert.Contains(logger.Errors, e => e.Contains("price_mystery"));
     }
 
@@ -47,10 +47,10 @@ public class InvoicePreviewBuilderTests
         {
           "id": "in_test", "total": 22218, "amount_due": 22218,
           "lines": { "data": [
-            { "amount": 12790, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm_seat", "metadata": { "purchasable_reference": "pm-seat" } } } } },
-            { "amount": 3582, "quantity": 2, "pricing": { "price_details": { "price": { "id": "price_pm_storage", "metadata": { "purchasable_reference": "pm-storage" } } } } },
-            { "amount": 4567, "quantity": 3, "pricing": { "price_details": { "price": { "id": "price_sm_seat", "metadata": { "purchasable_reference": "sm-seat" } } } } },
-            { "amount": 1279, "quantity": 1, "pricing": { "price_details": { "price": { "id": "price_sm_sa", "metadata": { "purchasable_reference": "sm-service-account" } } } } }
+            { "amount": 12790, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm_seat", "unit_amount_decimal": "2558", "metadata": { "purchasable_reference": "pm-seat" } } } } },
+            { "amount": 3582, "quantity": 2, "pricing": { "price_details": { "price": { "id": "price_pm_storage", "unit_amount_decimal": "1791", "metadata": { "purchasable_reference": "pm-storage" } } } } },
+            { "amount": 4500, "quantity": 3, "pricing": { "price_details": { "price": { "id": "price_sm_seat", "unit_amount_decimal": "1500", "metadata": { "purchasable_reference": "sm-seat" } } } } },
+            { "amount": 1279, "quantity": 1, "pricing": { "price_details": { "price": { "id": "price_sm_sa", "unit_amount_decimal": "1279", "metadata": { "purchasable_reference": "sm-service-account" } } } } }
           ] }
         }
         """);
@@ -59,11 +59,11 @@ public class InvoicePreviewBuilderTests
         var preview = builder.Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually);
 
         Assert.Equal(5, preview.PasswordManager.Seats.Quantity);
-        Assert.Equal(127.90m, preview.PasswordManager.Seats.Cost);
+        Assert.Equal(25.58m, preview.PasswordManager.Seats.Cost);
         Assert.Equal(2, preview.PasswordManager.AdditionalStorage!.Quantity);
-        Assert.Equal(35.82m, preview.PasswordManager.AdditionalStorage.Cost);
+        Assert.Equal(17.91m, preview.PasswordManager.AdditionalStorage.Cost);
         Assert.Equal(3, preview.SecretsManager!.Seats.Quantity);
-        Assert.Equal(45.67m, preview.SecretsManager.Seats.Cost);
+        Assert.Equal(15.00m, preview.SecretsManager.Seats.Cost);
         Assert.Equal(1, preview.SecretsManager.AdditionalServiceAccounts!.Quantity);
         Assert.Equal(12.79m, preview.SecretsManager.AdditionalServiceAccounts.Cost);
     }
@@ -169,7 +169,7 @@ public class InvoicePreviewBuilderTests
           "id": "in_test", "total": 17606, "amount_due": 17606,
           "lines": { "data": [
             { "amount": 12790, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm_seat", "metadata": { "purchasable_reference": "pm-seat" } } } } },
-            { "amount": 3582, "quantity": 2, "proration": true, "pricing": { "price_details": { "price": { "id": "price_pm_storage_pos", "metadata": { "purchasable_reference": "pm-storage" } } } }, "parent": { "subscription_item_details": { "proration": false } } },
+            { "amount": 3582, "quantity": 2, "proration": true, "pricing": { "price_details": { "price": { "id": "price_pm_storage_pos", "unit_amount_decimal": "1791", "metadata": { "purchasable_reference": "pm-storage" } } } }, "parent": { "subscription_item_details": { "proration": false } } },
             { "amount": 1234, "proration": false, "pricing": { "price_details": { "price": { "id": "price_pm_storage_prorate", "metadata": { "purchasable_reference": "pm-storage" } } } }, "parent": { "subscription_item_details": { "proration": true } } }
           ] }
         }
@@ -181,7 +181,7 @@ public class InvoicePreviewBuilderTests
         // Top-level "proration": true on this line is a no-op (unmapped field); nested false wins -> it's a position.
         Assert.NotNull(preview.PasswordManager.AdditionalStorage);
         Assert.Equal(2, preview.PasswordManager.AdditionalStorage!.Quantity);
-        Assert.Equal(35.82m, preview.PasswordManager.AdditionalStorage.Cost);
+        Assert.Equal(17.91m, preview.PasswordManager.AdditionalStorage.Cost);
 
         // Top-level "proration": false is a no-op; nested true wins -> it's a proration, not a second position.
         var proration = Assert.Single(preview.PasswordManager.Prorations!);
@@ -291,9 +291,9 @@ public class InvoicePreviewBuilderTests
         var preview = builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly);
 
         Assert.Equal(5, preview.PasswordManager.Seats.Quantity);
-        Assert.Equal(127.90m, preview.PasswordManager.Seats.Cost);
+        Assert.Equal(25.58m, preview.PasswordManager.Seats.Cost);
         Assert.Equal(2, preview.PasswordManager.AdditionalStorage!.Quantity);
-        Assert.Equal(11.98m, preview.PasswordManager.AdditionalStorage.Cost);
+        Assert.Equal(5.99m, preview.PasswordManager.AdditionalStorage.Cost);
         Assert.Equal(139.88m, preview.Total);
         Assert.Equal(139.88m, preview.AmountDue);
         Assert.Equal(0m, preview.EstimatedTax);
@@ -378,7 +378,7 @@ public class InvoicePreviewBuilderTests
         var preview = builder.Build(subscription, PlanTierType.Teams, PlanCadenceType.Monthly);
 
         Assert.Equal(300, preview.PasswordManager.Seats.Quantity);
-        Assert.Equal(1.50m, preview.PasswordManager.Seats.Cost); // 300 × 0.5¢ ÷ 100 — would be 0 under the old UnitAmount read
-        Assert.Equal(1.50m, preview.Total);
+        Assert.Equal(0.005m, preview.PasswordManager.Seats.Cost); // 0.5¢ unit price ÷ 100 — UnitAmountDecimal avoids the old truncate-to-0
+        Assert.Equal(1.50m, preview.Total); // 300 × 0.5¢ ÷ 100
     }
 }

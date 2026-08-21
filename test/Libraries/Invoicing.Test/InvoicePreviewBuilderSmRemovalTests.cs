@@ -25,7 +25,7 @@ public class InvoicePreviewBuilderSmRemovalTests
               "period": { "start": 1788387520, "end": 1789769920 } },
             { "amount": 5000, "quantity": 5,
               "parent": { "subscription_item_details": { "proration": false }, "type": "subscription_item_details" },
-              "pricing": { "price_details": { "price": { "id": "price_pm_seat", "metadata": { "purchasable_reference": "pm-seat" } } } },
+              "pricing": { "price_details": { "price": { "id": "price_pm_seat", "unit_amount_decimal": "1000", "metadata": { "purchasable_reference": "pm-seat" } } } },
               "period": { "start": 1789769920, "end": 1792361920 } }
           ] }
         }
@@ -33,7 +33,7 @@ public class InvoicePreviewBuilderSmRemovalTests
 
         var preview = Builder().Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Monthly);
 
-        Assert.Equal(50.00m, preview.PasswordManager.Seats.Cost);
+        Assert.Equal(10.00m, preview.PasswordManager.Seats.Cost);
         Assert.Equal(34.52m, preview.Total);
         Assert.Equal(34.52m, preview.AmountDue);
 
@@ -43,8 +43,10 @@ public class InvoicePreviewBuilderSmRemovalTests
         Assert.Equal(15.48m, proration.Credit);
         Assert.Equal(-15.48m, proration.Total);
 
-        // Visible rows now reconcile to the invoice total.
-        Assert.Equal(preview.Total, preview.PasswordManager.Seats.Cost + proration.Total);
+        // Visible rows now reconcile to the invoice total (unit cost × quantity, plus the proration).
+        Assert.Equal(
+            preview.Total,
+            preview.PasswordManager.Seats.Quantity * preview.PasswordManager.Seats.Cost + proration.Total);
     }
 
     // A plain Password Manager invoice with no Secrets Manager line and no Secrets Manager proration
@@ -79,10 +81,10 @@ public class InvoicePreviewBuilderSmRemovalTests
           "lines": { "data": [
             { "amount": 5000, "quantity": 5,
               "parent": { "subscription_item_details": { "proration": false }, "type": "subscription_item_details" },
-              "pricing": { "price_details": { "price": { "id": "price_pm_seat", "metadata": { "purchasable_reference": "pm-seat" } } } } },
+              "pricing": { "price_details": { "price": { "id": "price_pm_seat", "unit_amount_decimal": "1000", "metadata": { "purchasable_reference": "pm-seat" } } } } },
             { "amount": 1000, "quantity": 2,
               "parent": { "subscription_item_details": { "proration": false }, "type": "subscription_item_details" },
-              "pricing": { "price_details": { "price": { "id": "price_sm_service_account", "metadata": { "purchasable_reference": "sm-service-account" } } } } }
+              "pricing": { "price_details": { "price": { "id": "price_sm_service_account", "unit_amount_decimal": "500", "metadata": { "purchasable_reference": "sm-service-account" } } } } }
           ] }
         }
         """);
@@ -94,9 +96,12 @@ public class InvoicePreviewBuilderSmRemovalTests
         Assert.Null(preview.SecretsManager.Prorations);
         var serviceAccounts = preview.SecretsManager.AdditionalServiceAccounts;
         Assert.NotNull(serviceAccounts);
-        Assert.Equal(10.00m, serviceAccounts!.Cost);
+        Assert.Equal(5.00m, serviceAccounts!.Cost);
 
-        // The service-account row reconciles into the total alongside Password Manager seats.
-        Assert.Equal(preview.Total, preview.PasswordManager.Seats.Cost + serviceAccounts.Cost);
+        // The service-account row reconciles into the total alongside Password Manager seats (unit cost × quantity).
+        Assert.Equal(
+            preview.Total,
+            preview.PasswordManager.Seats.Quantity * preview.PasswordManager.Seats.Cost
+                + serviceAccounts.Quantity * serviceAccounts.Cost);
     }
 }

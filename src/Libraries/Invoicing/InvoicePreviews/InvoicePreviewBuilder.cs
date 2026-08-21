@@ -19,7 +19,8 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
 
         foreach (var line in invoice.Lines?.Data ?? [])
         {
-            var reference = ResolvePurchasableReference(line.Pricing?.PriceDetails?.Price);
+            var price = line.Pricing?.PriceDetails?.Price;
+            var reference = ResolvePurchasableReference(price);
             if (reference is null)
             {
                 continue;
@@ -43,7 +44,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             {
                 Reference = reference,
                 Quantity = line.Quantity ?? 0,
-                Cost = line.Amount / 100m,
+                Cost = (price?.UnitAmountDecimal ?? 0) / 100m,
                 Discounts = discounts.ItemLevel.GetValueOrDefault(reference),
             };
             if (!lineItemsByReference.TryAdd(reference, item))
@@ -75,9 +76,9 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
 
         foreach (var subscriptionItem in subscription.Items?.Data ?? [])
         {
+            var unitCost = (subscriptionItem.Price?.UnitAmountDecimal ?? 0) / 100m;
             // Every item counts toward the total, even one we cannot place, so the total is never understated.
-            var cost = subscriptionItem.Quantity * (subscriptionItem.Price?.UnitAmountDecimal ?? 0) / 100m;
-            total += cost;
+            total += subscriptionItem.Quantity * unitCost;
 
             var reference = ResolvePurchasableReference(subscriptionItem.Price);
             if (reference is null)
@@ -89,7 +90,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             {
                 Reference = reference,
                 Quantity = subscriptionItem.Quantity,
-                Cost = cost,
+                Cost = unitCost,
             };
             if (!lineItemsByReference.TryAdd(reference, item))
             {
