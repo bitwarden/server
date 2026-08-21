@@ -120,6 +120,50 @@ public class CollectionRepositoryGetManagingUserIdsTests
         Assert.DoesNotContain(owner.Id, userIds);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManagingUserIdsAsync_CustomEditAnyCollection_Included_WithoutPermissionExcluded(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        // Admin access is off so that EditAnyCollection is the only thing that can grant Manage here.
+        organization.AllowAdminAccessToAllCollectionItems = false;
+        await organizationRepository.ReplaceAsync(organization);
+
+        var editor = await userRepository.CreateTestUserAsync("editanycollection");
+        await organizationUserRepository.CreateAsync(CreateCustomUser(organization, editor,
+            new Permissions { EditAnyCollection = true }));
+
+        var manager = await userRepository.CreateTestUserAsync("managegroups");
+        await organizationUserRepository.CreateAsync(CreateCustomUser(organization, manager,
+            new Permissions { ManageGroups = true }));
+
+        // A collection neither user is directly assigned to.
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+
+        var userIds = await collectionRepository.GetManagingUserIdsAsync(collection.Id);
+
+        Assert.Contains(editor.Id, userIds);
+        Assert.DoesNotContain(manager.Id, userIds);
+    }
+
+    private static OrganizationUser CreateCustomUser(Organization organization, User user, Permissions permissions)
+    {
+        var organizationUser = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Custom,
+        };
+
+        organizationUser.SetPermissions(permissions);
+
+        return organizationUser;
+    }
+
     private static Task<OrganizationUser> CreateConfirmedUserAsync(
         IOrganizationUserRepository organizationUserRepository, Organization organization, User user)
         => organizationUserRepository.CreateAsync(new OrganizationUser
