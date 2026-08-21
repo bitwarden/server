@@ -8,7 +8,7 @@ public record InvoicePreviewItem
 
     public required long Quantity { get; init; }
 
-    /// <summary>Line cost in dollars.</summary>
+    /// <summary>Unit cost in dollars.</summary>
     public required decimal Cost { get; init; }
 
     /// <summary>Item-scoped discounts (coupons with a non-empty applies-to set).</summary>
