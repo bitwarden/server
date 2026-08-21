@@ -106,18 +106,16 @@ public class RequireOrganizationAbilityAttributeTests
     [Theory]
     [InlineData("NotARealAbility")]
     [InlineData("useRiskInsights")] // property lookup is case-sensitive
+    [InlineData("Id")] // exists, but is not a boolean
     [InlineData("")]
-    public async Task OnActionExecutionAsync_UnknownAbilityKey_Throws(string abilityKey)
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void Constructor_UnknownAbilityKey_Throws(string? abilityKey)
     {
-        var orgId = Guid.NewGuid();
-        var cacheService = CreateCacheService(orgId, new OrganizationAbility { Id = orgId, UseRiskInsights = true });
-        var context = CreateContext(cacheService, new RouteValueDictionary { { "organizationId", orgId.ToString() } });
-        var sut = new RequireOrganizationAbilityAttribute(abilityKey);
+        var exception = Assert.Throws<ArgumentException>(() => new RequireOrganizationAbilityAttribute(abilityKey!));
 
-        var exception = await Assert.ThrowsAsync<Exception>(() =>
-            sut.OnActionExecutionAsync(context, () => Task.FromResult(CreateExecutedContext(context))));
-
-        Assert.Contains("is not a valid Organization ability", exception.Message);
+        Assert.Equal("abilityKey", exception.ParamName);
+        Assert.Contains("must be a valid boolean property", exception.Message);
     }
 
     [Fact]
