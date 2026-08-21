@@ -1,5 +1,4 @@
-﻿using Bit.Api.AdminConsole.Authorization;
-using Bit.Api.AdminConsole.Authorization.Requirements;
+﻿using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Billing.Attributes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Organizations.Queries;

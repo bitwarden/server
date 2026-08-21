@@ -1,4 +1,4 @@
-using Bit.Invoicing.InvoicePreviews;
+﻿using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Queries;
 using Bit.Invoicing.InvoicePreviews.Stripe;
 using Bitwarden.Server.Sdk.Environment;
