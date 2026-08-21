@@ -2,7 +2,6 @@
 using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Core;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
@@ -12,7 +11,6 @@ using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -226,28 +224,8 @@ public class OrganizationReportControllerTests
             .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
     }
 
-    [Theory, BitAutoData]
-    public async Task GetLatestOrganizationReportAsync_NoUseRiskInsights_ThrowsBadRequestException(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId)
-    {
-        // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .GetOrganizationAbilityAsync(orgId)
-            .Returns(new OrganizationAbility { UseRiskInsights = false });
-
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.GetLatestOrganizationReportAsync(orgId));
-
-        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
-            .DidNotReceive()
-            .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
-    }
+    // The UseRiskInsights plan check is enforced by RequireOrganizationAbilityAttribute on each
+    // action rather than in the controller body; see RequireOrganizationAbilityAttributeTests.
 
     // CreateOrganizationReportAsync - the file path is gated on the new architecture, then selected by
     // request shape (FileSize); it is never selected by the file-storage flag.
@@ -1720,10 +1698,6 @@ public class OrganizationReportControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
-
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .GetOrganizationAbilityAsync(orgId)
-            .Returns(new OrganizationAbility { UseRiskInsights = true });
     }
 
     private static void SetupNewArchitecture(
@@ -1746,9 +1720,5 @@ public class OrganizationReportControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
-
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .GetOrganizationAbilityAsync(orgId)
-            .Returns(new OrganizationAbility { UseRiskInsights = true });
     }
 }
