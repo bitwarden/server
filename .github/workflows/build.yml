@@ -303,11 +303,6 @@ jobs:
             echo "METADATA_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      # org.opencontainers.image.licenses is intentionally not overridden here. These images
-      # combine AGPL/Bitwarden-licensed code with third-party base images (.NET, Alpine, nginx,
-      # SQL Server), so no single hand-maintained SPDX expression is accurate. The action falls
-      # back to the repository's detected SPDX id (NOASSERTION), which is the honest value.
-      # Use an SBOM if a full license inventory is needed.
       - name: Generate image metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
