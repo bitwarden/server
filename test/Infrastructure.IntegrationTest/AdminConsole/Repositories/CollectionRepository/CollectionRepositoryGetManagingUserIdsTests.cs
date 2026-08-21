@@ -132,7 +132,7 @@ public class CollectionRepositoryGetManagingUserIdsTests
         organization.AllowAdminAccessToAllCollectionItems = false;
         await organizationRepository.ReplaceAsync(organization);
 
-        var editor = await userRepository.CreateTestUserAsync("editanycollection");
+        var editor = await userRepository.CreateTestUserAsync("editany");
         await organizationUserRepository.CreateAsync(CreateCustomUser(organization, editor,
             new Permissions { EditAnyCollection = true }));
 
