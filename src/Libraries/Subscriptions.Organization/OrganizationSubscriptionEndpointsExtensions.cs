@@ -10,7 +10,11 @@ namespace Bit.Subscriptions.Organization;
 /// <summary>Maps the organization-scoped subscription HTTP surface as a Minimal API endpoint group.</summary>
 public static class OrganizationSubscriptionEndpointsExtensions
 {
-    /// <summary>Attaches the organization subscription group's shared cross-cutting chain to an empty group; the host owns the route prefix. Empty at this stage. Only an authenticated caller is required here; each handler performs its own organization billing authorization check.</summary>
+    /// <summary>
+    /// Attaches the organization subscription group's shared cross-cutting chain to an empty group;
+    /// the host owns the route prefix. Only an authenticated caller is required here; each handler
+    /// performs its own organization billing authorization check.
+    /// </summary>
     public static RouteGroupBuilder MapOrganizationSubscriptionEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("");
