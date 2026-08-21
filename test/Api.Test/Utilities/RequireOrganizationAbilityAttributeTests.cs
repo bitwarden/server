@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.AbilitiesCache;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Utilities;

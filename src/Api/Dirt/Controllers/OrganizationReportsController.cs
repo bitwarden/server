@@ -3,7 +3,6 @@ using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
