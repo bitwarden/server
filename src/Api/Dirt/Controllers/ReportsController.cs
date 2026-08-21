@@ -2,6 +2,7 @@
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Reports.Models.Data;
@@ -26,6 +27,7 @@ public class ReportsController : Controller
     private readonly IGetPasswordHealthReportApplicationQuery _getPwdHealthReportAppQuery;
     private readonly IDropPasswordHealthReportApplicationCommand _dropPwdHealthReportAppCommand;
     private readonly IGetPasskeyDirectoryQuery _getPasskeyDirectoryQuery;
+    private readonly IOrganizationAbilityCacheService _orgAbilityCacheService;
     private readonly ILogger<ReportsController> _logger;
 
     public ReportsController(
@@ -36,6 +38,7 @@ public class ReportsController : Controller
         IGetPasswordHealthReportApplicationQuery getPasswordHealthReportApplicationQuery,
         IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand,
         IGetPasskeyDirectoryQuery getPasskeyDirectoryQuery,
+        IOrganizationAbilityCacheService orgAbilityCacheService,
         ILogger<ReportsController> logger
     )
     {
@@ -46,6 +49,7 @@ public class ReportsController : Controller
         _getPwdHealthReportAppQuery = getPasswordHealthReportApplicationQuery;
         _dropPwdHealthReportAppCommand = dropPwdHealthReportAppCommand;
         _getPasskeyDirectoryQuery = getPasskeyDirectoryQuery;
+        _orgAbilityCacheService = orgAbilityCacheService;
         _logger = logger;
     }
 
@@ -60,8 +64,6 @@ public class ReportsController : Controller
     [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IEnumerable<MemberCipherDetailsResponseModel>> GetMemberCipherDetails(Guid orgId)
     {
-        // Using the AccessReports permission here until new permissions
-        // are needed for more control over reports
         if (!await _currentContext.AccessReports(orgId))
         {
             throw new NotFoundException();
@@ -143,14 +145,10 @@ public class ReportsController : Controller
     /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
     /// <exception cref="NotFoundException">If the user lacks access</exception>
     [HttpPost("password-health-report-application")]
-    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<PasswordHealthReportApplication> AddPasswordHealthReportApplication(
         [FromBody] PasswordHealthReportApplicationModel request)
     {
-        if (!await _currentContext.AccessReports(request.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
+        await AuthorizeAsync(request.OrganizationId);
 
         var commandRequest = new AddPasswordHealthReportApplicationRequest
         {
@@ -169,13 +167,12 @@ public class ReportsController : Controller
     /// <exception cref="NotFoundException">If user does not have access to the OrganizationId</exception>
     /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
     [HttpPost("password-health-report-applications")]
-    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task<IEnumerable<PasswordHealthReportApplication>> AddPasswordHealthReportApplications(
         [FromBody] IEnumerable<PasswordHealthReportApplicationModel> request)
     {
-        if (request.Any(_ => _currentContext.AccessReports(_.OrganizationId).Result == false))
+        foreach (var item in request)
         {
-            throw new NotFoundException();
+            await AuthorizeAsync(item.OrganizationId);
         }
 
         var commandRequests = request.Select(request => new AddPasswordHealthReportApplicationRequest
@@ -198,14 +195,10 @@ public class ReportsController : Controller
     /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
     /// <exception cref="BadRequestException">If the organization does not have any records</exception>
     [HttpDelete("password-health-report-application")]
-    [RequireOrganizationAbility("UseRiskInsights")]
     public async Task DropPasswordHealthReportApplication(
         [FromBody] DropPasswordHealthReportApplicationRequest request)
     {
-        if (!await _currentContext.AccessReports(request.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
+        await AuthorizeAsync(request.OrganizationId);
 
         await _dropPwdHealthReportAppCommand.DropPasswordHealthReportApplicationAsync(request);
     }
@@ -226,5 +219,24 @@ public class ReportsController : Controller
             Mfa = e.Mfa,
             Instructions = e.Instructions
         });
+    }
+
+    /// <summary>
+    /// Verifies the current Organization is authorized to access the Access Intelligence (formerly Risk Insights) reporting feature.
+    /// </summary>
+    /// <param name="organizationId">The organization ID to authorize.</param>
+    private async Task AuthorizeAsync(Guid organizationId)
+    {
+        if (!await _currentContext.AccessReports(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        // still required since the RequireOrganizationAbilityAttribute can not be applied to all endpoints in this controller - the organizationId is not present in route. 
+        var orgAbility = await _orgAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (orgAbility == null || !orgAbility.UseRiskInsights)
+        {
+            throw new NotFoundException("The user's organization does not have access to this feature in their plan.");
+        }
     }
 }
