@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Core.AdminConsole.Entities.Provider;
