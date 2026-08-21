@@ -29,9 +29,9 @@ public class MemberUpdateRequestModel : MemberBaseModel, IValidatableObject
             // Clear any permissions left over from a previous Custom role.
             existingUser.Permissions = null;
         }
-        // Permissions property is optional for backwards compatibility with existing usage
         else if (Permissions is not null)
         {
+            // Permissions property is optional for backwards compatibility with existing usage
             existingUser.SetPermissions(Permissions.ToData());
         }
 
