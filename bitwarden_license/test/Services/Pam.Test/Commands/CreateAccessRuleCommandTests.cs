@@ -1,10 +1,10 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
@@ -38,7 +38,7 @@ public class CreateAccessRuleCommandTests
             .CreateAsync(rule)
             .Returns(rule);
 
-        var result = await sutProvider.Sut.CreateAsync(rule, []);
+        var result = (await sutProvider.Sut.CreateAsync(rule, [])).AssertSuccess();
 
         Assert.Equal(_now, result.CreationDate);
         Assert.Equal(_now, result.RevisionDate);
@@ -65,7 +65,7 @@ public class CreateAccessRuleCommandTests
             .CreateAsync(rule)
             .Returns(rule);
 
-        var result = await sutProvider.Sut.CreateAsync(rule, collectionIds);
+        var result = (await sutProvider.Sut.CreateAsync(rule, collectionIds)).AssertSuccess();
 
         Assert.Equal(collectionIds, result.CollectionIds);
         await sutProvider.GetDependency<ICollectionRepository>().Received(1)
@@ -87,7 +87,7 @@ public class CreateAccessRuleCommandTests
             .CreateAsync(rule)
             .Returns(rule);
 
-        var result = await sutProvider.Sut.CreateAsync(rule, []);
+        var result = (await sutProvider.Sut.CreateAsync(rule, [])).AssertSuccess();
 
         Assert.True(result.AllowsExtensions);
         Assert.Equal(3600, result.MaxExtensionDurationSeconds);
@@ -101,10 +101,11 @@ public class CreateAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         sutProvider.GetDependency<IAccessRuleWriteValidator>()
             .ValidateAsync(Arg.Any<Guid>(), Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>())
-            .ThrowsAsync(new BadRequestException("Name is required."));
+            .Returns(new AccessRuleNameRequired());
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
-        Assert.Equal("Name is required.", ex.Message);
+        var result = await sutProvider.Sut.CreateAsync(rule, []);
+
+        Assert.IsType<AccessRuleNameRequired>(result.AssertError());
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
             .SetAccessRuleAssociationsAsync(default, default, default!, default!);
@@ -120,7 +121,7 @@ public class CreateAccessRuleCommandTests
         SetupValidator(sutProvider, rule.OrganizationId, []);
         sutProvider.GetDependency<IAccessRuleRepository>().CreateAsync(rule).Returns(rule);
 
-        await sutProvider.Sut.CreateAsync(rule, []);
+        (await sutProvider.Sut.CreateAsync(rule, [])).AssertSuccess();
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>

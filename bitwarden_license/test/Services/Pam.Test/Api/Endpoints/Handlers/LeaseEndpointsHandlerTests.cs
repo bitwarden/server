@@ -11,6 +11,7 @@ using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using OneOf.Types;
 using Xunit;
 using ApiEnums = Bit.Services.Pam.Api.Models;
 
@@ -84,7 +85,10 @@ public class LeaseEndpointsHandlerTests
     {
         SetupUser(sutProvider, userId);
 
-        await sutProvider.Sut.Revoke(_user, leaseId, new AccessLeaseRevokeRequestModel { Reason = "policy" });
+        sutProvider.GetDependency<IRevokeAccessLeaseCommand>().RevokeAsync(userId, leaseId, "policy").Returns(new None());
+
+        (await sutProvider.Sut.Revoke(_user, leaseId, new AccessLeaseRevokeRequestModel { Reason = "policy" }))
+            .AssertNoContent();
 
         await sutProvider.GetDependency<IRevokeAccessLeaseCommand>().Received(1).RevokeAsync(userId, leaseId, "policy");
     }
@@ -101,7 +105,7 @@ public class LeaseEndpointsHandlerTests
             .ExtendAsync(userId, Arg.Any<AccessLeaseExtensionSubmission>())
             .Returns(details);
 
-        var result = await sutProvider.Sut.Extend(_user, leaseId, model);
+        var result = (await sutProvider.Sut.Extend(_user, leaseId, model)).AssertOk();
 
         Assert.Equal(details.Id, result.Id);
         Assert.Equal(ApiEnums.AccessRequestStatus.Approved, result.Status);

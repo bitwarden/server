@@ -1,10 +1,11 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Context;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
@@ -42,21 +43,21 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         _timeProvider = timeProvider;
     }
 
-    public async Task<AccessRequestDetails> ExtendAsync(Guid userId, AccessLeaseExtensionSubmission submission)
+    public async Task<CommandResult<AccessRequestDetails>> ExtendAsync(Guid userId, AccessLeaseExtensionSubmission submission)
     {
         var lease = await _accessLeaseRepository.GetByIdAsync(submission.LeaseId);
 
         // 404 for both missing and someone else's lease, so the caller can't probe for leases they don't own.
         if (lease is null || lease.RequesterId != userId)
         {
-            throw new NotFoundException();
+            return new AccessLeaseNotFound();
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (lease.Status != AccessLeaseStatus.Active || lease.NotAfter <= now)
         {
-            throw new ConflictException("This lease is no longer active.");
+            return new AccessLeaseNoLongerActive();
         }
 
         // Extensions reuse the cipher's governing rule, but never its approval gate: they are always auto-approved,
@@ -65,36 +66,36 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         var governingRule = await _resolver.ResolveAsync(userId, lease.CipherId, signals);
         if (governingRule is null)
         {
-            throw new BadRequestException("This item does not require a lease.");
+            return new CipherNotGated();
         }
 
         if (!governingRule.AllowsExtensions)
         {
-            throw new BadRequestException("This item does not allow extending a lease.");
+            return new ExtensionsNotAllowed();
         }
 
         if (submission.DurationSeconds <= 0)
         {
-            throw new BadRequestException("A positive duration is required.");
+            return new DurationMustBePositive();
         }
 
         // The rule's max extension length is the cap (the admin picks it from presets); it is always set when
         // AllowsExtensions is true. A missing cap is treated as zero so a misconfigured rule denies.
         if (submission.DurationSeconds > (governingRule.MaxExtensionDurationSeconds ?? 0))
         {
-            throw new BadRequestException("The requested duration exceeds the maximum extension length for this item.");
+            return new ExtensionExceedsMax();
         }
 
         if (string.IsNullOrWhiteSpace(submission.Reason))
         {
-            throw new BadRequestException("A justification is required to extend a lease.");
+            return new ExtensionReasonRequired();
         }
 
         // A lease may be extended exactly once. Friendly early check; the mint proc re-counts under a per-lease lock
         // and is the race-safe authority.
         if (await _accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id) >= 1)
         {
-            throw new BadRequestException("This lease has already been extended.");
+            return new AccessLeaseAlreadyExtended();
         }
 
         // The extension window spans from the lease's current end to its new end; NotAfter is the lease's new end.
@@ -148,9 +149,9 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         switch (outcome)
         {
             case AccessLeaseExtendOutcome.LeaseNotActive:
-                throw new ConflictException("This lease is no longer active.");
+                return new AccessLeaseNoLongerActive();
             case AccessLeaseExtendOutcome.AlreadyExtended:
-                throw new BadRequestException("This lease has already been extended.");
+                return new AccessLeaseAlreadyExtended();
         }
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });

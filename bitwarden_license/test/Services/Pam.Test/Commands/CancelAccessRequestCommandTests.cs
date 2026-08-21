@@ -1,9 +1,9 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Commands;
-using Bit.Services.Pam.Services;
-using Bit.Core.Exceptions;
-using Bit.Pam.Entities;
+﻿using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
+using Bit.Services.Pam.OrganizationFeatures.Commands;
+using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
@@ -18,18 +18,20 @@ public class CancelAccessRequestCommandTests
     private static readonly DateTime _now = new(2026, 6, 11, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
-    public async Task CancelAsync_RequestMissing_ThrowsNotFound(Guid userId, Guid requestId)
+    public async Task CancelAsync_RequestMissing_ReturnsNotFound(Guid userId, Guid requestId)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(requestId).Returns((AccessRequest?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CancelAsync(userId, requestId));
+        var result = await sutProvider.Sut.CancelAsync(userId, requestId);
+
+        Assert.IsType<AccessRequestNotFound>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task CancelAsync_NeitherRequesterNorManager_ThrowsNotFound(Guid userId, AccessRequest request)
+    public async Task CancelAsync_NeitherRequesterNorManager_ReturnsNotFound(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
         request.Status = AccessRequestStatus.Pending;
@@ -37,7 +39,9 @@ public class CancelAccessRequestCommandTests
         // userId is neither the requester nor a manager (CanManageCollectionAsync defaults to false).
 
         // A request the caller can't act on is indistinguishable from a missing one, so ids can't be probed.
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CancelAsync(userId, request.Id));
+        var result = await sutProvider.Sut.CancelAsync(userId, request.Id);
+
+        Assert.IsType<AccessRequestNotFound>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -48,14 +52,15 @@ public class CancelAccessRequestCommandTests
     [BitAutoData(AccessRequestStatus.Denied)]
     [BitAutoData(AccessRequestStatus.Cancelled)]
     [BitAutoData(AccessRequestStatus.Expired)]
-    public async Task CancelAsync_TerminalStatus_ThrowsConflict(AccessRequestStatus status, AccessRequest request)
+    public async Task CancelAsync_TerminalStatus_ReturnsConflict(AccessRequestStatus status, AccessRequest request)
     {
         var sutProvider = Setup();
         request.Status = status;
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+        var result = await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id);
+
+        Assert.IsType<AccessRequestAlreadyResolved>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
@@ -72,7 +77,7 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         // No lease produced (GetByAccessRequestIdAsync defaults to null).
 
-        await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id);
+        (await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id)).AssertSuccess();
 
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CancelAsync(request.Id, _now);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -95,7 +100,7 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(managerId, request.CollectionId).Returns(true);
 
-        await sutProvider.Sut.CancelAsync(managerId, request.Id);
+        (await sutProvider.Sut.CancelAsync(managerId, request.Id)).AssertSuccess();
 
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CancelWithDecisionAsync(
             request,
@@ -114,7 +119,7 @@ public class CancelAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelAsync_ApprovedWithActiveLease_ThrowsConflict(AccessRequest request, AccessLease lease)
+    public async Task CancelAsync_ApprovedWithActiveLease_ReturnsConflict(AccessRequest request, AccessLease lease)
     {
         var sutProvider = Setup();
         request.Status = AccessRequestStatus.Approved;
@@ -122,8 +127,9 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+        var result = await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id);
+
+        Assert.IsType<AccessRequestHasActiveLease>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -133,7 +139,7 @@ public class CancelAccessRequestCommandTests
     [Theory]
     [BitAutoData(AccessLeaseStatus.Revoked)]
     [BitAutoData(AccessLeaseStatus.Expired)]
-    public async Task CancelAsync_ApprovedWithEndedLease_ThrowsConflict(
+    public async Task CancelAsync_ApprovedWithEndedLease_ReturnsConflict(
         AccessLeaseStatus leaseStatus, AccessRequest request, AccessLease lease)
     {
         var sutProvider = Setup();
@@ -142,8 +148,9 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+        var result = await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id);
+
+        Assert.IsType<AccessRequestAlreadyResolved>(result.AssertError());
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
     }

@@ -1,8 +1,8 @@
-﻿using Bit.Core.Exceptions;
-using Bit.Pam.Entities;
+﻿using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
@@ -24,36 +24,38 @@ public class DeleteAccessRuleCommandTests
             .GetByIdAsync(existing.Id)
             .Returns(existing);
 
-        await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id, Guid.NewGuid());
+        (await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id, Guid.NewGuid())).AssertSuccess();
 
         await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
             .DeleteAsync(existing);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_MissingExisting_ThrowsNotFound(
+    public async Task DeleteAsync_MissingExisting_ReturnsNotFound(
         SutProvider<DeleteAccessRuleCommand> sutProvider)
     {
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns((AccessRule?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+        var result = await sutProvider.Sut.DeleteAsync(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+
+        Assert.IsType<AccessRuleNotFound>(result.AssertError());
         await sutProvider.GetDependency<IAccessRuleRepository>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_WrongOrg_ThrowsNotFound(
+    public async Task DeleteAsync_WrongOrg_ReturnsNotFound(
         AccessRule existing, SutProvider<DeleteAccessRuleCommand> sutProvider)
     {
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetByIdAsync(existing.Id)
             .Returns(existing);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), existing.Id, Guid.NewGuid()));
+        var result = await sutProvider.Sut.DeleteAsync(Guid.NewGuid(), existing.Id, Guid.NewGuid());
+
+        Assert.IsType<AccessRuleNotFound>(result.AssertError());
         await sutProvider.GetDependency<IAccessRuleRepository>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default!);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>()
@@ -68,7 +70,7 @@ public class DeleteAccessRuleCommandTests
         existing.Name = "Production database";
         sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(existing.Id).Returns(existing);
 
-        await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id, actorId);
+        (await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id, actorId)).AssertSuccess();
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
@@ -88,7 +90,7 @@ public class DeleteAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(existing.Id).Returns(existing);
 
-        await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id, null);
+        (await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id, null)).AssertSuccess();
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(2)
             .EmitAsync(Arg.Is<AccessAuditEventData>(e => e.ActorId == null));

@@ -5,6 +5,7 @@ using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
@@ -44,16 +45,18 @@ public class LeaseEndpointsHandler(
             leases.Select(l => new AccessLeaseResponseModel(l)));
     }
 
-    public async Task Revoke(ClaimsPrincipal user, Guid id, AccessLeaseRevokeRequestModel model)
+    public async Task<Results<NoContent, PamErrorResult>> Revoke(
+        ClaimsPrincipal user, Guid id, AccessLeaseRevokeRequestModel model)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        await revokeAccessLeaseCommand.RevokeAsync(userId, id, model.Reason);
+        return PamResults.NoContent(await revokeAccessLeaseCommand.RevokeAsync(userId, id, model.Reason));
     }
 
-    public async Task<AccessRequestDetailsResponseModel> Extend(ClaimsPrincipal user, Guid id, AccessLeaseExtensionRequestModel model)
+    public async Task<Results<Ok<AccessRequestDetailsResponseModel>, PamErrorResult>> Extend(
+        ClaimsPrincipal user, Guid id, AccessLeaseExtensionRequestModel model)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var details = await requestLeaseExtensionCommand.ExtendAsync(userId, model.ToSubmission(id));
-        return new AccessRequestDetailsResponseModel(details);
+        var result = await requestLeaseExtensionCommand.ExtendAsync(userId, model.ToSubmission(id));
+        return PamResults.Ok(result, extension => new AccessRequestDetailsResponseModel(extension));
     }
 }

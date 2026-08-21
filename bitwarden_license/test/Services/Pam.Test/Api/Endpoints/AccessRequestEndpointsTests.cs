@@ -1,10 +1,12 @@
 ﻿using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
+using Bit.Services.Pam.Api;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -92,9 +94,11 @@ public class AccessRequestEndpointsTests
     [InlineData(nameof(AccessRequestEndpointsHandler.GetHistory), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
     [InlineData(nameof(AccessRequestEndpointsHandler.GetMine), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
     [InlineData(nameof(AccessRequestEndpointsHandler.GetDetails), typeof(Task<AccessRequestDetailsResponseModel>))]
-    [InlineData(nameof(AccessRequestEndpointsHandler.Decide), typeof(Task<AccessRequestDetailsResponseModel>))]
-    [InlineData(nameof(AccessRequestEndpointsHandler.Activate), typeof(Task<AccessLeaseResponseModel>))]
-    [InlineData(nameof(AccessRequestEndpointsHandler.Revoke), typeof(Task))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.Decide),
+        typeof(Task<Results<Ok<AccessRequestDetailsResponseModel>, PamErrorResult>>))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.Activate),
+        typeof(Task<Results<Ok<AccessLeaseResponseModel>, PamErrorResult>>))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.Revoke), typeof(Task<Results<NoContent, PamErrorResult>>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
         var method = typeof(AccessRequestEndpointsHandler).GetMethod(methodName);

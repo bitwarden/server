@@ -1,16 +1,15 @@
-﻿using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+﻿using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Commands;
@@ -43,7 +42,7 @@ public class UpdateAccessRuleCommandTests
             .Returns(existing);
         SetupValidator(sutProvider, orgId, existing.Id, []);
 
-        var result = await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, []);
+        var result = (await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, [])).AssertSuccess();
 
         Assert.Equal("renamed", result.Name);
         Assert.Equal("new description", result.Description);
@@ -80,7 +79,7 @@ public class UpdateAccessRuleCommandTests
             .Returns(existing);
         SetupValidator(sutProvider, orgId, existing.Id, [.. desired]);
 
-        var result = await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, desired);
+        var result = (await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, desired)).AssertSuccess();
 
         Assert.Equal(desired, result.CollectionIds);
         await sutProvider.GetDependency<ICollectionRepository>().Received(1)
@@ -102,7 +101,7 @@ public class UpdateAccessRuleCommandTests
             .Returns(existing);
         SetupValidator(sutProvider, orgId, existing.Id, []);
 
-        var result = await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, []);
+        var result = (await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, [])).AssertSuccess();
 
         Assert.Empty(result.CollectionIds);
         await sutProvider.GetDependency<ICollectionRepository>().Received(1)
@@ -112,22 +111,23 @@ public class UpdateAccessRuleCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_MissingExisting_ThrowsNotFoundWithoutValidating(AccessRule update)
+    public async Task UpdateAsync_MissingExisting_ReturnsNotFoundWithoutValidating(AccessRule update)
     {
         var sutProvider = SetupSutProvider();
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(Arg.Any<Guid>())
             .Returns((AccessRuleDetails?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateAsync(Guid.NewGuid(), Guid.NewGuid(), update, []));
+        var result = await sutProvider.Sut.UpdateAsync(Guid.NewGuid(), Guid.NewGuid(), update, []);
+
+        Assert.IsType<AccessRuleNotFound>(result.AssertError());
         // A rule the caller cannot see is a 404 before anything about the payload is judged.
         await sutProvider.GetDependency<IAccessRuleWriteValidator>().DidNotReceiveWithAnyArgs()
             .ValidateAsync(default, default!, default!, default);
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_WrongOrg_ThrowsNotFound(AccessRuleDetails existing, AccessRule update)
+    public async Task UpdateAsync_WrongOrg_ReturnsNotFound(AccessRuleDetails existing, AccessRule update)
     {
         var sutProvider = SetupSutProvider();
         var differentOrg = Guid.NewGuid();
@@ -135,8 +135,9 @@ public class UpdateAccessRuleCommandTests
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateAsync(differentOrg, existing.Id, update, []));
+        var result = await sutProvider.Sut.UpdateAsync(differentOrg, existing.Id, update, []);
+
+        Assert.IsType<AccessRuleNotFound>(result.AssertError());
         await sutProvider.GetDependency<IAccessRuleWriteValidator>().DidNotReceiveWithAnyArgs()
             .ValidateAsync(default, default!, default!, default);
     }
@@ -150,11 +151,11 @@ public class UpdateAccessRuleCommandTests
             .Returns(existing);
         sutProvider.GetDependency<IAccessRuleWriteValidator>()
             .ValidateAsync(Arg.Any<Guid>(), Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>())
-            .ThrowsAsync(new BadRequestException("A rule with that name already exists."));
+            .Returns(new AccessRuleNameTaken());
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateAsync(existing.OrganizationId, existing.Id, update, []));
-        Assert.Equal("A rule with that name already exists.", ex.Message);
+        var result = await sutProvider.Sut.UpdateAsync(existing.OrganizationId, existing.Id, update, []);
+
+        Assert.IsType<AccessRuleNameTaken>(result.AssertError());
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
             .SetAccessRuleAssociationsAsync(default, default, default!, default!);
@@ -175,7 +176,7 @@ public class UpdateAccessRuleCommandTests
         sutProvider.GetDependency<IAccessRuleRepository>().GetDetailsByIdAsync(existing.Id).Returns(existing);
         SetupValidator(sutProvider, orgId, existing.Id, []);
 
-        await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, []);
+        (await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, [])).AssertSuccess();
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
@@ -194,8 +195,9 @@ public class UpdateAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         sutProvider.GetDependency<IAccessRuleRepository>().GetDetailsByIdAsync(existing.Id).Returns(existing);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateAsync(Guid.NewGuid(), existing.Id, update, []));
+        var result = await sutProvider.Sut.UpdateAsync(Guid.NewGuid(), existing.Id, update, []);
+
+        Assert.IsType<AccessRuleNotFound>(result.AssertError());
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>()
             .DidNotReceiveWithAnyArgs().EmitAsync(default!);

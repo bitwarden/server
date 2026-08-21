@@ -1,5 +1,7 @@
-﻿using Bit.Services.Pam.Models;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Pam.Models;
+using Bit.Services.Pam.Models;
+
 namespace Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 
 public interface IRequestLeaseExtensionCommand
@@ -10,15 +12,12 @@ public interface IRequestLeaseExtensionCommand
     /// pushed out in place (no new lease is minted) and an auto-approved extension request is recorded. Only the
     /// lease's requester may extend it.
     /// </summary>
-    /// <exception cref="Bit.Core.Exceptions.NotFoundException">
-    /// The lease does not exist or the caller is not its requester.
-    /// </exception>
-    /// <exception cref="Bit.Core.Exceptions.ConflictException">
-    /// The lease is no longer active (revoked or expired).
-    /// </exception>
-    /// <exception cref="Bit.Core.Exceptions.BadRequestException">
-    /// The item is not lease-gated or does not allow extensions, the lease has already been extended, the duration is
-    /// non-positive or exceeds the maximum extension length, or no justification was supplied.
-    /// </exception>
-    Task<AccessRequestDetails> ExtendAsync(Guid userId, AccessLeaseExtensionSubmission submission);
+    /// <returns>
+    /// The recorded extension, or one of <see cref="Errors.AccessLeaseNotFound"/> (no such lease, or not the
+    /// caller's), <see cref="Errors.AccessLeaseNoLongerActive"/>, <see cref="Errors.CipherNotGated"/>,
+    /// <see cref="Errors.ExtensionsNotAllowed"/>, <see cref="Errors.DurationMustBePositive"/>,
+    /// <see cref="Errors.ExtensionExceedsMax"/>, <see cref="Errors.ExtensionReasonRequired"/> or
+    /// <see cref="Errors.AccessLeaseAlreadyExtended"/>.
+    /// </returns>
+    Task<CommandResult<AccessRequestDetails>> ExtendAsync(Guid userId, AccessLeaseExtensionSubmission submission);
 }

@@ -1,10 +1,12 @@
 ﻿using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
+using Bit.Services.Pam.Api;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -89,8 +91,9 @@ public class LeaseEndpointsTests
     [InlineData(nameof(LeaseEndpointsHandler.GetActive), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
     [InlineData(nameof(LeaseEndpointsHandler.GetHistory), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
     [InlineData(nameof(LeaseEndpointsHandler.GetMine), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
-    [InlineData(nameof(LeaseEndpointsHandler.Revoke), typeof(Task))]
-    [InlineData(nameof(LeaseEndpointsHandler.Extend), typeof(Task<AccessRequestDetailsResponseModel>))]
+    [InlineData(nameof(LeaseEndpointsHandler.Revoke), typeof(Task<Results<NoContent, PamErrorResult>>))]
+    [InlineData(nameof(LeaseEndpointsHandler.Extend),
+        typeof(Task<Results<Ok<AccessRequestDetailsResponseModel>, PamErrorResult>>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
         var method = typeof(LeaseEndpointsHandler).GetMethod(methodName);

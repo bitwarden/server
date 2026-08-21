@@ -1,4 +1,6 @@
-﻿namespace Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
+
+namespace Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 
 public interface IRevokeAccessLeaseCommand
 {
@@ -7,9 +9,9 @@ public interface IRevokeAccessLeaseCommand
     /// own access) or able to Manage the lease's collection (a managing approver or org admin); the actor is recorded
     /// as the revoker. The optional reason is retained for the audit trail.
     /// </summary>
-    /// <exception cref="Bit.Core.Exceptions.NotFoundException">
-    /// The lease does not exist, or the caller is neither its holder nor able to Manage its collection.
-    /// </exception>
-    /// <exception cref="Bit.Core.Exceptions.ConflictException">The lease is not active.</exception>
-    Task RevokeAsync(Guid userId, Guid leaseId, string? reason);
+    /// <returns>
+    /// Nothing on success, or one of <see cref="Errors.AccessLeaseNotFound"/> (no such lease, or the caller is
+    /// neither its holder nor able to Manage its collection) or <see cref="Errors.AccessLeaseNotActiveForRevoke"/>.
+    /// </returns>
+    Task<CommandResult> RevokeAsync(Guid userId, Guid leaseId, string? reason);
 }

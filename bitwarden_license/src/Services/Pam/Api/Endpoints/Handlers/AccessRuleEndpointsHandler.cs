@@ -5,6 +5,7 @@ using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
@@ -42,24 +43,24 @@ public class AccessRuleEndpointsHandler(
         return new AccessRuleResponseModel(rule);
     }
 
-    public async Task<AccessRuleResponseModel> Post(Guid orgId, AccessRuleRequestModel model)
+    public async Task<Results<Ok<AccessRuleResponseModel>, PamErrorResult>> Post(Guid orgId, AccessRuleRequestModel model)
     {
         var toCreate = model.ToAccessRule(orgId);
         toCreate.LastEditedBy = currentContext.UserId;
-        var rule = await createCommand.CreateAsync(toCreate, model.Collections);
-        return new AccessRuleResponseModel(rule);
+        var result = await createCommand.CreateAsync(toCreate, model.Collections);
+        return PamResults.Ok(result, rule => new AccessRuleResponseModel(rule));
     }
 
-    public async Task<AccessRuleResponseModel> Put(Guid orgId, Guid id, AccessRuleRequestModel model)
+    public async Task<Results<Ok<AccessRuleResponseModel>, PamErrorResult>> Put(Guid orgId, Guid id, AccessRuleRequestModel model)
     {
         var toUpdate = model.ToAccessRule(orgId);
         toUpdate.LastEditedBy = currentContext.UserId;
-        var rule = await updateCommand.UpdateAsync(orgId, id, toUpdate, model.Collections);
-        return new AccessRuleResponseModel(rule);
+        var result = await updateCommand.UpdateAsync(orgId, id, toUpdate, model.Collections);
+        return PamResults.Ok(result, rule => new AccessRuleResponseModel(rule));
     }
 
-    public async Task Delete(Guid orgId, Guid id)
+    public async Task<Results<NoContent, PamErrorResult>> Delete(Guid orgId, Guid id)
     {
-        await deleteCommand.DeleteAsync(orgId, id, currentContext.UserId);
+        return PamResults.NoContent(await deleteCommand.DeleteAsync(orgId, id, currentContext.UserId));
     }
 }

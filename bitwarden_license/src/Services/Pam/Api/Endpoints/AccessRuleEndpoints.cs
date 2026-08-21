@@ -44,12 +44,7 @@ internal static class AccessRuleEndpoints
             .WithName("Pam_AccessRules_Put")
             .RequireAuthorization(new AuthorizeAttribute<ManageAccessRulesRequirement>());
 
-        group.MapDelete("{id:guid}",
-            async (Guid orgId, Guid id, AccessRuleEndpointsHandler handler) =>
-            {
-                await handler.Delete(orgId, id);
-                return TypedResults.NoContent();
-            })
+        group.MapDelete("{id:guid}", (Guid orgId, Guid id, AccessRuleEndpointsHandler handler) => handler.Delete(orgId, id))
             .WithName("Pam_AccessRules_Delete")
             .RequireAuthorization(new AuthorizeAttribute<ManageAccessRulesRequirement>());
 

@@ -60,6 +60,24 @@ public class BitwardenTypedResultsExtensionsTests
     }
 
     [Fact]
+    public void BitwardenValidationProblem_WithAStatusCode_UsesItInsteadOf400()
+    {
+        var errors = new Dictionary<string, ErrorCode[]>
+        {
+            { "code", [new ErrorCode("already_active", "You already have this.")] }
+        };
+
+        var result = TypedResults.BitwardenValidationProblem(
+            errors, title: "The request conflicts with the current state.", type: "conflict_error",
+            statusCode: StatusCodes.Status409Conflict);
+
+        Assert.Equal(StatusCodes.Status409Conflict, result.StatusCode);
+        Assert.Equal(StatusCodes.Status409Conflict, result.ProblemDetails.Status);
+        Assert.Equal("conflict_error", result.ProblemDetails.Type);
+        Assert.Same(errors, result.ProblemDetails.Extensions["errors"]);
+    }
+
+    [Fact]
     public void BitwardenValidationProblem_WithNullErrors_Throws()
     {
         Assert.Throws<ArgumentNullException>(() => TypedResults.BitwardenValidationProblem(((IDictionary<string, ErrorCode[]>)null!)!));

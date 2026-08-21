@@ -1,10 +1,12 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
+using OneOf.Types;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -36,7 +38,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         _timeProvider = timeProvider;
     }
 
-    public async Task CancelAsync(Guid userId, Guid requestId)
+    public async Task<CommandResult> CancelAsync(Guid userId, Guid requestId)
     {
         var request = await _accessRequestRepository.GetByIdAsync(requestId);
 
@@ -44,7 +46,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         // caller can't probe for requests they have no business seeing. Mirrors the inbox/decide surfaces.
         if (request is null)
         {
-            throw new NotFoundException();
+            return new AccessRequestNotFound();
         }
 
         var isRequester = request.RequesterId == userId;
@@ -52,7 +54,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
             && await _approverCollectionAccessQuery.CanManageCollectionAsync(userId, request.CollectionId);
         if (!isRequester && !isManager)
         {
-            throw new NotFoundException();
+            return new AccessRequestNotFound();
         }
 
         // Only a request that has not produced a lease can be cancelled: still Pending, or Approved that the requester
@@ -60,7 +62,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         // client refreshes. The stored procs additionally guard the transition to stay race-safe.
         if (request.Status is not (AccessRequestStatus.Pending or AccessRequestStatus.Approved))
         {
-            throw new ConflictException("This request has already been resolved.");
+            return new AccessRequestAlreadyResolved();
         }
 
         // An approved request that has minted a lease is governed by that lease, not the request: end it via lease
@@ -68,9 +70,9 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         var lease = await _accessLeaseRepository.GetByAccessRequestIdAsync(requestId);
         if (lease is not null)
         {
-            throw lease.Status == AccessLeaseStatus.Active
-                ? new ConflictException("This request has an active lease; revoke the lease instead.")
-                : new ConflictException("This request has already been resolved.");
+            return lease.Status == AccessLeaseStatus.Active
+                ? new AccessRequestHasActiveLease()
+                : new AccessRequestAlreadyResolved();
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -122,5 +124,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         // Tell the requester their request is gone, so a manager's retraction reaches them and their other devices
         // drop the request from "My requests" without a manual refresh.
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
+
+        return new None();
     }
 }

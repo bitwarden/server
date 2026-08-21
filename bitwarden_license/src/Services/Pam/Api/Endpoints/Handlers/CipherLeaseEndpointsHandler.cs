@@ -1,9 +1,10 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Services;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Core.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
@@ -32,10 +33,11 @@ public class CipherLeaseEndpointsHandler(
         return new CipherAccessStateResponseModel(result);
     }
 
-    public async Task<AccessRequestResultResponseModel> Post(ClaimsPrincipal user, Guid id, AccessRequestCreateRequestModel model)
+    public async Task<Results<Ok<AccessRequestResultResponseModel>, PamErrorResult>> Post(
+        ClaimsPrincipal user, Guid id, AccessRequestCreateRequestModel model)
     {
         var userId = userService.GetProperUserId(user)!.Value;
         var result = await submitAccessRequestCommand.SubmitAsync(userId, id, model.ToSubmission());
-        return new AccessRequestResultResponseModel(result);
+        return PamResults.Ok(result, submitted => new AccessRequestResultResponseModel(submitted));
     }
 }

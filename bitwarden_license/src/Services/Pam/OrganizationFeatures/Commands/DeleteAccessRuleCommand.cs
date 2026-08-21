@@ -1,9 +1,11 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Errors;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
+using OneOf.Types;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -23,12 +25,12 @@ public class DeleteAccessRuleCommand : IDeleteAccessRuleCommand
         _accessAuditEventEmitter = accessAuditEventEmitter;
     }
 
-    public async Task DeleteAsync(Guid organizationId, Guid id, Guid? userId)
+    public async Task<CommandResult> DeleteAsync(Guid organizationId, Guid id, Guid? userId)
     {
         var existing = await _repository.GetByIdAsync(id);
         if (existing is null || existing.OrganizationId != organizationId)
         {
-            throw new NotFoundException();
+            return new AccessRuleNotFound();
         }
 
         // audit (before/after): the rule name is captured from the row we still hold, because the delete is hard and
@@ -49,5 +51,7 @@ public class DeleteAccessRuleCommand : IDeleteAccessRuleCommand
         await _repository.DeleteAsync(existing);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+
+        return new None();
     }
 }

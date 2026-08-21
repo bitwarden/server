@@ -1,4 +1,5 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -30,9 +31,15 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
         _accessAuditEventEmitter = accessAuditEventEmitter;
     }
 
-    public async Task<AccessRuleDetails> CreateAsync(AccessRule rule, IEnumerable<Guid> collectionIds)
+    public async Task<CommandResult<AccessRuleDetails>> CreateAsync(AccessRule rule, IEnumerable<Guid> collectionIds)
     {
-        var desiredCollectionIds = await _validator.ValidateAsync(rule.OrganizationId, rule, collectionIds);
+        var validated = await _validator.ValidateAsync(rule.OrganizationId, rule, collectionIds);
+        if (validated.IsError)
+        {
+            return validated.AsError;
+        }
+
+        var desiredCollectionIds = validated.AsSuccess;
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         rule.CreationDate = now;
