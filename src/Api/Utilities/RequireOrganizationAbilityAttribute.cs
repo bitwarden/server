@@ -13,7 +13,7 @@ namespace Bit.Core.Utilities;
 // </summary>
 public class RequireOrganizationAbilityAttribute : Attribute, IAsyncActionFilter
 {
-  private readonly string _abilityKey;
+  private readonly PropertyInfo _ability;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="RequireOrganizationAbilityAttribute"/> class with the specified ability key.
@@ -22,7 +22,12 @@ public class RequireOrganizationAbilityAttribute : Attribute, IAsyncActionFilter
   // </summary>
   public RequireOrganizationAbilityAttribute(string abilityKey)
   {
-    _abilityKey = abilityKey;
+    if (string.IsNullOrWhiteSpace(abilityKey) || !typeof(OrganizationAbility).GetProperties().Any(p => p.Name == abilityKey && p.PropertyType == typeof(bool)))
+    {
+      throw new ArgumentException("Ability key must be a valid boolean property on the OrganizationAbility class.", nameof(abilityKey));
+    }
+
+    _ability = typeof(OrganizationAbility).GetProperty(abilityKey)!;
   }
 
   public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -47,13 +52,7 @@ public class RequireOrganizationAbilityAttribute : Attribute, IAsyncActionFilter
       throw new BadRequestException("The user's organization does not have access to this feature in their plan.");
     }
 
-    PropertyInfo? ability = orgAbility.GetType().GetProperty(_abilityKey);
-    if (ability == null || ability.PropertyType != typeof(bool))
-    {
-      throw new Exception($"Ability '{_abilityKey}' is not a valid Organization ability. See the OrganizationAbility class for valid abilities.");
-    }
-
-    var hasAbility = (bool)ability.GetValue(orgAbility)!;
+    var hasAbility = (bool)_ability.GetValue(orgAbility)!;
     if (!hasAbility)
     {
       throw new BadRequestException("The user's organization does not have access to this feature in their plan.");
