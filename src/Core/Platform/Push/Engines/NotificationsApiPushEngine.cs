@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -38,7 +39,9 @@ public class NotificationsApiPushEngine : BaseIdentityClientService, IPushEngine
     {
         var contextId = GetContextIdentifier(excludeCurrentContext);
         var request = new PushNotificationData<T>(type, payload, contextId);
-        await SendAsync(HttpMethod.Post, "send", request);
+        // PascalCase, matching what AzureQueuePushEngine writes, so both ingresses of the
+        // Notifications service carry the same payload shape.
+        await SendAsync(HttpMethod.Post, "send", request, JsonHelpers.Default);
     }
 
     private string? GetContextIdentifier(bool excludeCurrentContext)

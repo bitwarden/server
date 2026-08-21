@@ -34,7 +34,7 @@ public class AzureQueuePushEngine : IPushEngine
     {
         var contextId = GetContextIdentifier(excludeCurrentContext);
         var message = JsonSerializer.Serialize(new PushNotificationData<T>(type, payload, contextId),
-            JsonHelpers.IgnoreWritingNull);
+            JsonHelpers.Default);
         await _queueClient.SendMessageAsync(message);
     }
 
