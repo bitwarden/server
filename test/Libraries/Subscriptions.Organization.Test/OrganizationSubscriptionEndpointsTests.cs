@@ -1,5 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.Auth.Identity;
+using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Requirements;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
