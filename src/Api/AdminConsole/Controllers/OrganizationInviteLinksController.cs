@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -8,6 +7,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1324,7 +1324,8 @@
         "dependencies": {
           "Core": "[2026.8.0, )",
           "ExceptionHandling": "[0.0.1, )",
-          "Invoicing": "[0.0.1, )"
+          "Invoicing": "[0.0.1, )",
+          "OrganizationAuthorization": "[0.0.1, )"
         }
       },
       "subscriptions.user": {

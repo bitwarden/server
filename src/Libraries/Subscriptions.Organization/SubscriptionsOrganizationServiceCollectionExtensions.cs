@@ -1,4 +1,5 @@
 ﻿using Bit.Invoicing;
+using Bit.Subscriptions.Organization.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Subscriptions.Organization;
@@ -10,6 +11,7 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
     public static IServiceCollection AddOrganizationSubscriptions(this IServiceCollection services)
     {
         services.AddInvoicing();
+        services.AddScoped<OrganizationSubscriptionEndpointsHandler>();
         return services;
     }
 }

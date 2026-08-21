@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
@@ -14,6 +13,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

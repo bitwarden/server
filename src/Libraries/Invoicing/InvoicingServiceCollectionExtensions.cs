@@ -1,4 +1,5 @@
 ﻿using Bit.Invoicing.InvoicePreviews;
+using Bit.Invoicing.InvoicePreviews.Queries;
 using Bit.Invoicing.InvoicePreviews.Stripe;
 using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,7 @@ public static class InvoicingServiceCollectionExtensions
             return sp.GetRequiredService<InvoicePreviewService>();
         });
         services.AddKnownFeatureFlags(InvoicingFeatureFlags.GetKeys());
+        services.TryAddScoped<IGetSubscriptionPreviewQuery, GetSubscriptionPreviewQuery>();
         return services;
     }
 }

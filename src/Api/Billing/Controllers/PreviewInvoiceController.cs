@@ -1,11 +1,11 @@
-﻿using Bit.Api.AdminConsole.Authorization;
-using Bit.Api.Billing.Attributes;
+﻿using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.PreviewInvoice;
 using Bit.Api.Billing.Models.Requirements;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Entities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
