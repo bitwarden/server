@@ -32,7 +32,6 @@ public class OrganizationReportsController : Controller
     private readonly IGetOrganizationReportApplicationDataQuery _getOrganizationReportApplicationDataQuery;
     private readonly IUpdateOrganizationReportApplicationDataCommand _updateOrganizationReportApplicationDataCommand;
     private readonly IFeatureService _featureService;
-    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationReportStorageService _storageService;
     private readonly ICreateOrganizationReportCommand _createReportCommand;
     private readonly IOrganizationReportRepository _organizationReportRepo;
@@ -51,7 +50,6 @@ public class OrganizationReportsController : Controller
         IGetOrganizationReportApplicationDataQuery getOrganizationReportApplicationDataQuery,
         IUpdateOrganizationReportApplicationDataCommand updateOrganizationReportApplicationDataCommand,
         IFeatureService featureService,
-        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IOrganizationReportStorageService storageService,
         ICreateOrganizationReportCommand createReportCommand,
         IOrganizationReportRepository organizationReportRepo,
@@ -69,7 +67,6 @@ public class OrganizationReportsController : Controller
         _getOrganizationReportApplicationDataQuery = getOrganizationReportApplicationDataQuery;
         _updateOrganizationReportApplicationDataCommand = updateOrganizationReportApplicationDataCommand;
         _featureService = featureService;
-        _organizationAbilityCacheService = organizationAbilityCacheService;
         _storageService = storageService;
         _createReportCommand = createReportCommand;
         _organizationReportRepo = organizationReportRepo;

@@ -1,11 +1,13 @@
 ﻿using AutoFixture;
 using Bit.Api.Dirt.Controllers;
 using Bit.Api.Dirt.Models;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -53,7 +55,7 @@ public class ReportsControllerTests
     public async Task AddPasswordHealthReportApplicationAsync_withAccess_success(SutProvider<ReportsController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
+        SetupAuthorization(sutProvider);
 
         // Act
         var request = new PasswordHealthReportApplicationModel
@@ -75,7 +77,7 @@ public class ReportsControllerTests
         SutProvider<ReportsController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
+        SetupAuthorization(sutProvider);
 
         // Act
         var fixture = new Fixture();
@@ -129,7 +131,7 @@ public class ReportsControllerTests
     public async Task DropPasswordHealthReportApplicationAsync_withAccess_success(SutProvider<ReportsController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
+        SetupAuthorization(sutProvider);
 
         // Act
         var fixture = new Fixture();
@@ -142,6 +144,52 @@ public class ReportsControllerTests
             .DropPasswordHealthReportApplicationAsync(Arg.Is<DropPasswordHealthReportApplicationRequest>(_ =>
                 _.OrganizationId == request.OrganizationId &&
                 _.PasswordHealthReportApplicationIds == request.PasswordHealthReportApplicationIds));
+    }
+
+    // These endpoints take the organization id from the request body rather than the route, so
+    // RequireOrganizationAbilityAttribute cannot be applied - the controller checks the ability itself.
+
+    [Theory, BitAutoData]
+    public async Task AddPasswordHealthReportApplicationAsync_withoutRiskInsights(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns(new OrganizationAbility { UseRiskInsights = false });
+
+        // Act & Assert
+        var request = new PasswordHealthReportApplicationModel
+        {
+            OrganizationId = Guid.NewGuid(),
+            Url = "https://example.com",
+        };
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
+            await sutProvider.Sut.AddPasswordHealthReportApplication(request));
+
+        // Assert
+        _ = sutProvider.GetDependency<IAddPasswordHealthReportApplicationCommand>()
+            .Received(0);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DropPasswordHealthReportApplicationAsync_withoutOrganizationAbility(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns((OrganizationAbility)null);
+
+        // Act & Assert
+        var fixture = new Fixture();
+        var request = fixture.Create<DropPasswordHealthReportApplicationRequest>();
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
+            await sutProvider.Sut.DropPasswordHealthReportApplication(request));
+
+        // Assert
+        _ = sutProvider.GetDependency<IDropPasswordHealthReportApplicationCommand>()
+            .Received(0);
     }
 
     [Theory, BitAutoData]
@@ -169,5 +217,16 @@ public class ReportsControllerTests
         Assert.Equal("test.com", result[1].DomainName);
         Assert.False(result[1].Passwordless);
         Assert.True(result[1].Mfa);
+    }
+
+    private static void SetupAuthorization(SutProvider<ReportsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(Arg.Any<Guid>())
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns(new OrganizationAbility { UseRiskInsights = true });
     }
 }
