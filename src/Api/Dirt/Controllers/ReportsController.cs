@@ -10,6 +10,7 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -61,7 +62,7 @@ public class ReportsController : Controller
     /// <returns>IEnumerable of MemberCipherDetailsResponseModel</returns>
     /// <exception cref="NotFoundException">If Access reports permission is not assigned</exception>
     [HttpGet("member-cipher-details/{orgId}")]
-    [RequireOrganizationAbility("UseRiskInsights")]
+    [RequireOrganizationAbility(nameof(OrganizationAbility.UseRiskInsights))]
     public async Task<IEnumerable<MemberCipherDetailsResponseModel>> GetMemberCipherDetails(Guid orgId)
     {
         if (!await _currentContext.AccessReports(orgId))
@@ -84,6 +85,7 @@ public class ReportsController : Controller
     /// <returns>IEnumerable of MemberAccessReportResponseModel</returns>
     /// <exception cref="NotFoundException">If Access reports permission is not assigned</exception>
     [HttpGet("member-access/{orgId}")]
+    [RequireOrganizationAbility(nameof(OrganizationAbility.UseRiskInsights))]
     public async Task<IEnumerable<MemberAccessDetailReportResponseModel>> GetMemberAccessReport(Guid orgId)
     {
         if (!await _currentContext.AccessReports(orgId))
@@ -126,7 +128,7 @@ public class ReportsController : Controller
     /// <exception cref="NotFoundException">If the user lacks access</exception>
     /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
     [HttpGet("password-health-report-applications/{orgId}")]
-    [RequireOrganizationAbility("UseRiskInsights")]
+    [RequireOrganizationAbility(nameof(OrganizationAbility.UseRiskInsights))]
     public async Task<IEnumerable<PasswordHealthReportApplication>> GetPasswordHealthReportApplications(Guid orgId)
     {
         if (!await _currentContext.AccessReports(orgId))
