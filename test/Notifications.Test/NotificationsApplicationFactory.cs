@@ -18,7 +18,7 @@ namespace Notifications.Test;
 /// an in-memory Identity server that issues real JWT tokens. Tests interact with the service through
 /// <see cref="HttpClient"/> only.
 /// </summary>
-public sealed class NotificationsApplicationFactory : IAsyncDisposable
+public sealed class NotificationsApplicationFactory : IAsyncDisposable, IAsyncLifetime
 {
     // Shared key that the Identity test server uses to authenticate internal clients.
     // Must match the value configured on the Identity factory so that InternalClientProvider
@@ -125,6 +125,12 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable
         _identityFactory.Dispose();
     }
 
+    // Lets xunit own the lifetime when this is used as a class fixture, so the app and its
+    // in-memory Identity server boot once per test class instead of once per test case.
+    Task IAsyncLifetime.InitializeAsync() => Task.CompletedTask;
+
+    Task IAsyncLifetime.DisposeAsync() => DisposeAsync().AsTask();
+
     private async Task<string> FetchInternalAccessTokenAsync()
     {
         using var client = _identityFactory.CreateClient();
@@ -147,6 +153,12 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable
     /// </summary>
     internal Task<HubInvocation> AwaitNextHubInvocationAsync(CancellationToken cancellationToken = default)
         => _recorder.AwaitNextAsync(cancellationToken);
+
+    /// <summary>
+    /// Discards notifications recorded so far. Call this before exercising a new one when the factory
+    /// is shared across tests, so a case that failed mid-flight cannot desynchronise the next one.
+    /// </summary>
+    internal void DiscardRecordedHubInvocations() => _recorder.DiscardRecorded();
 
     /// <summary>
     /// Encodes a notification into the exact bytes the service would put on a client connection,

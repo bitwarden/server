@@ -53,6 +53,16 @@ internal sealed class HubInvocationRecorder
     }
 
     /// <summary>
+    /// Drops every notification recorded so far.
+    /// </summary>
+    public void DiscardRecorded()
+    {
+        while (_invocations.Reader.TryRead(out _))
+        {
+        }
+    }
+
+    /// <summary>
     /// Waits for the next notification sent through any hub context created by this recorder.
     /// </summary>
     public async Task<HubInvocation> AwaitNextAsync(CancellationToken cancellationToken = default)
