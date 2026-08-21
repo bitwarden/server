@@ -5,7 +5,6 @@ using Bit.IntegrationTestCommon.Factories;
 using Bit.Notifications;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
@@ -33,19 +32,6 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable, IAsyncLi
     private readonly Lazy<Task<string>> _cachedToken;
     private readonly HubInvocationRecorder _recorder = new();
 
-    /// <summary>
-    /// The mock <see cref="IHubClients"/> wired into <see cref="NotificationsHub"/>. Use this to
-    /// assert that <c>POST /send</c> routed a notification to the expected user or group.
-    /// </summary>
-    public IHubClients NotificationsHubClients { get; }
-
-    /// <summary>
-    /// The mock <see cref="IHubClients"/> wired into <see cref="AnonymousNotificationsHub"/>. Use
-    /// this to assert that <c>POST /send</c> routed a notification to the expected anonymous group
-    /// (e.g. <see cref="Bit.Core.Enums.PushType.AuthRequestResponse"/>).
-    /// </summary>
-    public IHubClients AnonymousHubClients { get; }
-
     public NotificationsApplicationFactory()
     {
         _identityFactory = new IdentityApplicationFactory();
@@ -61,10 +47,8 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable, IAsyncLi
             });
         });
 
-        var (notificationsHubContext, notificationsClients) = _recorder.CreateHubContext<NotificationsHub>();
-        NotificationsHubClients = notificationsClients;
-        var (anonymousHubContext, anonymousClients) = _recorder.CreateHubContext<AnonymousNotificationsHub>();
-        AnonymousHubClients = anonymousClients;
+        var (notificationsHubContext, _) = _recorder.CreateHubContext<NotificationsHub>();
+        var (anonymousHubContext, _) = _recorder.CreateHubContext<AnonymousNotificationsHub>();
 
         _notificationsFactory = new WebApplicationFactory<Bit.Notifications.Program>().WithWebHostBuilder(builder =>
         {

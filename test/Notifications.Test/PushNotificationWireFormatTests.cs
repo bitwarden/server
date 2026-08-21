@@ -255,6 +255,7 @@ public sealed class PushNotificationWireFormatTests
                     RevisionDate = _subSecond,
                     ReadDate = _nextDay,
                 },
+                ClientType = ClientType.All,
                 ExcludeCurrentContext = false,
             }),
             nameof(NotificationsHub),
@@ -265,9 +266,9 @@ public sealed class PushNotificationWireFormatTests
     ];
 
     /// <summary>
-    /// Every payload format the service accepts, one entry each, grouped by status: what the engines
-    /// write now, then what they have stopped writing but must still accept. Each section carries the
-    /// note explaining its status.
+    /// Every payload format the service accepts, one entry each, in two generations: what the engines
+    /// write now, and what senders deployed before this release write. Each section carries the note
+    /// explaining its status.
     ///
     /// <para>A format stays listed after the engine stops producing it, because a sender that has
     /// not been redeployed can still be sending it. That is what lets the sender change ship in one
@@ -275,45 +276,45 @@ public sealed class PushNotificationWireFormatTests
     /// </summary>
     private static readonly WireCase[] WireCases =
     [
-        // What both engines write now: PascalCase with every property stated explicitly. The
-        // queue payloads changed when AzureQueuePushEngine stopped omitting null-valued
-        // properties, and the endpoint payloads changed when NotificationsApiPushEngine stopped
-        // using camelCase. The two ingresses now carry byte-identical payloads, which is why the
-        // entries below pair up.
-        new("LogOut/User", Ingress.AzureQueue, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Reason":null},"ContextId":null}"""),
-        new("LogOut/User/ExcludedContext", Ingress.AzureQueue, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Reason":null},"ContextId":"test-device-id"}"""),
-        new("OrganizationStatus/Organization", Ingress.AzureQueue, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"ContextId":null}"""),
-        new("OrganizationStatus/Organization/ExcludedContext", Ingress.AzureQueue, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"ContextId":"test-device-id"}"""),
-        new("Notification/Installation/AllClients", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":0,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}"""),
-        new("Notification/User/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","OrganizationId":null,"InstallationId":null,"TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}"""),
-        new("Notification/Organization/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":null,"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","InstallationId":null,"TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}"""),
-        new("Notification/Installation/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}"""),
-        new("AuthRequestResponse/AnonymousHub", Ingress.AzureQueue, """{"Type":16,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Id":"dddddddd-dddd-dddd-dddd-dddddddddddd"},"ContextId":"test-device-id"}"""),
-        new("Notification/User/RealisticValues", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":3,"Global":false,"ClientType":0,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","OrganizationId":null,"InstallationId":null,"TaskId":"eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee","Title":"Test title","Body":"Test body","CreationDate":"2026-08-20T12:34:56Z","RevisionDate":"2026-08-20T12:34:56.1234567Z","ReadDate":"2026-08-21T08:00:00Z","DeletedDate":null},"ContextId":null}"""),
+        // What both engines write now, all of it landing in one release: PascalCase, envelope
+        // routing fields, and nulls omitted from the envelope while the payload states its own.
+        // The routing fields are stripped before a notification reaches clients, which is why
+        // every frame below is unchanged from the generation that predates them.
+        new("LogOut/User", Ingress.AzureQueue, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Reason":null},"Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"}"""),
+        new("LogOut/User/ExcludedContext", Ingress.AzureQueue, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Reason":null},"ContextId":"test-device-id","Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"}"""),
+        new("OrganizationStatus/Organization", Ingress.AzureQueue, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"Target":1,"TargetId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}"""),
+        new("OrganizationStatus/Organization/ExcludedContext", Ingress.AzureQueue, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"ContextId":"test-device-id","Target":1,"TargetId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}"""),
+        new("Notification/Installation/AllClients", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":0,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"Target":2,"TargetId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","ClientType":0}"""),
+        new("Notification/User/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","OrganizationId":null,"InstallationId":null,"TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","ClientType":2}"""),
+        new("Notification/Organization/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":null,"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","InstallationId":null,"TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"Target":1,"TargetId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","ClientType":2}"""),
+        new("Notification/Installation/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"Target":2,"TargetId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","ClientType":2}"""),
+        new("AuthRequestResponse/AnonymousHub", Ingress.AzureQueue, """{"Type":16,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Id":"dddddddd-dddd-dddd-dddd-dddddddddddd"},"ContextId":"test-device-id","Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"}"""),
+        new("Notification/User/RealisticValues", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":3,"Global":false,"ClientType":0,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","OrganizationId":null,"InstallationId":null,"TaskId":"eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee","Title":"Test title","Body":"Test body","CreationDate":"2026-08-20T12:34:56Z","RevisionDate":"2026-08-20T12:34:56.1234567Z","ReadDate":"2026-08-21T08:00:00Z","DeletedDate":null},"Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","ClientType":0}"""),
+        new("LogOut/User", Ingress.SendEndpoint, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Reason":null},"Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"}"""),
+        new("LogOut/User/ExcludedContext", Ingress.SendEndpoint, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Reason":null},"ContextId":"test-device-id","Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"}"""),
+        new("OrganizationStatus/Organization", Ingress.SendEndpoint, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"Target":1,"TargetId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}"""),
+        new("OrganizationStatus/Organization/ExcludedContext", Ingress.SendEndpoint, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"ContextId":"test-device-id","Target":1,"TargetId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}"""),
+        new("Notification/Installation/AllClients", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":0,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"Target":2,"TargetId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","ClientType":0}"""),
+        new("Notification/User/Browser", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","OrganizationId":null,"InstallationId":null,"TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","ClientType":2}"""),
+        new("Notification/Organization/Browser", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":null,"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","InstallationId":null,"TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"Target":1,"TargetId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","ClientType":2}"""),
+        new("Notification/Installation/Browser", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"Target":2,"TargetId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","ClientType":2}"""),
+        new("AuthRequestResponse/AnonymousHub", Ingress.SendEndpoint, """{"Type":16,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Id":"dddddddd-dddd-dddd-dddd-dddddddddddd"},"ContextId":"test-device-id","Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"}"""),
+        new("Notification/User/RealisticValues", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":3,"Global":false,"ClientType":0,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","OrganizationId":null,"InstallationId":null,"TaskId":"eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee","Title":"Test title","Body":"Test body","CreationDate":"2026-08-20T12:34:56Z","RevisionDate":"2026-08-20T12:34:56.1234567Z","ReadDate":"2026-08-21T08:00:00Z","DeletedDate":null},"Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","ClientType":0}"""),
 
-        new("LogOut/User", Ingress.SendEndpoint, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Reason":null},"ContextId":null}"""),
-        new("LogOut/User/ExcludedContext", Ingress.SendEndpoint, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Reason":null},"ContextId":"test-device-id"}"""),
-        new("OrganizationStatus/Organization", Ingress.SendEndpoint, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"ContextId":null}"""),
-        new("OrganizationStatus/Organization/ExcludedContext", Ingress.SendEndpoint, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"ContextId":"test-device-id"}"""),
-        new("Notification/Installation/AllClients", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":0,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}"""),
-        new("Notification/User/Browser", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","OrganizationId":null,"InstallationId":null,"TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}"""),
-        new("Notification/Organization/Browser", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":null,"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","InstallationId":null,"TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}"""),
-        new("Notification/Installation/Browser", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"ContextId":null}"""),
-        new("AuthRequestResponse/AnonymousHub", Ingress.SendEndpoint, """{"Type":16,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Id":"dddddddd-dddd-dddd-dddd-dddddddddddd"},"ContextId":"test-device-id"}"""),
-        new("Notification/User/RealisticValues", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":3,"Global":false,"ClientType":0,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","OrganizationId":null,"InstallationId":null,"TaskId":"eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee","Title":"Test title","Body":"Test body","CreationDate":"2026-08-20T12:34:56Z","RevisionDate":"2026-08-20T12:34:56.1234567Z","ReadDate":"2026-08-21T08:00:00Z","DeletedDate":null},"ContextId":null}"""),
-
-        // Superseded formats, still accepted because a sender that has not been redeployed can
-        // still be producing them: Azure Queue payloads that omit null-valued properties, then
-        // camelCase endpoint payloads. Retire this whole section one release after the section
-        // above shipped, once no deployed sender can produce either. The two scenarios absent
-        // from the queue entries have no null-valued property, so nothing changed for them there.
+        // What senders deployed before that release write, and so what this service must keep
+        // accepting until none of them are left: PascalCase with null-valued properties omitted
+        // on the queue, camelCase on the endpoint, and no envelope routing on either -- these
+        // route by payload inspection. Delete this section one release after the one above
+        // ships, along with the payload-derived fallback in HubHelpers.
         new("LogOut/User", Ingress.AzureQueue, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"}}"""),
         new("LogOut/User/ExcludedContext", Ingress.AzureQueue, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"},"ContextId":"test-device-id"}"""),
         new("OrganizationStatus/Organization", Ingress.AzureQueue, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true}}"""),
+        new("OrganizationStatus/Organization/ExcludedContext", Ingress.AzureQueue, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"ContextId":"test-device-id"}"""),
         new("Notification/Installation/AllClients", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":0,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00"}}"""),
         new("Notification/User/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00"}}"""),
         new("Notification/Organization/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00"}}"""),
         new("Notification/Installation/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00"}}"""),
+        new("AuthRequestResponse/AnonymousHub", Ingress.AzureQueue, """{"Type":16,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Id":"dddddddd-dddd-dddd-dddd-dddddddddddd"},"ContextId":"test-device-id"}"""),
         new("Notification/User/RealisticValues", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":3,"Global":false,"ClientType":0,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","TaskId":"eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee","Title":"Test title","Body":"Test body","CreationDate":"2026-08-20T12:34:56Z","RevisionDate":"2026-08-20T12:34:56.1234567Z","ReadDate":"2026-08-21T08:00:00Z"}}"""),
 
         new("LogOut/User", Ingress.SendEndpoint, """{"type":11,"payload":{"userId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","reason":null},"contextId":null}"""),
@@ -474,6 +475,9 @@ public sealed class PushNotificationWireFormatTests
                 OrganizationId = target == NotificationTarget.Organization ? _orgId : null,
                 InstallationId = target == NotificationTarget.Installation ? _installationId : null,
             },
+            // Set on the envelope as well as the payload, matching what the notification centre
+            // push sites do -- envelope routing reads it from here.
+            ClientType = clientType,
             ExcludeCurrentContext = false,
         };
 
