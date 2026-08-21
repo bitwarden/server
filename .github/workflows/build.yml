@@ -55,98 +55,65 @@ jobs:
             dotnet: true
             node: true
             description: Admin portal
-            license: "AGPL-3.0-only AND LicenseRef-Bitwarden-License-1.0"
           - project_name: Api
             base_path: ./src
             dotnet: true
             description: Core backend API
-            license: "AGPL-3.0-only AND LicenseRef-Bitwarden-License-1.0"
           - project_name: Attachments
             base_path: ./util
             description: Attachment file storage container
-            license: "AGPL-3.0-only"
           - project_name: Billing
             base_path: ./src
             dotnet: true
             description: Billing and subscription service
-            license: "AGPL-3.0-only AND LicenseRef-Bitwarden-License-1.0"
           - project_name: Events
             base_path: ./src
             dotnet: true
             description: Audit event collection API
-            license: "AGPL-3.0-only"
           - project_name: EventsProcessor
             base_path: ./src
             dotnet: true
             description: Background processor for queued audit events
-            license: "AGPL-3.0-only"
           - project_name: Icons
             base_path: ./src
             dotnet: true
             description: Website icon fetching and caching service
-            license: "AGPL-3.0-only"
           - project_name: Identity
             base_path: ./src
             dotnet: true
             description: Identity and authentication server
-            license: "AGPL-3.0-only"
           - project_name: MsSql
             base_path: ./util
             description: Microsoft SQL Server with backup tooling
-            license: "AGPL-3.0-only"
           - project_name: MsSqlMigratorUtility
             base_path: ./util
             dotnet: true
             description: Command-line utility for performing MSSQL database migrations
-            license: "AGPL-3.0-only"
           - project_name: Nginx
             base_path: ./util
             description: Nginx reverse proxy with TLS and security-header configuration
-            license: "AGPL-3.0-only"
           - project_name: Notifications
             base_path: ./src
             dotnet: true
             description: Real-time notification hub for client applications
-            license: "AGPL-3.0-only"
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
             description: SCIM directory provisioning service
-            license: "AGPL-3.0-only AND LicenseRef-Bitwarden-License-1.0"
           - project_name: SeederApi
             base_path: ./util
             platforms: linux/amd64,linux/arm64
             dotnet: true
             description: Web API for seeding and querying test data during development and testing
-            license: "AGPL-3.0-only"
           - project_name: Setup
             base_path: ./util
             dotnet: true
             description: Self-hosted installation and configuration generator
-            license: "AGPL-3.0-only"
           - project_name: Sso
             base_path: ./bitwarden_license/src
             dotnet: true
             description: SAML and OIDC single sign-on service
-            license: "AGPL-3.0-only AND LicenseRef-Bitwarden-License-1.0"
     steps:
-      - name: Validate image license metadata
-        env:
-          PROJECT_NAME: ${{ matrix.project_name }}
-          LICENSE_ID: ${{ matrix.license }}
-        run: |
-          case "${LICENSE_ID}" in
-            "AGPL-3.0-only" | "AGPL-3.0-only AND LicenseRef-Bitwarden-License-1.0")
-              echo "${PROJECT_NAME} license: ${LICENSE_ID}"
-              echo "### :balance_scale: License: ${LICENSE_ID}" >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            *)
-              echo "::error::Matrix entry '${PROJECT_NAME}' has an unrecognized license '${LICENSE_ID}'. Add an approved SPDX expression to the build matrix."
-              echo "### :x: Unrecognized license for ${PROJECT_NAME}: '${LICENSE_ID}'" >> "$GITHUB_STEP_SUMMARY"
-              exit 1
-              ;;
-          esac
-
       - name: Check secrets
         id: check-secrets
         run: |
@@ -321,7 +288,6 @@ jobs:
           PROJECT_TITLE: ${{ matrix.project_name }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           DESCRIPTION: ${{ matrix.description || 'Bitwarden service' }}
-          LICENSE_ID: ${{ matrix.license }}
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -331,13 +297,17 @@ jobs:
             echo "org.opencontainers.image.description=${DESCRIPTION}"
             echo "org.opencontainers.image.vendor=Bitwarden Inc."
             echo "org.opencontainers.image.url=https://bitwarden.com"
-            echo "org.opencontainers.image.licenses=${LICENSE_ID}"
             echo "org.opencontainers.image.version=${IMAGE_TAG}"
             echo "org.opencontainers.image.revision=${REVISION}"
             echo "com.bitwarden.project=${PROJECT_NAME}"
             echo "METADATA_EOF"
           } >> "$GITHUB_OUTPUT"
 
+      # org.opencontainers.image.licenses is intentionally not overridden here. These images
+      # combine AGPL/Bitwarden-licensed code with third-party base images (.NET, Alpine, nginx,
+      # SQL Server), so no single hand-maintained SPDX expression is accurate. The action falls
+      # back to the repository's detected SPDX id (NOASSERTION), which is the honest value.
+      # Use an SBOM if a full license inventory is needed.
       - name: Generate image metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
