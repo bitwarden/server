@@ -59,6 +59,7 @@
         },
         "email": {
           "type": "string",
+          "minLength": 1,
           "description": "Override derived email (firstName.lastName@domain). Use for non-standard email patterns."
         },
         "branch": {
