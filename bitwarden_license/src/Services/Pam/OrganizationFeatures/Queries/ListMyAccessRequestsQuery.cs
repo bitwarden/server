@@ -1,6 +1,6 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Pam.Models;
+﻿using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 
