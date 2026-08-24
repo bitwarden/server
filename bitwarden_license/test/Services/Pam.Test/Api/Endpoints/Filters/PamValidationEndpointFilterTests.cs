@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Api;
+using Bit.Pam.Enums;
 using Bit.Services.Pam.Api.Endpoints.Filters;
-using Bit.Services.Pam.Api.Models;
 using Bit.Services.Pam.Api.Models.Request;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
