@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Pam.Enums;
 using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Request;
@@ -24,7 +25,7 @@ public class AccessDecisionRequestModel
 
     public AccessDecisionSubmission ToSubmission() => new()
     {
-        Verdict = Verdict!.Value.ToDomainVerdict(),
+        Verdict = Verdict!.Value,
         Comment = Comment,
     };
 }
