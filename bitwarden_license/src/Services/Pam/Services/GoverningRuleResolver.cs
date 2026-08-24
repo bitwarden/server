@@ -69,7 +69,28 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             .ThenBy(c => c.Rule.Id)
             .First();
 
-        var conditions = Parse(governingRule.Conditions);
+        return Build(governingCollection.OrganizationId, governingCollection.Id, governingRule);
+    }
+
+    public async Task<GoverningRule?> ResolvePinnedAsync(Guid ruleId, Guid collectionId)
+    {
+        var rule = await _accessRuleRepository.GetByIdAsync(ruleId);
+
+        // Dropped for the same two reasons ResolveAsync drops a candidate, and to the same effect: a disabled rule does
+        // not gate access, and a rule that no longer loads has been deleted. Either way the pin points at nothing that
+        // governs any more, so the caller is left ungated rather than held to a rule the admin took out of service.
+        return rule is { Enabled: true } ? Build(rule.OrganizationId, collectionId, rule) : null;
+    }
+
+    /// <summary>
+    /// Projects a stored rule onto the shape its callers evaluate. Shared by both resolution paths so a rule reached
+    /// through the caller's collections and the same rule reached through a request's pin can never be described
+    /// differently — the pinned path exists precisely so a later operation sees the rule that decided, and that
+    /// guarantee is worth nothing if the two paths read its fields differently.
+    /// </summary>
+    private static GoverningRule Build(Guid organizationId, Guid collectionId, AccessRule rule)
+    {
+        var (conditions, unreadable) = Parse(rule.Conditions);
 
         // Whether the rule routes to a human is structural too: it is carried by a HumanApprovalCondition among the
         // rule's conditions, not by how those conditions evaluate for these signals. Reading it off the engine's
@@ -81,30 +102,35 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         var requiresHumanApproval = conditions.Any(c => c is HumanApprovalCondition);
 
         return new GoverningRule(
-            governingCollection.OrganizationId,
-            governingCollection.Id,
+            organizationId,
+            collectionId,
             requiresHumanApproval,
             conditions)
         {
-            RuleId = governingRule.Id,
-            AllowsExtensions = governingRule.AllowsExtensions,
-            MaxExtensionDurationSeconds = governingRule.MaxExtensionDurationSeconds,
-            DefaultLeaseDurationSeconds = governingRule.DefaultLeaseDurationSeconds,
-            MaxLeaseDurationSeconds = governingRule.MaxLeaseDurationSeconds,
+            RuleId = rule.Id,
+            AllowsExtensions = rule.AllowsExtensions,
+            MaxExtensionDurationSeconds = rule.MaxExtensionDurationSeconds,
+            DefaultLeaseDurationSeconds = rule.DefaultLeaseDurationSeconds,
+            MaxLeaseDurationSeconds = rule.MaxLeaseDurationSeconds,
+            ConditionsUnreadable = unreadable,
         };
     }
 
     /// <summary>
-    /// Parses the stored conditions JSON into a flat list of <see cref="AccessCondition"/>. A malformed or
-    /// unparseable document fails safe to a single human-approval condition so access is never silently auto-approved
-    /// on conditions the server could not understand; the human-approval path then routes it to an approver rather
-    /// than issuing an automatic lease.
+    /// Parses the stored conditions JSON into a flat list of <see cref="AccessCondition"/>, reporting whether it had
+    /// to fall back. A malformed or unparseable document fails safe to a single human-approval condition so access is
+    /// never silently auto-approved on conditions the server could not understand; the human-approval path then routes
+    /// it to an approver rather than issuing an automatic lease. The flag rides alongside because that stand-in is
+    /// indistinguishable from a genuine <c>[human_approval]</c> rule, and a caller that strips the approval gate
+    /// before evaluating (see <see cref="GoverningRule.AutomatedConditions"/>) is left with an empty list, which the
+    /// engine reads as vacuously satisfied — the fail-safe would become a fail-open without something to mark it.
     /// </summary>
-    private static IReadOnlyList<AccessCondition> Parse(string conditionsJson)
+    private static (IReadOnlyList<AccessCondition> Conditions, bool Unreadable) Parse(string conditionsJson)
     {
         try
         {
-            return JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options) ?? FailSafe();
+            var conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options);
+            return conditions is null ? FailSafe() : (conditions, false);
         }
         // NotSupportedException alongside JsonException: the polymorphic reader reports a missing or unreadable
         // "kind" that way, and it is not a JsonException. Left uncaught it would escape ResolveAsync entirely,
@@ -116,5 +142,6 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         }
     }
 
-    private static IReadOnlyList<AccessCondition> FailSafe() => [new HumanApprovalCondition()];
+    private static (IReadOnlyList<AccessCondition> Conditions, bool Unreadable) FailSafe() =>
+        ([new HumanApprovalCondition()], true);
 }

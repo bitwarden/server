@@ -123,7 +123,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         var evaluation = _ruleEngine.Evaluate(governingRule.Conditions, signals);
         if (evaluation.Outcome != AccessEvaluationOutcome.Allow)
         {
-            throw new BadRequestException(DenyMessage(evaluation));
+            throw new BadRequestException(AccessDenialMessage.For(evaluation));
         }
 
         var notAfter = now.AddSeconds(durationSeconds);
@@ -270,11 +270,4 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 
         return AccessRequestResult.Human(created);
     }
-
-    private static string DenyMessage(AccessEvaluation evaluation) => evaluation.Reason switch
-    {
-        DenyReason.NotWithinIpRange => "Access to this item is not permitted from your current network.",
-        DenyReason.NotWithinTimeWindow => "Access to this item is not permitted at this time.",
-        _ => "Access to this item is not permitted right now.",
-    };
 }
