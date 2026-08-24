@@ -37,7 +37,7 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
 
         var row = new EfModel
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = auditEvent.OrganizationId,
             CorrelationId = auditEvent.CorrelationId,
             Kind = auditEvent.Kind,
