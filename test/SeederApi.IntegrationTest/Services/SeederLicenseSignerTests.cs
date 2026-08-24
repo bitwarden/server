@@ -118,13 +118,12 @@ public sealed class SeederLicenseSignerTests : IDisposable
         File.WriteAllBytes(publicOnlyPath, _certificate.Export(X509ContentType.Cert));
         try
         {
-            using var signer = NewSigner(path: publicOnlyPath, password: string.Empty,
-                allowed: AllowedFor(_certificate));
+            using var signer = NewSigner(path: publicOnlyPath, allowed: AllowedFor(_certificate));
 
             var result = await signer.CreateUserTokenAsync(LicenseTestHelpers.NewPremiumOwner());
 
             Assert.Null(result.Token);
-            Assert.False(string.IsNullOrEmpty(result.Warning));
+            Assert.Contains("no RSA private key", result.Warning);
         }
         finally
         {
