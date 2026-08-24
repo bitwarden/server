@@ -42,6 +42,7 @@ public class InvoicePreviewBuilderSmRemovalTests
         var proration = Assert.Single(preview.SecretsManager.Prorations!);
         Assert.Equal(15.48m, proration.Credit);
         Assert.Equal(-15.48m, proration.Total);
+        Assert.Equal(1, proration.Months);
 
         // Visible rows now reconcile to the invoice total (unit cost × quantity, plus the proration).
         Assert.Equal(
