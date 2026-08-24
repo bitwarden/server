@@ -15,9 +15,9 @@ namespace Bit.Subscriptions.Organization;
 public static class OrganizationSubscriptionEndpointsExtensions
 {
     /// <summary>
-    /// Attaches the organization subscription group's shared cross-cutting chain to an empty group;
-    /// the host owns the route prefix. Only an authenticated caller is required here; each handler
-    /// performs its own organization billing authorization check.
+    /// Attaches the group's shared cross-cutting chain to an empty group; the host owns the route prefix.
+    /// The group authorizes every endpoint (<see cref="Policies.Application"/> + <see cref="OrganizationBillingRequirement"/>),
+    /// so handlers don't repeat the access check.
     /// </summary>
     public static RouteGroupBuilder MapOrganizationSubscriptionEndpoints(this IEndpointRouteBuilder endpoints)
     {
