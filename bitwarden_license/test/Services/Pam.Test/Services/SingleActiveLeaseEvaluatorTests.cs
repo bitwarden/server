@@ -79,6 +79,36 @@ public class SingleActiveLeaseEvaluatorTests
         Assert.False(await sutProvider.Sut.AppliesAsync(userId, cipherId));
     }
 
+    [Theory, BitAutoData]
+    public async Task AppliesAsync_OneDisabledSingletonRulePath_ReturnsFalse(
+        SutProvider<SingleActiveLeaseEvaluator> sutProvider, Guid userId, Guid cipherId,
+        Collection singletonCollection, Collection disabledCollection, AccessRule singletonRule,
+        AccessRule disabledRule)
+    {
+        singletonRule.SingleActiveLease = true;
+        disabledRule.SingleActiveLease = true;
+        SetupGovernedCollection(sutProvider, singletonCollection, singletonRule);
+        SetupGovernedCollection(sutProvider, disabledCollection, disabledRule);
+        disabledRule.Enabled = false;
+        SetupReachableCollections(sutProvider, userId, cipherId, singletonCollection, disabledCollection);
+
+        // A switched-off rule governs nothing, so its path is an escape exactly like an ungated one.
+        Assert.False(await sutProvider.Sut.AppliesAsync(userId, cipherId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AppliesAsync_OnlyPathGovernedByDisabledSingletonRule_ReturnsFalse(
+        SutProvider<SingleActiveLeaseEvaluator> sutProvider, Guid userId, Guid cipherId,
+        Collection collection, AccessRule rule)
+    {
+        rule.SingleActiveLease = true;
+        SetupGovernedCollection(sutProvider, collection, rule);
+        rule.Enabled = false;
+        SetupReachableCollections(sutProvider, userId, cipherId, collection);
+
+        Assert.False(await sutProvider.Sut.AppliesAsync(userId, cipherId));
+    }
+
     private static void SetupReachableCollections(
         SutProvider<SingleActiveLeaseEvaluator> sutProvider, Guid userId, Guid cipherId, params Collection[] collections)
     {
@@ -93,6 +123,9 @@ public class SingleActiveLeaseEvaluatorTests
     private static void SetupGovernedCollection(
         SutProvider<SingleActiveLeaseEvaluator> sutProvider, Collection collection, AccessRule rule)
     {
+        // Pinned rather than left to the fixture: whether the rule is switched on decides whether the path
+        // governs at all, so a test that means "governed" has to say so.
+        rule.Enabled = true;
         collection.AccessRuleId = rule.Id;
         sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
     }
