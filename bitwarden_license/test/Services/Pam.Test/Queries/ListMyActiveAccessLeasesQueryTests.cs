@@ -1,6 +1,6 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Queries;
-using Bit.Pam.Entities;
+﻿using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
