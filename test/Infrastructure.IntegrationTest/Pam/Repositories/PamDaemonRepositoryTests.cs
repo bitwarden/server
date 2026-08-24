@@ -159,7 +159,7 @@ public class PamDaemonRepositoryTests
 
         var assignment = new PamDaemonTargetAssignment
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             DaemonId = daemon.Id,
             TargetSystemId = target.Id,
             OrganizationId = organization.Id,

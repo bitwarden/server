@@ -58,7 +58,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
             new
             {
                 JobId = jobId,
-                AttemptId = CoreHelpers.GenerateComb(),
+                AttemptId = CombGuid.Generate(),
                 DaemonId = daemonId,
                 Now = now,
                 ReleaseDelaySeconds = (int)releaseDelay.TotalSeconds,

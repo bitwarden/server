@@ -66,7 +66,7 @@ public class AccessLeaseExpiryTests
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
         await accessLeaseRepository.RevokeAsync(revoked, AccessLeaseStatus.Revoked, new AccessDecision
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = revoked.AccessRequestId,
             DeciderKind = AccessDeciderKind.Human,
             ApproverId = Guid.NewGuid(),
@@ -114,7 +114,7 @@ public class AccessLeaseExpiryTests
     {
         var request = new AccessRequest
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organizationId,
             CollectionId = Guid.NewGuid(),
             CipherId = Guid.NewGuid(),
@@ -125,7 +125,7 @@ public class AccessLeaseExpiryTests
         };
         var decision = new AccessDecision
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = request.Id,
             DeciderKind = AccessDeciderKind.Automatic,
             Verdict = AccessDecisionVerdict.Approve,
@@ -134,7 +134,7 @@ public class AccessLeaseExpiryTests
 
         var lease = new AccessLease
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             AccessRequestId = request.Id,
             OrganizationId = organizationId,
             CollectionId = request.CollectionId,

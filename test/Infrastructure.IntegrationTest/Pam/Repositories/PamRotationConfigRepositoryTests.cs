@@ -281,7 +281,7 @@ public class PamRotationConfigRepositoryTests
         IPamDaemonRepository pamDaemonRepository, Guid daemonId, Guid targetSystemId, Guid organizationId, DateTime now)
         => await pamDaemonRepository.CreateAssignmentAsync(new PamDaemonTargetAssignment
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             DaemonId = daemonId,
             TargetSystemId = targetSystemId,
             OrganizationId = organizationId,
@@ -313,7 +313,7 @@ public class PamRotationConfigRepositoryTests
 
     private static PamRotationJob BuildPendingJob(Guid configId, DateTime now) => new()
     {
-        Id = CoreHelpers.GenerateComb(),
+        Id = CombGuid.Generate(),
         RotationConfigId = configId,
         Source = PamRotationSource.Scheduled,
         Status = PamRotationJobStatus.Pending,
