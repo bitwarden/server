@@ -6,7 +6,7 @@ namespace Bit.Invoicing.InvoicePreviews;
 /// <summary>Reduces one product's proration lines into a single renderable credit row.</summary>
 internal static class ProrationMapper
 {
-    internal static PurchasableProration? Summarize(IReadOnlyList<InvoiceLineItem> lines, Invoice invoice)
+    internal static PurchasableProration? Summarize(IReadOnlyList<InvoiceLineItem> lines)
     {
         if (lines.Count == 0)
         {
@@ -22,20 +22,20 @@ internal static class ProrationMapper
             Credit = creditCents / 100m,
             Total = (chargeCents - creditCents) / 100m,
             Tax = lines.SelectMany(line => line.Taxes ?? []).Sum(tax => tax.Amount) / 100m,
-            Months = MonthsRemaining(lines, invoice),
+            Months = MonthsRemaining(lines),
         };
     }
 
-    private static int MonthsRemaining(IReadOnlyList<InvoiceLineItem> lines, Invoice invoice)
+    private static int MonthsRemaining(IReadOnlyList<InvoiceLineItem> lines)
     {
-        var lineEnd = lines.Select(line => line.Period?.End).FirstOrDefault(end => end.HasValue);
-        if (lineEnd is null)
+        var period = lines.Select(line => line.Period).FirstOrDefault(p => p is not null);
+        if (period is null)
         {
             return 0;
         }
 
-        // 30-day months, minimum one, matching the legacy proration display.
-        var days = (lineEnd.Value - invoice.PeriodEnd).TotalDays;
+        // Calculate from the proration line's own span (End - Start); it is correct under any proration_behavior. (See README)
+        var days = (period.End - period.Start).TotalDays;
         return Math.Max(1, (int)Math.Round(days / 30, MidpointRounding.AwayFromZero));
     }
 }

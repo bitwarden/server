@@ -57,8 +57,8 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         {
             PlanTier = planTier,
             Cadence = cadence,
-            PasswordManager = BuildPasswordManagerItems(lineItemsByReference, ProrationMapper.Summarize(passwordManagerProrations, invoice)),
-            SecretsManager = BuildSecretsManagerItems(lineItemsByReference, ProrationMapper.Summarize(secretsManagerProrations, invoice)),
+            PasswordManager = BuildPasswordManagerItems(lineItemsByReference, ProrationMapper.Summarize(passwordManagerProrations)),
+            SecretsManager = BuildSecretsManagerItems(lineItemsByReference, ProrationMapper.Summarize(secretsManagerProrations)),
             Discounts = discounts.CartLevel.Length > 0 ? discounts.CartLevel : null,
             EstimatedTax = (invoice.TotalTaxes?.Sum(tax => tax.Amount) ?? 0) / 100m,
             Total = invoice.Total / 100m,
