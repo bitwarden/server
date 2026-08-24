@@ -209,7 +209,7 @@ public class PamRotationJobRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ClaimAsync_DisabledTargetOrPausedConfig_NotEligible(
+    public async Task ClaimAsync_DisabledTargetOrPausedConfig_NotClaimable(
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,
         IApiKeyRepository apiKeyRepository,
@@ -221,19 +221,21 @@ public class PamRotationJobRepositoryTests
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamDaemonRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
 
-        // Pause the config after the job was offered: EligibleClaimsOnly's capability half fails.
+        // Pause the config after the job was offered: EligibleClaimsOnly's capability half fails. The daemon is
+        // still assigned to the target, so this is a transient hold (409) rather than the 404 a job it may never
+        // touch would get -- PamRotationJob_Claim classifies eligibility on assignment and daemon org/status only.
         fixture.Config.Enabled = false;
         await pamRotationConfigRepository.ReplaceAsync(fixture.Config);
-        Assert.Equal(PamRotationClaimOutcome.NotEligible,
+        Assert.Equal(PamRotationClaimOutcome.NotClaimable,
             (await pamRotationJobRepository.ClaimAsync(fixture.Job.Id, fixture.Daemon.Id, fixture.Now, _releaseDelay))
             .Outcome);
 
-        // Re-enable the config but disable the target: still not eligible.
+        // Re-enable the config but disable the target: still held, for the same reason.
         fixture.Config.Enabled = true;
         await pamRotationConfigRepository.ReplaceAsync(fixture.Config);
         fixture.Target.Status = PamTargetSystemStatus.Disabled;
         await pamTargetSystemRepository.ReplaceAsync(fixture.Target);
-        Assert.Equal(PamRotationClaimOutcome.NotEligible,
+        Assert.Equal(PamRotationClaimOutcome.NotClaimable,
             (await pamRotationJobRepository.ClaimAsync(fixture.Job.Id, fixture.Daemon.Id, fixture.Now, _releaseDelay))
             .Outcome);
 

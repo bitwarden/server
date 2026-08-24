@@ -10,7 +10,6 @@ using Bit.Infrastructure.IntegrationTest.Comparers;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
-using Microsoft.Data.SqlClient;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
@@ -71,9 +70,9 @@ public class PamRotationConfigRepositoryTests
     // OneConfigPerCipher (IX_PamRotationConfig_CipherId): a second config for a cipher that already has one hits the
     // unique index and throws -- PamRotationConfigRepository does not catch this the way AccessLeaseRepository does
     // for its own unique-index backstop, so the caller (CreateRotationConfigCommand) is expected to have already
-    // guarded against it via GetByCipherIdAsync.
+    // guarded against it via GetByCipherIdAsync. Both ORMs enforce it; only the exception type differs.
     [DatabaseTheory, DatabaseData]
-    public async Task CreateAsync_SecondConfigForSameCipher_ThrowsSqlException(
+    public async Task CreateAsync_SecondConfigForSameCipher_Throws(
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,
         ICipherRepository cipherRepository,
@@ -86,8 +85,11 @@ public class PamRotationConfigRepositoryTests
 
         await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
 
-        await Assert.ThrowsAsync<SqlException>(() =>
+        // The exception type is provider-specific (SqlException on MSSQL, DbUpdateException through EF), so assert
+        // the invariant rather than the type: the write fails and the cipher still has exactly its first config.
+        await Assert.ThrowsAnyAsync<Exception>(() =>
             pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now)));
+        Assert.NotNull(await pamRotationConfigRepository.GetByCipherIdAsync(cipher.Id));
     }
 
     // The sweep's due phase: enabled + automatic + active-target configs whose schedule has come due, with no active
@@ -133,9 +135,11 @@ public class PamRotationConfigRepositoryTests
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, activeTarget.Id, now,
                 nextRotationAt: null));
 
+        // The sweep is deliberately global -- it runs across every organization -- so scope the assertion to this
+        // test's own rows rather than to the whole result, which any other seeded organization would perturb.
         var dueConfigs = await pamRotationConfigRepository.GetManyDueAsync(now);
 
-        var row = Assert.Single(dueConfigs);
+        var row = Assert.Single(dueConfigs, c => c.OrganizationId == organization.Id);
         Assert.Equal(due.Id, row.Id);
     }
 
@@ -188,7 +192,18 @@ public class PamRotationConfigRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(job.Id, daemon.Id, now, TimeSpan.FromMinutes(15));
         Assert.Equal(PamRotationClaimOutcome.Claimed, claim.Outcome);
 
-        await pamRotationConfigRepository.DeleteWithJobsAsync(config.Id);
+        // While a daemon holds the claim the delete is refused outright: tearing the job out from under it would
+        // leave the target rotated and the vault holding the old secret, with no attempt row to record the drift.
+        Assert.False(await pamRotationConfigRepository.DeleteWithJobsAsync(config.Id));
+        Assert.NotNull(await pamRotationConfigRepository.GetByIdAsync(config.Id));
+        Assert.NotNull(await pamRotationJobRepository.GetByIdAsync(job.Id));
+
+        // Once the job reaches a terminal state the config and its whole job/attempt history cascade away.
+        var failure = await pamRotationJobRepository.MarkAttemptErroredAsync(claim.AttemptId!.Value, daemon.Id,
+            "boom", PamRotationSyncState.TargetUnchanged, now, maxAttempts: 1, retryBaseDelay: TimeSpan.FromMinutes(1));
+        Assert.Equal(PamRotationJobStatus.Failed, failure.JobStatus);
+
+        Assert.True(await pamRotationConfigRepository.DeleteWithJobsAsync(config.Id));
 
         Assert.Null(await pamRotationConfigRepository.GetByIdAsync(config.Id));
         Assert.Null(await pamRotationJobRepository.GetByIdAsync(job.Id));
