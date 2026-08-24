@@ -24,16 +24,18 @@ public static class PamEndpointsExtensions
 
         // Credential rotation -- admin fleet/config management, gated behind the PamRotation flag on top of the
         // same org-scoped Policies.Application every other admin group uses.
-        endpoints.MapGroup("/organizations/{orgId:guid}/rotation/daemons").WithPamRotationDefaults().MapRotationDaemonEndpoints();
-        endpoints.MapGroup("/organizations/{orgId:guid}/rotation/target-systems").WithPamRotationDefaults().MapRotationTargetSystemEndpoints();
-        endpoints.MapGroup("/organizations/{orgId:guid}/rotation/configs").WithPamRotationDefaults().MapRotationConfigEndpoints();
+        var rotationAdmin = endpoints.MapGroup("/organizations/{orgId:guid}/rotation").WithPamRotationDefaults();
+        rotationAdmin.MapGroup("/daemons").MapRotationDaemonEndpoints();
+        rotationAdmin.MapGroup("/target-systems").MapRotationTargetSystemEndpoints();
+        rotationAdmin.MapGroup("/configs").MapRotationConfigEndpoints();
 
         // Credential rotation -- the daemon-facing surface. Policies.PamRotationDaemon replaces Policies.Application
         // (a machine-credential bearer token, not a user's), and DaemonRequestEndpointFilter re-verifies the daemon
         // end to end on every request and bumps its heartbeat.
-        endpoints.MapGroup("/rotation/daemon").WithPamDaemonDefaults().MapRotationDaemonJobsEndpoints();
-        endpoints.MapGroup("/rotation/jobs").WithPamDaemonDefaults().MapRotationJobEndpoints();
-        endpoints.MapGroup("/rotation/attempts").WithPamDaemonDefaults().MapRotationAttemptEndpoints();
+        var rotationDaemon = endpoints.MapGroup("/rotation").WithPamDaemonDefaults();
+        rotationDaemon.MapGroup("/daemon").MapRotationDaemonJobsEndpoints();
+        rotationDaemon.MapGroup("/jobs").MapRotationJobEndpoints();
+        rotationDaemon.MapGroup("/attempts").MapRotationAttemptEndpoints();
     }
 
     /// <summary>Applies the shared PAM endpoint chain with the surface's usual authorization policy and feature flag.</summary>
