@@ -1,8 +1,11 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 
@@ -15,6 +18,9 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
     private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
+    private readonly IGoverningRuleResolver _resolver;
+    private readonly IAccessRuleEngine _ruleEngine;
+    private readonly ICurrentContext _currentContext;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
@@ -24,6 +30,9 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
         ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
+        IGoverningRuleResolver resolver,
+        IAccessRuleEngine ruleEngine,
+        ICurrentContext currentContext,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
@@ -32,6 +41,9 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
         _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
+        _resolver = resolver;
+        _ruleEngine = ruleEngine;
+        _currentContext = currentContext;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -118,6 +130,28 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
+        // The last gate before the point of no return: the rule's automated conditions have to still hold, now, at
+        // the moment the lease is minted. Approval is a decision about *this* requester and window; a source-IP
+        // allowlist is a standing condition on the network they reach the credential from, and nothing downstream
+        // re-asks it -- CipherLeaseGate hands over a gated cipher on the existence of an active lease alone. Checking
+        // only at submit meant an approval, once obtained, carried a caller across a narrowed allowlist or onto a
+        // network the rule never admitted, for the whole approved window (PM-42273).
+        var denial = await FindConditionDenialAsync(userId, request, now);
+        if (denial is not null)
+        {
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with
+                {
+                    Kind = AccessAuditEventKind.LeaseActivationRejected,
+                    Phase = AccessAuditEventPhase.Outcome,
+                    AccessLeaseId = null,
+                    // The reason, not the copy shown to the requester: wording is presentation and will be
+                    // translated, while the reason stays queryable and means one thing to whoever reads the trail.
+                    Detail = denial.Reason.ToString(),
+                });
+            throw new BadRequestException(AccessDenialMessage.For(denial));
+        }
+
         var outcome = await _accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now, enforceSingleActiveLease);
 
         if (outcome == AccessLeaseMintOutcome.SingleActiveLeaseConflict)
@@ -153,5 +187,53 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
 
         return lease;
+    }
+
+    /// <summary>
+    /// Re-evaluates the governing rule's automated conditions against the caller's signals right now. Returns the
+    /// denial to refuse with, or null when the conditions still admit the caller — or when there are none left to
+    /// apply.
+    /// </summary>
+    /// <remarks>
+    /// The rule pinned on the request is the one consulted, not whichever rule governs the cipher today: a request is
+    /// held to the rule that approved it, and re-resolving could hand it a rule created or re-pointed since. Requests
+    /// predating pinning fall back to resolution so the gate still covers them rather than waving them through.
+    ///
+    /// The approval gate itself is stripped (<see cref="GoverningRule.AutomatedConditions"/>) — an approver's verdict
+    /// has already settled it, and re-asking would refuse every human-approved activation outright. That is also why a
+    /// rule the server cannot parse is refused here rather than deferred: its fail-safe stand-in is an approval gate,
+    /// and stripping that leaves nothing, which the engine reads as vacuously satisfied.
+    /// </remarks>
+    private async Task<AccessEvaluation?> FindConditionDenialAsync(Guid userId, AccessRequest request, DateTime now)
+    {
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
+
+        var governingRule = request.RuleId is { } ruleId
+            ? await _resolver.ResolvePinnedAsync(ruleId, request.CollectionId)
+            : await _resolver.ResolveAsync(userId, request.CipherId, signals);
+
+        // No rule left to enforce: the admin disabled or deleted it, or the cipher is no longer reachable through a
+        // gated collection. Leasing has stopped governing this credential, so there is nothing to hold the caller to
+        // and the approved request activates.
+        if (governingRule is null)
+        {
+            return null;
+        }
+
+        if (governingRule.ConditionsUnreadable)
+        {
+            return AccessEvaluation.Deny(DenyReason.UnsupportedCondition);
+        }
+
+        var evaluation = _ruleEngine.Evaluate(governingRule.AutomatedConditions, signals);
+        return evaluation.Outcome switch
+        {
+            AccessEvaluationOutcome.Allow => null,
+            // No condition kind asks for approval outside the gate stripped above, but if one ever did it would be
+            // asking for something this gate cannot deliver — the request is already approved and there is no second
+            // approver to route to. Recorded as unsupported rather than passed off as a plain deny with no reason.
+            AccessEvaluationOutcome.RequiresApproval => AccessEvaluation.Deny(DenyReason.UnsupportedCondition),
+            _ => evaluation,
+        };
     }
 }

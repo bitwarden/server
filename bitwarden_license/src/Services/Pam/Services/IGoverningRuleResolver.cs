@@ -17,4 +17,22 @@ public interface IGoverningRuleResolver
     /// <paramref name="signals"/> either. The rule's conditions are returned unevaluated for the caller to apply.
     /// </summary>
     Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId, AccessSignals signals);
+
+    /// <summary>
+    /// Loads the rule a request pinned at submit (<c>AccessRequest.RuleId</c>), rather than re-deriving which rule
+    /// governs the caller now. Use this from any operation that acts on an existing request: re-resolving would apply
+    /// oldest-wins over today's collections and rules, so a rule created or re-pointed since submit could silently
+    /// take over from the one that actually decided the request.
+    /// </summary>
+    /// <param name="ruleId">The pinned rule.</param>
+    /// <param name="collectionId">
+    /// The collection the request was made through, carried on the request. Supplied rather than re-derived because it
+    /// is a fact about the request, not about which collections reach the cipher today.
+    /// </param>
+    /// <returns>
+    /// The pinned rule, or null when it no longer gates access — it was disabled, or deleted (a delete clears the pin,
+    /// so in practice this is the narrow window before that lands). Null means ungated, exactly as it does for
+    /// <see cref="ResolveAsync"/>: there is no rule left to hold the caller to.
+    /// </returns>
+    Task<GoverningRule?> ResolvePinnedAsync(Guid ruleId, Guid collectionId);
 }
