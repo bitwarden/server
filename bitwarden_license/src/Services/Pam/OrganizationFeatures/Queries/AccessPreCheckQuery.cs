@@ -1,12 +1,12 @@
-﻿using Bit.Services.Pam.Engine;
+﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
+using Bit.Core.Vault.Repositories;
+using Bit.Pam.Repositories;
+using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Enums;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Services.Pam.Services;
-using Bit.Core.Context;
-using Bit.Core.Exceptions;
-using Bit.Core.Vault.Repositories;
-using Bit.Pam.Repositories;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 

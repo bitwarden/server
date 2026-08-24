@@ -1,5 +1,5 @@
-﻿using Bit.Services.Pam.Models;
-using Bit.Pam.Models;
+﻿using Bit.Pam.Models;
+using Bit.Services.Pam.Models;
 namespace Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 
 public interface IDecideAccessRequestCommand

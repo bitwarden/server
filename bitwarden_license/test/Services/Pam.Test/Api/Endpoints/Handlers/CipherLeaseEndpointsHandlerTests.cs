@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Services;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

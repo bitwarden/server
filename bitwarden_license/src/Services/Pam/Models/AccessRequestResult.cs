@@ -1,6 +1,6 @@
-﻿using Bit.Services.Pam.Enums;
-using Bit.Pam.Entities;
+﻿using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Services.Pam.Enums;
 
 namespace Bit.Services.Pam.Models;
 
