@@ -27,6 +27,9 @@ useradd -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1 ||
 usermod -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1
 mkhomedir_helper $USERNAME
 
+# setpriv, update the $HOME for the target user
+export HOME=/home/$USERNAME
+
 # Read the SA_PASSWORD value from a file for swarm environments.
 # See https://github.com/Microsoft/mssql-docker/issues/326
 if [ ! -z "$SA_PASSWORD" ] && [ ! -z "$SA_PASSWORD_FILE" ]
@@ -59,7 +62,7 @@ chown $USERNAME:$GROUPNAME /backup-db.sql
 # Launch a loop to backup database on a daily basis
 if [ "$BACKUP_DB" != "0" ]
 then
-    gosu $USERNAME:$GROUPNAME /bin/sh -c "/backup-db.sh loop >/dev/null 2>&1 &"
+    setpriv --reuid $USERNAME --regid $GROUPNAME --init-groups /bin/sh -c "/backup-db.sh loop >/dev/null 2>&1 &"
 fi
 
-exec gosu $USERNAME:$GROUPNAME /opt/mssql/bin/sqlservr
+exec setpriv --reuid $USERNAME --regid $GROUPNAME --init-groups /opt/mssql/bin/sqlservr
