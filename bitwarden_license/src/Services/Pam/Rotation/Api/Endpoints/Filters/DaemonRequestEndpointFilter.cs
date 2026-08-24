@@ -18,15 +18,11 @@ namespace Bit.Services.Pam.Rotation.Api.Endpoints.Filters;
 /// otherwise ineligible daemon cannot be distinguished from an unknown one.
 ///
 /// On success this also doubles as the daemon's heartbeat (spec <c>DaemonConnection</c>): it conditionally bumps
-/// <see cref="PamDaemon.LastHeartbeatAt"/> (the repository only writes when the existing value is stale, so a
-/// tightly polling daemon does not hammer its row) and stashes the loaded daemon on
-/// <see cref="HttpContext.Items"/> under <see cref="PamDaemonHttpContextKey"/> so handlers avoid a second lookup.
+/// <see cref="PamDaemon.LastHeartbeatAt"/> -- the repository only writes when the existing value is stale, so a
+/// tightly polling daemon does not hammer its row.
 /// </summary>
 public class DaemonRequestEndpointFilter : IEndpointFilter
 {
-    /// <summary>The <see cref="HttpContext.Items"/> key handlers read to get the <see cref="PamDaemon"/> this filter already loaded.</summary>
-    public const string PamDaemonHttpContextKey = "PamDaemon";
-
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         // Endpoint filters registered via the generic AddEndpointFilter<T>() are resolved per invocation from the
@@ -58,8 +54,6 @@ public class DaemonRequestEndpointFilter : IEndpointFilter
 
         var now = timeProvider.GetUtcNow().UtcDateTime;
         await daemonRepository.UpdateHeartbeatAsync(daemon.Id, now, options.Value.HeartbeatMinInterval);
-
-        context.HttpContext.Items[PamDaemonHttpContextKey] = daemon;
 
         return await next(context);
     }

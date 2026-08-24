@@ -30,8 +30,12 @@ public interface IPamRotationJobRepository
     /// </summary>
     Task<PamRotationClaimResult> ClaimAsync(Guid jobId, Guid daemonId, DateTime now, TimeSpan releaseDelay);
 
-    /// <summary>Returns the daemon's currently claimable jobs — jobs on targets it is assigned to that are Pending and past <c>NextClaimableAt</c>. The daemon's poll.</summary>
-    Task<ICollection<PamRotationJob>> GetManyClaimableByDaemonIdAsync(Guid daemonId, DateTime now);
+    /// <summary>
+    /// Returns the daemon's currently claimable jobs — jobs on targets it is assigned to that are Pending and past
+    /// <c>NextClaimableAt</c>. The daemon's poll. Each row carries its config's target system id, projected from the
+    /// join the eligibility check already makes, so the caller does not re-read the config per job.
+    /// </summary>
+    Task<ICollection<PamClaimableJob>> GetManyClaimableByDaemonIdAsync(Guid daemonId, DateTime now);
 
     /// <summary>Returns every job recorded against the config, each with its attempts, oldest first — the config detail page's attempt history.</summary>
     Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId);

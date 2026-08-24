@@ -66,10 +66,10 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<ICollection<PamRotationJob>> GetManyClaimableByDaemonIdAsync(Guid daemonId, DateTime now)
+    public async Task<ICollection<PamClaimableJob>> GetManyClaimableByDaemonIdAsync(Guid daemonId, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.QueryAsync<PamRotationJob>(
+        var results = await connection.QueryAsync<PamClaimableJob>(
             "[dbo].[PamRotationJob_ReadManyClaimableByDaemonId]",
             new { DaemonId = daemonId, Now = now },
             commandType: CommandType.StoredProcedure);

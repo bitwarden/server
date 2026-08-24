@@ -1,4 +1,4 @@
-﻿using Bit.Pam.Entities;
+﻿using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Rotation.Queries.Interfaces;
 
@@ -16,6 +16,6 @@ public class ListClaimableJobsQuery : IListClaimableJobsQuery
         _timeProvider = timeProvider;
     }
 
-    public Task<ICollection<PamRotationJob>> ListAsync(Guid daemonId) =>
+    public Task<ICollection<PamClaimableJob>> ListAsync(Guid daemonId) =>
         _jobRepository.GetManyClaimableByDaemonIdAsync(daemonId, _timeProvider.GetUtcNow().UtcDateTime);
 }

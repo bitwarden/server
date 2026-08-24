@@ -1,4 +1,4 @@
-﻿using Bit.Pam.Entities;
+﻿using Bit.Pam.Models;
 
 namespace Bit.Services.Pam.Rotation.Queries.Interfaces;
 
@@ -8,5 +8,5 @@ public interface IListClaimableJobsQuery
     /// A daemon's currently claimable jobs — its poll (spec <c>ClaimRotation</c>'s candidate set). Doubles as the
     /// daemon's heartbeat when idle.
     /// </summary>
-    Task<ICollection<PamRotationJob>> ListAsync(Guid daemonId);
+    Task<ICollection<PamClaimableJob>> ListAsync(Guid daemonId);
 }

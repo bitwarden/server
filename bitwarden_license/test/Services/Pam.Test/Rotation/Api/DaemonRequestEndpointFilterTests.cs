@@ -139,7 +139,6 @@ public class DaemonRequestEndpointFilterTests
         Assert.True(nextCalled.Value);
         Assert.Equal("ok", result);
         await daemonRepository.Received(1).UpdateHeartbeatAsync(daemonId, _now, _heartbeatMinInterval);
-        Assert.Same(daemon, context.HttpContext.Items[DaemonRequestEndpointFilter.PamDaemonHttpContextKey]);
     }
 
     private static EndpointFilterDelegate NextDelegate(StrongBox<bool> nextCalled) => _ =>

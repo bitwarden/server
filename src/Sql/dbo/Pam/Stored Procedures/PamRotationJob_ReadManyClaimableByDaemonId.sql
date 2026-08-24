@@ -9,7 +9,7 @@ BEGIN
     -- PamRotationJob_Claim itself re-checks (config enabled, target active, an assignment exists, the daemon is
     -- Enabled, and -- defense in depth -- its own org matches the config's org) so the list a daemon sees and what
     -- it can actually claim never diverge.
-    SELECT J.*
+    SELECT J.*, C.[TargetSystemId]
     FROM [dbo].[PamRotationJob] J
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
     INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]

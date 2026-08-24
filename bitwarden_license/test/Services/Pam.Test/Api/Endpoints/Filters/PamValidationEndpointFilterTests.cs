@@ -2,6 +2,7 @@
 using Bit.Pam.Enums;
 using Bit.Services.Pam.Api.Endpoints.Filters;
 using Bit.Services.Pam.Api.Models.Request;
+using Bit.Services.Pam.Rotation.Api.Models.Request;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Xunit;
@@ -65,6 +66,80 @@ public class PamValidationEndpointFilterTests
         Assert.True(nextCalled);
         Assert.Equal("ok", result);
     }
+
+    [Fact]
+    public async Task InvokeAsync_NestedRequestModelViolatesARangeAttribute_Returns400()
+    {
+        // PamPasswordPolicyRequestModel is only ever reached as a nested property, and TryValidateObject does not
+        // recurse -- so without the filter's own walk these constraints would never run.
+        var context = CreateContext(new UpdateTargetSystemPolicyRequestModel
+        {
+            PasswordPolicy = new PamPasswordPolicyRequestModel
+            {
+                MinLength = 0,
+                MaxLength = 0,
+                IncludeLowercase = true,
+            },
+        });
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.Contains(nameof(PamPasswordPolicyRequestModel.MinLength), jsonResult.Value!.ValidationErrors!.Keys);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NestedRequestModelViolatesItsValidatableObjectRule_Returns400()
+    {
+        var context = CreateContext(new UpdateTargetSystemPolicyRequestModel
+        {
+            PasswordPolicy = new PamPasswordPolicyRequestModel
+            {
+                MinLength = 32,
+                MaxLength = 16,
+                IncludeLowercase = true,
+            },
+        });
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.Contains(
+            "MinLength must not be greater than MaxLength.",
+            jsonResult.Value!.ValidationErrors![nameof(PamPasswordPolicyRequestModel.MinLength)]);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ValidNestedRequestModel_CallsNext()
+    {
+        var nextCalled = false;
+        var context = CreateContext(new UpdateTargetSystemPolicyRequestModel
+        {
+            PasswordPolicy = new PamPasswordPolicyRequestModel
+            {
+                MinLength = 16,
+                MaxLength = 32,
+                IncludeUppercase = true,
+                IncludeLowercase = true,
+                IncludeDigits = true,
+            },
+        });
+        EndpointFilterDelegate next = _ =>
+        {
+            nextCalled = true;
+            return ValueTask.FromResult<object?>("ok");
+        };
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, next);
+
+        Assert.True(nextCalled);
+        Assert.Equal("ok", result);
+    }
+
+    private static EndpointFilterDelegate NotCalled() =>
+        _ => throw new Xunit.Sdk.XunitException("The filter should have short-circuited before calling next.");
 
     // Use DefaultEndpointFilterInvocationContext's params constructor rather than the static Create(...), whose
     // generic overload would treat a passed object[] as one argument instead of spreading it.
