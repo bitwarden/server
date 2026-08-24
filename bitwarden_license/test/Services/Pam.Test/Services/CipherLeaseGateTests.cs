@@ -198,6 +198,44 @@ public class CipherLeaseGateTests
         Assert.True(access.Authorizes(userOwnedCipherId));
     }
 
+    [Fact]
+    public async Task AuthorizeReadManyAsync_GovernedOnlyByDisabledRule_NotGated()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var disabledRuleCollectionId = Guid.NewGuid();
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(
+            userId,
+            [new Cipher { Id = cipherId }],
+            [DisabledRuleCollection(disabledRuleCollectionId)],
+            Group(new CollectionCipher { CipherId = cipherId, CollectionId = disabledRuleCollectionId }));
+
+        // A switched-off rule gates nothing, which is the reading the single-cipher path already took: the
+        // resolver drops a disabled rule, so gating here withheld the credential while offering no way to
+        // request it — no data and no prompt either (PM-42274).
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeReadManyAsync_AlsoReachableThroughDisabledRuleCollection_NotGated()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var leasingCollectionId = Guid.NewGuid();
+        var disabledRuleCollectionId = Guid.NewGuid();
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(
+            userId,
+            [new Cipher { Id = cipherId }],
+            [LeasingCollection(leasingCollectionId), DisabledRuleCollection(disabledRuleCollectionId)],
+            Group(
+                new CollectionCipher { CipherId = cipherId, CollectionId = leasingCollectionId },
+                new CollectionCipher { CipherId = cipherId, CollectionId = disabledRuleCollectionId }));
+
+        // The disabled path is an escape for the same reason a plain collection is: it gates nothing, so the
+        // caller can already read the cipher in full through it.
+        Assert.True(access.Authorizes(cipherId));
+    }
+
     // --- AuthorizeReadManyAsync (self-loading) ----------------------------------------------------
 
     [Fact]
@@ -233,6 +271,21 @@ public class CipherLeaseGateTests
         Assert.True(access.Authorizes(plainCipherId));
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);
         await sutProvider.GetDependency<ICollectionCipherRepository>().Received(1).GetManyByUserIdAsync(userId);
+    }
+
+    [Fact]
+    public async Task AuthorizeReadManyAsync_SelfLoading_GovernedOnlyByDisabledRule_NotGated()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var disabledRuleCollectionId = Guid.NewGuid();
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns([DisabledRuleCollection(disabledRuleCollectionId)]);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdAsync(userId)
+            .Returns([new CollectionCipher { CipherId = cipherId, CollectionId = disabledRuleCollectionId }]);
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId, [new Cipher { Id = cipherId }]);
+
+        Assert.True(access.Authorizes(cipherId));
     }
 
     // --- EnsureCanMutateAsync ---------------------------------------------------------------------
@@ -469,7 +522,14 @@ public class CipherLeaseGateTests
         HasActiveLeasesFor(sutProvider, userId);
 
     private static CollectionDetails LeasingCollection(Guid id) =>
-        new() { Id = id, AccessRuleId = Guid.NewGuid() };
+        new() { Id = id, AccessRuleId = Guid.NewGuid(), HasEnabledAccessRule = true };
+
+    /// <summary>
+    /// A collection associated with a rule the admin has switched off. The association is still recorded, so
+    /// this is exactly the shape that used to gate on the bare <c>AccessRuleId</c>.
+    /// </summary>
+    private static CollectionDetails DisabledRuleCollection(Guid id) =>
+        new() { Id = id, AccessRuleId = Guid.NewGuid(), HasEnabledAccessRule = false };
 
     private static CollectionDetails PlainCollection(Guid id) => new() { Id = id, AccessRuleId = null };
 
