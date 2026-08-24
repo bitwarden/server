@@ -1,7 +1,9 @@
-﻿using Bit.Core;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
 using Bit.Services.Pam.Api.Endpoints.Filters;
+using Bit.Services.Pam.Rotation.Api.Authorization;
 using Bit.Services.Pam.Rotation.Api.Endpoints;
 using Bit.Services.Pam.Rotation.Api.Endpoints.Filters;
 
@@ -23,7 +25,8 @@ public static class PamEndpointsExtensions
         endpoints.MapGroup("/leases/ciphers/{id:guid}").WithPamDefaults().MapCipherLeaseEndpoints();
 
         // Credential rotation -- admin fleet/config management, gated behind the PamRotation flag on top of the
-        // same org-scoped Policies.Application every other admin group uses.
+        // same Policies.Application every other admin group uses, plus ManageRotationRequirement for the org-scoped
+        // role check. Nested groups inherit both, so every route below is gated identically.
         var rotationAdmin = endpoints.MapGroup("/organizations/{orgId:guid}/rotation").WithPamRotationDefaults();
         rotationAdmin.MapGroup("/daemons").MapRotationDaemonEndpoints();
         rotationAdmin.MapGroup("/target-systems").MapRotationTargetSystemEndpoints();
@@ -43,11 +46,16 @@ public static class PamEndpointsExtensions
         group.WithPamDefaults(Policies.Application, FeatureFlagKeys.Pam);
 
     /// <summary>
-    /// Rotation's admin surface: org admin/owner-gated (per-row org checks happen in the commands), behind the
-    /// rotation flag rather than the base PAM flag.
+    /// Rotation's admin surface: behind the rotation flag rather than the base PAM flag, and authorized in the
+    /// middleware by <see cref="ManageRotationRequirement"/> rather than in the handlers. Handlers and commands are
+    /// left with resource scoping only -- confirming an id reached by route belongs to the route organization.
     /// </summary>
-    private static RouteGroupBuilder WithPamRotationDefaults(this RouteGroupBuilder group) =>
+    private static RouteGroupBuilder WithPamRotationDefaults(this RouteGroupBuilder group)
+    {
         group.WithPamDefaults(Policies.Application, FeatureFlagKeys.PamRotation);
+        group.RequireAuthorization(new AuthorizeAttribute<ManageRotationRequirement>());
+        return group;
+    }
 
     /// <summary>
     /// Rotation's daemon-facing surface: <see cref="Policies.PamRotationDaemon"/> instead of the user-token

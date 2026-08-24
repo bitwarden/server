@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Context;
-using Bit.Core.Exceptions;
 using Bit.HttpExtensions;
 using Bit.Pam;
 using Bit.Services.Pam.Rotation.Api.Models.Request;
@@ -10,9 +9,10 @@ using Bit.Services.Pam.Rotation.Queries.Interfaces;
 namespace Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>organizations/{orgId}/rotation/configs</c> resource. Every method is org admin/owner-gated
-/// (see <see cref="EnsureAdminAsync"/>, copied from <c>AccessRuleEndpointsHandler</c>); the commands underneath
-/// additionally re-verify every id argument belongs to the route organization.
+/// Handler for the <c>organizations/{orgId}/rotation/configs</c> resource. Authority over the organization is already
+/// settled by the time a handler runs -- <c>PamEndpointsExtensions</c> gates the whole rotation admin group on
+/// <c>ManageRotationRequirement</c> through the authorization middleware. What is left is resource scoping: the
+/// commands underneath re-verify every id argument belongs to the route organization.
 ///
 /// <see cref="ICreateRotationConfigCommand"/> and <see cref="IUpdateRotationSettingsCommand"/>/
 /// <see cref="IUpdateRotationAccountCommand"/> return the bare entity, not the list/detail projection, so this
@@ -35,8 +35,6 @@ public class RotationConfigEndpointsHandler(
 {
     public async Task<ListResponseModel<PamRotationConfigResponseModel>> GetAll(Guid orgId)
     {
-        await EnsureAdminAsync(orgId);
-
         var configs = await listRotationConfigsQuery.ListAsync(orgId);
         var now = timeProvider.GetUtcNow().UtcDateTime;
         return new ListResponseModel<PamRotationConfigResponseModel>(
@@ -46,15 +44,11 @@ public class RotationConfigEndpointsHandler(
 
     public async Task<PamRotationConfigDetailResponseModel> Get(Guid orgId, Guid id)
     {
-        await EnsureAdminAsync(orgId);
-
         return await GetDetailAsync(orgId, id);
     }
 
     public async Task<PamRotationConfigDetailResponseModel> Post(Guid orgId, CreateRotationConfigRequestModel model)
     {
-        await EnsureAdminAsync(orgId);
-
         var created = await createRotationConfigCommand.CreateAsync(
             orgId,
             currentContext.UserId!.Value,
@@ -69,8 +63,6 @@ public class RotationConfigEndpointsHandler(
 
     public async Task<PamRotationConfigDetailResponseModel> PutSettings(Guid orgId, Guid id, UpdateRotationSettingsRequestModel model)
     {
-        await EnsureAdminAsync(orgId);
-
         var updated = await updateRotationSettingsCommand.UpdateAsync(
             orgId, currentContext.UserId!.Value, id, model.ScheduleCron, model.RotateOnAccessEnd);
         return await GetDetailAsync(orgId, updated.Id);
@@ -78,8 +70,6 @@ public class RotationConfigEndpointsHandler(
 
     public async Task<PamRotationConfigDetailResponseModel> PutAccount(Guid orgId, Guid id, UpdateRotationAccountRequestModel model)
     {
-        await EnsureAdminAsync(orgId);
-
         var updated = await updateRotationAccountCommand.UpdateAsync(
             orgId, currentContext.UserId!.Value, id, model.AccountIdentity, model.TerminateSessions);
         return await GetDetailAsync(orgId, updated.Id);
@@ -87,36 +77,26 @@ public class RotationConfigEndpointsHandler(
 
     public async Task Pause(Guid orgId, Guid id)
     {
-        await EnsureAdminAsync(orgId);
-
         await pauseRotationCommand.PauseAsync(orgId, currentContext.UserId!.Value, id);
     }
 
     public async Task Resume(Guid orgId, Guid id)
     {
-        await EnsureAdminAsync(orgId);
-
         await resumeRotationCommand.ResumeAsync(orgId, currentContext.UserId!.Value, id);
     }
 
     public async Task Rotate(Guid orgId, Guid id)
     {
-        await EnsureAdminAsync(orgId);
-
         await triggerRotationCommand.TriggerAsync(orgId, currentContext.UserId!.Value, id);
     }
 
     public async Task RecordManual(Guid orgId, Guid id)
     {
-        await EnsureAdminAsync(orgId);
-
         await recordManualRotationCommand.RecordAsync(orgId, currentContext.UserId!.Value, id);
     }
 
     public async Task Delete(Guid orgId, Guid id)
     {
-        await EnsureAdminAsync(orgId);
-
         await deleteRotationConfigCommand.DeleteAsync(orgId, currentContext.UserId!.Value, id);
     }
 
@@ -127,13 +107,5 @@ public class RotationConfigEndpointsHandler(
         var awaitingManualRotation = PamRotationRules.AwaitingManualRotation(
             history.Config, history.Config.TargetSystemMethod, now);
         return new PamRotationConfigDetailResponseModel(history, awaitingManualRotation);
-    }
-
-    private async Task EnsureAdminAsync(Guid orgId)
-    {
-        if (!await currentContext.OrganizationAdmin(orgId) && !await currentContext.OrganizationOwner(orgId))
-        {
-            throw new NotFoundException();
-        }
     }
 }
