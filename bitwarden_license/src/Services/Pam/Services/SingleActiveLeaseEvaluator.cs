@@ -48,8 +48,12 @@ public class SingleActiveLeaseEvaluator : ISingleActiveLeaseEvaluator
 
             var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId.Value);
 
-            // A missing rule, or a rule that does not ask for a singleton, is likewise an escape path.
-            if (accessRule is null || !accessRule.SingleActiveLease)
+            // A missing rule, a switched-off one, or a rule that does not ask for a singleton is likewise an
+            // escape path. Enabled counts here for the same reason it does in GoverningRuleResolver and the
+            // leasing gate: a disabled rule governs nothing, so a path carrying only one is no different from
+            // an ungated path, and holding the member to its singleton would bind a constraint no rule is
+            // actually imposing.
+            if (accessRule is not { Enabled: true, SingleActiveLease: true })
             {
                 return false;
             }
