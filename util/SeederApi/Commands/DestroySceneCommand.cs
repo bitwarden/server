@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Licenses;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -97,6 +96,10 @@ public class DestroySceneCommand(
     /// Best-effort removal of the premium license files the seeder writes for seeded users. File errors
     /// are logged and swallowed so cleanup never aborts the database teardown.
     /// </summary>
+    /// <remarks>
+    /// Path convention duplicated from <c>LicensingService.WriteUserLicenseAsync</c>
+    /// (<c>{LicenseDirectory}/user/{userId}.json</c>); keep the two in sync.
+    /// </remarks>
     private void DeleteSeededUserLicenseFiles(List<Guid?> userIds, string playId)
     {
         if (string.IsNullOrEmpty(globalSettings.LicenseDirectory))
@@ -106,7 +109,7 @@ public class DestroySceneCommand(
 
         foreach (var userId in userIds.Where(id => id.HasValue))
         {
-            var filePath = LicenseDirectoryPaths.UserLicensePath(globalSettings.LicenseDirectory, userId!.Value);
+            var filePath = Path.Combine(globalSettings.LicenseDirectory, "user", $"{userId!.Value}.json");
             try
             {
                 if (File.Exists(filePath))

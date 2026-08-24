@@ -1,5 +1,6 @@
-﻿using System.Security.Cryptography.X509Certificates;
-using Bit.Core.Billing.Licenses;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Billing.Licenses.Services;
 using Bit.Core.Entities;
@@ -7,6 +8,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Seeder.Services;
 
@@ -17,11 +19,21 @@ public sealed class SeederLicenseSigner : ISeederLicenseSigner, IDisposable
     private readonly ILicenseClaimsFactory<User> _userLicenseClaimsFactory;
     private readonly Lazy<CertificateLoad> _certificate;
 
+    // Mirrors the private prod/dev thumbprint consts in LicensingService
+    // (src/Core/Billing/Services/Implementations/LicensingService.cs). A license signed by any other
+    // certificate is rejected by a self-hosted instance, so keep these in sync.
+    private static readonly IReadOnlySet<string> _trustedThumbprints =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            CoreHelpers.CleanCertificateThumbprint("B34876439FCDA2846505B2EFBBA6C4A951313EBE"),
+            CoreHelpers.CleanCertificateThumbprint("207E64A231E8AA32AAF68A61037C075EBEBD553F"),
+        };
+
     public SeederLicenseSigner(
         IGlobalSettings globalSettings,
         ILicenseClaimsFactory<User> userLicenseClaimsFactory,
         ILogger<SeederLicenseSigner> logger)
-        : this(globalSettings, userLicenseClaimsFactory, logger, LicensingCertificateThumbprints.All)
+        : this(globalSettings, userLicenseClaimsFactory, logger, _trustedThumbprints)
     {
     }
 
@@ -47,7 +59,34 @@ public sealed class SeederLicenseSigner : ISeederLicenseSigner, IDisposable
         var claims = await _userLicenseClaimsFactory.GenerateClaims(user, licenseContext);
         var audience = $"user:{user.Id}";
 
-        return LicenseSigningResult.Signed(LicenseTokenGenerator.Generate(certificate, claims, audience));
+        return LicenseSigningResult.Signed(GenerateToken(certificate, claims, audience));
+    }
+
+    /// <summary>
+    /// Mirrors <c>LicensingService.GenerateToken</c> (src/Core/Billing/Services/Implementations/LicensingService.cs); keep issuer, algorithm, and lifetime in sync.
+    /// </summary>
+    private static string GenerateToken(X509Certificate2 certificate, List<Claim> claims, string audience)
+    {
+        if (claims.All(claim => claim.Type != JwtRegisteredClaimNames.Jti))
+        {
+            claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
+        }
+
+        using var rsa = certificate.GetRSAPrivateKey();
+        var securityKey = new RsaSecurityKey(rsa);
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Issuer = "bitwarden",
+            Audience = audience,
+            NotBefore = DateTime.UtcNow,
+            Expires = DateTime.UtcNow.AddYears(1),
+            SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.RsaSha256Signature)
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
     }
 
     /// <summary>

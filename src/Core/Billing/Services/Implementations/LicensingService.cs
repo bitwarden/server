@@ -7,7 +7,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Billing.Licenses.Services;
 using Bit.Core.Billing.Models;
@@ -22,6 +21,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -31,6 +31,8 @@ namespace Bit.Core.Billing.Services;
 
 public class LicensingService : ILicensingService
 {
+    private const string _productionCertThumbprint = "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
+    private const string _developmentCertThumbprint = "207E64A231E8AA32AAF68A61037C075EBEBD553F";
     private readonly X509Certificate2 _creationCertificate;
     private readonly HashSet<X509Certificate2> _verificationCertificates;
     private readonly IGlobalSettings _globalSettings;
@@ -66,9 +68,7 @@ public class LicensingService : ILicensingService
 
 
         // Load license creation cert
-        var creationCertThumbprint = environment.IsDevelopment()
-            ? LicensingCertificateThumbprints.Development
-            : LicensingCertificateThumbprints.Production;
+        var creationCertThumbprint = environment.IsDevelopment() ? _developmentCertThumbprint : _productionCertThumbprint;
         _verificationCertificates = new HashSet<X509Certificate2>();
         if (_globalSettings.SelfHosted)
         {
@@ -117,8 +117,13 @@ public class LicensingService : ILicensingService
         {
             throw new Exception("Invalid licensing certificate.");
         }
+        var allowedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            CoreHelpers.CleanCertificateThumbprint(_productionCertThumbprint),
+            CoreHelpers.CleanCertificateThumbprint(_developmentCertThumbprint)
+        };
         if (_verificationCertificates is null || _verificationCertificates.Count == 0
-            || _verificationCertificates.Any(c => !LicensingCertificateThumbprints.IsAllowed(c.Thumbprint)))
+            || _verificationCertificates.Any(c => !allowedThumbprints.Contains(c.Thumbprint)))
         {
             throw new Exception("Invalid license verifying certificate.");
         }
@@ -332,7 +337,7 @@ public class LicensingService : ILicensingService
 
     private UserLicense ReadUserLicense(User user)
     {
-        var filePath = LicenseDirectoryPaths.UserLicensePath(_globalSettings.LicenseDirectory, user.Id);
+        var filePath = $"{_globalSettings.LicenseDirectory}/user/{user.Id}.json";
         if (!File.Exists(filePath))
         {
             return null;
@@ -420,14 +425,34 @@ public class LicensingService : ILicensingService
         return GenerateToken(claims, audience);
     }
 
-    private string GenerateToken(List<Claim> claims, string audience) =>
-        LicenseTokenGenerator.Generate(_creationCertificate, claims, audience);
+    private string GenerateToken(List<Claim> claims, string audience)
+    {
+        if (claims.All(claim => claim.Type != JwtClaimTypes.JwtId))
+        {
+            claims.Add(new Claim(JwtClaimTypes.JwtId, Guid.NewGuid().ToString()));
+        }
+
+        var securityKey = new RsaSecurityKey(_creationCertificate.GetRSAPrivateKey());
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Issuer = "bitwarden",
+            Audience = audience,
+            NotBefore = DateTime.UtcNow,
+            Expires = DateTime.UtcNow.AddYears(1), // Org expiration is a claim
+            SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.RsaSha256Signature)
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
+    }
 
     public async Task WriteUserLicenseAsync(User user, UserLicense license)
     {
-        var dir = LicenseDirectoryPaths.UserLicenseDirectory(_globalSettings.LicenseDirectory);
+        var dir = $"{_globalSettings.LicenseDirectory}/user";
         Directory.CreateDirectory(dir);
-        await using var fs = File.OpenWrite(LicenseDirectoryPaths.UserLicensePath(_globalSettings.LicenseDirectory, user.Id));
+        await using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
         await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
     }
 }
