@@ -123,7 +123,7 @@ public class AccessAuditEventRepositoryTests
 
         var rule = new AccessRule
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organization.Id,
             Name = "audit-rule",
             Conditions = "[]",
@@ -157,7 +157,7 @@ public class AccessAuditEventRepositoryTests
 
         var rule = new AccessRule
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organization.Id,
             Name = "original-name",
             Conditions = "[]",
