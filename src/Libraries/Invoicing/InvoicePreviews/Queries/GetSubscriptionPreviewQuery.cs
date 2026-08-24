@@ -72,7 +72,6 @@ public class GetSubscriptionPreviewQuery(
 
             case SubscriptionStatus.Trialing:
             case SubscriptionStatus.Active:
-                // The next-charge date is the current billing-period boundary, matching today's behavior.
                 return preview with
                 {
                     InvoicePreview = invoicePreview with { NextPaymentAttempt = subscription.GetCurrentPeriodEnd() },
