@@ -9,6 +9,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Tools.Services;
@@ -81,13 +82,13 @@ public class SendValidationService : ISendValidationService
 
         if (disableSendRequirement.DisableSend)
         {
-            throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+            throw new BadRequestException("Due to an Enterprise policy, you are only able to delete an existing Send.");
         }
 
         if (sendOptionsRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
         {
             throw new BadRequestException(
-                "Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+                "Due to an Enterprise policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
         }
 
         var passwordRequired = sendControlsRequirement.WhoCanAccess == SendWhoCanAccessType.PasswordProtected;
@@ -95,12 +96,34 @@ public class SendValidationService : ISendValidationService
         if ((passwordRequired && send.Password == null) || (emailsRequired && send.Emails == null))
         {
             var requiredAccessControl = passwordRequired ? "password" : emailsRequired ? "email verification" : "(cannot determine required auth)";
-            throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by {requiredAccessControl}");
+            throw new BadRequestException($"Due to an Enterprise policy your Sends must be protected by {requiredAccessControl}");
         }
 
         if (emailsRequired && sendControlsRequirement.AllowedDomains != null && !SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsRequirement.AllowedDomains))
         {
-            throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): {sendControlsRequirement.AllowedDomains}");
+            throw new BadRequestException($"Due to an Enterprise policy your Sends must be protected by email verification and access granted only to the following domain(s): {sendControlsRequirement.AllowedDomains}");
+        }
+
+        if (sendControlsRequirement.AllowedSendTypes != null && !sendControlsRequirement.AllowedSendTypes.Contains(send.Type))
+        {
+            throw new BadRequestException($"Due to an Enterprise policy your Sends must be of the following types: {string.Join(", ", sendControlsRequirement.AllowedSendTypes.Select(st => st == SendType.Text ? "Text" : st == SendType.File ? "File" : "Unknown"))}");
+        }
+
+        // We allow for up to a minute of skew in the difference between the deletion date and the creation date
+        if (sendControlsRequirement.DeletionHours != null && (send.DeletionDate.AddMinutes(-1) - send.CreationDate).TotalHours > sendControlsRequirement.DeletionHours.Value)
+        {
+            var duration = sendControlsRequirement.DeletionHours.Value;
+            var units = "hour";
+            if (duration >= 24)
+            {
+                units = "day";
+                duration /= 24;
+            }
+            if (duration > 1)
+            {
+                units += "s";
+            }
+            throw new BadRequestException($"Due to an Enterprise policy your Sends must have deletion dates no more than {duration} {units} from their creation dates");
         }
     }
 

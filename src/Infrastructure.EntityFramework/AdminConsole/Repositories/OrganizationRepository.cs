@@ -127,43 +127,6 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         }
     }
 
-    public async Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync()
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            return await GetDbSet(dbContext)
-            .Select(e => new OrganizationAbility
-            {
-                Enabled = e.Enabled,
-                Id = e.Id,
-                Use2fa = e.Use2fa,
-                UseEvents = e.UseEvents,
-                UsersGetPremium = e.UsersGetPremium,
-                Using2fa = e.Use2fa && e.TwoFactorProviders != null,
-                UseSso = e.UseSso,
-                UseKeyConnector = e.UseKeyConnector,
-                UseResetPassword = e.UseResetPassword,
-                UseScim = e.UseScim,
-                UseCustomPermissions = e.UseCustomPermissions,
-                UsePolicies = e.UsePolicies,
-                LimitCollectionCreation = e.LimitCollectionCreation,
-                LimitCollectionDeletion = e.LimitCollectionDeletion,
-                LimitItemDeletion = e.LimitItemDeletion,
-                AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                UseRiskInsights = e.UseRiskInsights,
-                UseOrganizationDomains = e.UseOrganizationDomains,
-                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
-                UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
-                UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
-                UsePhishingBlocker = e.UsePhishingBlocker,
-                UseMyItems = e.UseMyItems,
-                UseInviteLinks = e.UseInviteLinks,
-                UsePam = e.UsePam
-            }).ToListAsync();
-        }
-    }
-
 #nullable enable
     public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
     {
@@ -268,6 +231,30 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.OrganizationIntegrations.Where(oi => oi.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            // The PAM leasing tables need the same treatment, and additionally reference each other:
+            // AccessRequest.ExtensionOfLeaseId -> AccessLease and AccessLease.AccessRequestId -> AccessRequest are
+            // both Restrict, while Organization cascades to both. Whichever cascade the provider fired first would
+            // be blocked by the other, so an organization holding an extended lease could not be deleted at all.
+            // Detaching the extension links breaks that cycle; AccessDecision then cascades from AccessRequest, and
+            // clearing the requests first releases their AccessRequest.RuleId hold on the rules removed below.
+            await dbContext.AccessRequests
+                .Where(r => r.OrganizationId == organization.Id && r.ExtensionOfLeaseId != null)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.ExtensionOfLeaseId, (Guid?)null));
+            await dbContext.AccessLeases.Where(l => l.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.AccessRequests.Where(r => r.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            // Detach the collections before removing the rules they point at. Organization cascades to both
+            // Collection and AccessRule while Collection -> AccessRule does not, so leaving this to the database
+            // would make the delete depend on which of those two cascade paths the provider happens to apply
+            // first. Clearing the association explicitly keeps the outcome the same on all four databases.
+            await dbContext.Collections
+                .Where(c => c.OrganizationId == organization.Id && c.AccessRuleId != null)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.AccessRuleId, (Guid?)null));
+            await dbContext.AccessRules.Where(ar => ar.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
             await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
@@ -423,7 +410,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     organization.Seats > 0 &&
                     organization.Status == OrganizationStatusType.Created &&
                     !organization.UseSecretsManager &&
-                    planTypes.Contains(organization.PlanType)
+                    planTypes.Contains(organization.PlanType) &&
+                    !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == organization.Id)
                 select organization;
 
             return await query.ToArrayAsync();

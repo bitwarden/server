@@ -1,6 +1,8 @@
-﻿using Bit.Api.Models.Response;
-using Bit.Core.Services;
+﻿using System.Text.Json.Nodes;
+using Bit.Api.Models.Response;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Environment;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Xunit;
 
@@ -18,9 +20,11 @@ public class ServerSettingsResponseModelTests
         globalSettings.WebPush.Returns(Substitute.For<IWebPushSettings>());
 
         var featureService = Substitute.For<IFeatureService>();
-        featureService.GetAll().Returns(new Dictionary<string, object>());
+        featureService.GetAll().Returns(new Dictionary<string, JsonValue>());
 
-        var model = new ConfigResponseModel(featureService, globalSettings);
+        var bitwardenEnvironment = Substitute.For<IBitwardenEnvironment>();
+
+        var model = new ConfigResponseModel(featureService, globalSettings, bitwardenEnvironment);
 
         Assert.True(model.Settings.SuppressOnboardingInterstitials);
     }
@@ -35,9 +39,11 @@ public class ServerSettingsResponseModelTests
         globalSettings.WebPush.Returns(Substitute.For<IWebPushSettings>());
 
         var featureService = Substitute.For<IFeatureService>();
-        featureService.GetAll().Returns(new Dictionary<string, object>());
+        featureService.GetAll().Returns(new Dictionary<string, JsonValue>());
 
-        var model = new ConfigResponseModel(featureService, globalSettings);
+        var bitwardenEnvironment = Substitute.For<IBitwardenEnvironment>();
+
+        var model = new ConfigResponseModel(featureService, globalSettings, bitwardenEnvironment);
 
         Assert.False(model.Settings.SuppressOnboardingInterstitials);
     }

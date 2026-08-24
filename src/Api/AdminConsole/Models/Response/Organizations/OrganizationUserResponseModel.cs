@@ -8,7 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
@@ -28,7 +27,8 @@ public class OrganizationUserResponseModel : ResponseModel
         Status = organizationUser.Status;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
-        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
+        AccessPam = organizationUser.AccessPam;
+        Permissions = organizationUser.GetPermissions();
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
     }
 
@@ -47,7 +47,8 @@ public class OrganizationUserResponseModel : ResponseModel
         Status = organizationUser.Status;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
-        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
+        AccessPam = organizationUser.AccessPam;
+        Permissions = organizationUser.GetPermissions();
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
         HasMasterPassword = organizationUser.HasMasterPassword;
@@ -59,6 +60,8 @@ public class OrganizationUserResponseModel : ResponseModel
     public OrganizationUserStatusType Status { get; set; }
     public string ExternalId { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool AccessPam { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public bool UsesKeyConnector { get; set; }
@@ -87,14 +90,9 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
         ClaimedByOrganization = claimedByOrganization;
         SsoExternalId = organizationUser.SsoExternalId;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
+        CreationDate = organizationUser.CreationDate;
     }
 
-    [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
-    public bool ManagedByOrganization
-    {
-        get => ClaimedByOrganization;
-        set => ClaimedByOrganization = value;
-    }
     public bool ClaimedByOrganization { get; set; }
     public string SsoExternalId { get; set; }
 
@@ -102,6 +100,11 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IEnumerable<Guid> Groups { get; set; }
+
+    /// <summary>
+    /// The date the organization user was created, i.e. when the user was first invited to the organization.
+    /// </summary>
+    public DateTime CreationDate { get; set; }
 }
 
 #nullable enable
@@ -148,6 +151,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         ResetPasswordEnrolled = ResetPasswordEnrolled && !data.OrgUser.UsesKeyConnector;
         ClaimedByOrganization = data.ClaimedByOrganization;
         RevocationReason = data.OrgUser.RevocationReason;
+        CreationDate = data.OrgUser.CreationDate;
     }
 
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
@@ -170,6 +174,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
         ClaimedByOrganization = claimedByOrganization;
         RevocationReason = organizationUser.RevocationReason;
+        CreationDate = organizationUser.CreationDate;
     }
 
     public string Name { get; set; }
@@ -177,12 +182,6 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
-    [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
-    public bool ManagedByOrganization
-    {
-        get => ClaimedByOrganization;
-        set => ClaimedByOrganization = value;
-    }
     /// <summary>
     /// Indicates if the organization claimed the user. If a user is "claimed" by an organization,
     /// the organization has greater control over their account, and some user actions are restricted.
@@ -195,6 +194,10 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     /// revocation reasons were tracked.
     /// </summary>
     public RevocationReason? RevocationReason { get; set; }
+    /// <summary>
+    /// The date the organization user was created, i.e. when the user was first invited to the organization.
+    /// </summary>
+    public DateTime CreationDate { get; set; }
 }
 
 public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel

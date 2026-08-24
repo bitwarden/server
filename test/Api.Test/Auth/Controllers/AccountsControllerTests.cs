@@ -2,7 +2,7 @@
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -21,7 +21,6 @@ using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -719,7 +718,7 @@ public class AccountsControllerTests : IDisposable
 
         var result = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(new SecretVerificationRequestModel()));
 
-        Assert.Equal("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
+        Assert.Equal(new CannotDeleteClaimedAccountError().Message, result.Message);
     }
 
     [Fact]
@@ -898,44 +897,6 @@ public class AccountsControllerTests : IDisposable
         Assert.Contains("User has existing keypair", exception.Message);
     }
 
-    [Fact]
-    public async Task GetProfile_PoliciesInAcceptedState_FlagEnabled_PopulatesOrganizationsNew()
-    {
-        var user = GenerateExampleUser();
-        ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization>());
-        _featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(true);
-
-        var acceptedOrganizationId = Guid.NewGuid();
-        var organizationsNew = new List<OrganizationUserOrganizationDetails>
-        {
-            new() { OrganizationId = acceptedOrganizationId }
-        };
-        _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id)
-            .Returns(organizationsNew);
-
-        var result = await _sut.GetProfile();
-
-        await _organizationUserRepository.Received(1).GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
-        Assert.NotNull(result.OrganizationsNew);
-        var returnedOrganization = Assert.Single(result.OrganizationsNew);
-        Assert.Equal(acceptedOrganizationId, returnedOrganization.Id);
-    }
-
-    [Fact]
-    public async Task GetProfile_PoliciesInAcceptedState_FlagDisabled_OrganizationsNewIsNull()
-    {
-        var user = GenerateExampleUser();
-        ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization>());
-        _featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(false);
-
-        var result = await _sut.GetProfile();
-
-        await _organizationUserRepository.DidNotReceive().GetManyConfirmedAcceptedDetailsByUserAsync(Arg.Any<Guid>());
-        Assert.Null(result.OrganizationsNew);
-    }
-
     // Below are helper functions that currently belong to this
     // test class, but ultimately may need to be split out into
     // something greater in order to share common test steps with
@@ -1020,16 +981,70 @@ public class AccountsControllerTests : IDisposable
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
+        var setUserKeyId = Substitute.For<UpdateUserData>();
+        _userRepository.SetUserKeyId(user.Id, Arg.Any<KeyId>()).Returns(setUserKeyId);
+
         // Act
         var result = await _sut.PostKeys(model);
 
         // Assert
         await _userRepository.Received(1).SetV2AccountCryptographicStateAsync(
             user.Id,
-            Arg.Any<UserAccountKeysData>());
+            Arg.Any<UserAccountKeysData>(),
+            Arg.Is<IEnumerable<UpdateUserData>>(actions =>
+                actions != null && actions.Count() == 1 && actions.First() == setUserKeyId));
+        _userRepository.Received(1).SetUserKeyId(
+            user.Id,
+            Arg.Is<KeyId>(keyId => keyId.ToString() == model.UserKeyId));
         await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(Arg.Any<User>());
         Assert.NotNull(result);
         Assert.Equal("keys", result.Object);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostKeys_WithAccountKeysAndNoUserKeyId_DoesNotSetUserKeyId(
+        User user,
+        KeysRequestModel model)
+    {
+        // Arrange
+        user.PublicKey = null;
+        user.PrivateKey = null;
+        model.AccountKeys = new AccountKeysRequestModel
+        {
+            UserKeyEncryptedAccountPrivateKey = "wrapped-private-key",
+            AccountPublicKey = "public-key",
+            PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairRequestModel
+            {
+                PublicKey = "public-key",
+                WrappedPrivateKey = "wrapped-private-key",
+                SignedPublicKey = "signed-public-key"
+            },
+            SignatureKeyPair = new SignatureKeyPairRequestModel
+            {
+                VerifyingKey = "verifying-key",
+                SignatureAlgorithm = "ed25519",
+                WrappedSigningKey = "wrapped-signing-key"
+            },
+            SecurityState = new SecurityStateModel
+            {
+                SecurityState = "security-state",
+                SecurityVersion = 2
+            }
+        };
+        // A client that predates the key id field sends none.
+        model.UserKeyId = null;
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        // Act
+        await _sut.PostKeys(model);
+
+        // Assert
+        _userRepository.DidNotReceive().SetUserKeyId(Arg.Any<Guid>(), Arg.Any<KeyId>());
+        await _userRepository.Received(1).SetV2AccountCryptographicStateAsync(
+            user.Id,
+            Arg.Any<UserAccountKeysData>(),
+            null);
     }
 
     [Theory, BitAutoData]

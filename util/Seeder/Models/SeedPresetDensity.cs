@@ -122,4 +122,14 @@ internal record SeedPresetCipherAssignment
     public double? MultiCollectionRate { get; init; }
 
     public int? MaxCollectionsPerCipher { get; init; }
+
+    public double? ArchivedRate { get; init; }
+
+    public double? DeletedRate { get; init; }
+
+    public double? ArchivedAndDeletedOverlapRate { get; init; }
+
+    public int? MaxArchivedCiphers { get; init; }
+
+    public int? MaxDeletedCiphers { get; init; }
 }

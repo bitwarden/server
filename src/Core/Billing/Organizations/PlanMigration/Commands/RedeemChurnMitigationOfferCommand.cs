@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Services;
@@ -62,7 +63,9 @@ public class RedeemChurnMitigationOfferCommand(
         // Stripe-first, DB-write second. Set-union semantics make this branch self-healing
         // on retry: a re-attempt sees the coupon already on Phase 2 and no-ops the Stripe
         // call before writing ChurnDiscountAppliedDate.
-        var subscription = await TryGetSubscriptionAsync(organization);
+        var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+            stripeAdapter, _logger, organization,
+            ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]);
         if (subscription is null)
         {
             return DefaultConflict;
@@ -166,13 +169,30 @@ public class RedeemChurnMitigationOfferCommand(
         Entities.OrganizationPlanMigrationCohortAssignment assignment,
         string churnDiscountCouponCode)
     {
-        var subscription = await TryGetSubscriptionAsync(organization);
+        var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+            stripeAdapter, _logger, organization,
+            ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]);
         if (subscription is null)
         {
             return DefaultConflict;
         }
 
-        var currentCouponIds = subscription.Discounts?.Select(d => d.Coupon.Id).ToList() ?? [];
+        var currentCouponIds = subscription.Discounts?
+            .Select(d => d.Source?.Coupon?.Id)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToList() ?? [];
+
+        // A discount with no resolvable coupon (deleted in Stripe, or "discounts.source.coupon" not
+        // expanded) is excluded above and stripped by the write below; log it so a future expand
+        // regression that silently drops a live discount stays detectable.
+        var unresolvableDiscountCount = subscription.Discounts?.Count(d => string.IsNullOrEmpty(d?.Source?.Coupon?.Id)) ?? 0;
+        if (unresolvableDiscountCount > 0)
+        {
+            _logger.LogWarning(
+                "{Command}: {Count} discount(s) on Subscription ({SubscriptionId}) for Organization ({OrganizationId}) had no resolvable coupon and were excluded from the discount write; ensure 'discounts.source.coupon' is expanded",
+                CommandName, unresolvableDiscountCount, subscription.Id, organization.Id);
+        }
+
         var mergedCouponIds = (subscription.Customer?.Discount).MergeDiscountCouponIds(
             currentCouponIds,
             churnDiscountCouponCode);
@@ -246,23 +266,5 @@ public class RedeemChurnMitigationOfferCommand(
             ProrationBehavior = phase.ProrationBehavior
         };
 
-    private async Task<Subscription?> TryGetSubscriptionAsync(Organization organization)
-    {
-        try
-        {
-            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions
-                {
-                    Expand = ["customer", "test_clock", "discounts.coupon"]
-                });
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
-        {
-            _logger.LogError(
-                "{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
-                CommandName, organization.GatewaySubscriptionId, organization.Id);
-            return null;
-        }
-    }
 
 }

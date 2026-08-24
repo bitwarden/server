@@ -98,6 +98,7 @@ public class OrganizationUserUpdateRequestModel
     [EnumDataType(typeof(OrganizationUserType))]
     public OrganizationUserType? Type { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool AccessPam { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
@@ -109,6 +110,8 @@ public class OrganizationUserUpdateRequestModel
 
     [StringLength(50)]
     public string? Name { get; set; }
+
+    public string? DefaultUserCollectionName { get; set; }
 #nullable disable
 
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
@@ -116,6 +119,7 @@ public class OrganizationUserUpdateRequestModel
         existingUser.Type = Type.Value;
         existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
         existingUser.AccessSecretsManager = AccessSecretsManager;
+        existingUser.AccessPam = AccessPam;
         return existingUser;
     }
 }
@@ -136,9 +140,3 @@ public class OrganizationUserBulkRequestModel
     public string? DefaultUserCollectionName { get; set; }
 }
 #nullable disable
-
-public class ResetPasswordWithOrgIdRequestModel : OrganizationUserResetPasswordEnrollmentRequestModel
-{
-    [Required]
-    public Guid OrganizationId { get; set; }
-}

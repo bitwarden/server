@@ -2,8 +2,10 @@
 using System.Security.Cryptography;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 
@@ -39,23 +41,27 @@ public class SingleUserScene(
         public bool EmailVerified { get; set; } = false;
         public bool Premium { get; set; } = false;
         public bool SelfHosted { get; set; } = false;
+        public GatewayType? Gateway { get; set; }
+        public string? GatewayCustomerId { get; set; }
+        public string? GatewaySubscriptionId { get; set; }
     }
 
     public async Task<SceneResult<SingleUserSceneResult>> SeedAsync(Request request)
     {
         var (user, keys) = UserSeeder.Create(
-            request.Email,
+            new UserSeed
+            {
+                Email = request.Email,
+                EmailVerified = request.EmailVerified || request.Premium,
+                Premium = request.Premium,
+                MaxStorageGb = request.Premium ? (short)1 : null,
+                Password = request.Password,
+                Gateway = request.Gateway,
+                GatewayCustomerId = request.GatewayCustomerId,
+                GatewaySubscriptionId = request.GatewaySubscriptionId
+            },
             passwordHasher,
-            manglerService,
-            emailVerified: request.EmailVerified || request.Premium,
-            premium: request.Premium,
-            maxStorageGb: request.Premium ? (short)1 : null,
-            password: request.Password);
-
-        if (request.Premium)
-        {
-            user.PremiumExpirationDate = DateTime.UtcNow.AddYears(1);
-        }
+            manglerService);
 
         await userRepository.CreateAsync(user);
 

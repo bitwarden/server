@@ -5,6 +5,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.RustSDK;
 using Bit.Seeder.Attributes;
+using Bit.Seeder.Enums;
 using Bit.Seeder.Models;
 
 namespace Bit.Seeder.Factories;
@@ -26,10 +27,15 @@ internal static class CipherEncryption
     private static readonly string _fieldPathsJson =
         JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
 
-    internal static EncryptedCipherDto Encrypt(CipherViewDto cipherView, string keyBase64)
+    internal static EncryptedCipherDto Encrypt(
+        CipherViewDto cipherView,
+        string keyBase64,
+        CipherEncryptionType mode = CipherEncryptionType.UserKey)
     {
         var viewJson = JsonSerializer.Serialize(cipherView, _sdkJsonOptions);
-        var encryptedJson = RustSdkService.EncryptFields(viewJson, _fieldPathsJson, keyBase64);
+        var encryptedJson = mode == CipherEncryptionType.CipherKey
+            ? RustSdkService.EncryptFieldsWithCipherKey(viewJson, _fieldPathsJson, keyBase64)
+            : RustSdkService.EncryptFields(viewJson, _fieldPathsJson, keyBase64);
         return JsonSerializer.Deserialize<EncryptedCipherDto>(encryptedJson, _sdkJsonOptions)
             ?? throw new InvalidOperationException("Failed to parse encrypted cipher");
     }
@@ -39,14 +45,13 @@ internal static class CipherEncryption
         object data,
         CipherType cipherType,
         Guid? organizationId,
-        Guid? userId,
-        DateTime? deletedDate = null)
+        Guid? userId)
     {
         var dataJson = JsonSerializer.Serialize(data, _serverJsonOptions);
 
         return new Cipher
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organizationId,
             UserId = userId,
             Type = cipherType,
@@ -54,8 +59,7 @@ internal static class CipherEncryption
             Key = encrypted.Key,
             Reprompt = (CipherRepromptType?)encrypted.Reprompt,
             CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
-            DeletedDate = deletedDate
+            RevisionDate = DateTime.UtcNow
         };
     }
 }

@@ -112,7 +112,16 @@ public class UpgradeOrganizationPlanVNextCommand(
 
         var builder = OrganizationSubscriptionChangeSet.Builder(currentPlan);
 
-        builder.ChangePasswordManagerPrice(plan);
+        // Teams 2019 is the only Packaged plan with an Additional per-seat price (a base price plus a
+        // seat price); route it through the collapse. Anything else — flat Packaged plans like Teams
+        // Starter, Scalable plans, and Free — takes the standard path. Remove this branch (and
+        // ChangePackagedPasswordManagerPrice) once all Teams 2019 orgs are migrated off the packaged plan.
+        var isPackagedWithAdditionalSeatPrice = !string.IsNullOrEmpty(currentPlan.PasswordManager.StripePlanId) &&
+                                                !string.IsNullOrEmpty(currentPlan.PasswordManager.StripeSeatPlanId);
+
+        builder = isPackagedWithAdditionalSeatPrice
+            ? builder.ChangePackagedPasswordManagerPrice(plan, organization.Seats!.Value)
+            : builder.ChangePasswordManagerPrice(plan);
 
         if (organization.MaxStorageGb > currentPlan.PasswordManager.BaseStorageGb)
         {
@@ -175,6 +184,7 @@ public class UpgradeOrganizationPlanVNextCommand(
         organization.UseAutomaticUserConfirmation = plan.AutomaticUserConfirmation;
         organization.UseMyItems = plan.HasMyItems;
         organization.UseInviteLinks = plan.HasInviteLinks;
+        organization.UseRiskInsights = plan.HasRiskInsights;
 
         if (keys != null)
         {

@@ -85,6 +85,7 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
             UsersGetPremium = plan.UsersGetPremium,
             UseCustomPermissions = plan.HasCustomPermissions,
             UseScim = plan.HasScim,
+            UseRiskInsights = plan.HasRiskInsights,
             Plan = plan.Name,
             Gateway = GatewayType.Stripe,
             ReferenceData = signup.Owner.ReferenceData,

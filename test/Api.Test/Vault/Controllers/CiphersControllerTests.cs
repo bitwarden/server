@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Utilities;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
@@ -63,17 +65,18 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Put_OpaqueLoginCipherWithOldClient_SkipsFido2VersionCheck(
+    public async Task Put_BlobEncryptedLoginCipherWithOldClient_SkipsFido2VersionCheck(
         User user,
         SutProvider<CiphersController> sutProvider)
     {
+        const string blob = "{\"format_version\":1,\"wrapped_cek\":\"abc\",\"envelope\":\"def\"}";
         var cipherId = Guid.NewGuid();
         var cipherDetails = new CipherDetails
         {
             Id = cipherId,
             UserId = user.Id,
             Type = CipherType.Login,
-            Data = "2.iv|ct|mac",
+            Data = blob,
             Edit = true,
             ViewPassword = true,
         };
@@ -92,13 +95,13 @@ public class CiphersControllerTests
         {
             Type = CipherType.Login,
             Name = "2.name|encrypted",
-            Data = "2.iv|ct|mac",
+            Data = blob,
         };
 
         var response = await sutProvider.Sut.Put(cipherId, model);
 
         Assert.NotNull(response);
-        Assert.Equal("2.iv|ct|mac", response.Data);
+        Assert.Equal(blob, response.Data);
         Assert.Null(response.Login);
         await sutProvider.GetDependency<ICipherService>()
             .Received(1)
@@ -1806,13 +1809,17 @@ public class CiphersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sut.Sut.PutShareMany(model));
     }
     [Theory, BitAutoData]
-    public async Task PutShareMany_CipherNotOwned_ThrowsNotFoundException(
+    public async Task PutShareMany_CipherNotOwned_ThrowsBadRequestException(
         Guid organizationId,
         Guid userId,
         CipherWithIdRequestModel request,
         SutProvider<CiphersController> sutProvider)
     {
-        request.EncryptedFor = userId;
+        // The controller reads the organization off the first cipher, so it has to match the stub below.
+        request.OrganizationId = organizationId.ToString();
+#pragma warning disable CS0618
+        request.EncryptedFor = null;
+#pragma warning restore CS0618
         var model = new CipherBulkShareRequestModel
         {
             Ciphers = new[] { request },
@@ -1829,19 +1836,23 @@ public class CiphersControllerTests
             .GetManyByUserIdAsync(userId, withOrganizations: false)
             .Returns(Task.FromResult((ICollection<CipherDetails>)new List<CipherDetails>()));
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.PutShareMany(model)
         );
     }
 
     [Theory, BitAutoData]
-    public async Task PutShareMany_EncryptedForWrongUser_ThrowsNotFoundException(
+    public async Task PutShareMany_EncryptedForWrongUser_ThrowsBadRequestException(
         Guid organizationId,
         Guid userId,
         CipherWithIdRequestModel request,
         SutProvider<CiphersController> sutProvider)
     {
+        // The controller reads the organization off the first cipher, so it has to match the stub below.
+        request.OrganizationId = organizationId.ToString();
+#pragma warning disable CS0618 // Deliberately exercising the deprecated field.
         request.EncryptedFor = Guid.NewGuid(); // not equal to userId
+#pragma warning restore CS0618
         var model = new CipherBulkShareRequestModel
         {
             Ciphers = new[] { request },
@@ -1860,7 +1871,7 @@ public class CiphersControllerTests
             .GetManyByUserIdAsync(userId, withOrganizations: false)
             .Returns(Task.FromResult((ICollection<CipherDetails>)(new[] { existing })));
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.PutShareMany(model)
         );
     }
@@ -2016,8 +2027,7 @@ public class CiphersControllerTests
                 Name = "SharedCipher",
                 Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
                 FolderId = null,
-                Favorite = false,
-                EncryptedFor = userId
+                Favorite = false
             },
             CollectionIds = [Guid.NewGuid().ToString()]
         };
@@ -2089,8 +2099,7 @@ public class CiphersControllerTests
                 Name = "SharedCipher",
                 Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
                 FolderId = folderId.ToString(),
-                Favorite = true,
-                EncryptedFor = userId
+                Favorite = true
             },
             CollectionIds = [Guid.NewGuid().ToString()]
         };
@@ -2165,8 +2174,7 @@ public class CiphersControllerTests
                 Name = "SharedCipher",
                 Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
                 FolderId = newFolderId.ToString(),  // Update to new folder
-                Favorite = true,  // Add favorite
-                EncryptedFor = userId
+                Favorite = true  // Add favorite
             },
             CollectionIds = [Guid.NewGuid().ToString()]
         };
@@ -2485,5 +2493,387 @@ public class CiphersControllerTests
         Assert.Equal("application/octet-stream", fileResult.ContentType);
         Assert.Equal(fileName, fileResult.FileDownloadName);
         Assert.Same(stream, fileResult.FileStream);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AzureValidateFile_WhenCipherNotFound_DeletesOrphanedBlob(
+        Guid cipherId,
+        string attachmentId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var eventGridKey = "test-event-grid-key";
+        var previousEventGridKey = ApiHelpers.EventGridKey;
+        ApiHelpers.EventGridKey = eventGridKey;
+
+        try
+        {
+            var requestPayload = $$"""
+            [
+              {
+                "id": "{{Guid.NewGuid()}}",
+                "eventType": "Microsoft.Storage.BlobCreated",
+                "subject": "/blobServices/default/containers/{{AzureAttachmentStorageService.EventGridEnabledContainerName}}/blobs/{{cipherId}}/{{attachmentId}}",
+                "eventTime": "{{DateTime.UtcNow:O}}",
+                "data": {},
+                "dataVersion": "1"
+              }
+            ]
+            """;
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.QueryString = new QueryString($"?key={eventGridKey}");
+            httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(requestPayload));
+
+            sutProvider.Sut.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext,
+            };
+
+            sutProvider.GetDependency<IAttachmentStorageService>().FileUploadType.Returns(FileUploadType.Azure);
+            sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId).ReturnsNull();
+
+            await sutProvider.Sut.AzureValidateFile();
+
+            await sutProvider.GetDependency<IAttachmentStorageService>().Received(1)
+                .DeleteAttachmentAsync(cipherId, Arg.Is<CipherAttachment.MetaData>(metadata =>
+                    metadata.AttachmentId == attachmentId &&
+                    metadata.ContainerName == AzureAttachmentStorageService.EventGridEnabledContainerName));
+        }
+        finally
+        {
+            ApiHelpers.EventGridKey = previousEventGridKey;
+        }
+    }
+
+    /// <summary>
+    /// A well-formed key id that is never the one <see cref="KeyIdBuilder"/> hands out, so it always
+    /// mismatches the user key id on an AutoFixture-generated <see cref="User"/>.
+    /// </summary>
+    private const string MismatchedKeyId = "ffffffffffffffffffffffffffffffff";
+
+    private static CipherRequestModel SecureNoteRequestModel(string encryptedByKeyId) => new()
+    {
+        Type = CipherType.SecureNote,
+        Name = "test",
+        Data = "{}",
+        EncryptedByKeyId = encryptedByKeyId
+    };
+
+    [Theory, BitAutoData]
+    public async Task Post_EncryptedByKeyIdMatchesUserKeyId_SavesCipher(
+        User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        await sutProvider.Sut.Post(SecureNoteRequestModel(KeyIdBuilder.HexEncodedKeyId));
+
+        await sutProvider.GetDependency<ICipherService>().Received(1)
+            .SaveDetailsAsync(Arg.Any<CipherDetails>(), user.Id, Arg.Any<DateTime?>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_EncryptedByKeyIdDoesNotMatchUserKeyId_ThrowsBadRequestException(
+        User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.Post(SecureNoteRequestModel(MismatchedKeyId)));
+        Assert.Contains("current user key", exception.Message);
+
+        await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
+            .SaveDetailsAsync(default, default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_EncryptedByKeyIdNotSent_SavesCipher(
+        User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        // A client that predates the field sends nothing, and must keep working.
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        await sutProvider.Sut.Post(SecureNoteRequestModel(null));
+
+        await sutProvider.GetDependency<ICipherService>().Received(1)
+            .SaveDetailsAsync(Arg.Any<CipherDetails>(), user.Id, Arg.Any<DateTime?>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_UserHasNoKeyId_DoesNotValidateEncryptedByKeyId(
+        User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        // Nothing to compare against until the user's key id has been backfilled.
+        user.UserKeyId = null;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        await sutProvider.Sut.Post(SecureNoteRequestModel(MismatchedKeyId));
+
+        await sutProvider.GetDependency<ICipherService>().Received(1)
+            .SaveDetailsAsync(Arg.Any<CipherDetails>(), user.Id, Arg.Any<DateTime?>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostCreate_EncryptedByKeyIdDoesNotMatchUserKeyId_ThrowsBadRequestException(
+        User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        var model = new CipherCreateRequestModel
+        {
+            Cipher = SecureNoteRequestModel(MismatchedKeyId),
+            CollectionIds = []
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostCreate(model));
+        Assert.Contains("current user key", exception.Message);
+
+        await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
+            .SaveDetailsAsync(default, default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_EncryptedByKeyIdDoesNotMatchUserKeyId_ThrowsBadRequestException(
+        User user,
+        Guid cipherId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        // The cipher-not-found check runs before validation, so the cipher has to exist.
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(new CipherDetails
+            {
+                Id = cipherId,
+                UserId = user.Id,
+                Type = CipherType.SecureNote,
+                Data = "{}"
+            });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.Put(cipherId, SecureNoteRequestModel(MismatchedKeyId)));
+        Assert.Contains("current user key", exception.Message);
+
+        await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
+            .SaveDetailsAsync(default, default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutShare_DoesNotValidateEncryptedByKeyId(
+        User user,
+        Guid cipherId,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        // Sharing re-encrypts the cipher under the organization key, so the key id the client sends is
+        // the organization's, not the user's, and there is nothing to compare it against.
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId)
+            .Returns(new Cipher
+            {
+                Id = cipherId,
+                UserId = user.Id,
+                Type = CipherType.Login,
+                Data = "{}"
+            });
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(new CipherDetails
+            {
+                Id = cipherId,
+                OrganizationId = organizationId,
+                Type = CipherType.Login,
+                Data = "{}"
+            });
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId });
+
+        var cipherModel = SecureNoteRequestModel(MismatchedKeyId);
+        cipherModel.OrganizationId = organizationId.ToString();
+        var model = new CipherShareRequestModel
+        {
+            Cipher = cipherModel,
+            CollectionIds = [Guid.NewGuid().ToString()]
+        };
+
+        await sutProvider.Sut.PutShare(cipherId, model);
+
+        await sutProvider.GetDependency<ICipherService>().Received(1)
+            .ShareAsync(Arg.Any<Cipher>(), Arg.Any<Cipher>(), organizationId, Arg.Any<IEnumerable<Guid>>(), user.Id,
+                Arg.Any<DateTime?>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_OrganizationCipher_DoesNotValidateEncryptedByKeyId(
+        User user,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        // An organization cipher is encrypted with the organization key, which has no key id yet.
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId });
+
+        var model = SecureNoteRequestModel(MismatchedKeyId);
+        model.OrganizationId = organizationId.ToString();
+
+        await sutProvider.Sut.Post(model);
+
+        await sutProvider.GetDependency<ICipherService>().Received(1)
+            .SaveDetailsAsync(Arg.Any<CipherDetails>(), user.Id, Arg.Any<DateTime?>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_OrganizationCipher_EncryptedForOtherUser_ThrowsBadRequestException(
+        User user,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        // The legacy EncryptedFor check identifies the posting user, not a key, so it still applies.
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        var model = SecureNoteRequestModel(null);
+        model.OrganizationId = organizationId.ToString();
+#pragma warning disable CS0618
+        model.EncryptedFor = Guid.NewGuid(); // not equal to user.Id
+#pragma warning restore CS0618
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Post(model));
+        Assert.Contains("encrypted for the current user", exception.Message);
+
+        await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
+            .SaveDetailsAsync(default, default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostCreate_OrganizationCipher_DoesNotValidateEncryptedByKeyId(
+        User user,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(true);
+        // PostCreate re-reads the saved cipher to build its response.
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(Arg.Any<Guid>(), user.Id)
+            .Returns(new CipherDetails
+            {
+                OrganizationId = organizationId,
+                Type = CipherType.SecureNote,
+                Data = "{}"
+            });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId });
+
+        var cipherModel = SecureNoteRequestModel(MismatchedKeyId);
+        cipherModel.OrganizationId = organizationId.ToString();
+        var model = new CipherCreateRequestModel
+        {
+            Cipher = cipherModel,
+            CollectionIds = []
+        };
+
+        await sutProvider.Sut.PostCreate(model);
+
+        await sutProvider.GetDependency<ICipherService>().Received(1)
+            .SaveDetailsAsync(Arg.Any<CipherDetails>(), user.Id, Arg.Any<DateTime?>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_OrganizationCipher_DoesNotValidateEncryptedByKeyId(
+        User user,
+        Guid cipherId,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        // Organization ownership is read off the cipher we hold, not off the model.
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(new CipherDetails
+            {
+                Id = cipherId,
+                OrganizationId = organizationId,
+                Type = CipherType.SecureNote,
+                Data = "{}"
+            });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId });
+
+        var model = SecureNoteRequestModel(MismatchedKeyId);
+        model.OrganizationId = organizationId.ToString();
+
+        await sutProvider.Sut.Put(cipherId, model);
+
+        await sutProvider.GetDependency<ICipherService>().Received(1)
+            .SaveDetailsAsync(Arg.Any<CipherDetails>(), user.Id, Arg.Any<DateTime?>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutAdmin_EncryptedForWrongUser_ThrowsBadRequestExceptionBeforeAuthorizationCheck(
+        Guid userId,
+        Guid cipherId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(default)
+            .ReturnsForAnyArgs(userId);
+
+        var model = SecureNoteRequestModel(null);
+#pragma warning disable CS0618
+        model.EncryptedFor = Guid.NewGuid(); // not equal to userId
+#pragma warning restore CS0618
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAdmin(cipherId, model));
+        Assert.Contains("encrypted for the current user", exception.Message);
     }
 }

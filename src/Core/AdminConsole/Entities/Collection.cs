@@ -48,6 +48,19 @@ public class Collection : ITableObject<Guid>
     public string? DefaultUserCollectionEmail { get; set; }
 
     /// <summary>
+    /// Reference to the <c>AccessRule</c> that gates PAM credential leasing for this
+    /// collection. Null means leasing is disabled for the collection.
+    /// </summary>
+    /// <remarks>
+    /// Read-only for practical purposes: this property has a single writer,
+    /// <c>ICollectionRepository.SetAccessRuleAssociationsAsync</c> (and it is cleared when the rule is deleted).
+    /// Setting it here and calling <c>CreateAsync</c>/<c>ReplaceAsync</c> does nothing — both deliberately ignore
+    /// it, in every ORM, so that ordinary collection edits cannot erase or forge a PAM association. Change the
+    /// association through the repository method instead.
+    /// </remarks>
+    public Guid? AccessRuleId { get; set; }
+
+    /// <summary>
     /// Initializes <see cref="Id"/> to a new COMB GUID.
     /// </summary>
     public void SetNewId()

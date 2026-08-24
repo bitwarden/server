@@ -7,8 +7,8 @@ using Stripe;
 using Bit.Core.Utilities;
 using Duende.IdentityModel;
 using System.Globalization;
-using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
+using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
@@ -171,7 +171,7 @@ public class Startup
             .AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>,
                 EmergencyAccessRotationValidator>();
         services
-            .AddScoped<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+            .AddScoped<IRotationValidator<OrganizationAccountRecoveryRotationData,
                     IReadOnlyList<OrganizationUser>>
                 , OrganizationUserRotationValidator>();
         services
@@ -278,10 +278,15 @@ public class Startup
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
 
+        // Gates endpoints carrying IFeatureMetadata; required in any app that
+        // routes requests through endpoints tagged with [RequireFeature].
+        app.UseFeatureFlagChecks();
+
         // Add endpoints to the request pipeline.
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
 
 #if !OSS
             // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.

@@ -22,7 +22,9 @@ BEGIN
         [ResetPasswordKey] VARCHAR(MAX),
         [AccessSecretsManager] BIT,
         [RevocationReason] TINYINT NULL,
-        [StatusNew] SMALLINT NULL
+        [StatusNew] SMALLINT NULL,
+        [AccessPam] BIT,
+        [V2UpgradeToken] VARCHAR(MAX) NULL
     )
 
     INSERT INTO @OrganizationUserInput
@@ -41,7 +43,9 @@ BEGIN
         [ResetPasswordKey],
         [AccessSecretsManager],
         [RevocationReason],
-        [StatusNew]
+        [StatusNew],
+        [AccessPam],
+        [V2UpgradeToken]
     FROM OPENJSON(@jsonData)
     WITH (
         [Id] UNIQUEIDENTIFIER '$.Id',
@@ -58,7 +62,9 @@ BEGIN
         [ResetPasswordKey] VARCHAR (MAX) '$.ResetPasswordKey',
         [AccessSecretsManager] BIT '$.AccessSecretsManager',
         [RevocationReason] TINYINT '$.RevocationReason',
-        [StatusNew] SMALLINT '$.StatusNew'
+        [StatusNew] SMALLINT '$.StatusNew',
+        [AccessPam] BIT '$.AccessPam',
+        [V2UpgradeToken] VARCHAR(MAX) '$.V2UpgradeToken'
     )
 
     -- Perform the update
@@ -78,7 +84,9 @@ BEGIN
         [ResetPasswordKey] = OUI.[ResetPasswordKey],
         [AccessSecretsManager] = OUI.[AccessSecretsManager],
         [RevocationReason] = OUI.[RevocationReason],
-        [StatusNew] = OUI.[StatusNew]
+        [StatusNew] = OUI.[StatusNew],
+        [AccessPam] = ISNULL(OUI.[AccessPam], 0),
+        [V2UpgradeToken] = OUI.[V2UpgradeToken]
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN

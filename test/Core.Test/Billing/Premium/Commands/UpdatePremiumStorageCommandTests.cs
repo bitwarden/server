@@ -239,6 +239,27 @@ public class UpdatePremiumStorageCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task Run_FetchesSubscriptionWithCustomerDiscountSourceCouponExpanded(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        // Act
+        await _command.Run(user, 9);
+
+        // Assert
+        await _stripeAdapter.Received().GetSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer.discount.source.coupon")));
+    }
+
+    [Theory, BitAutoData]
     public async Task Run_AddStorageFromZero_Success(User user)
     {
         // Arrange
@@ -676,7 +697,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 4);
-        subscription.Customer.Discount = new Discount { Coupon = new Coupon { Id = "retention" } };
+        subscription.Customer.Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } };
         _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4);
@@ -708,7 +729,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 4);
-        subscription.Customer.Discount = new Discount { Coupon = new Coupon { Id = "retention" } };
+        subscription.Customer.Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } };
         _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4, phase2Active: true);
@@ -860,6 +881,91 @@ public class UpdatePremiumStorageCommandTests
 
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
         await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 1));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithSchedule_PreservesPhaseMetadata(User user)
+    {
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4);
+
+        // Distinct values per phase catch an index-shift bug; the non-cohort key pins the
+        // passthrough as unconditional — nothing filters by key.
+        schedule.Phases[0].Metadata = new Dictionary<string, string>
+        {
+            { MetadataKeys.MigrationCohortId, "cohort_1" },
+            { MetadataKeys.MigrationCohortName, "Premium 2020" },
+            { "unrelated_key", "phase_1_value" }
+        };
+        schedule.Phases[1].Metadata = new Dictionary<string, string>
+        {
+            { MetadataKeys.MigrationCohortId, "cohort_2" },
+            { MetadataKeys.MigrationCohortName, "Premium 2025" },
+            { "unrelated_key", "phase_2_value" }
+        };
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(user, 9);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases.Count == 2 &&
+                opts.Phases[0].Metadata != null &&
+                opts.Phases[0].Metadata[MetadataKeys.MigrationCohortId] == "cohort_1" &&
+                opts.Phases[0].Metadata[MetadataKeys.MigrationCohortName] == "Premium 2020" &&
+                opts.Phases[0].Metadata["unrelated_key"] == "phase_1_value" &&
+                opts.Phases[1].Metadata != null &&
+                opts.Phases[1].Metadata[MetadataKeys.MigrationCohortId] == "cohort_2" &&
+                opts.Phases[1].Metadata[MetadataKeys.MigrationCohortName] == "Premium 2025" &&
+                opts.Phases[1].Metadata["unrelated_key"] == "phase_2_value"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithSinglePhaseSchedule_PreservesPhaseMetadata(User user)
+    {
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4, singlePhase: true);
+        schedule.Phases[0].Metadata = new Dictionary<string, string>
+        {
+            { MetadataKeys.MigrationCohortId, "cohort_1" },
+            { MetadataKeys.MigrationCohortName, "Premium 2020" },
+            { "unrelated_key", "unrelated_value" }
+        };
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(user, 9);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases.Count == 1 &&
+                opts.Phases[0].Metadata != null &&
+                opts.Phases[0].Metadata[MetadataKeys.MigrationCohortId] == "cohort_1" &&
+                opts.Phases[0].Metadata[MetadataKeys.MigrationCohortName] == "Premium 2020" &&
+                opts.Phases[0].Metadata["unrelated_key"] == "unrelated_value"));
     }
 
     private static SubscriptionSchedule CreateMockSchedule(

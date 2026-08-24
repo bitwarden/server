@@ -13,7 +13,9 @@
     @ResetPasswordKey VARCHAR(MAX),
     @AccessSecretsManager BIT = 0,
     @RevocationReason TINYINT = NULL,
-    @StatusNew SMALLINT = NULL
+    @StatusNew SMALLINT = NULL,
+    @AccessPam BIT = 0,
+    @V2UpgradeToken VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -34,7 +36,9 @@ BEGIN
         [ResetPasswordKey],
         [AccessSecretsManager],
         [RevocationReason],
-        [StatusNew]
+        [StatusNew],
+        [AccessPam],
+        [V2UpgradeToken]
     )
     VALUES
     (
@@ -52,6 +56,8 @@ BEGIN
         @ResetPasswordKey,
         @AccessSecretsManager,
         @RevocationReason,
-        @StatusNew
+        @StatusNew,
+        @AccessPam,
+        @V2UpgradeToken
     )
 END

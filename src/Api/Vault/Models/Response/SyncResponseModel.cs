@@ -89,7 +89,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                         Parallelism = user.KdfParallelism
                     },
                     MasterKeyEncryptedUserKey = user.Key!,
-                    Salt = user.GetMasterPasswordSalt()
+                    Salt = user.GetMasterPasswordSalt(),
+                    ContainedKeyId = user.GetUserKeyId()?.ToString()
                 }
                 : null,
             WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null,
@@ -99,7 +100,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                     WrappedUserKey1 = tokenData.WrappedUserKey1,
                     WrappedUserKey2 = tokenData.WrappedUserKey2
                 }
-                : null
+                : null,
+            UserKeyId = user.GetUserKeyId()?.ToString()
         };
     }
 
@@ -125,7 +127,6 @@ public class SyncResponseModel() : ResponseModel("sync")
     public IEnumerable<PolicyResponseModel> Policies { get; set; }
     /// <summary>
     /// Policies for organizations where the user is in the Confirmed or Accepted status.
-    /// Null when the <c>pm-34145-policies-in-accepted-state</c> feature flag is disabled.
     /// New clients should prefer this property and fall back to <see cref="Policies"/> if absent.
     /// </summary>
     public IEnumerable<PolicyResponseModel> PoliciesNew { get; set; }

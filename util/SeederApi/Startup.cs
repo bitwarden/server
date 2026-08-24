@@ -31,6 +31,8 @@ public class Startup
 
         services.AddCustomDataProtectionServices(Environment, globalSettings);
 
+        services.AddDistributedCache(globalSettings);
+
         services.AddTokenizers();
         services.AddDatabaseRepositories(globalSettings);
         services.AddTestPlayIdTracking(globalSettings);
@@ -91,6 +93,7 @@ public class Startup
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllerRoute(name: "default", pattern: "{controller=Seed}/{action=Index}/{id?}");
+            endpoints.MapVersionEndpoint();
         });
     }
 }

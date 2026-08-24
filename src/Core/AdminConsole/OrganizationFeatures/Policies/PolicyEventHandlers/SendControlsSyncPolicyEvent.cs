@@ -5,6 +5,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
@@ -19,7 +21,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandler
 public class SendControlsSyncPolicyEvent(
     IPolicyRepository policyRepository,
     TimeProvider timeProvider,
-    ISendRepository sendRepository) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
+    ISendRepository sendRepository,
+    IFeatureService featureService,
+    IOrganizationUserRepository orgUserRepository) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
 {
     public PolicyType Type => PolicyType.SendControls;
 
@@ -44,7 +48,10 @@ public class SendControlsSyncPolicyEvent(
             enabled: postUpsertedPolicyState.Enabled && sendControlsPolicyData.DisableHideEmail,
             policyData: sendOptionsData);
 
-        await UpdateSendsByPolicyAsync(postUpsertedPolicyState, sendControlsPolicyData);
+        if (featureService.IsEnabled(FeatureFlagKeys.SendControlsExistingSends))
+        {
+            await UpdateSendsByPolicyAsync(postUpsertedPolicyState, sendControlsPolicyData);
+        }
     }
 
     private async Task UpsertLegacyPolicyAsync<T>(
@@ -79,9 +86,13 @@ public class SendControlsSyncPolicyEvent(
         return Task.FromResult(string.Empty);
     }
 
+    // Enable or disable all Sends in an org based on whether they are compliant to org policy
     private async Task UpdateSendsByPolicyAsync(Policy postUpsertedPolicyState, SendControlsPolicyData sendControlsPolicyData)
     {
         var orgSendIds = await sendRepository.GetIdsByOrganizationIdAsync(postUpsertedPolicyState.OrganizationId);
+        // We fetch all of the owners and admins in the org so we can ignore their Sends when enforcing policy compliance
+        // This could be a heavy call in theory but in practice owners and admins should be a minority of org users
+        var orgOwnerAndAdminUserIds = (await orgUserRepository.GetManyByMinimumRoleAsync(postUpsertedPolicyState.OrganizationId, Core.Enums.OrganizationUserType.Admin)).Select(oud => oud.GetUserId());
         foreach (var sendIdsChunk in orgSendIds.Chunk(50))
         {
             var enabled = new List<Guid>();
@@ -91,7 +102,8 @@ public class SendControlsSyncPolicyEvent(
             {
                 if (
                     // If the policy is disabled then we want to re-enable any Sends that were previously disabled
-                    postUpsertedPolicyState.Enabled && SendIsNonCompliant(send, sendControlsPolicyData))
+                    // If the Send was created by an Owner or an Admin in the organization we ignore it
+                    postUpsertedPolicyState.Enabled && !orgOwnerAndAdminUserIds.Contains(send.UserId) && SendIsNonCompliant(send, sendControlsPolicyData))
                 {
                     disabled.Add(send.Id);
                 }
@@ -147,6 +159,15 @@ public class SendControlsSyncPolicyEvent(
                 // aborting the org-wide sweep.
                 return true;
             }
+        }
+        if (policyData.AllowedSendTypes != null && !policyData.AllowedSendTypes.Contains(send.Type))
+        {
+            return true;
+        }
+        // We allow for up to a minute of skew in the difference between the deletion date and the creation date
+        if (policyData.DeletionHours.HasValue && (send.DeletionDate.AddMinutes(-1) - send.CreationDate).TotalHours > policyData.DeletionHours.Value)
+        {
+            return true;
         }
         return false;
     }

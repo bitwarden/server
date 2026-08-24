@@ -1,4 +1,4 @@
-﻿@model UsersModel
+@model UsersModel
 @{
     ViewData["Title"] = "Users";
 }
@@ -8,7 +8,7 @@
 <form class="row row-cols-lg-auto g-3 align-items-center mb-2" method="get">
     <div class="col-12">
         <label class="visually-hidden" asp-for="Email">Email</label>
-        <input type="email" class="form-control" placeholder="Email" asp-for="Email" name="email">
+        <input type="text" class="form-control" placeholder="Email" asp-for="Email" name="email">
     </div>
     <div class="col-12">
         <button type="submit" class="btn btn-primary" title="Search">

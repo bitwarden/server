@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
@@ -39,8 +40,16 @@ internal static class SeederStepTestHelpers
     {
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
         var org = OrganizationSeeder.Create(
-            name, domain, seats: 10, context.GetMangler(),
-            orgKeys.PublicKey, orgKeys.PrivateKey, PlanType.EnterpriseAnnually);
+            new OrganizationSeed
+            {
+                Name = name,
+                Domain = domain,
+                Seats = 10,
+                PlanType = PlanType.EnterpriseAnnually,
+                PublicKey = orgKeys.PublicKey,
+                PrivateKey = orgKeys.PrivateKey
+            },
+            context.GetMangler());
         context.Organization = org;
         context.OrgKeys = orgKeys;
         context.Domain = domain;
@@ -60,5 +69,8 @@ internal static class SeederStepTestHelpers
         public T Read<T>(string seedName) => (T)_seeds[seedName];
 
         public IReadOnlyList<string> ListAvailable() => _seeds.Keys.ToArray();
+
+        public byte[] ReadBytes(string fileName) =>
+            throw new NotSupportedException("StubSeedReader does not provide binary samples.");
     }
 }

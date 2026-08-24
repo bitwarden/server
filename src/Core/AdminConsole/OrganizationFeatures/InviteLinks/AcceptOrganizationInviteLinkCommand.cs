@@ -1,16 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -25,15 +24,14 @@ public class AcceptOrganizationInviteLinkCommand(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
-    IProviderUserRepository providerUserRepository,
-    IPolicyRequirementQuery policyRequirementQuery,
-    IAcceptOrganizationMembershipValidator acceptOrganizationMembershipValidator,
+    IAcceptInviteLinkMembershipValidator acceptInviteLinkMembershipValidator,
     IOrganizationService organizationService,
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
     IMailService mailService,
     IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
+    IPolicyQuery policyQuery,
     ILogger<AcceptOrganizationInviteLinkCommand> logger,
     IEventService eventService)
     : IAcceptOrganizationInviteLinkCommand
@@ -42,8 +40,8 @@ public class AcceptOrganizationInviteLinkCommand(
     {
         var user = request.User;
 
-        var link = await organizationInviteLinkRepository.GetByCodeAsync(request.Code);
-        if (link is null)
+        var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
+        if (link is null || !link.CodeMatches(request.Code.ToString()))
         {
             return new InviteLinkNotFound();
         }
@@ -59,52 +57,32 @@ public class AcceptOrganizationInviteLinkCommand(
             return new InviteLinkNotAvailable();
         }
 
-        if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
-        {
-            return new EmailDomainNotAllowed();
-        }
-
-        // Provider users cannot accept invite links
-        if ((await providerUserRepository.GetManyByUserAsync(user.Id)).Count != 0)
-        {
-            return new ProviderUsersCannotAcceptInviteLink();
-        }
-
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
-        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser);
-        if (membershipStatusError is not null)
-        {
-            return membershipStatusError;
-        }
+        // These policy states are needed both to validate the accept and to drive the post-accept side effects
+        // below, so resolve them here and pass them into the validator on the request.
+        var autoConfirmPolicyEnabled = organization.UsePolicies
+            && (await policyQuery.RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)).Enabled;
+        var autoEnrollEnabled = await IsAccountRecoveryAutoEnrollEnabledAsync(organization);
 
-        var allOrganizationMemberships = await organizationUserRepository.GetManyByUserAsync(user.Id);
-
-        var membershipValidationRequest = new AcceptOrganizationMembershipValidationRequest
-        {
-            OrganizationId = organization.Id,
-            User = user,
-            AllOrganizationMemberships = allOrganizationMemberships,
-            ExistingMembership = existingOrganizationUser,
-        };
-        var membershipValidationResult = await acceptOrganizationMembershipValidator
-            .ValidateAsync(membershipValidationRequest);
+        var membershipValidationResult = await acceptInviteLinkMembershipValidator.ValidateAsync(
+            new AcceptInviteLinkMembershipValidationRequest
+            {
+                Organization = organization,
+                User = user,
+                AllowedDomains = link.GetAllowedDomains(),
+                ExistingMembership = existingOrganizationUser,
+                ResetPasswordKey = request.ResetPasswordKey,
+                AutoConfirmPolicyEnabled = autoConfirmPolicyEnabled,
+                AccountRecoveryAutoEnroll = autoEnrollEnabled,
+            });
         if (membershipValidationResult.IsError)
         {
             return membershipValidationResult.AsError;
         }
 
-        var resetPasswordRequirement = await policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-        var autoEnrollEnabled = resetPasswordRequirement.AutoEnrollEnabled(organization.Id);
-        if (autoEnrollEnabled && !OrganizationUser.IsValidResetPasswordKey(request.ResetPasswordKey))
-        {
-            return new ResetPasswordKeyRequired();
-        }
-
-        var autoConfirmPolicyEnabled = membershipValidationResult.Request.AutoConfirmPolicyEnabled;
-
         var acceptResult = existingOrganizationUser is not null
-            ? await AcceptExistingInviteAsync(organization, existingOrganizationUser, user, autoConfirmPolicyEnabled)
+            ? await AcceptExistingInviteAsync(existingOrganizationUser, user, autoConfirmPolicyEnabled)
             : await CreateNewMembershipAsync(organization, user, autoConfirmPolicyEnabled);
         if (acceptResult.IsError)
         {
@@ -116,6 +94,18 @@ public class AcceptOrganizationInviteLinkCommand(
         await PerformPostAcceptSideEffectsAsync(organization, user, autoEnrollEnabled, request.ResetPasswordKey, autoConfirmPolicyEnabled);
 
         return acceptResult;
+    }
+
+    private async Task<bool> IsAccountRecoveryAutoEnrollEnabledAsync(Organization organization)
+    {
+        if (!organization.UsePolicies)
+        {
+            return false;
+        }
+
+        var resetPasswordPolicy = await policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
+        return resetPasswordPolicy.Enabled
+            && resetPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
     }
 
     /// <summary>
@@ -133,23 +123,9 @@ public class AcceptOrganizationInviteLinkCommand(
         return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 
-    private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser) =>
-        existingOrganizationUser?.Status switch
-        {
-            OrganizationUserStatusType.Revoked => new OrganizationAccessRevoked(),
-            OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed => new AlreadyOrganizationMember(),
-            _ => null
-        };
-
     private async Task<CommandResult<OrganizationUser>> AcceptExistingInviteAsync(
-        Organization organization, OrganizationUser existingOrganizationUser, User user, bool autoConfirmPolicyEnabled)
+        OrganizationUser existingOrganizationUser, User user, bool autoConfirmPolicyEnabled)
     {
-        var freeAdminError = await ValidateFreeOrganizationAdminLimitAsync(organization, existingOrganizationUser, user);
-        if (freeAdminError is not null)
-        {
-            return freeAdminError;
-        }
-
         existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         existingOrganizationUser.UserId = user.Id;
         existingOrganizationUser.Email = null;
@@ -170,7 +146,7 @@ public class AcceptOrganizationInviteLinkCommand(
         var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
         if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
         {
-            return new OrganizationHasNoAvailableSeats();
+            return new OrganizationHasNoAvailableSeats(organization.DisplayName());
         }
 
         var seatExpansionError = await TryExpandSeatsAsync(organization, occupiedSeatCount);
@@ -245,20 +221,5 @@ public class AcceptOrganizationInviteLinkCommand(
         {
             await mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
         }
-    }
-
-    // An email invite can carry an Admin/Owner role. Enforce the "one admin of a Free org"
-    // rule here too, mirroring AcceptOrgUserCommand, so the invite link can't bypass it.
-    private async Task<Error?> ValidateFreeOrganizationAdminLimitAsync(
-        Organization targetOrganization, OrganizationUser existingOrganizationUser, User user)
-    {
-        if (existingOrganizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin &&
-            targetOrganization.PlanType == PlanType.Free &&
-            await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id) > 0)
-        {
-            return new OnlyOneFreeOrganizationAdminAllowed();
-        }
-
-        return null;
     }
 }

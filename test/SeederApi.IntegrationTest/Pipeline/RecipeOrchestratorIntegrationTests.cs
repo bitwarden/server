@@ -12,14 +12,14 @@ using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 namespace Bit.SeederApi.IntegrationTest.Pipeline;
 
 /// <summary>
-/// Verifies that BOTH <see cref="RecipeOrchestrator"/> <c>Execute</c> overloads
+/// Verifies that BOTH <see cref="RecipeOrchestrator"/> <c>ExecuteAsync</c> overloads
 /// (preset path + options path) actually invoke <c>EnsureOwnerEmailUnique</c>
 /// against the real database. Regression protection against a future change that
 /// silently removes the guard call from one overload.
 /// </summary>
 public sealed class RecipeOrchestratorIntegrationTests : IDisposable
 {
-    private const string CollidingEmail = "exists@bw.example";
+    private const string _collidingEmail = "exists@bw.example";
 
     private readonly SqliteConnection _connection;
     private readonly ServiceProvider _provider;
@@ -49,24 +49,24 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void Execute_Preset_OwnerEmailCollidesWithExistingUser_Throws()
+    public async Task Execute_Preset_OwnerEmailCollidesWithExistingUser_ThrowsAsync()
     {
-        SeedExistingUser(CollidingEmail);
+        SeedExistingUser(_collidingEmail);
         var orchestrator = NewOrchestrator(new NoOpManglerService());
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            orchestrator.Execute(
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            orchestrator.ExecuteAsync(
                 presetName: "any-preset-never-read",
-                ownerEmailOverride: CollidingEmail));
+                ownerEmailOverride: _collidingEmail));
 
-        Assert.Contains(CollidingEmail, ex.Message);
+        Assert.Contains(_collidingEmail, ex.Message);
         Assert.Contains("--mangle", ex.Message);
     }
 
     [Fact]
-    public void Execute_Options_OwnerEmailCollidesWithExistingUser_Throws()
+    public async Task Execute_Options_OwnerEmailCollidesWithExistingUser_ThrowsAsync()
     {
-        SeedExistingUser(CollidingEmail);
+        SeedExistingUser(_collidingEmail);
         var orchestrator = NewOrchestrator(new NoOpManglerService());
 
         var options = new OrganizationVaultOptions
@@ -74,29 +74,29 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             Name = "Test Org",
             Domain = "test.example",
             Users = 1,
-            OwnerEmail = CollidingEmail,
+            OwnerEmail = _collidingEmail,
         };
 
-        var ex = Assert.Throws<InvalidOperationException>(() => orchestrator.Execute(options));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => orchestrator.ExecuteAsync(options));
 
-        Assert.Contains(CollidingEmail, ex.Message);
+        Assert.Contains(_collidingEmail, ex.Message);
     }
 
     [Fact]
-    public void Execute_Preset_ManglingEnabled_SkipsGuardEvenIfEmailExists()
+    public async Task Execute_Preset_ManglingEnabled_SkipsGuardEvenIfEmailExistsAsync()
     {
         // With --mangle, the per-run unique tag prevents collisions, so the guard
         // is skipped. We prove execution proceeded past the guard by using an
         // unknown preset name: failure comes from SeedReader ("not found"), not the
         // guard ("already exists"). Both throw InvalidOperationException, so we
         // discriminate by message content.
-        SeedExistingUser(CollidingEmail);
+        SeedExistingUser(_collidingEmail);
         var orchestrator = NewOrchestrator(new ManglerService());
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            orchestrator.Execute(
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            orchestrator.ExecuteAsync(
                 presetName: "non-existent-preset",
-                ownerEmailOverride: CollidingEmail));
+                ownerEmailOverride: _collidingEmail));
 
         Assert.Contains("not found", ex.Message);
         Assert.DoesNotContain("already exists", ex.Message);
@@ -116,15 +116,15 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
 
     private RecipeOrchestrator NewOrchestrator(IManglerService mangler)
     {
-        // Mapper + LicensingService are not exercised by the pre-flight guard,
-        // which fires before BulkCommitter or any AutoMapper usage. Null-forgive
-        // them; if the guard ever stops being the first thing in Execute, these
-        // tests will fail loudly.
+        // Mapper, LicensingService, and AttachmentStorageService are not exercised by the pre-flight
+        // guard, which fires before BulkCommitter or any AutoMapper usage. Null-forgive them; if the
+        // guard ever stops being the first thing in ExecuteAsync, these tests will fail loudly.
         var deps = new SeederDependencies(
             _db,
             null!,
             new PasswordHasher<User>(),
             mangler,
+            null!,
             null!);
         return new RecipeOrchestrator(deps);
     }

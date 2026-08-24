@@ -24,6 +24,7 @@ public static class OrganizationTestHelpers
             Email = $"{id}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
+            AccountRevisionDate = DateTime.UtcNow.AddMinutes(-10),
         });
     }
 
@@ -205,11 +206,11 @@ public static class OrganizationTestHelpers
         string identifier = "test")
         => repository.CreateAsync(new OrganizationInviteLink
         {
-            Code = Guid.NewGuid(),
+            Code = Guid.NewGuid().ToString(),
             OrganizationId = organization.Id,
             AllowedDomains = "[\"example.com\"]",
-            EncryptedInviteKey = $"encrypted-key-{identifier}",
-            EncryptedOrgKey = $"encrypted-org-key-{identifier}",
+            Invite = $"invite-blob-{identifier}",
+            SupportsConfirmation = true,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         });

@@ -8,6 +8,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="[10.0.10]" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XUnitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio"
@@ -20,5 +21,6 @@
     <ProjectReference Include="..\..\src\Notifications\Notifications.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\Core.Test\Core.Test.csproj" />
+    <ProjectReference Include="..\IntegrationTestCommon\IntegrationTestCommon.csproj" />
   </ItemGroup>
 </Project>

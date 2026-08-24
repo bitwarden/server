@@ -97,6 +97,7 @@ public class RestartSubscriptionCommand(
             organization.UseResetPassword = newPlan.HasResetPassword;
             organization.UsersGetPremium = newPlan.UsersGetPremium;
             organization.UseCustomPermissions = newPlan.HasCustomPermissions;
+            organization.UseRiskInsights = newPlan.HasRiskInsights;
         }
 
         var items = new List<SubscriptionItemOptions>();
@@ -166,6 +167,7 @@ public class RestartSubscriptionCommand(
         var options = new SubscriptionCreateOptions
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
+            BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
             CollectionMethod = CollectionMethod.ChargeAutomatically,
             Customer = canceledSubscription.CustomerId,
             Items = items,

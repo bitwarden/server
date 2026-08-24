@@ -88,6 +88,29 @@ public static class PlanFeatures
         org.LimitItemDeletion = overrides.LimitItemDeletion ?? org.LimitItemDeletion;
         org.LimitCollectionCreation = overrides.LimitCollectionCreation ?? org.LimitCollectionCreation;
         org.LimitCollectionDeletion = overrides.LimitCollectionDeletion ?? org.LimitCollectionDeletion;
+
+        org.UseGroups = overrides.UseGroups ?? org.UseGroups;
+        org.UsePolicies = overrides.UsePolicies ?? org.UsePolicies;
+        org.UseSso = overrides.UseSso ?? org.UseSso;
+        org.UseKeyConnector = overrides.UseKeyConnector ?? org.UseKeyConnector;
+        org.UseScim = overrides.UseScim ?? org.UseScim;
+        org.UseDirectory = overrides.UseDirectory ?? org.UseDirectory;
+        org.UseEvents = overrides.UseEvents ?? org.UseEvents;
+        org.UseTotp = overrides.UseTotp ?? org.UseTotp;
+        org.Use2fa = overrides.Use2fa ?? org.Use2fa;
+        org.UseApi = overrides.UseApi ?? org.UseApi;
+        org.UseResetPassword = overrides.UseResetPassword ?? org.UseResetPassword;
+        org.UseCustomPermissions = overrides.UseCustomPermissions ?? org.UseCustomPermissions;
+        org.UseOrganizationDomains = overrides.UseOrganizationDomains ?? org.UseOrganizationDomains;
+        org.UsersGetPremium = overrides.UsersGetPremium ?? org.UsersGetPremium;
+        org.SelfHost = overrides.SelfHost ?? org.SelfHost;
+        org.UseRiskInsights = overrides.UseRiskInsights ?? org.UseRiskInsights;
+        org.UseMyItems = overrides.UseMyItems ?? org.UseMyItems;
+        org.UseAdminSponsoredFamilies = overrides.UseAdminSponsoredFamilies ?? org.UseAdminSponsoredFamilies;
+        org.UseInviteLinks = overrides.UseInviteLinks ?? org.UseInviteLinks;
+        org.SyncSeats = overrides.SyncSeats ?? org.SyncSeats;
+        org.UsePasswordManager = overrides.UsePasswordManager ?? org.UsePasswordManager;
+        org.UsePam = overrides.UsePam ?? org.UsePam;
     }
 
     /// <summary>
@@ -96,18 +119,20 @@ public static class PlanFeatures
     /// </summary>
     internal static void EnableSecretsManager(Organization org, int? smSeats, int? smServiceAccounts)
     {
-        var baseServiceAccounts = org.PlanType switch
+        var (baseSeats, baseServiceAccounts) = org.PlanType switch
         {
             PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually
-                or PlanType.TeamsAnnually => 50,
-            PlanType.TeamsMonthly or PlanType.TeamsStarter => 20,
+                or PlanType.TeamsAnnually => (org.Seats, 50),
+            PlanType.TeamsMonthly or PlanType.TeamsStarter => (org.Seats, 20),
+            // Free Secrets Manager tier: 2 seats, 3 service accounts (see FreePlan mock).
+            PlanType.Free => (2, 3),
             _ => throw new ArgumentException(
                 $"PlanType '{org.PlanType}' does not support Secrets Manager. " +
-                "Supported: TeamsMonthly, TeamsAnnually, TeamsStarter, EnterpriseMonthly, EnterpriseAnnually.")
+                "Supported: Free, TeamsMonthly, TeamsAnnually, TeamsStarter, EnterpriseMonthly, EnterpriseAnnually.")
         };
 
         org.UseSecretsManager = true;
-        org.SmSeats = smSeats ?? org.Seats;
+        org.SmSeats = smSeats ?? baseSeats;
         org.SmServiceAccounts = smServiceAccounts ?? baseServiceAccounts;
     }
 

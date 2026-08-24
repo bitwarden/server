@@ -50,9 +50,14 @@ dotnet run -- individual --subscription premium --vault
 
 # Self-hosted instance — writes a license file so premium status is recognized
 dotnet run -- individual --subscription premium --first-name Jane --last-name Smith --self-hosted
+
+# Aged account — CreationDate backdated 365 days
+dotnet run -- individual --subscription free --account-age-days 365
 ```
 
 Add `--self-hosted` when targeting a self-hosted instance — without it, premium status won't be recognized.
+
+Use `--account-age-days N` to backdate the account's `CreationDate` by `N` days (default `0` = today) for scenarios that depend on account age. Only `CreationDate` is backdated; the revision dates stay at the seed time.
 
 ### `preset` - Fixture-Based Seeding
 
@@ -61,6 +66,9 @@ Loads a named configuration from the embedded catalog. Presets are curated JSON 
 ```bash
 # List available presets
 dotnet run -- preset --list
+
+# Day-to-day dev preset with memorable role logins
+dotnet run -- preset --name dev.playground
 
 # QA preset with known users and relationships
 dotnet run -- preset --name qa.enterprise-basic --mangle
@@ -71,5 +79,7 @@ dotnet run -- preset --name scale.md-balanced-sterling-cooper --mangle
 # Individual user preset
 dotnet run -- preset --name individual.premium --mangle
 ```
+
+Org presets accept `--mangle` (per-run unique IDs, emails, and identifiers, so you can seed the same preset repeatedly), `--org-name` (override the org display name), and `--owner-email` (override the owner login email). Both overrides compose with `--mangle`.
 
 For the full preset catalog, see [presets.md](../Seeder/Seeds/docs/presets.md).

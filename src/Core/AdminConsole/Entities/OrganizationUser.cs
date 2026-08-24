@@ -2,12 +2,11 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
-
-#nullable enable
 
 namespace Bit.Core.Entities;
 
@@ -15,7 +14,7 @@ namespace Bit.Core.Entities;
 /// An association table between one <see cref="User"/> and one <see cref="Organization"/>, representing that user's
 /// membership in the organization. "Member" refers to the OrganizationUser object.
 /// </summary>
-public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
+public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser, IOrganizationUserRole
 {
     /// <summary>
     /// A unique random identifier.
@@ -47,6 +46,12 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// is not enrolled in account recovery.
     /// </summary>
     public string? ResetPasswordKey { get; set; }
+    /// <summary>
+    /// The V2 user key wrapped with the V1 user key, as JSON. Set during a V1 to V2 upgrade rotation.
+    /// An Organization admin reaches the V1 user key through account recovery, so the admin can unwrap
+    /// the V2 user key from this token and update <see cref="ResetPasswordKey"/> to it. NULL at all other times.
+    /// </summary>
+    public string? V2UpgradeToken { get; set; }
     /// <inheritdoc cref="OrganizationUserStatusType"/>
     public OrganizationUserStatusType Status { get; set; }
     /// <summary>
@@ -93,6 +98,10 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// True if the User has access to Secrets Manager for this Organization, false otherwise.
     /// </summary>
     public bool AccessSecretsManager { get; set; }
+    /// <summary>
+    /// True if the User has access to Privileged Access Management for this Organization, false otherwise.
+    /// </summary>
+    public bool AccessPam { get; set; }
     /// <summary>
     /// The reason a user is revoked. Null if the user is not revoked, or was revoked before
     /// revocation reasons were tracked.
@@ -152,5 +161,22 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     public void SetPermissions(Permissions permissions)
     {
         Permissions = CoreHelpers.ClassToJsonData(permissions);
+    }
+
+    public OrganizationUser UpdateOrganizationUser(OrganizationUserType organizationUserType,
+        Permissions? permissions,
+        bool accessSecretsManager,
+        bool accessPam,
+        TimeProvider timeProvider)
+    {
+        if (permissions is not null)
+        {
+            SetPermissions(permissions);
+        }
+        Type = organizationUserType;
+        AccessSecretsManager = accessSecretsManager;
+        AccessPam = accessPam;
+        RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
+        return this;
     }
 }
