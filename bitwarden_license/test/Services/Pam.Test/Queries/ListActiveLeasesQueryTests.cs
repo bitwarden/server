@@ -1,7 +1,7 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Queries;
-using Bit.Services.Pam.Services;
-using Bit.Pam.Entities;
+﻿using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.OrganizationFeatures.Queries;
+using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;

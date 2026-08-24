@@ -1,8 +1,8 @@
-﻿using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Services.Pam.Services;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 
