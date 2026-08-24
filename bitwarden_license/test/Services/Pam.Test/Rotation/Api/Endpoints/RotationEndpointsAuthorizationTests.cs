@@ -1,15 +1,24 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Context;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
+using Bit.Services.Pam.Rotation;
 using Bit.Services.Pam.Rotation.Api.Authorization;
 using Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
+using Bit.Services.Pam.Rotation.Commands.Interfaces;
+using Bit.Services.Pam.Rotation.Queries.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Rotation.Api.Endpoints;
@@ -100,6 +109,70 @@ public class RotationEndpointsAuthorizationTests
             Assert.DoesNotContain(requirements, r => r is MemberOrProviderRequirement);
             Assert.DoesNotContain(requirements, r => r is MemberRequirement);
         });
+    }
+
+    [Fact]
+    public async Task MapPamEndpoints_RunsDaemonRequestEndpointFilterAheadOfEveryDaemonRoute()
+    {
+        // Policies.PamRotationDaemon only proves the caller holds a rotation-daemon token. Everything that makes
+        // that token *currently* valid -- the daemon still enabled, its organization still enabled and licensed --
+        // lives in DaemonRequestEndpointFilter, and AddEndpointFilter<T>() leaves no metadata to assert on. So drive
+        // the built endpoint instead: with no PamDaemonId the filter 404s, whereas an endpoint that had lost its
+        // filter would reach its handler and fail some other way.
+        var endpoints = DaemonEndpoints();
+        Assert.NotEmpty(endpoints);
+
+        foreach (var endpoint in endpoints)
+        {
+            var httpContext = new DefaultHttpContext
+            {
+                RequestServices = DaemonRequestServices(),
+                Response = { Body = new MemoryStream() },
+            };
+
+            await endpoint.RequestDelegate!(httpContext);
+
+            Assert.Equal(StatusCodes.Status404NotFound, httpContext.Response.StatusCode);
+        }
+    }
+
+    private static List<RouteEndpoint> DaemonEndpoints() =>
+        MaterializeEndpoints()
+            .Where(e => e.RoutePattern.RawText!.StartsWith("/rotation", StringComparison.Ordinal))
+            .ToList();
+
+    /// <remarks>
+    /// Minimal API binds a handler's injected parameters before the filter chain runs, so the handlers have to be
+    /// resolvable even though the filter short-circuits ahead of them.
+    /// </remarks>
+    private static IServiceProvider DaemonRequestServices()
+    {
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.PamDaemonId.Returns((Guid?)null);
+
+        var hostEnvironment = Substitute.For<IHostEnvironment>();
+        hostEnvironment.EnvironmentName.Returns(Environments.Production);
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(hostEnvironment);
+        services.AddSingleton(currentContext);
+        services.AddSingleton(Substitute.For<IPamDaemonRepository>());
+        services.AddSingleton(Substitute.For<IPamRotationJobRepository>());
+        services.AddSingleton(Substitute.For<IListClaimableJobsQuery>());
+        services.AddSingleton(Substitute.For<IClaimRotationJobCommand>());
+        services.AddSingleton(Substitute.For<IGetRotationCipherQuery>());
+        services.AddSingleton(Substitute.For<ISubmitCipherUpdateCommand>());
+        services.AddSingleton(Substitute.For<IReportRotationSucceededCommand>());
+        services.AddSingleton(Substitute.For<IReportRotationFailedCommand>());
+        services.AddSingleton(Substitute.For<IOrganizationAbilityCacheService>());
+        services.AddSingleton(Options.Create(new PamRotationOptions()));
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<RotationDaemonJobsEndpointsHandler>();
+        services.AddScoped<RotationJobEndpointsHandler>();
+        services.AddScoped<RotationAttemptEndpointsHandler>();
+
+        return services.BuildServiceProvider();
     }
 
     [Fact]

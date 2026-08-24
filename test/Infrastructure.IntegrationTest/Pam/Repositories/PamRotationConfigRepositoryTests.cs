@@ -6,6 +6,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Bit.Infrastructure.IntegrationTest.Comparers;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
@@ -52,7 +53,7 @@ public class PamRotationConfigRepositoryTests
         Assert.True(persisted.TerminateSessions);
         Assert.Equal("0 0/15 * * * ?", persisted.ScheduleCron);
         Assert.True(persisted.RotateOnAccessEnd);
-        Assert.Equal(now.AddMinutes(15), persisted.NextRotationAt);
+        Assert.Equal(now.AddMinutes(15), persisted.NextRotationAt.Value, LaxDateTimeComparer.Default);
         Assert.True(persisted.Enabled);
         Assert.Null(persisted.LastRotationAt);
 

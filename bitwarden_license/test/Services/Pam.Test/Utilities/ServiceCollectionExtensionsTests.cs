@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Pam.Services;
-using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Services;
 using Bit.Services.Pam.Utilities;
 using Microsoft.Extensions.Configuration;
@@ -105,11 +104,26 @@ public class ServiceCollectionExtensionsTests
         Assert.Equal(expectedImplementation, descriptor.ImplementationType);
     }
 
-    [Theory]
-    [InlineData(typeof(LeaseEndpointsHandler))]
-    [InlineData(typeof(AccessRequestEndpointsHandler))]
-    [InlineData(typeof(CipherLeaseEndpointsHandler))]
-    [InlineData(typeof(AccessRuleEndpointsHandler))]
+    /// <remarks>
+    /// Discovered by reflection rather than listed by hand: the hand-maintained list had drifted to four of the
+    /// eleven handlers PAM registers, and the sibling every-dependency test cannot catch that because it only walks
+    /// registrations that already exist.
+    /// </remarks>
+    public static TheoryData<Type> EndpointHandlers()
+    {
+        var data = new TheoryData<Type>();
+        foreach (var type in typeof(ServiceCollectionExtensions).Assembly.GetTypes()
+                     .Where(t => t is { IsClass: true, IsAbstract: false, IsPublic: true }
+                                 && t.Name.EndsWith("EndpointsHandler", StringComparison.Ordinal))
+                     .OrderBy(t => t.FullName, StringComparer.Ordinal))
+        {
+            data.Add(type);
+        }
+
+        return data;
+    }
+
+    [Theory, MemberData(nameof(EndpointHandlers))]
     public void AddPamServices_RegistersEndpointHandler(Type handlerType)
     {
         // The Minimal API endpoints resolve their handler from DI, and an unregistered handler would also make the
@@ -117,5 +131,12 @@ public class ServiceCollectionExtensionsTests
         var services = PamServices();
 
         Assert.Contains(services, d => d.ServiceType == handlerType);
+    }
+
+    [Fact]
+    public void EndpointHandlers_DiscoversEveryHandlerInTheAssembly()
+    {
+        // Guards the guard: a rename that stops matching the suffix would silently empty the theory above.
+        Assert.True(EndpointHandlers().Count >= 11);
     }
 }

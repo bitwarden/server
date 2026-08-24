@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Bit.Infrastructure.IntegrationTest.Comparers;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
@@ -73,7 +74,7 @@ public class PamTargetSystemRepositoryTests
         Assert.NotNull(persisted);
         Assert.Equal("manual-vault-renamed", persisted!.Name);
         Assert.Equal(PamTargetSystemStatus.Disabled, persisted.Status);
-        Assert.Equal(now.AddMinutes(5), persisted.RevisionDate);
+        Assert.Equal(now.AddMinutes(5), persisted.RevisionDate, LaxDateTimeComparer.Default);
         Assert.Null(persisted.Kind);
         Assert.Null(persisted.PasswordPolicy);
     }

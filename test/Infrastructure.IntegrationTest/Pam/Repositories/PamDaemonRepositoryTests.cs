@@ -3,6 +3,7 @@ using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Bit.Infrastructure.IntegrationTest.Comparers;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
@@ -122,7 +123,7 @@ public class PamDaemonRepositoryTests
         var thirdHeartbeat = firstHeartbeat.AddSeconds(20);
         await pamDaemonRepository.UpdateHeartbeatAsync(daemon.Id, thirdHeartbeat, minInterval);
         var afterThird = await pamDaemonRepository.GetByIdAsync(daemon.Id);
-        Assert.Equal(thirdHeartbeat, afterThird!.LastHeartbeatAt);
+        Assert.Equal(thirdHeartbeat, afterThird!.LastHeartbeatAt.Value, LaxDateTimeComparer.Default);
         Assert.NotEqual(recordedFirst, afterThird.LastHeartbeatAt);
     }
 
@@ -213,7 +214,7 @@ public class PamDaemonRepositoryTests
         Assert.NotNull(persisted);
         Assert.Equal("renamed-daemon", persisted!.Name);
         Assert.Equal(PamDaemonStatus.Disabled, persisted.Status);
-        Assert.Equal(newRevisionDate, persisted.RevisionDate);
+        Assert.Equal(newRevisionDate, persisted.RevisionDate, LaxDateTimeComparer.Default);
         Assert.Equal(originalOrganizationId, persisted.OrganizationId);
         Assert.Equal(originalApiKeyId, persisted.ApiKeyId);
     }

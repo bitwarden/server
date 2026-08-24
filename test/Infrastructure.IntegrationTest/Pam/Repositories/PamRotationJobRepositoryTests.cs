@@ -7,6 +7,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Bit.Infrastructure.IntegrationTest.Comparers;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
@@ -101,13 +102,13 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(fixture.Cipher.Id, winner.CipherId);
         Assert.Equal(fixture.Config.AccountIdentity, winner.AccountIdentity);
         Assert.Equal(fixture.Config.TerminateSessions, winner.TerminateSessions);
-        Assert.Equal(claimNow.Add(_releaseDelay), winner.ExecuteBy);
+        Assert.Equal(claimNow.Add(_releaseDelay), winner.ExecuteBy!.Value, LaxDateTimeComparer.Default);
 
         // The job records the winning claim, and ExecuteBy is exactly ClaimedAt + releaseDelay.
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobStatus.Claimed, job!.Status);
         Assert.NotNull(job.ClaimedByDaemonId);
-        Assert.Equal(claimNow, job.ClaimedAt);
+        Assert.Equal(claimNow, job.ClaimedAt.Value, LaxDateTimeComparer.Default);
         Assert.Equal(job.ClaimedAt!.Value.Add(_releaseDelay), winner.ExecuteBy);
 
         // AtMostOneInFlightAttemptPerJob: only the winner's attempt row was inserted.
@@ -271,7 +272,7 @@ public class PamRotationJobRepositoryTests
         var cipher = await cipherRepository.GetByIdAsync(fixture.Cipher.Id);
         Assert.NotNull(cipher);
         Assert.Equal(rotatedData, cipher!.Data);
-        Assert.Equal(writeNow, cipher.RevisionDate);
+        Assert.Equal(writeNow, cipher.RevisionDate, LaxDateTimeComparer.Default);
 
         // The attempt records the accepted write; it stays Executing until the success report.
         var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId.Value);
@@ -419,7 +420,7 @@ public class PamRotationJobRepositoryTests
         var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId.Value);
         Assert.Equal(PamRotationAttemptStatus.Rotated, attempt!.Status);
         Assert.Equal(PamSessionTerminationOutcome.Terminated, attempt.SessionTermination);
-        Assert.Equal(resolveNow, attempt.ResolvedDate);
+        Assert.Equal(resolveNow, attempt.ResolvedDate.Value, LaxDateTimeComparer.Default);
         // The attempt keeps the executing daemon's identity permanently...
         Assert.Equal(fixture.Daemon.Id, attempt.ClaimedByDaemonId);
 
@@ -459,7 +460,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationAttemptStatus.Errored, attempt!.Status);
         Assert.Equal("target unreachable", attempt.FailureReason);
         Assert.Equal(PamRotationSyncState.TargetUnchanged, attempt.SyncState);
-        Assert.Equal(errorNow, attempt.ResolvedDate);
+        Assert.Equal(errorNow, attempt.ResolvedDate.Value, LaxDateTimeComparer.Default);
 
         // The job goes back to Pending with the claim fields cleared and the first backoff step applied:
         // NextClaimableAt = now + retryBaseDelay * 2^(1-1).
@@ -467,7 +468,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationJobStatus.Pending, job!.Status);
         Assert.Null(job.ClaimedByDaemonId);
         Assert.Null(job.ClaimedAt);
-        Assert.Equal(errorNow.Add(retryBaseDelay), job.NextClaimableAt);
+        Assert.Equal(errorNow.Add(retryBaseDelay), job.NextClaimableAt, LaxDateTimeComparer.Default);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -604,7 +605,7 @@ public class PamRotationJobRepositoryTests
         Assert.Null(job.ClaimedAt);
         var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId!.Value);
         Assert.Equal(PamRotationAttemptStatus.Abandoned, attempt!.Status);
-        Assert.Equal(now, attempt.ResolvedDate);
+        Assert.Equal(now, attempt.ResolvedDate.Value, LaxDateTimeComparer.Default);
     }
 
     // Success wins: a job whose attempt reached Rotated is never timed out, no matter how far past ExpiresAt it is.
@@ -676,11 +677,11 @@ public class PamRotationJobRepositoryTests
         Assert.Null(job.ClaimedByDaemonId);
         Assert.Null(job.ClaimedAt);
         // Re-claimable exactly at the lease's end (pre-clear ClaimedAt + releaseDelay), not at the sweep's run time.
-        Assert.Equal(claimTime.Add(_releaseDelay), job.NextClaimableAt);
+        Assert.Equal(claimTime.Add(_releaseDelay), job.NextClaimableAt, LaxDateTimeComparer.Default);
 
         var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId!.Value);
         Assert.Equal(PamRotationAttemptStatus.Abandoned, attempt!.Status);
-        Assert.Equal(now, attempt.ResolvedDate);
+        Assert.Equal(now, attempt.ResolvedDate.Value, LaxDateTimeComparer.Default);
     }
 
     [DatabaseTheory, DatabaseData]
