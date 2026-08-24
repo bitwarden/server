@@ -181,14 +181,33 @@ public class CipherLeaseGate : ICipherLeaseGate
     }
 
     /// <summary>
-    /// The cipher ids reachable <em>only</em> through leasing-enabled collections (those carrying a
-    /// <see cref="Collection.AccessRuleId" />).
+    /// The cipher ids reachable <em>only</em> through leasing-enabled collections — those governed by an
+    /// access rule that is currently switched on, per
+    /// <see cref="CollectionDetails.HasEnabledAccessRule" />.
     /// </summary>
     /// <remarks>
     /// "Only" is what makes this safe to compute structurally, without evaluating a rule. A cipher also
     /// reachable through a plain collection is not gated: the caller can already read it in full by that
     /// other path, so withholding it here would hide a credential leasing does not actually protect. By the
     /// same token a user-owned cipher — reachable through no collection at all — is never gated.
+    ///
+    /// "Governed by an enabled rule", not merely carrying a <see cref="Collection.AccessRuleId" />: a
+    /// disabled rule gates nothing, which is the same reading <c>GoverningRuleResolver</c> applies on the
+    /// single-cipher path. Keying off the bare association instead let a cipher governed only by a disabled
+    /// rule sync as partial while every other surface treated it as ungated — the item rendered with no
+    /// credentials and no gating prompt either, because the banner's access-state read resolved no rule and
+    /// so had nothing to offer (PM-42274). Enabled-ness is derived by the collection read paths rather than
+    /// stored, so a caller supplying <paramref name="collections" /> must load them through one of those
+    /// paths; a bare <see cref="Collection" /> cannot answer this.
+    ///
+    /// That derivation is a schema dependency, and it fails <em>open</em>: the flag arrives from a projection
+    /// added by <c>2026-08-21_00_AddPamCollectionReads.sql</c>, and a read path that does not select it leaves
+    /// the property at its default of false, which reads here as "no enabled rule" and so gates nothing at
+    /// all. Dapper does not error on a column missing from the result set, so the only symptom is silently
+    /// absent gating. The migration must therefore land before this code does, and a change to any collection
+    /// read path has to carry the projection with it — the integration coverage that pins this is
+    /// <c>CollectionRepositoryHasEnabledAccessRuleTests</c>, which exercises the real read rather than a
+    /// substituted repository.
     ///
     /// A null <paramref name="collections" /> or <paramref name="collectionCiphersByCipher" /> means "not
     /// loaded, because the caller has no organizations", which is equivalent to empty: with no collection to
@@ -205,7 +224,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         }
 
         var leasingCollectionIds = collections
-            .Where(c => c.AccessRuleId.HasValue)
+            .Where(c => c.HasEnabledAccessRule)
             .Select(c => c.Id)
             .ToHashSet();
         if (leasingCollectionIds.Count == 0)
