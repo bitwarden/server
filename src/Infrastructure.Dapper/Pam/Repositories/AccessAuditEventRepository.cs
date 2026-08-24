@@ -28,7 +28,7 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
             "[dbo].[AccessAuditEvent_Create]",
             new
             {
-                Id = CoreHelpers.GenerateComb(),
+                Id = CombGuid.Generate(),
                 auditEvent.CorrelationId,
                 auditEvent.OrganizationId,
                 Kind = (byte)auditEvent.Kind,
