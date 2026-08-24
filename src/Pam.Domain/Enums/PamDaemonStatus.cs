@@ -1,4 +1,4 @@
-namespace Bit.Pam.Enums;
+﻿namespace Bit.Pam.Enums;
 
 /// <summary>
 /// Lifecycle of a <see cref="Entities.PamDaemon"/>. Only an <see cref="Enabled"/> daemon may authenticate, poll, or

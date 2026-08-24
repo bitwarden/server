@@ -1,4 +1,4 @@
-namespace Bit.Services.Pam.Rotation.Commands.Interfaces;
+﻿namespace Bit.Services.Pam.Rotation.Commands.Interfaces;
 
 public interface IDeleteDaemonCommand
 {

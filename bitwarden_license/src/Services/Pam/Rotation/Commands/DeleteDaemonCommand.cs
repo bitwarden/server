@@ -1,4 +1,4 @@
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;

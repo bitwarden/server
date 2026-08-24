@@ -2,12 +2,12 @@
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Rotation;
 using Bit.Services.Pam.Rotation.Commands.Interfaces;
 using Bit.Services.Pam.Rotation.Jobs;
-using Bit.Services.Pam.Rotation;
 using Bit.Services.Pam.Services;
-using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
