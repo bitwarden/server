@@ -8,9 +8,11 @@ namespace Bit.Core.Pam.Services;
 
 /// <summary>
 /// The decision point for PAM credential leasing in Vault code. A cipher reachable only through
-/// leasing-enabled collections is "leasing-gated": its secrets are withheld (partial data) unless the
-/// caller holds a valid active lease, and mutating it is refused without one. Every method is
-/// "unrestricted" when the <c>Pam</c> feature flag is off, so flag-off behaviour is unchanged.
+/// leasing-enabled collections — those governed by an access rule that is currently <em>enabled</em> — is
+/// "leasing-gated": its secrets are withheld (partial data) unless the caller holds a valid active lease,
+/// and mutating it is refused without one. A collection whose rule has been switched off gates nothing.
+/// Every method is "unrestricted" when the <c>Pam</c> feature flag is off, so flag-off behaviour is
+/// unchanged.
 /// </summary>
 /// <remarks>
 /// Callers reach a cipher in one of two stances, and the gate has a method family for each. A
@@ -47,8 +49,11 @@ public interface ICipherLeaseGate
     /// regardless of lease state — secrets are only ever released one cipher at a time.
     /// </summary>
     /// <param name="collections">
-    /// The caller's collections. <c>null</c> means "not loaded, because the caller has no organizations"
-    /// and is equivalent to empty: with no collection to reach a cipher through, nothing is gated.
+    /// The caller's collections, loaded through a collection read path so that
+    /// <see cref="CollectionDetails.HasEnabledAccessRule"/> is populated — the implementation reads it to
+    /// tell a governing rule that is switched on from one that is not. <c>null</c> means "not loaded,
+    /// because the caller has no organizations" and is equivalent to empty: with no collection to reach a
+    /// cipher through, nothing is gated.
     /// </param>
     /// <param name="collectionCiphersByCipher">
     /// The caller's cipher-to-collection mappings, keyed by cipher id. <c>null</c> carries the same
