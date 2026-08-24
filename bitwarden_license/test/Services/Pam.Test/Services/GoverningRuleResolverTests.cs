@@ -77,6 +77,7 @@ public class GoverningRuleResolverTests
 
         Assert.NotNull(result);
         Assert.False(result!.RequiresHumanApproval);
+        Assert.False(result.ConditionsUnreadable);
         var ip = Assert.IsType<IpAllowlistCondition>(Assert.Single(result.Conditions));
         Assert.Equal("10.0.0.0/8", Assert.Single(ip.Cidrs));
     }
@@ -160,6 +161,9 @@ public class GoverningRuleResolverTests
         Assert.True(result!.RequiresHumanApproval);
         // An unparseable rule fails safe to human approval rather than surfacing a rule the engine cannot evaluate.
         Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
+        // Flagged as well as substituted: the stand-in is indistinguishable from a genuine [human_approval] rule, and
+        // a caller that strips the approval gate before evaluating needs to know it is looking at a fallback.
+        Assert.True(result.ConditionsUnreadable);
     }
 
     [Theory, BitAutoData]
@@ -435,6 +439,106 @@ public class GoverningRuleResolverTests
         Assert.NotNull(result);
         Assert.Null(result!.DefaultLeaseDurationSeconds);
         Assert.Null(result.MaxLeaseDurationSeconds);
+    }
+
+    // ResolvePinnedAsync answers a different question from ResolveAsync: not "which rule governs this caller now" but
+    // "which rule decided this request". It therefore reads the rule straight off its id and never consults the
+    // caller's collections, so a rule created or re-pointed since submit cannot take over.
+
+    [Theory, BitAutoData]
+    public async Task ResolvePinnedAsync_EnabledRule_ProjectsItOntoTheSuppliedCollection(
+        SutProvider<GoverningRuleResolver> sutProvider, AccessRule rule, Guid collectionId)
+    {
+        rule.Enabled = true;
+        rule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+        rule.MaxLeaseDurationSeconds = 1800;
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
+
+        var result = await sutProvider.Sut.ResolvePinnedAsync(rule.Id, collectionId);
+
+        Assert.NotNull(result);
+        Assert.Equal(rule.Id, result!.RuleId);
+        // The collection is the request's own fact, carried in; the organization is the rule's.
+        Assert.Equal(collectionId, result.CollectionId);
+        Assert.Equal(rule.OrganizationId, result.OrganizationId);
+        Assert.False(result.RequiresHumanApproval);
+        Assert.False(result.ConditionsUnreadable);
+        Assert.Equal(1800, result.MaxLeaseDurationSeconds);
+        var ip = Assert.IsType<IpAllowlistCondition>(Assert.Single(result.Conditions));
+        Assert.Equal("10.0.0.0/8", Assert.Single(ip.Cidrs));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolvePinnedAsync_DoesNotConsultTheCallersCollections(
+        SutProvider<GoverningRuleResolver> sutProvider, AccessRule rule, Guid collectionId)
+    {
+        rule.Enabled = true;
+        rule.Conditions = "[]";
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
+
+        await sutProvider.Sut.ResolvePinnedAsync(rule.Id, collectionId);
+
+        // Re-deriving reachability would reintroduce oldest-wins over today's rules, which is the drift the pin exists
+        // to prevent.
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByUserIdCipherIdAsync(default, default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByManyIdsAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolvePinnedAsync_DisabledRule_ReturnsNull(
+        SutProvider<GoverningRuleResolver> sutProvider, AccessRule rule, Guid collectionId)
+    {
+        // Dropped for the same reason ResolveAsync drops it: an admin has switched the rule off, so it no longer gates.
+        rule.Enabled = false;
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
+
+        Assert.Null(await sutProvider.Sut.ResolvePinnedAsync(rule.Id, collectionId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolvePinnedAsync_MissingRule_ReturnsNull(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid ruleId, Guid collectionId)
+    {
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(ruleId).Returns((AccessRule?)null);
+
+        Assert.Null(await sutProvider.Sut.ResolvePinnedAsync(ruleId, collectionId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolvePinnedAsync_MalformedRule_FailsSafeAndFlagsConditionsUnreadable(
+        SutProvider<GoverningRuleResolver> sutProvider, AccessRule rule, Guid collectionId)
+    {
+        rule.Enabled = true;
+        rule.Conditions = "not json";
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
+
+        var result = await sutProvider.Sut.ResolvePinnedAsync(rule.Id, collectionId);
+
+        Assert.NotNull(result);
+        Assert.True(result!.RequiresHumanApproval);
+        Assert.True(result.ConditionsUnreadable);
+        Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
+        // Stripping the fail-safe gate leaves nothing, which the engine reads as vacuously satisfied -- the flag above
+        // is what stops a caller evaluating this list from failing open.
+        Assert.Empty(result.AutomatedConditions);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AutomatedConditions_StripsTheApprovalGateAndKeepsTheRest(
+        SutProvider<GoverningRuleResolver> sutProvider, AccessRule rule, Guid collectionId)
+    {
+        rule.Enabled = true;
+        rule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]},{"kind":"human_approval"}]""";
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
+
+        var result = await sutProvider.Sut.ResolvePinnedAsync(rule.Id, collectionId);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result!.Conditions.Count);
+        // An approver's verdict settles the gate once; the allowlist is a standing condition and stays answerable.
+        Assert.IsType<IpAllowlistCondition>(Assert.Single(result.AutomatedConditions));
     }
 
     private static void SetupReachableCollections(
