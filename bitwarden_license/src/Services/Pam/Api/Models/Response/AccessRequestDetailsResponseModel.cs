@@ -1,4 +1,5 @@
 ﻿using Bit.HttpExtensions;
+using Bit.Pam.Enums;
 using Bit.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Response;
@@ -26,7 +27,7 @@ public class AccessRequestDetailsResponseModel : ResponseModel
         OrganizationId = details.OrganizationId;
         RequesterId = details.RequesterId;
         RuleId = details.RuleId;
-        Status = details.Status.ToApiStatus(details.ProducedLeaseId.HasValue);
+        Status = details.Status;
         LeaseNotBefore = details.NotBefore.AsUtc();
         LeaseNotAfter = details.NotAfter.AsUtc();
         Reason = details.Reason;
@@ -42,12 +43,12 @@ public class AccessRequestDetailsResponseModel : ResponseModel
                 Name = d.Name,
                 Email = d.Email,
                 Comment = d.Comment,
-                Verdict = d.Verdict.ToApiVerdict(),
+                Verdict = d.Verdict,
                 DecidedAt = d.DecidedAt.AsUtc(),
             })
             .ToList();
         ProducedLeaseId = details.ProducedLeaseId;
-        ProducedLeaseStatus = details.ProducedLeaseStatus?.ToApiStatus();
+        ProducedLeaseStatus = details.ProducedLeaseStatus;
         ExtensionOfLeaseId = details.ExtensionOfLeaseId;
         RequesterName = details.RequesterName;
         RequesterEmail = details.RequesterEmail;
