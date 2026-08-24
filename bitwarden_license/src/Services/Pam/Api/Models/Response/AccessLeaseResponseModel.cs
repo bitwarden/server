@@ -1,5 +1,6 @@
 ﻿using Bit.HttpExtensions;
 using Bit.Pam.Entities;
+using Bit.Pam.Enums;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -27,7 +28,7 @@ public class AccessLeaseResponseModel : ResponseModel
         CollectionId = lease.CollectionId;
         OrganizationId = lease.OrganizationId;
         RequesterId = lease.RequesterId;
-        Status = lease.Status.ToApiStatus();
+        Status = lease.Status;
         NotBefore = lease.NotBefore.AsUtc();
         NotAfter = lease.NotAfter.AsUtc();
         RevokedAt = lease.RevokedDate.AsUtc();
