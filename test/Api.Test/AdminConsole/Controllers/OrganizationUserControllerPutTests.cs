@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -31,7 +32,7 @@ public class OrganizationUserControllerPutTests
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
         // Arrange
-        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: []);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: [], model);
 
         // Authorize all changes for basic happy path test. The controller authorizes the posted collections
         // as a single bulk set, then re-checks each current collection individually for the readonly merge.
@@ -67,6 +68,35 @@ public class OrganizationUserControllerPutTests
     }
 
     [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task Put_ConvertedFromCustom_ClearsPermissions(OrganizationUserType newType,
+        OrganizationUserUpdateRequestModel model, OrganizationUser organizationUser, Organization organization,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        // Arrange
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: [], model);
+
+        organizationUser.Type = OrganizationUserType.Custom;
+        organizationUser.SetPermissions(new Permissions { ManageUsers = true });
+        model.Type = newType;
+        model.Collections = new List<SelectionReadOnlyRequestModel>();
+
+        // Act
+        await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        // Assert
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
+            Arg.Is<OrganizationUser>(ou => ou.Permissions == null),
+            OrganizationUserType.Custom,
+            savingUserId,
+            Arg.Any<List<CollectionAccessSelection>>(),
+            Arg.Any<IEnumerable<Guid>>(),
+            model.DefaultUserCollectionName);
+    }
+
+    [Theory]
     [BitAutoData]
     public async Task Put_NoAdminAccess_CannotAddSelfToCollections(OrganizationUserUpdateRequestModel model,
         OrganizationUser organizationUser, Organization organization,
@@ -76,7 +106,7 @@ public class OrganizationUserControllerPutTests
         organizationUser.UserId = savingUserId;
         organization.AllowAdminAccessToAllCollectionItems = false;
 
-        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: []);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: [], model);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.Put(organization, organizationUser.Id, model));
         Assert.Contains("You cannot add yourself to a collection.", exception.Message);
@@ -92,7 +122,7 @@ public class OrganizationUserControllerPutTests
         organizationUser.UserId = savingUserId;
         organization.AllowAdminAccessToAllCollectionItems = false;
 
-        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: []);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: [], model);
 
         // Not changing any collection access
         model.Collections = new List<SelectionReadOnlyRequestModel>();
@@ -130,7 +160,7 @@ public class OrganizationUserControllerPutTests
         organizationUser.UserId = savingUserId;
         organization.AllowAdminAccessToAllCollectionItems = true;
 
-        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: []);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: [], model);
 
         // Not changing any collection access
         model.Collections = new List<SelectionReadOnlyRequestModel>();
@@ -192,7 +222,7 @@ public class OrganizationUserControllerPutTests
             },
         };
 
-        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess, model);
 
         // User is upgrading editedCollectionId to manage
         model.Collections = new List<SelectionReadOnlyRequestModel>
@@ -252,7 +282,7 @@ public class OrganizationUserControllerPutTests
     {
         // Target user is currently assigned to the POSTed collections
         Put_Setup(sutProvider, organization, organizationUser, savingUserId,
-            currentCollectionAccess: model.Collections.Select(cas => cas.ToSelectionReadOnly()).ToList());
+            currentCollectionAccess: model.Collections.Select(cas => cas.ToSelectionReadOnly()).ToList(), model);
 
         var postedCollectionIds = model.Collections.Select(c => c.Id).ToHashSet();
 
@@ -272,7 +302,7 @@ public class OrganizationUserControllerPutTests
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
         // The target user is not currently assigned to any collections, so we're granting access for the first time
-        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: []);
+        Put_Setup(sutProvider, organization, organizationUser, savingUserId, currentCollectionAccess: [], model);
 
         var postedCollectionIds = model.Collections.Select(c => c.Id).ToHashSet();
         // But the saving user does not have permission to assign access to the collections
@@ -286,9 +316,13 @@ public class OrganizationUserControllerPutTests
 
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider,
         Organization organization, OrganizationUser organizationUser, Guid savingUserId,
-        List<CollectionAccessSelection> currentCollectionAccess)
+        List<CollectionAccessSelection> currentCollectionAccess, OrganizationUserUpdateRequestModel model)
     {
         var orgId = organization.Id = organizationUser.OrganizationId;
+
+        // Custom permissions are only persisted for the Custom role, so pin the requested role to keep the
+        // permissions assertions below deterministic.
+        model.Type = OrganizationUserType.Custom;
 
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
