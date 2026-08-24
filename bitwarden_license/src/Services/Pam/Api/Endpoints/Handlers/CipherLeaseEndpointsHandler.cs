@@ -1,9 +1,9 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Services;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Core.Services;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 

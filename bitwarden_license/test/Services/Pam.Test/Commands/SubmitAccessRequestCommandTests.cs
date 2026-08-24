@@ -1,8 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
-using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;

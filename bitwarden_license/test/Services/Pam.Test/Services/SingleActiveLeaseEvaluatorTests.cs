@@ -1,8 +1,8 @@
-﻿using Bit.Services.Pam.Services;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

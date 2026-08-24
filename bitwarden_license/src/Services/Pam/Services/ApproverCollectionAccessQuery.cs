@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.AbilitiesCache;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
