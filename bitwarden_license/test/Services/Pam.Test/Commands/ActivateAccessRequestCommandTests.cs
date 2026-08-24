@@ -1,8 +1,12 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.Models;
+using Bit.Services.Pam.Models.Conditions;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
@@ -17,6 +21,10 @@ namespace Bit.Services.Pam.Test.Commands;
 public class ActivateAccessRequestCommandTests
 {
     private static readonly DateTime _now = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+
+    // The caller's source address. In 10.0.0.0/8 and outside 192.168.0.0/16, so the allowlists below read as
+    // "still admits them" and "no longer admits them" respectively.
+    private const string _requesterIp = "10.0.0.5";
 
     [Theory, BitAutoData]
     public async Task ActivateAsync_RequestMissing_ThrowsNotFound(Guid userId, Guid requestId)
@@ -298,22 +306,225 @@ public class ActivateAccessRequestCommandTests
             e.Kind == AccessAuditEventKind.LeaseActivationRejected && e.Phase == AccessAuditEventPhase.Outcome));
     }
 
+    // The rule pinned at submit is re-evaluated before the mint, so an approval stays spendable only while the
+    // conditions that produced it still hold. Nothing downstream re-asks: CipherLeaseGate releases a gated cipher on
+    // the existence of an active lease alone, which makes this the last gate (PM-42273).
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_PinnedRuleStillAdmitsCaller_Mints(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        SetupPinnedRule(sutProvider, request, new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] });
+        SetupMint(sutProvider, AccessLeaseMintOutcome.Minted);
+
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+
+        Assert.Equal(AccessLeaseStatus.Active, result.Status);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_IpAllowlistNarrowedSinceApproval_ThrowsBadRequestWithoutMinting(
+        AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        // The allowlist the approval was granted under has been narrowed to a range the caller is no longer in --
+        // equivalently, the caller has moved off the network it admits. Either way the lease must not be minted.
+        SetupPinnedRule(sutProvider, request, new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+
+        Assert.Contains("current network", ex.Message);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .CreateFromApprovedRequestAsync(default!, default, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
+        // Held to the rule that approved it: re-deriving which rule governs the cipher today would let a rule created
+        // or re-pointed since submit take over from the one the request was decided under.
+        await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs()
+            .ResolveAsync(default, default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_HumanApprovedRequest_StillReEvaluatesTheRulesOtherConditions(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        // A human-gated rule carrying an IP allowlist. The approver settled the approval gate; the allowlist is a
+        // standing condition on the network the credential is reached from, so it is re-asked here. An approver
+        // decides *who* may have access, not from where.
+        SetupPinnedRule(
+            sutProvider, request,
+            new HumanApprovalCondition(),
+            new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+
+        Assert.Contains("current network", ex.Message);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .CreateFromApprovedRequestAsync(default!, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_HumanApprovalGateAlone_DoesNotBlockActivation(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        // The gate is stripped before evaluation, leaving nothing to evaluate. Folding it back in would return
+        // requires-approval and refuse every human-approved activation -- there is no second approver to route to.
+        SetupPinnedRule(sutProvider, request, new HumanApprovalCondition());
+        SetupMint(sutProvider, AccessLeaseMintOutcome.Minted);
+
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+
+        Assert.Equal(AccessLeaseStatus.Active, result.Status);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_PinnedRuleConditionsUnreadable_ThrowsBadRequestWithoutMinting(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        // The resolver could not parse the stored document and substituted its fail-safe approval gate. Stripping that
+        // gate leaves an empty list, which the engine reads as vacuously satisfied, so deferring to the conditions
+        // here would turn the fail-safe into a fail-open on exactly the rules the server cannot understand.
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolvePinnedAsync(request.RuleId!.Value, request.CollectionId)
+            .Returns(new GoverningRule(request.OrganizationId, request.CollectionId, true, [new HumanApprovalCondition()])
+            {
+                ConditionsUnreadable = true,
+            });
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .CreateFromApprovedRequestAsync(default!, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_PinnedRuleNoLongerGoverns_Mints(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        // The admin disabled or deleted the rule. Leasing has stopped governing the credential, so there is no
+        // condition left to hold the caller to and the approval they already have activates.
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolvePinnedAsync(request.RuleId!.Value, request.CollectionId)
+            .Returns((GoverningRule?)null);
+        SetupMint(sutProvider, AccessLeaseMintOutcome.Minted);
+
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+
+        Assert.Equal(AccessLeaseStatus.Active, result.Status);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_RequestPredatesRulePinning_FallsBackToResolvingTheCipher(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        // Rows written before RuleId existed carry no pin. Falling back to resolution keeps them behind the gate
+        // rather than waving through every request already in flight when this shipped.
+        request.RuleId = null;
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(request.RequesterId, request.CipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(
+                request.OrganizationId, request.CollectionId, false,
+                [new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] }]));
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+
+        Assert.Contains("current network", ex.Message);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .CreateFromApprovedRequestAsync(default!, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_AlreadyActivated_LiveLease_DoesNotReEvaluate(
+        AccessRequest request, AccessLease existing)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        existing.Status = AccessLeaseStatus.Active;
+        existing.NotAfter = _now.AddMinutes(30);
+        sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(existing);
+        SetupPinnedRule(sutProvider, request, new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
+
+        // The re-check gates minting, not access: the lease already exists, and taking it back is revocation's job,
+        // not something a repeat activation should do behind the caller's back.
+        Assert.Same(existing, await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+    }
+
+    // A refused activation is recorded like the other refusals -- the Attempt, then a LeaseActivationRejected Outcome
+    // carrying the reason, so an admin can see that someone tried to start access the rule no longer admits.
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_ConditionsNoLongerAdmitCaller_EmitsAttemptThenRejectedOutcome(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        SetupPinnedRule(sutProvider, request, new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivated && e.Phase == AccessAuditEventPhase.Attempt));
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivationRejected && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessLeaseId == null && e.Detail == nameof(DenyReason.NotWithinIpRange)));
+    }
+
     private static SutProvider<ActivateAccessRequestCommand> Setup()
     {
-        var sutProvider = new SutProvider<ActivateAccessRequestCommand>().WithFakeTimeProvider().Create();
+        var sutProvider = new SutProvider<ActivateAccessRequestCommand>()
+            .WithFakeTimeProvider()
+            // The real engine, not a stub: these tests turn on how an IP allowlist actually evaluates against a
+            // caller's address, and a stubbed verdict would only assert that the command forwards what it is told.
+            .SetDependency<IAccessRuleEngine>(new AccessRuleEngine())
+            .Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
         return sutProvider;
     }
 
-    // An approved request owned by its BitAutoData requester, with an open window containing _now and no produced
-    // lease. Tests override the specific precondition they exercise.
+    // An approved request owned by its BitAutoData requester, with an open window containing _now, a pinned rule, and
+    // no produced lease. The caller reaches the API from _requesterIp. Tests override the specific precondition they
+    // exercise; those that leave the resolver unstubbed resolve no rule, which is the ungated case.
     private static void SetupApprovedRequest(SutProvider<ActivateAccessRequestCommand> sutProvider, AccessRequest request)
     {
         request.Status = AccessRequestStatus.Approved;
         request.NotBefore = _now.AddMinutes(-5);
         request.NotAfter = _now.AddHours(1);
+        request.RuleId = Guid.NewGuid();
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id)
             .Returns((AccessLease?)null);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(_requesterIp);
+    }
+
+    private static void SetupPinnedRule(
+        SutProvider<ActivateAccessRequestCommand> sutProvider, AccessRequest request, params AccessCondition[] conditions)
+    {
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolvePinnedAsync(request.RuleId!.Value, request.CollectionId)
+            .Returns(new GoverningRule(
+                request.OrganizationId,
+                request.CollectionId,
+                conditions.Any(c => c is HumanApprovalCondition),
+                conditions));
+    }
+
+    private static void SetupMint(
+        SutProvider<ActivateAccessRequestCommand> sutProvider, AccessLeaseMintOutcome outcome)
+    {
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, Arg.Any<bool>())
+            .Returns(outcome);
     }
 }
