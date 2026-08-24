@@ -85,6 +85,36 @@ public class PamRotationSweepServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task SweepAsync_TimeoutPhase_ConfigWithoutASchedule_LeavesNextRotationAlone(PamRotationConfig config)
+    {
+        var sutProvider = Setup();
+        // On-demand / access-end only: writing a concrete NextRotationAt here would enrol it in the due sweep
+        // permanently, since only the success path (via the schedule calculator) ever clears the value again.
+        config.ScheduleCron = null;
+        var timedOutJob = new PamTimedOutJob
+        {
+            JobId = Guid.NewGuid(),
+            RotationConfigId = config.Id,
+            OrganizationId = config.OrganizationId,
+            CipherId = config.CipherId,
+            Source = PamRotationSource.AccessEnd,
+            ClaimedByDaemonId = null,
+            AttemptCount = 0,
+        };
+        sutProvider.GetDependency<IPamRotationJobRepository>().TimeoutDueAsync(_now)
+            .Returns(new List<PamTimedOutJob> { timedOutJob });
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+
+        await sutProvider.Sut.SweepAsync();
+
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
+        // The timeout is still audited -- only the scheduling side effect is suppressed.
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
+            Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobTimedOut));
+    }
+
+    [Theory, BitAutoData]
     public async Task SweepAsync_TimeoutPhase_StuckJob_EmitsAuditWithStuckDetail(
         PamRotationConfig config, Guid claimedByDaemonId)
     {

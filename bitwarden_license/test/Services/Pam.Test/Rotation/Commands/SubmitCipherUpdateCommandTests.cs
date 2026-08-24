@@ -41,19 +41,21 @@ public class SubmitCipherUpdateCommandTests
 
     [Theory, BitAutoData]
     public async Task SubmitAsync_Accepted_PushesCipherSyncUpdate(
-        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, Cipher cipher,
-        string cipherDataJson, DateTime lastKnownRevisionDate)
+        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
+        Cipher cipher, string cipherDataJson, DateTime lastKnownRevisionDate)
     {
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
         cipher.Id = config.CipherId;
+        daemon.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
             .AcceptCipherWriteAsync(attempt.Id, daemonId, cipherDataJson, lastKnownRevisionDate, _now)
             .Returns(PamRotationCipherWriteOutcome.Accepted);
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(config.CipherId).Returns(cipher);
 
         await sutProvider.Sut.SubmitAsync(daemonId, attempt.Id, cipherDataJson, lastKnownRevisionDate);
@@ -71,6 +73,7 @@ public class SubmitCipherUpdateCommandTests
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
+        daemon.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
             .AcceptCipherWriteAsync(attempt.Id, daemonId, cipherDataJson, lastKnownRevisionDate, _now)
@@ -101,6 +104,7 @@ public class SubmitCipherUpdateCommandTests
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
+        daemon.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
             .AcceptCipherWriteAsync(attempt.Id, daemonId, cipherDataJson, lastKnownRevisionDate, _now)
@@ -117,6 +121,29 @@ public class SubmitCipherUpdateCommandTests
                 && a.RotationJobId == job.Id));
         await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs()
             .PushSyncCipherUpdateAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_AttemptInAnotherOrganization_ThrowsNotFound_NoWriteNoAudit(
+        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
+        string cipherDataJson, DateTime lastKnownRevisionDate)
+    {
+        var sutProvider = Setup();
+        job.RotationConfigId = config.Id;
+        attempt.JobId = job.Id;
+        daemon.OrganizationId = Guid.NewGuid();
+        config.OrganizationId = Guid.NewGuid();
+        SetupAttempt(sutProvider, attempt);
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.SubmitAsync(daemonId, attempt.Id, cipherDataJson, lastKnownRevisionDate));
+
+        await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
+            .AcceptCipherWriteAsync(default, default, default!, default, default);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     private static SutProvider<SubmitCipherUpdateCommand> Setup()

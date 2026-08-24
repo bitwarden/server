@@ -88,7 +88,12 @@ public class PamRotationSweepService : IPamRotationSweepService
             try
             {
                 var config = await _configRepository.GetByIdAsync(job.RotationConfigId);
-                if (config is not null)
+
+                // Only a config that actually has a schedule gets its next rotation pushed out. Writing a concrete
+                // NextRotationAt onto a cron-less config would enrol it in the due sweep permanently -- it has no
+                // cron to clear the value again on success -- and every subsequent offer would be tagged Scheduled
+                // on a config the admin set up as on-demand or access-end only.
+                if (config is { ScheduleCron: not null })
                 {
                     config.NextRotationAt = now + _options.Value.FailureRetryDelay;
                     config.RevisionDate = now;

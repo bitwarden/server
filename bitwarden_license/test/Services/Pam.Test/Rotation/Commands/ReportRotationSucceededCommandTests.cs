@@ -47,6 +47,7 @@ public class ReportRotationSucceededCommandTests
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
         daemon.Id = daemonId;
+        daemon.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
             .MarkAttemptRotatedAsync(attempt.Id, daemonId, sessionTermination, _now)
@@ -78,18 +79,21 @@ public class ReportRotationSucceededCommandTests
 
     [Theory, BitAutoData]
     public async Task ReportSucceededAsync_Rejected_EmitsReportRejectedAuditAndThrowsConflict_ConfigNotUpdated(
-        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config,
+        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
         PamSessionTerminationOutcome sessionTermination)
     {
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
+        daemon.Id = daemonId;
+        daemon.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
             .MarkAttemptRotatedAsync(attempt.Id, daemonId, sessionTermination, _now)
             .Returns(PamRotationAttemptResolveOutcome.Rejected);
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
 
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.ReportSucceededAsync(daemonId, attempt.Id, sessionTermination));
@@ -103,6 +107,32 @@ public class ReportRotationSucceededCommandTests
                 && a.RotationJobId == job.Id
                 && a.RotationConfigId == config.Id
                 && a.CipherId == config.CipherId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ReportSucceededAsync_AttemptInAnotherOrganization_ThrowsNotFound_NoAudit(
+        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
+        PamSessionTerminationOutcome sessionTermination)
+    {
+        var sutProvider = Setup();
+        job.RotationConfigId = config.Id;
+        attempt.JobId = job.Id;
+        daemon.Id = daemonId;
+        daemon.OrganizationId = Guid.NewGuid();
+        config.OrganizationId = Guid.NewGuid();
+        SetupAttempt(sutProvider, attempt);
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.ReportSucceededAsync(daemonId, attempt.Id, sessionTermination));
+
+        // Indistinguishable from an attempt that does not exist: no resolution attempted, and nothing written to
+        // the other organization's audit trail.
+        await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
+            .MarkAttemptRotatedAsync(default, default, default, default);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     private static SutProvider<ReportRotationSucceededCommand> Setup()

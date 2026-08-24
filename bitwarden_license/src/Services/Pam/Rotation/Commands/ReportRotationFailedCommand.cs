@@ -44,9 +44,16 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
         // echo credentials), and truncation never rejects the report.
         var truncatedReason = Truncate(failureReason);
 
-        // Unknown attempt id: nothing to audit against (spec's `exists attempt` precondition).
+        // Unknown attempt id: nothing to audit against (spec's `exists attempt` precondition). The attempt id is a
+        // bare route value the daemon supplies, so an attempt in another organization has to be indistinguishable
+        // from one that does not exist -- otherwise the reject audit below lands in the victim organization's trail
+        // carrying this daemon's name, and the 404-vs-409 split tells the caller which foreign ids are real.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
-        if (attempt is null)
+        var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
+        var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
+        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
+
+        if (attempt is null || config is null || daemon is null || config.OrganizationId != daemon.OrganizationId)
         {
             throw new NotFoundException();
         }
@@ -56,10 +63,6 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             attemptId, daemonId, truncatedReason, syncState, now, _options.Value.MaxAttempts,
             _options.Value.RetryBaseDelay);
 
-        var job = await _jobRepository.GetByIdAsync(attempt.JobId);
-        var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
-        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
-
         if (result.Outcome != PamRotationAttemptResolveOutcome.Resolved)
         {
             // Stale report (spec RejectStaleFailureReport): nothing changed, but the report itself is worth auditing.
@@ -67,13 +70,13 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             {
                 Kind = AccessAuditEventKind.RotationReportRejected,
                 OccurredAt = now,
-                OrganizationId = config?.OrganizationId ?? Guid.Empty,
+                OrganizationId = config.OrganizationId,
                 ActorId = null,
                 DaemonId = daemonId,
-                DaemonName = daemon?.Name,
+                DaemonName = daemon.Name,
                 RotationJobId = job?.Id,
-                RotationConfigId = config?.Id,
-                CipherId = config?.CipherId,
+                RotationConfigId = config.Id,
+                CipherId = config.CipherId,
                 Detail = "Stale failure report: the attempt is no longer executing under this daemon's claim.",
             };
             await _accessAuditEventEmitter.EmitAsync(rejectedAudit);
@@ -81,13 +84,14 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             throw new ConflictException("This attempt is no longer executing.");
         }
 
-        var organizationId = config?.OrganizationId ?? daemon?.OrganizationId ?? Guid.Empty;
+        var organizationId = config.OrganizationId;
 
         if (result.JobStatus == PamRotationJobStatus.Failed)
         {
             // Retry budget exhausted: the job failed outright, so the config's next rotation is pushed out rather
-            // than immediately retried.
-            if (config is not null)
+            // than immediately retried. Only for a config that has a schedule -- see PamRotationSweepService's
+            // timeout phase for why a cron-less config must keep a null NextRotationAt.
+            if (config.ScheduleCron is not null)
             {
                 config.NextRotationAt = now + _options.Value.FailureRetryDelay;
                 config.RevisionDate = now;
@@ -101,10 +105,10 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
                 OrganizationId = organizationId,
                 ActorId = null,
                 DaemonId = daemonId,
-                DaemonName = daemon?.Name,
+                DaemonName = daemon.Name,
                 RotationJobId = job?.Id,
-                RotationConfigId = config?.Id,
-                CipherId = config?.CipherId,
+                RotationConfigId = config.Id,
+                CipherId = config.CipherId,
                 RotationSource = job?.Source,
                 SyncState = syncState,
                 Detail = truncatedReason,
@@ -121,10 +125,10 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
                 OrganizationId = organizationId,
                 ActorId = null,
                 DaemonId = daemonId,
-                DaemonName = daemon?.Name,
+                DaemonName = daemon.Name,
                 RotationJobId = job?.Id,
-                RotationConfigId = config?.Id,
-                CipherId = config?.CipherId,
+                RotationConfigId = config.Id,
+                CipherId = config.CipherId,
                 RotationSource = job?.Source,
                 SyncState = syncState,
                 Detail = truncatedReason,

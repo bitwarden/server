@@ -65,6 +65,24 @@ public class PamLeaseExpirySweepServiceTests
         await sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().Received(1).HandleAsync(lease2.CipherId);
     }
 
+    [Fact]
+    public async Task SweepAsync_AuditEmitThrows_StillFiresTheAccessEndTrigger()
+    {
+        var sutProvider = Setup();
+        var lease = MakeExpiredLease();
+        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now)
+            .Returns(new List<PamExpiredLease> { lease });
+        sutProvider.GetDependency<IAccessAuditEventEmitter>()
+            .EmitAsync(Arg.Any<AccessAuditEventData>())
+            .Returns(Task.FromException(new InvalidOperationException("audit store unavailable")));
+
+        await sutProvider.Sut.SweepAsync();
+
+        // ExpireDueAsync has already flipped the lease out of Active, so it is never returned again -- letting an
+        // audit hiccup swallow the rotation trigger would silently leave the credential the user just held valid.
+        await sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().Received(1).HandleAsync(lease.CipherId);
+    }
+
     private static SutProvider<PamLeaseExpirySweepService> Setup()
     {
         var sutProvider = new SutProvider<PamLeaseExpirySweepService>().WithFakeTimeProvider().Create();

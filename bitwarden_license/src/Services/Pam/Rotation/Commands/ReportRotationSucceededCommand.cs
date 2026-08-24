@@ -37,19 +37,22 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
     public async Task<PamRotationAttempt> ReportSucceededAsync(
         Guid daemonId, Guid attemptId, PamSessionTerminationOutcome sessionTermination)
     {
-        // Unknown attempt id: nothing to audit against (spec's `exists attempt` precondition).
+        // Unknown attempt id: nothing to audit against (spec's `exists attempt` precondition). The attempt id is a
+        // bare route value the daemon supplies, so an attempt in another organization has to be indistinguishable
+        // from one that does not exist -- otherwise the reject audit below lands in the victim organization's trail
+        // carrying this daemon's name, and the 404-vs-409 split tells the caller which foreign ids are real.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
-        if (attempt is null)
+        var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
+        var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
+        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
+
+        if (attempt is null || config is null || daemon is null || config.OrganizationId != daemon.OrganizationId)
         {
             throw new NotFoundException();
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var outcome = await _jobRepository.MarkAttemptRotatedAsync(attemptId, daemonId, sessionTermination, now);
-
-        var job = await _jobRepository.GetByIdAsync(attempt.JobId);
-        var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
-        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
 
         if (outcome != PamRotationAttemptResolveOutcome.Resolved)
         {
@@ -58,13 +61,13 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
             {
                 Kind = AccessAuditEventKind.RotationReportRejected,
                 OccurredAt = now,
-                OrganizationId = config?.OrganizationId ?? Guid.Empty,
+                OrganizationId = config.OrganizationId,
                 ActorId = null,
                 DaemonId = daemonId,
-                DaemonName = daemon?.Name,
+                DaemonName = daemon.Name,
                 RotationJobId = job?.Id,
-                RotationConfigId = config?.Id,
-                CipherId = config?.CipherId,
+                RotationConfigId = config.Id,
+                CipherId = config.CipherId,
                 Detail = "Stale success report: the attempt is no longer executing under this daemon's claim.",
             };
             await _accessAuditEventEmitter.EmitAsync(rejectedAudit);
@@ -72,26 +75,23 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
             throw new ConflictException("This attempt is no longer executing.");
         }
 
-        if (config is not null)
-        {
-            config.LastRotationAt = now;
-            config.NextRotationAt = _scheduleCalculator.GetNextOccurrence(config.ScheduleCron, now);
-            config.RevisionDate = now;
-            await _configRepository.ReplaceAsync(config);
-        }
+        config.LastRotationAt = now;
+        config.NextRotationAt = _scheduleCalculator.GetNextOccurrence(config.ScheduleCron, now);
+        config.RevisionDate = now;
+        await _configRepository.ReplaceAsync(config);
 
         // Machinery event: single Outcome-phase, no human actor.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationSucceeded,
             OccurredAt = now,
-            OrganizationId = config?.OrganizationId ?? daemon?.OrganizationId ?? Guid.Empty,
+            OrganizationId = config.OrganizationId,
             ActorId = null,
             DaemonId = daemonId,
-            DaemonName = daemon?.Name,
+            DaemonName = daemon.Name,
             RotationJobId = job?.Id,
-            RotationConfigId = config?.Id,
-            CipherId = config?.CipherId,
+            RotationConfigId = config.Id,
+            CipherId = config.CipherId,
             RotationSource = job?.Source,
         };
         await _accessAuditEventEmitter.EmitAsync(audit);

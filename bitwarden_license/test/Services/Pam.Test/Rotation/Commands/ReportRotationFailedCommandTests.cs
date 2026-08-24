@@ -45,6 +45,7 @@ public class ReportRotationFailedCommandTests
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
+        daemon.OrganizationId = config.OrganizationId;
         var longReason = new string('x', 600);
         var expectedTruncated = longReason.Substring(0, 500);
         SetupAttempt(sutProvider, attempt);
@@ -70,6 +71,7 @@ public class ReportRotationFailedCommandTests
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
+        daemon.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
             .MarkAttemptErroredAsync(attempt.Id, daemonId, Arg.Any<string>(), syncState, _now, Arg.Any<int>(), Arg.Any<TimeSpan>())
@@ -100,6 +102,7 @@ public class ReportRotationFailedCommandTests
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
+        daemon.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
             .MarkAttemptErroredAsync(attempt.Id, daemonId, Arg.Any<string>(), syncState, _now, Arg.Any<int>(), Arg.Any<TimeSpan>())
@@ -124,18 +127,20 @@ public class ReportRotationFailedCommandTests
 
     [Theory, BitAutoData]
     public async Task ReportFailedAsync_Rejected_EmitsReportRejectedAuditAndThrowsConflict_ConfigNotUpdated(
-        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config,
+        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
         string failureReason, PamRotationSyncState syncState)
     {
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
+        daemon.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
             .MarkAttemptErroredAsync(attempt.Id, daemonId, Arg.Any<string>(), syncState, _now, Arg.Any<int>(), Arg.Any<TimeSpan>())
             .Returns(new PamRotationFailureResult { Outcome = PamRotationAttemptResolveOutcome.Rejected, JobStatus = null });
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
 
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.ReportFailedAsync(daemonId, attempt.Id, failureReason, syncState));
@@ -148,6 +153,56 @@ public class ReportRotationFailedCommandTests
                 && a.DaemonId == daemonId
                 && a.RotationJobId == job.Id
                 && a.RotationConfigId == config.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ReportFailedAsync_BudgetExhaustedOnConfigWithoutASchedule_LeavesNextRotationAlone(
+        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
+        string failureReason, PamRotationSyncState syncState)
+    {
+        var sutProvider = Setup();
+        job.RotationConfigId = config.Id;
+        attempt.JobId = job.Id;
+        daemon.OrganizationId = config.OrganizationId;
+        // On-demand / access-end only -- see PamRotationSweepService's timeout phase for why this must stay null.
+        config.ScheduleCron = null;
+        SetupAttempt(sutProvider, attempt);
+        sutProvider.GetDependency<IPamRotationJobRepository>()
+            .MarkAttemptErroredAsync(attempt.Id, daemonId, Arg.Any<string>(), syncState, _now, Arg.Any<int>(), Arg.Any<TimeSpan>())
+            .Returns(new PamRotationFailureResult { Outcome = PamRotationAttemptResolveOutcome.Resolved, JobStatus = PamRotationJobStatus.Failed });
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
+
+        await sutProvider.Sut.ReportFailedAsync(daemonId, attempt.Id, failureReason, syncState);
+
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
+            Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationFailed));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ReportFailedAsync_AttemptInAnotherOrganization_ThrowsNotFound_NoAudit(
+        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
+        string failureReason, PamRotationSyncState syncState)
+    {
+        var sutProvider = Setup();
+        job.RotationConfigId = config.Id;
+        attempt.JobId = job.Id;
+        daemon.OrganizationId = Guid.NewGuid();
+        config.OrganizationId = Guid.NewGuid();
+        SetupAttempt(sutProvider, attempt);
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.ReportFailedAsync(daemonId, attempt.Id, failureReason, syncState));
+
+        await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
+            .MarkAttemptErroredAsync(default, default, default, default, default, default, default);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     private static SutProvider<ReportRotationFailedCommand> Setup()

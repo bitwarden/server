@@ -53,7 +53,21 @@ public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
                     LeaseNotBefore = lease.NotBefore,
                     LeaseNotAfter = lease.NotAfter,
                 };
-                await _accessAuditEventEmitter.EmitAsync(audit);
+                // Emitting the audit and firing the access-end trigger are independent, so they get independent
+                // try blocks: ExpireDueAsync has already flipped the whole batch out of Active, so a lease is never
+                // returned twice. Sharing one block meant an audit-store hiccup silently swallowed the rotation
+                // trigger for that lease -- and RotateOnAccessEnd is the control that stops a credential the user
+                // just held from staying valid.
+                try
+                {
+                    await _accessAuditEventEmitter.EmitAsync(audit);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "PamLeaseExpirySweepService: failed to emit the audit event for expired lease {AccessLeaseId}.",
+                        lease.Id);
+                }
 
                 // Self-gates on the PamRotation flag -- safe to call unconditionally here, the same as the
                 // RevokeAccessLeaseCommand hook.
