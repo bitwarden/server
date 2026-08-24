@@ -71,6 +71,23 @@ public class DeleteRotationConfigCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task DeleteAsync_JobClaimedAfterTheActiveJobRead_ThrowsBadRequest(
+        Guid actingUserId, PamRotationConfigDetails details)
+    {
+        var sutProvider = Setup();
+        details.HasActiveJob = false;
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
+        // The repository's own guard re-checks under lock and refuses once a job has been offered in the window.
+        sutProvider.GetDependency<IPamRotationConfigRepository>().DeleteWithJobsAsync(details.Id).Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DeleteAsync(details.OrganizationId, actingUserId, details.Id));
+
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceive()
+            .EmitAsync(Arg.Is<AccessAuditEventData>(e => e.Phase == AccessAuditEventPhase.Outcome));
+    }
+
+    [Theory, BitAutoData]
     public async Task DeleteAsync_HappyPath_EmitsAttemptThenOutcomeWithPreCapturedNames(
         Guid actingUserId, PamRotationConfigDetails details)
     {
@@ -94,6 +111,7 @@ public class DeleteRotationConfigCommandTests
     {
         var sutProvider = new SutProvider<DeleteRotationConfigCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().DeleteWithJobsAsync(Arg.Any<Guid>()).Returns(true);
         return sutProvider;
     }
 }

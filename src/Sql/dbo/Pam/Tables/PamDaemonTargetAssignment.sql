@@ -27,3 +27,8 @@ GO
 CREATE NONCLUSTERED INDEX [IX_PamDaemonTargetAssignment_TargetSystemId]
     ON [dbo].[PamDaemonTargetAssignment] ([TargetSystemId] ASC);
 GO
+
+-- Backs PamDaemonTargetAssignment_ReadByOrganizationId and the Organization cascade delete.
+CREATE NONCLUSTERED INDEX [IX_PamDaemonTargetAssignment_OrganizationId]
+    ON [dbo].[PamDaemonTargetAssignment] ([OrganizationId] ASC);
+GO

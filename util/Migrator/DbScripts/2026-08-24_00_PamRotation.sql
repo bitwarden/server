@@ -155,6 +155,39 @@ BEGIN
 END
 GO
 
+-- OrganizationId indexes. Each of these three tables has a _ReadByOrganizationId procedure and an ON DELETE CASCADE
+-- FK to Organization, both of which scan without one. Created as guarded standalone statements rather than inside
+-- the CREATE TABLE blocks above so a database that already ran an earlier revision of this script still picks them up.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamTargetSystem_OrganizationId' AND [object_id] = OBJECT_ID('[dbo].[PamTargetSystem]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_PamTargetSystem_OrganizationId]
+        ON [dbo].[PamTargetSystem] ([OrganizationId] ASC);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamDaemonTargetAssignment_OrganizationId' AND [object_id] = OBJECT_ID('[dbo].[PamDaemonTargetAssignment]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_PamDaemonTargetAssignment_OrganizationId]
+        ON [dbo].[PamDaemonTargetAssignment] ([OrganizationId] ASC);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationConfig_OrganizationId' AND [object_id] = OBJECT_ID('[dbo].[PamRotationConfig]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_OrganizationId]
+        ON [dbo].[PamRotationConfig] ([OrganizationId] ASC);
+END
+GO
+
+-- The daemon poll joins assignment -> config on TargetSystemId every few seconds per daemon, and
+-- PamRotationConfig_AnyByTargetSystemWithTerminateSessions scans the same column.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationConfig_TargetSystemId' AND [object_id] = OBJECT_ID('[dbo].[PamRotationConfig]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_TargetSystemId]
+        ON [dbo].[PamRotationConfig] ([TargetSystemId] ASC);
+END
+GO
+
 
 -- Stored procedures
 
@@ -673,11 +706,26 @@ BEGIN
     SET NOCOUNT ON
     -- DeleteRotationConfigCommand's cascade: the audit trail (AccessAuditEvent) is the durable history of a config's
     -- rotations, so jobs/attempts are hard-deleted here rather than soft-retired. Order matters -- attempts reference
-    -- jobs, jobs reference the config, and both FKs are ON DELETE NO ACTION -- so children must go first. The caller
-    -- has already confirmed the config has no active job.
+    -- jobs, jobs reference the config, and both FKs are ON DELETE NO ACTION -- so children must go first.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
+
+    -- The caller's HasActiveJob read happened outside this transaction, so re-check under the same range lock
+    -- PamRotationJob_Create takes. Without it a job created and claimed in the window is hard-deleted mid-rotation:
+    -- the daemon changes the password on the target, then its accept-write and success report both find nothing,
+    -- leaving the vault holding the old secret with no attempt row to record the drift.
+    IF EXISTS (
+        SELECT 1
+        FROM [dbo].[PamRotationJob] WITH (UPDLOCK, HOLDLOCK)
+        WHERE [RotationConfigId] = @Id
+            AND [Status] IN (0, 1) -- Pending, Claimed
+    )
+    BEGIN
+        ROLLBACK TRANSACTION
+        SELECT 0 -- ActiveJobExists
+        RETURN
+    END
 
     DELETE A
     FROM [dbo].[PamRotationAttempt] A
@@ -691,6 +739,8 @@ BEGIN
     WHERE [Id] = @Id
 
     COMMIT TRANSACTION
+
+    SELECT 1 -- Deleted
 END
 GO
 
@@ -763,15 +813,15 @@ BEGIN
     SET NOCOUNT ON
 
     -- The daemon poll: jobs this daemon may claim right now. Re-derives every eligibility condition
-    -- PamRotationJob_Claim itself re-checks (config enabled, target active, an assignment exists, and -- defense in
-    -- depth -- the daemon's own org matches the config's org) so the list a daemon sees and what it can actually
-    -- claim never diverge.
+    -- PamRotationJob_Claim itself re-checks (config enabled, target active, an assignment exists, the daemon is
+    -- Enabled, and -- defense in depth -- its own org matches the config's org) so the list a daemon sees and what
+    -- it can actually claim never diverge.
     SELECT J.*
     FROM [dbo].[PamRotationJob] J
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
     INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
     INNER JOIN [dbo].[PamDaemonTargetAssignment] A ON A.[DaemonId] = @DaemonId AND A.[TargetSystemId] = C.[TargetSystemId]
-    INNER JOIN [dbo].[PamDaemon] D ON D.[Id] = @DaemonId AND D.[OrganizationId] = C.[OrganizationId]
+    INNER JOIN [dbo].[PamDaemon] D ON D.[Id] = @DaemonId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
     WHERE J.[Status] = 0 -- Pending
         AND J.[NextClaimableAt] <= @Now
         AND C.[Enabled] = 1
@@ -879,9 +929,9 @@ BEGIN
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
     INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
     INNER JOIN [dbo].[PamDaemonTargetAssignment] A ON A.[DaemonId] = @DaemonId AND A.[TargetSystemId] = C.[TargetSystemId]
-    -- Defense in depth: the daemon must be Enrolled AND in the same org as the config, even though the caller
+    -- Defense in depth: the daemon must be Enabled AND in the same org as the config, even though the caller
     -- (ClaimRotationJobCommand) already checked both from the bearer token's claims.
-    INNER JOIN [dbo].[PamDaemon] D ON D.[Id] = @DaemonId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enrolled
+    INNER JOIN [dbo].[PamDaemon] D ON D.[Id] = @DaemonId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
     WHERE J.[Id] = @JobId
         AND J.[Status] = 0 -- Pending
         AND J.[NextClaimableAt] <= @Now
@@ -900,7 +950,7 @@ BEGIN
                 FROM [dbo].[PamRotationJob] J2
                 INNER JOIN [dbo].[PamRotationConfig] C2 ON C2.[Id] = J2.[RotationConfigId]
                 INNER JOIN [dbo].[PamDaemonTargetAssignment] A2 ON A2.[DaemonId] = @DaemonId AND A2.[TargetSystemId] = C2.[TargetSystemId]
-                INNER JOIN [dbo].[PamDaemon] D2 ON D2.[Id] = @DaemonId AND D2.[OrganizationId] = C2.[OrganizationId] AND D2.[Status] = 0 -- Enrolled
+                INNER JOIN [dbo].[PamDaemon] D2 ON D2.[Id] = @DaemonId AND D2.[OrganizationId] = C2.[OrganizationId] AND D2.[Status] = 0 -- Enabled
                 WHERE J2.[Id] = @JobId
             ) THEN -1 -- NotEligible (unknown job, or a job outside this daemon's assignment/org)
             ELSE 0 -- NotClaimable (eligible, but not pending / in backoff / held by a paused config or disabled target)
@@ -979,10 +1029,12 @@ BEGIN
     BEGIN TRANSACTION
 
     DECLARE @CipherId UNIQUEIDENTIFIER
+    DECLARE @OrganizationId UNIQUEIDENTIFIER
     DECLARE @VerifiedJobId UNIQUEIDENTIFIER
 
     SELECT
         @CipherId = C.[CipherId],
+        @OrganizationId = C.[OrganizationId],
         @VerifiedJobId = J.[Id]
     FROM [dbo].[PamRotationAttempt] AT
     INNER JOIN [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
@@ -1021,6 +1073,10 @@ BEGIN
     UPDATE [dbo].[PamRotationAttempt]
     SET [CipherUpdated] = 1
     WHERE [Id] = @AttemptId
+
+    -- Every other writer of dbo.Cipher ends here (see Cipher_Update): without the bump a client that misses the
+    -- push sees an unchanged AccountRevisionDate, skips the sync, and keeps serving the pre-rotation password.
+    EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @CipherId, @OrganizationId
 
     COMMIT TRANSACTION
 

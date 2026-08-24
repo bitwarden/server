@@ -37,3 +37,14 @@ CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_NextRotationAt]
     ON [dbo].[PamRotationConfig] ([NextRotationAt] ASC)
     WHERE [Enabled] = 1 AND [NextRotationAt] IS NOT NULL;
 GO
+
+-- Backs PamRotationConfig_ReadManyByOrganizationId and the Organization cascade delete.
+CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_OrganizationId]
+    ON [dbo].[PamRotationConfig] ([OrganizationId] ASC);
+GO
+
+-- Backs the daemon poll's assignment -> config join and
+-- PamRotationConfig_AnyByTargetSystemWithTerminateSessions; also the FK's own lookups.
+CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_TargetSystemId]
+    ON [dbo].[PamRotationConfig] ([TargetSystemId] ASC);
+GO

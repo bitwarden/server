@@ -76,12 +76,14 @@ public class PamRotationConfigRepository : Repository<PamRotationConfig, Guid>, 
         return result.HasValue;
     }
 
-    public async Task DeleteWithJobsAsync(Guid configId)
+    public async Task<bool> DeleteWithJobsAsync(Guid configId)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
+        var outcome = await connection.ExecuteScalarAsync<int>(
             $"[{Schema}].[PamRotationConfig_DeleteWithJobs]",
             new { Id = configId },
             commandType: CommandType.StoredProcedure);
+
+        return outcome == 1;
     }
 }

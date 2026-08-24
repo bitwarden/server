@@ -25,9 +25,9 @@ BEGIN
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
     INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
     INNER JOIN [dbo].[PamDaemonTargetAssignment] A ON A.[DaemonId] = @DaemonId AND A.[TargetSystemId] = C.[TargetSystemId]
-    -- Defense in depth: the daemon must be Enrolled AND in the same org as the config, even though the caller
+    -- Defense in depth: the daemon must be Enabled AND in the same org as the config, even though the caller
     -- (ClaimRotationJobCommand) already checked both from the bearer token's claims.
-    INNER JOIN [dbo].[PamDaemon] D ON D.[Id] = @DaemonId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enrolled
+    INNER JOIN [dbo].[PamDaemon] D ON D.[Id] = @DaemonId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
     WHERE J.[Id] = @JobId
         AND J.[Status] = 0 -- Pending
         AND J.[NextClaimableAt] <= @Now
@@ -46,7 +46,7 @@ BEGIN
                 FROM [dbo].[PamRotationJob] J2
                 INNER JOIN [dbo].[PamRotationConfig] C2 ON C2.[Id] = J2.[RotationConfigId]
                 INNER JOIN [dbo].[PamDaemonTargetAssignment] A2 ON A2.[DaemonId] = @DaemonId AND A2.[TargetSystemId] = C2.[TargetSystemId]
-                INNER JOIN [dbo].[PamDaemon] D2 ON D2.[Id] = @DaemonId AND D2.[OrganizationId] = C2.[OrganizationId] AND D2.[Status] = 0 -- Enrolled
+                INNER JOIN [dbo].[PamDaemon] D2 ON D2.[Id] = @DaemonId AND D2.[OrganizationId] = C2.[OrganizationId] AND D2.[Status] = 0 -- Enabled
                 WHERE J2.[Id] = @JobId
             ) THEN -1 -- NotEligible (unknown job, or a job outside this daemon's assignment/org)
             ELSE 0 -- NotClaimable (eligible, but not pending / in backoff / held by a paused config or disabled target)

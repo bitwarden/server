@@ -6,22 +6,17 @@
 -- daemon's OAuth client via IApiKeyRepository.GetByIdAsync(apiKeyId), so this sproc is required for daemon token
 -- issuance to work at all.
 
-IF OBJECT_ID('[dbo].[ApiKey_ReadById]') IS NULL
+CREATE OR ALTER PROCEDURE [dbo].[ApiKey_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
 BEGIN
-    EXECUTE ('
-        CREATE PROCEDURE [dbo].[ApiKey_ReadById]
-            @Id UNIQUEIDENTIFIER
-        AS
-        BEGIN
-            SET NOCOUNT ON
+    SET NOCOUNT ON
 
-            SELECT
-                *
-            FROM
-                [dbo].[ApiKeyView]
-            WHERE
-                [Id] = @Id
-        END
-    ')
+    SELECT
+        *
+    FROM
+        [dbo].[ApiKeyView]
+    WHERE
+        [Id] = @Id
 END
 GO

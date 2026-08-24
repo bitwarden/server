@@ -55,8 +55,12 @@ public class DeleteRotationConfigCommand : IDeleteRotationConfigCommand
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
         // Cascades the config's jobs and attempts in the same transaction -- the audit trail above is the durable
-        // history, not these rows.
-        await _configRepository.DeleteWithJobsAsync(configId);
+        // history, not these rows. The repository re-checks the active-job guard under lock, so a job offered and
+        // claimed since the read above blocks the delete rather than being torn out from under its daemon.
+        if (!await _configRepository.DeleteWithJobsAsync(configId))
+        {
+            throw new BadRequestException("This rotation config has an active job.");
+        }
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
     }

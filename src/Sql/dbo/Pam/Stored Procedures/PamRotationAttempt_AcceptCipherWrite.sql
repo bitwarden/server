@@ -17,10 +17,12 @@ BEGIN
     BEGIN TRANSACTION
 
     DECLARE @CipherId UNIQUEIDENTIFIER
+    DECLARE @OrganizationId UNIQUEIDENTIFIER
     DECLARE @VerifiedJobId UNIQUEIDENTIFIER
 
     SELECT
         @CipherId = C.[CipherId],
+        @OrganizationId = C.[OrganizationId],
         @VerifiedJobId = J.[Id]
     FROM [dbo].[PamRotationAttempt] AT
     INNER JOIN [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
@@ -59,6 +61,10 @@ BEGIN
     UPDATE [dbo].[PamRotationAttempt]
     SET [CipherUpdated] = 1
     WHERE [Id] = @AttemptId
+
+    -- Every other writer of dbo.Cipher ends here (see Cipher_Update): without the bump a client that misses the
+    -- push sees an unchanged AccountRevisionDate, skips the sync, and keeps serving the pre-rotation password.
+    EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @CipherId, @OrganizationId
 
     COMMIT TRANSACTION
 

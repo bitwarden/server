@@ -34,8 +34,9 @@ public interface IPamRotationConfigRepository : IRepository<PamRotationConfig, G
 
     /// <summary>
     /// Deletes the config's jobs and attempts, then the config itself, in one transaction — the durable history
-    /// stays in the audit trail, not here. Called by <c>DeleteRotationConfigCommand</c> after it has confirmed the
-    /// config has no active job.
+    /// stays in the audit trail, not here. Re-checks under lock that the config still has no active job and returns
+    /// false without deleting when one appeared after the caller's own check, so a job claimed in that window is
+    /// never removed out from under the daemon executing it.
     /// </summary>
-    Task DeleteWithJobsAsync(Guid configId);
+    Task<bool> DeleteWithJobsAsync(Guid configId);
 }
