@@ -8,6 +8,7 @@ using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
@@ -124,7 +125,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
 
         var deps = new SeederDependencies(
             _db, mapper, new PasswordHasher<User>(), new NoOpManglerService(), licensing,
-            new NoopAttachmentStorageService(), signer);
+            new NoopAttachmentStorageService(), signer, NullLoggerFactory.Instance);
         var orchestrator = new RecipeOrchestrator(deps);
 
         var options = new IndividualUserOptions
@@ -173,6 +174,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             null!,
             new PasswordHasher<User>(),
             mangler,
+            null!,
             null!,
             null!,
             null!);

@@ -21,7 +21,7 @@ internal static class SelfHostLicenseService
     /// Best-effort premium license write. Without a private-key licensing certificate
     /// (licenseCertificatePath/licenseCertificatePassword) the signer returns a warning and nothing is
     /// written. Write failures are swallowed and returned as a warning so the write never aborts
-    /// the caller, which has already committed the user row.
+    /// the caller.
     /// </summary>
     internal static async Task<LicenseWriteOutcome> WriteLicenseAsync(
         ILicensingService licenseService, ISeederLicenseSigner signer, User user, ILogger logger)

@@ -2,7 +2,6 @@
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Pipeline;
 
@@ -41,6 +40,8 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var effectiveKdf = kdfIterations ?? preset.KdfIterations ?? 5_000;
 
         var services = new ServiceCollection();
+        services.AddSingleton(deps.LoggerFactory);
+        services.AddLogging();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(deps.AttachmentStorageService);
@@ -68,6 +69,8 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
             email => deps.Db.Users.Any(u => u.Email == email));
 
         var services = new ServiceCollection();
+        services.AddSingleton(deps.LoggerFactory);
+        services.AddLogging();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(deps.AttachmentStorageService);
@@ -138,11 +141,8 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var maxStorageGb = premium ? (short)1 : (short)0;
 
         var services = new ServiceCollection();
-        services.AddLogging(builder =>
-        {
-            builder.AddConsole();
-            builder.SetMinimumLevel(LogLevel.Warning);
-        });
+        services.AddSingleton(deps.LoggerFactory);
+        services.AddLogging();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(deps.AttachmentStorageService);

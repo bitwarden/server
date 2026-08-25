@@ -7,6 +7,7 @@ using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.SeederUtility.Configuration;
 
@@ -43,8 +44,10 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal ISeederLicenseSigner LicenseSigner { get; }
 
+    internal ILoggerFactory LoggerFactory { get; }
+
     internal SeederDependencies ToDependencies()
-        => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService, LicenseSigner);
+        => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService, LicenseSigner, LoggerFactory);
 
     private readonly ServiceProvider _provider;
 
@@ -62,6 +65,7 @@ internal sealed class SeederServiceScope : IDisposable
         LicensingService = sp.GetRequiredService<ILicensingService>();
         AttachmentStorageService = sp.GetRequiredService<IAttachmentStorageService>();
         LicenseSigner = sp.GetRequiredService<ISeederLicenseSigner>();
+        LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
     }
 
     public void Dispose()

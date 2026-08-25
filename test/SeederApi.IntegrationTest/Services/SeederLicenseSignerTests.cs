@@ -77,6 +77,18 @@ public sealed class SeederLicenseSignerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateUserTokenAsync_CalledTwice_SignsBothTimes()
+    {
+        using var signer = NewSigner();
+
+        var first = await signer.CreateUserTokenAsync(LicenseTestHelpers.NewPremiumOwner());
+        var second = await signer.CreateUserTokenAsync(LicenseTestHelpers.NewPremiumOwner());
+
+        Assert.NotNull(first.Token);
+        Assert.NotNull(second.Token);
+    }
+
+    [Fact]
     public async Task CreateUserTokenAsync_NoCertificateConfigured_SkipsWithWarning()
     {
         using var signer = NewSigner(path: string.Empty, password: string.Empty);

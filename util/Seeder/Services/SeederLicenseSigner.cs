@@ -12,20 +12,16 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Seeder.Services;
 
-/// <inheritdoc />
-/// <remarks>Caches the loaded signing certificate across runs.</remarks>
 public sealed class SeederLicenseSigner : ISeederLicenseSigner, IDisposable
 {
     private readonly ILicenseClaimsFactory<User> _userLicenseClaimsFactory;
     private readonly Lazy<CertificateLoad> _certificate;
 
-    // Mirrors the private prod/dev thumbprint consts in LicensingService
-    // (src/Core/Billing/Services/Implementations/LicensingService.cs). A license signed by any other
-    // certificate is rejected by a self-hosted instance, so keep these in sync.
+    // Only the development licensing thumbprint is trusted. The production thumbprint from LicensingService
+    // (src/Core/Billing/Services/Implementations/LicensingService.cs) is deliberately excluded here.
     private static readonly IReadOnlySet<string> _trustedThumbprints =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            CoreHelpers.CleanCertificateThumbprint("B34876439FCDA2846505B2EFBBA6C4A951313EBE"),
             CoreHelpers.CleanCertificateThumbprint("207E64A231E8AA32AAF68A61037C075EBEBD553F"),
         };
 
@@ -72,7 +68,7 @@ public sealed class SeederLicenseSigner : ISeederLicenseSigner, IDisposable
             claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
         }
 
-        using var rsa = certificate.GetRSAPrivateKey();
+        var rsa = certificate.GetRSAPrivateKey();
         var securityKey = new RsaSecurityKey(rsa);
         var tokenDescriptor = new SecurityTokenDescriptor
         {
