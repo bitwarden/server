@@ -674,7 +674,7 @@ public class HandlebarsMailService : IMailService
         var model = new LicenseExpiredViewModel();
         if (organizationName != null)
         {
-            model.OrganizationName = CoreHelpers.SanitizeForEmail(organizationName);
+            model.OrganizationName = organizationName;
         }
         await AddMessageContentAsync(message, "LicenseExpired", model);
         message.Category = "LicenseExpired";
@@ -1398,8 +1398,8 @@ public class HandlebarsMailService : IMailService
         var model = new ProviderUpdatePaymentMethodViewModel
         {
             OrganizationId = organizationId.ToString(),
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
-            ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+            OrganizationName = organizationName,
+            ProviderName = providerName,
             SiteName = _globalSettings.SiteName,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
         };
@@ -1596,7 +1596,7 @@ public class HandlebarsMailService : IMailService
         var model = new FamiliesForEnterpriseRemoveOfferViewModel
         {
             SponsoredOrganizationId = organizationId,
-            SponsoringOrgName = CoreHelpers.SanitizeForEmail(organizationName),
+            SponsoringOrgName = organizationName,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
         };
         await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRemovedFromFamilyUser", model);

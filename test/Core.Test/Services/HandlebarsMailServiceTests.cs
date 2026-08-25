@@ -416,20 +416,38 @@ public class HandlebarsMailServiceTests
     }
 
     [Fact]
-    public async Task SendProviderUpdatePaymentMethod_RendersUpdatedCopy()
+    public async Task SendLicenseExpiredAsync_RendersOrganizationName()
     {
         // Act
-        await _sut.SendProviderUpdatePaymentMethod(Guid.NewGuid(), "Acme Corp", "Best MSP", new[] { "owner@example.com" });
+        await _sut.SendLicenseExpiredAsync(new[] { "user@example.com" }, "Acme.Corp");
 
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
-            m.HtmlContent.Contains("Your Bitwarden organization, Acme Corp, is no longer managed by Best MSP.") &&
+            m.HtmlContent.Contains("your Bitwarden organization license for <b") &&
+            m.HtmlContent.Contains("Acme.Corp</b> has expired and must be updated for continued use") &&
+            m.TextContent.Contains("your Bitwarden organization license for Acme.Corp has expired and must be updated for continued use") &&
+            !m.HtmlContent.Contains("[dot]") &&
+            !m.TextContent.Contains("[dot]") &&
+            m.Category == "LicenseExpired"));
+    }
+
+    [Fact]
+    public async Task SendProviderUpdatePaymentMethod_RendersUpdatedCopy()
+    {
+        // Act
+        await _sut.SendProviderUpdatePaymentMethod(Guid.NewGuid(), "Acme.Corp", "Best.MSP", new[] { "owner@example.com" });
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.HtmlContent.Contains("Your Bitwarden organization, Acme.Corp, is no longer managed by Best.MSP.") &&
+            !m.HtmlContent.Contains("[dot]") &&
             m.HtmlContent.Contains("going to Admin Console in the web app, then selecting your organization, Billing, and") &&
             m.HtmlContent.Contains(">Payment Details</a>") &&
             m.HtmlContent.Contains("/billing/payment-details") &&
             !m.HtmlContent.Contains("/billing/payment-method") &&
             m.HtmlContent.Contains("https://bitwarden.com/help/update-billing-info/#update-billing-for-organizations") &&
-            m.TextContent.Contains("Your Bitwarden organization, Acme Corp, is no longer managed by Best MSP.") &&
+            m.TextContent.Contains("Your Bitwarden organization, Acme.Corp, is no longer managed by Best.MSP.") &&
+            !m.TextContent.Contains("[dot]") &&
             m.TextContent.Contains("Or click the following link:") &&
             m.TextContent.Contains("/billing/payment-details") &&
             !m.TextContent.Contains("<a ") &&
@@ -490,15 +508,17 @@ public class HandlebarsMailServiceTests
         var organizationId = Guid.NewGuid().ToString();
 
         // Act
-        await _sut.SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync("user@example.com", organizationId, "Acme Corp");
+        await _sut.SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync("user@example.com", organizationId, "Acme.Corp");
 
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
             m.Subject == "Your Sponsored Families Plan has been removed" &&
-            m.HtmlContent.Contains("Acme Corp has removed the Sponsored Families Plan. You can no longer redeem this benefit or access an existing family vault.") &&
+            m.HtmlContent.Contains("Acme.Corp has removed the Sponsored Families Plan. You can no longer redeem this benefit or access an existing family vault.") &&
+            !m.HtmlContent.Contains("[dot]") &&
             m.HtmlContent.Contains("Contact your organization admin for more information.") &&
             m.HtmlContent.Contains($"/organizations/{organizationId}/billing/subscription\" target=\"_blank\" clicktracking=off>") &&
-            m.TextContent.Contains("Acme Corp has removed the Sponsored Families Plan. You can no longer redeem this benefit or access an existing family vault.") &&
+            m.TextContent.Contains("Acme.Corp has removed the Sponsored Families Plan. You can no longer redeem this benefit or access an existing family vault.") &&
+            !m.TextContent.Contains("[dot]") &&
             m.TextContent.Contains($"Or click the following link:") &&
             m.TextContent.Contains($"/organizations/{organizationId}/billing/subscription") &&
             m.Category == "FamiliesForEnterpriseRemovedFromFamilyUser"));
