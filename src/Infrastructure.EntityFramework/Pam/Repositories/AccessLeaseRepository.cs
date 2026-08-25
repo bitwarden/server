@@ -276,17 +276,6 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
     }
 
     /// <summary>
-    /// True when the write failed because a duplicate key was inserted -- here, the unique
-    /// [IX_AccessLease_AccessRequestId] backstop tripping because a concurrent activation minted this request's
-    /// lease first. Deliberately narrow so that any other write failure propagates rather than being reported as a
-    /// benign mint outcome. Mirrors the Dapper counterpart's <c>SqlException.Number is 2601 or 2627</c>.
-    /// </summary>
-    /// <remarks>
-    /// Distinct from <c>EntityFrameworkCache.IsDuplicateKeyException</c>, which only recognises primary-key
-    /// violations: the backstop here is a unique <em>index</em>, which reports different codes on SQL Server
-    /// (2601 rather than 2627) and SQLite (2067 rather than 1555).
-    /// </remarks>
-    /// <summary>
     /// True when the provider refused the transaction because it could not serialize it against a concurrent one:
     /// PostgreSQL's SSI aborting it at commit, or a deadlock victim elsewhere. The transaction is already gone in
     /// every case, so the only recovery is to run the whole attempt again.
@@ -303,6 +292,17 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         _ => e.InnerException is not null && IsSerializationFailure(e.InnerException),
     };
 
+    /// <summary>
+    /// True when the write failed because a duplicate key was inserted -- here, the unique
+    /// [IX_AccessLease_AccessRequestId] backstop tripping because a concurrent activation minted this request's
+    /// lease first. Deliberately narrow so that any other write failure propagates rather than being reported as a
+    /// benign mint outcome. Mirrors the Dapper counterpart's <c>SqlException.Number is 2601 or 2627</c>.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <c>EntityFrameworkCache.IsDuplicateKeyException</c>, which only recognises primary-key
+    /// violations: the backstop here is a unique <em>index</em>, which reports different codes on SQL Server
+    /// (2601 rather than 2627) and SQLite (2067 rather than 1555).
+    /// </remarks>
     private static bool IsDuplicateKeyException(DbUpdateException e) => e.InnerException switch
     {
         MySqlConnector.MySqlException my => my.ErrorCode == MySqlConnector.MySqlErrorCode.DuplicateKeyEntry,
