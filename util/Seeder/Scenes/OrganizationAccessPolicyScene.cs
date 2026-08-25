@@ -59,17 +59,7 @@ public class OrganizationAccessPolicyScene(
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
     {
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
-        if (organization == null)
-        {
-            throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
-        }
-
-        if (!organization.UseSecretsManager)
-        {
-            throw new InvalidOperationException(
-                $"Organization {request.OrganizationId} does not have Secrets Manager enabled.");
-        }
+        await organizationRepository.GetSecretsManagerOrganizationOrThrowAsync(request.OrganizationId);
 
         var policies = request.Grants.Select(BuildPolicy).ToList();
 
