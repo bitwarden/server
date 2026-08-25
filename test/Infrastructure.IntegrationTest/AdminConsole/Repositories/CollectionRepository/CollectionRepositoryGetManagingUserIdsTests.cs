@@ -149,6 +149,77 @@ public class CollectionRepositoryGetManagingUserIdsTests
         Assert.DoesNotContain(manager.Id, userIds);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManagingUserIdsAsync_UnconfirmedMembers_Excluded(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        IGroupRepository groupRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var member = await userRepository.CreateTestUserAsync("member");
+        var memberOrgUser = await CreateConfirmedUserAsync(organizationUserRepository, organization, member);
+
+        // An accepted Owner would manage by role, by assignment and by group if it were confirmed.
+        var accepted = await userRepository.CreateTestUserAsync("accepted");
+        var acceptedOrgUser =
+            await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(organization, accepted);
+
+        var invitedOrgUser = await organizationUserRepository.CreateTestOrganizationUserInviteAsync(organization);
+
+        var group = await groupRepository.CreateTestGroupAsync(organization);
+        await groupRepository.UpdateUsersAsync(group.Id, [acceptedOrgUser.Id], DateTime.UtcNow);
+
+        var collection = new Collection { Name = "Leased", OrganizationId = organization.Id };
+        await collectionRepository.CreateAsync(collection, groups:
+        [
+            new CollectionAccessSelection { Id = group.Id, Manage = true },
+        ], users:
+        [
+            new CollectionAccessSelection { Id = memberOrgUser.Id, Manage = true },
+            new CollectionAccessSelection { Id = acceptedOrgUser.Id, Manage = true },
+            new CollectionAccessSelection { Id = invitedOrgUser.Id, Manage = true },
+        ]);
+
+        var userIds = await collectionRepository.GetManagingUserIdsAsync(collection.Id);
+
+        Assert.Equal(member.Id, Assert.Single(userIds));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManagingUserIdsAsync_ManageByEveryRoute_ReturnsTheUserOnce(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        IGroupRepository groupRepository)
+    {
+        // The test-org helper allows admin access, so a confirmed Owner manages by role as well.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var owner = await userRepository.CreateTestUserAsync("owner");
+        var ownerOrgUser =
+            await organizationUserRepository.CreateTestOrganizationUserAsync(organization, owner);
+
+        var group = await groupRepository.CreateTestGroupAsync(organization);
+        await groupRepository.UpdateUsersAsync(group.Id, [ownerOrgUser.Id], DateTime.UtcNow);
+
+        var collection = new Collection { Name = "Leased", OrganizationId = organization.Id };
+        await collectionRepository.CreateAsync(collection, groups:
+        [
+            new CollectionAccessSelection { Id = group.Id, Manage = true },
+        ], users:
+        [
+            new CollectionAccessSelection { Id = ownerOrgUser.Id, Manage = true },
+        ]);
+
+        var userIds = await collectionRepository.GetManagingUserIdsAsync(collection.Id);
+
+        Assert.Equal(owner.Id, Assert.Single(userIds));
+    }
+
     private static OrganizationUser CreateCustomUser(Organization organization, User user, Permissions permissions)
     {
         var organizationUser = new OrganizationUser

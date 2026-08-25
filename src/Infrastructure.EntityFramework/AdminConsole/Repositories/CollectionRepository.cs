@@ -557,73 +557,51 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var collection = await dbContext.Collections.FindAsync(collectionId);
-            if (collection == null)
-            {
-                return Array.Empty<Guid>();
-            }
+            var directManageUserIds = from cu in dbContext.CollectionUsers
+                                      where cu.CollectionId == collectionId && cu.Manage
+                                      join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                      where ou.Status == OrganizationUserStatusType.Confirmed && ou.UserId != null
+                                      select ou.UserId!.Value;
 
-            var organizationId = collection.OrganizationId;
+            var groupManageUserIds = from cg in dbContext.CollectionGroups
+                                     where cg.CollectionId == collectionId && cg.Manage
+                                     join gu in dbContext.GroupUsers on cg.GroupId equals gu.GroupId
+                                     join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
+                                     where ou.Status == OrganizationUserStatusType.Confirmed && ou.UserId != null
+                                     select ou.UserId!.Value;
 
-            // Confirmed members of the organization with a linked account.
-            var confirmedOrgUsers = await dbContext.OrganizationUsers
-                .Where(ou => ou.OrganizationId == organizationId
-                    && ou.Status == OrganizationUserStatusType.Confirmed
-                    && ou.UserId != null)
-                .Select(ou => new { ou.Id, ou.UserId, ou.Type, ou.Permissions })
+            var adminManageUserIds = from c in dbContext.Collections
+                                     where c.Id == collectionId
+                                     join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                     join ou in dbContext.OrganizationUsers on c.OrganizationId equals ou.OrganizationId
+                                     where ou.Status == OrganizationUserStatusType.Confirmed
+                                         && ou.UserId != null
+                                         && (ou.Type == OrganizationUserType.Owner
+                                             || ou.Type == OrganizationUserType.Admin)
+                                         && o.AllowAdminAccessToAllCollectionItems
+                                     select ou.UserId!.Value;
+
+            var managerUserIds = await directManageUserIds
+                .Union(groupManageUserIds)
+                .Union(adminManageUserIds)
                 .ToListAsync();
-            var orgUsersById = confirmedOrgUsers.ToDictionary(ou => ou.Id);
 
-            var managerUserIds = new HashSet<Guid>();
-
-            void AddIfConfirmed(Guid organizationUserId)
-            {
-                if (orgUsersById.TryGetValue(organizationUserId, out var ou) && ou.UserId.HasValue)
-                {
-                    managerUserIds.Add(ou.UserId.Value);
-                }
-            }
-
-            // Direct Manage assignments.
-            var directManageOrgUserIds = await dbContext.CollectionUsers
-                .Where(cu => cu.CollectionId == collectionId && cu.Manage)
-                .Select(cu => cu.OrganizationUserId)
+            // TODO: Update to JSON query after upgrading to EF 10.
+            var customMembers = await (from c in dbContext.Collections
+                                       where c.Id == collectionId
+                                       join ou in dbContext.OrganizationUsers on c.OrganizationId equals ou.OrganizationId
+                                       where ou.Status == OrganizationUserStatusType.Confirmed
+                                           && ou.UserId != null
+                                           && ou.Type == OrganizationUserType.Custom
+                                       select new { UserId = ou.UserId!.Value, ou.Permissions })
                 .ToListAsync();
-            foreach (var organizationUserId in directManageOrgUserIds)
-            {
-                AddIfConfirmed(organizationUserId);
-            }
 
-            // Manage via group membership.
-            var groupManageOrgUserIds = await (from cg in dbContext.CollectionGroups
-                                               join gu in dbContext.GroupUsers on cg.GroupId equals gu.GroupId
-                                               where cg.CollectionId == collectionId && cg.Manage
-                                               select gu.OrganizationUserId)
-                .ToListAsync();
-            foreach (var organizationUserId in groupManageOrgUserIds)
-            {
-                AddIfConfirmed(organizationUserId);
-            }
-
-            // Org Owners/Admins (when the org permits) and Custom users with EditAnyCollection (permission parsed in
-            // memory because the JSON column isn't portably queryable across providers).
-            var allowAdminAccess = await dbContext.Organizations
-                .Where(o => o.Id == organizationId)
-                .Select(o => o.AllowAdminAccessToAllCollectionItems)
-                .FirstOrDefaultAsync();
-            foreach (var ou in confirmedOrgUsers)
-            {
-                var isAdminManager = allowAdminAccess
-                    && ou.Type is OrganizationUserType.Owner or OrganizationUserType.Admin;
-                var hasEditAnyCollection = ou.Type == OrganizationUserType.Custom
-                    && CoreHelpers.LoadClassFromJsonData<Permissions>(ou.Permissions).EditAnyCollection;
-                if ((isAdminManager || hasEditAnyCollection) && ou.UserId.HasValue)
-                {
-                    managerUserIds.Add(ou.UserId.Value);
-                }
-            }
-
-            return managerUserIds.ToList();
+            return managerUserIds
+                .Concat(customMembers
+                    .Where(m => CoreHelpers.LoadClassFromJsonData<Permissions>(m.Permissions).EditAnyCollection)
+                    .Select(m => m.UserId))
+                .Distinct()
+                .ToList();
         }
     }
 
