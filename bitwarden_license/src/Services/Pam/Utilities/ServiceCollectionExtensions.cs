@@ -99,12 +99,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<RotationJobEndpointsHandler>();
         services.AddScoped<RotationAttemptEndpointsHandler>();
 
-        // Runs on every daemon-facing rotation route (see PamEndpointsExtensions.WithPamDaemonDefaults). Registered
-        // explicitly even though its parameterless constructor would let AddEndpointFilter<T>() construct it
-        // unregistered (as PamExceptionHandlerEndpointFilter/PamValidationEndpointFilter already do) -- being
-        // explicit here documents that it participates in the request pipeline, since unlike those two it resolves
-        // several other services from the request's provider inside InvokeAsync.
-        services.AddScoped<DaemonRequestEndpointFilter>();
+        // Runs on every daemon-facing rotation route (see PamEndpointsExtensions.WithPamDaemonDefaults). Its
+        // parameterless constructor would let AddEndpointFilter<T>() construct it unregistered, as
+        // PamExceptionHandlerEndpointFilter/PamValidationEndpointFilter are -- registering it anyway keeps a filter
+        // that resolves services of its own visible in the container.
+        services.AddScoped<DaemonHeartbeatEndpointFilter>();
 
         services.AddPamRotationServices(configuration);
         services.AddPamOpenApiEndpointDataSource();

@@ -32,9 +32,8 @@ public static class PamEndpointsExtensions
         rotationAdmin.MapGroup("/target-systems").MapRotationTargetSystemEndpoints();
         rotationAdmin.MapGroup("/configs").MapRotationConfigEndpoints();
 
-        // Credential rotation -- the daemon-facing surface. Policies.PamRotationDaemon replaces Policies.Application
-        // (a machine-credential bearer token, not a user's), and DaemonRequestEndpointFilter re-verifies the daemon
-        // end to end on every request and bumps its heartbeat.
+        // Credential rotation -- the daemon-facing surface. Policies.PamRotationDaemon replaces
+        // Policies.Application: a machine-credential bearer token, not a user's.
         var rotationDaemon = endpoints.MapGroup("/rotation").WithPamDaemonDefaults();
         rotationDaemon.MapGroup("/daemon").MapRotationDaemonJobsEndpoints();
         rotationDaemon.MapGroup("/jobs").MapRotationJobEndpoints();
@@ -59,15 +58,18 @@ public static class PamEndpointsExtensions
 
     /// <summary>
     /// Rotation's daemon-facing surface: <see cref="Policies.PamRotationDaemon"/> instead of the user-token
-    /// <see cref="Policies.Application"/>, plus <see cref="DaemonRequestEndpointFilter"/> on every route to
-    /// re-verify the daemon and bump its heartbeat. Runs after the feature/validation filters so a disabled flag or
-    /// an invalid body short-circuits before the extra daemon lookup.
+    /// <see cref="Policies.Application"/>, and <see cref="DaemonHeartbeatEndpointFilter"/> on every route so any
+    /// daemon request counts as a sign of life. The filter goes on last, after the feature and validation filters,
+    /// so a disabled flag or a malformed body short-circuits ahead of the heartbeat write.
+    ///
+    /// These routes carry no {orgId} and no organization requirement: a daemon's organization comes from its token,
+    /// and the work queries scope every read and write to it.
     ///
     /// TODO(PM-39040): rate-limit this group by client_id.
     /// </summary>
     private static RouteGroupBuilder WithPamDaemonDefaults(this RouteGroupBuilder group) =>
         group.WithPamDefaults(Policies.PamRotationDaemon, FeatureFlagKeys.PamRotation)
-            .AddEndpointFilter<DaemonRequestEndpointFilter>();
+            .AddEndpointFilter<DaemonHeartbeatEndpointFilter>();
 
     /// <summary>
     /// Applies the shared PAM endpoint chain to a group for the given authorization policy and feature flag. Order

@@ -15,13 +15,22 @@ namespace Bit.Identity.IdentityServer.ClientProviders;
 /// credential is a generic <c>dbo.ApiKey</c> row (mirrors Secrets Manager's machine-account mechanic in
 /// <see cref="SecretsManagerApiKeyProvider"/>) with a null <c>ServiceAccountId</c>; the owner link is inverted via
 /// <c>PamDaemon.ApiKeyId</c>. Authentication is denied unless the daemon is Enabled and its organization has PAM
-/// enabled and licensed — the server never holds the daemon's plaintext org key, only the ciphertext
+/// enabled and licensed, and the access token's lifetime is shorter than the platform default so an already-issued
+/// token outlives a disable, a delete, or a license lapse by minutes rather than an hour — the server never holds
+/// the daemon's plaintext org key, only the ciphertext
 /// <c>EncryptedPayload</c> handed back on every token response (zero-knowledge; see
 /// <see cref="Duende.IdentityServer.Models.Client.Properties"/> "encryptedPayload").
 /// </summary>
 internal class PamDaemonClientProvider : IClientProvider
 {
     public const string DaemonPrefix = "daemon";
+
+    /// <summary>
+    /// How long a daemon's access token stays valid. Shorter than the one-hour platform default: a daemon polls
+    /// continuously, so it re-authenticates cheaply, and the shorter window bounds how long a revoked daemon or a
+    /// lapsed PAM license keeps a usable token.
+    /// </summary>
+    private const int DaemonAccessTokenLifetimeInMinutes = 15;
 
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly IPamDaemonRepository _pamDaemonRepository;
@@ -61,7 +70,7 @@ internal class PamDaemonClientProvider : IClientProvider
             ClientSecrets = { new Secret(apiKey.ClientSecretHash) },
             AllowedScopes = apiKey.GetScopes(),
             AllowedGrantTypes = GrantTypes.ClientCredentials,
-            AccessTokenLifetime = 3600 * 1,
+            AccessTokenLifetime = 60 * DaemonAccessTokenLifetimeInMinutes,
             ClientClaimsPrefix = null,
             Properties = new Dictionary<string, string> {
                 {"encryptedPayload", apiKey.EncryptedPayload},

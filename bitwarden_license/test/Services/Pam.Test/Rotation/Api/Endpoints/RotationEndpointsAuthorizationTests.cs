@@ -1,6 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Pam.Repositories;
@@ -123,13 +122,12 @@ public class RotationEndpointsAuthorizationTests
     }
 
     [Fact]
-    public async Task MapPamEndpoints_RunsDaemonRequestEndpointFilterAheadOfEveryDaemonRoute()
+    public async Task MapPamEndpoints_RunsDaemonHeartbeatEndpointFilterAheadOfEveryDaemonRoute()
     {
-        // Policies.PamRotationDaemon only proves the caller holds a rotation-daemon token. Everything that makes
-        // that token *currently* valid -- the daemon still enabled, its organization still enabled and licensed --
-        // lives in DaemonRequestEndpointFilter, and AddEndpointFilter<T>() leaves no metadata to assert on. So drive
-        // the built endpoint instead: with no PamDaemonId the filter 404s, whereas an endpoint that had lost its
-        // filter would reach its handler and fail some other way.
+        // A daemon that reaches any of these routes is alive, so every one of them has to record the heartbeat --
+        // miss one and a daemon looks offline while it is working. AddEndpointFilter<T>() leaves no metadata to
+        // assert on, so drive the built endpoint instead: with no PamDaemonId the filter 404s, whereas an endpoint
+        // that had lost its filter would reach its handler and fail some other way.
         var endpoints = DaemonEndpoints();
         Assert.NotEmpty(endpoints);
 
@@ -175,7 +173,6 @@ public class RotationEndpointsAuthorizationTests
         services.AddSingleton(Substitute.For<ISubmitCipherUpdateCommand>());
         services.AddSingleton(Substitute.For<IReportRotationSucceededCommand>());
         services.AddSingleton(Substitute.For<IReportRotationFailedCommand>());
-        services.AddSingleton(Substitute.For<IOrganizationAbilityCacheService>());
         services.AddSingleton(Options.Create(new PamRotationOptions()));
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<RotationDaemonJobsEndpointsHandler>();
@@ -190,7 +187,7 @@ public class RotationEndpointsAuthorizationTests
     {
         // The daemon routes carry no {orgId}, and OrganizationRequirementHandler reads the id off the route —
         // attaching an IOrganizationRequirement here would throw rather than deny. The daemon is authorized by
-        // Policies.PamRotationDaemon plus DaemonRequestEndpointFilter instead.
+        // Policies.PamRotationDaemon, and scoped to its own organization by the queries underneath.
         var endpoints = MaterializeEndpoints()
             .Where(e => e.RoutePattern.RawText!.StartsWith("/rotation", StringComparison.Ordinal))
             .ToList();

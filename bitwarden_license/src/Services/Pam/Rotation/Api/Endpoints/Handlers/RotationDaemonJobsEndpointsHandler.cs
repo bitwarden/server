@@ -7,10 +7,11 @@ namespace Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
 /// Handler for <c>GET rotation/daemon/jobs</c> -- the daemon's poll (spec <c>ClaimRotation</c>'s candidate set),
-/// which doubles as its heartbeat when idle (the heartbeat write itself happens in
-/// <see cref="Bit.Services.Pam.Rotation.Api.Endpoints.Filters.DaemonRequestEndpointFilter"/>, ahead of every daemon
-/// route, not here). Runs behind <c>Policies.PamRotationDaemon</c>; the daemon's identity comes from
-/// <see cref="ICurrentContext.PamDaemonId"/>, already re-verified Enabled by the filter.
+/// and the only request an idle daemon makes, which is why
+/// <see cref="Bit.Services.Pam.Rotation.Api.Endpoints.Filters.DaemonHeartbeatEndpointFilter"/> records the heartbeat
+/// for the whole daemon surface rather than this handler doing it. The daemon's identity comes from
+/// <see cref="ICurrentContext.PamDaemonId"/>; the poll query admits only an Enabled daemon, and returns only jobs
+/// belonging to that daemon's organization and assigned target systems.
 /// </summary>
 public class RotationDaemonJobsEndpointsHandler(
     ICurrentContext currentContext,

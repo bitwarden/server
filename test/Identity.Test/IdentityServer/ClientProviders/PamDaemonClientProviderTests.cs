@@ -126,6 +126,7 @@ public class PamDaemonClientProviderTests
         var scope = Assert.Single(client.AllowedScopes);
         Assert.Equal(ApiScopes.ApiPamRotation, scope);
         Assert.Equal(GrantTypes.ClientCredentials, client.AllowedGrantTypes);
+        Assert.Equal(TimeSpan.FromMinutes(15).TotalSeconds, client.AccessTokenLifetime);
         Assert.Null(client.ClientClaimsPrefix);
         Assert.Equal("encrypted-payload", client.Properties["encryptedPayload"]);
         Assert.Contains(client.Claims, c =>
