@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Services;
 using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -14,9 +15,10 @@ namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 /// </summary>
 public class LeaseEndpointsHandler(
     IUserService userService,
+    TimeProvider timeProvider,
     IListActiveLeasesQuery listActiveLeasesQuery,
     IListLeaseHistoryQuery listLeaseHistoryQuery,
-    IListMyActiveAccessLeasesQuery listMyActiveAccessLeasesQuery,
+    IAccessLeaseRepository accessLeaseRepository,
     IRevokeAccessLeaseCommand revokeAccessLeaseCommand,
     IRequestLeaseExtensionCommand requestLeaseExtensionCommand)
 {
@@ -39,7 +41,8 @@ public class LeaseEndpointsHandler(
     public async Task<ListResponseModel<AccessLeaseResponseModel>> GetMine(ClaimsPrincipal user)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var leases = await listMyActiveAccessLeasesQuery.GetMineActiveAsync(userId);
+        var leases = await accessLeaseRepository.GetManyActiveByRequesterIdAsync(
+            userId, timeProvider.GetUtcNow().UtcDateTime);
         return new ListResponseModel<AccessLeaseResponseModel>(
             leases.Select(l => new AccessLeaseResponseModel(l)));
     }

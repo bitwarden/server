@@ -3,6 +3,7 @@ using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Models;
@@ -68,7 +69,9 @@ public class LeaseEndpointsHandlerTests
     {
         SetupUser(sutProvider, userId);
         lease.Status = AccessLeaseStatus.Active;
-        sutProvider.GetDependency<IListMyActiveAccessLeasesQuery>().GetMineActiveAsync(userId).Returns([lease]);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetManyActiveByRequesterIdAsync(userId, Arg.Any<DateTime>())
+            .Returns([lease]);
 
         var result = (await sutProvider.Sut.GetMine(_user)).Data.ToList();
 
