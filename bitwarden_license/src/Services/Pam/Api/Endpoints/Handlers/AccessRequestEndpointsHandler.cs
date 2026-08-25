@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Services;
 using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -17,7 +18,7 @@ public class AccessRequestEndpointsHandler(
     IListInboxRequestsQuery listInboxRequestsQuery,
     IListInboxHistoryQuery listInboxHistoryQuery,
     IDecideAccessRequestCommand decideAccessRequestCommand,
-    IListMyAccessRequestsQuery listMyAccessRequestsQuery,
+    IAccessRequestRepository accessRequestRepository,
     IActivateAccessRequestCommand activateAccessRequestCommand,
     ICancelAccessRequestCommand cancelAccessRequestCommand,
     IGetAccessRequestDetailsQuery getAccessRequestDetailsQuery)
@@ -41,7 +42,7 @@ public class AccessRequestEndpointsHandler(
     public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetMine(ClaimsPrincipal user)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var requests = await listMyAccessRequestsQuery.GetMineAsync(userId);
+        var requests = await accessRequestRepository.GetManyByRequesterIdAsync(userId);
         return new ListResponseModel<AccessRequestDetailsResponseModel>(
             requests.Select(r => new AccessRequestDetailsResponseModel(r)));
     }
