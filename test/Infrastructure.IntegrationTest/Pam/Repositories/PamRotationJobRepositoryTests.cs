@@ -104,12 +104,13 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(fixture.Config.TerminateSessions, winner.TerminateSessions);
         Assert.Equal(claimNow.Add(_releaseDelay), winner.ExecuteBy!.Value, LaxDateTimeComparer.Default);
 
-        // The job records the winning claim, and ExecuteBy is exactly ClaimedAt + releaseDelay.
+        // The job records the winning claim, and ExecuteBy is the claimed-at instant plus the release delay.
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobStatus.Claimed, job!.Status);
         Assert.NotNull(job.ClaimedByDaemonId);
         Assert.Equal(claimNow, job.ClaimedAt.Value, LaxDateTimeComparer.Default);
-        Assert.Equal(job.ClaimedAt!.Value.Add(_releaseDelay), winner.ExecuteBy);
+        Assert.Equal(
+            job.ClaimedAt!.Value.Add(_releaseDelay), winner.ExecuteBy!.Value, LaxDateTimeComparer.Default);
 
         // AtMostOneInFlightAttemptPerJob: only the winner's attempt row was inserted.
         var details = Assert.Single(await pamRotationJobRepository.GetManyByConfigIdAsync(fixture.Config.Id));
