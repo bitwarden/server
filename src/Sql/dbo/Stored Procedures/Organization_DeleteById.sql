@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
-    @Id UNIQUEIDENTIFIER
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationDeleteTasks NVARCHAR(MAX) = NULL
 WITH RECOMPILE
 AS
 BEGIN
@@ -157,6 +158,41 @@ BEGIN
         [dbo].[Send]
     WHERE
         [OrganizationId] = @Id
+
+    -- Atomically enqueue one or more OrganizationDeleteTasks (e.g. for purging Table
+    -- Storage event logs) so downstream cleanup is durably recorded with the deletion.
+    -- Tasks are passed as a JSON array of { Id, TaskType, CreationDate } objects, letting
+    -- any number of teams enqueue their own cleanup type in the same transaction as the delete.
+    IF @OrganizationDeleteTasks IS NOT NULL
+    BEGIN
+        -- [TaskType] and [CreationDate] are read straight from OPENJSON without the ISNULL
+        -- fallbacks that bulk JSON procedures normally need. That guidance covers adding a
+        -- NOT NULL column to an existing table, where an older server omits the new field and
+        -- OPENJSON yields NULL. Here the parameter, the JSON contract, and the table all ship
+        -- together: an older server sends no JSON at all, so the guard above skips the insert.
+        -- An explicit NULL [TaskType] should fail rather than silently enqueue task type 0.
+        INSERT INTO [dbo].[OrganizationDeleteTask]
+        (
+            [Id],
+            [OrganizationId],
+            [TaskType],
+            [CreationDate],
+            [RevisionDate]
+        )
+        SELECT
+            [Id],
+            @Id,
+            [TaskType],
+            [CreationDate],
+            [CreationDate]
+        FROM
+            OPENJSON(@OrganizationDeleteTasks)
+            WITH (
+                [Id]           UNIQUEIDENTIFIER '$.Id',
+                [TaskType]     TINYINT          '$.TaskType',
+                [CreationDate] DATETIME2(7)     '$.CreationDate'
+            )
+    END
 
     DELETE
     FROM
