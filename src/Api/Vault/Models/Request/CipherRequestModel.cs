@@ -11,7 +11,7 @@ using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models.Request;
 
-public class CipherRequestModel
+public class CipherRequestModel : IValidatableObject
 {
     /// <summary>
     /// The Id of the user that encrypted the cipher. It should always represent a UserId.
@@ -34,7 +34,6 @@ public class CipherRequestModel
     public bool Favorite { get; set; }
     public CipherRepromptType Reprompt { get; set; }
     public string Key { get; set; }
-    [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
@@ -82,6 +81,21 @@ public class CipherRequestModel
     /// </summary>
     public KeyId GetEncryptedByKeyId() =>
         KeyId.FromHexEncodedString(string.IsNullOrEmpty(EncryptedByKeyId) ? null : EncryptedByKeyId);
+
+    /// <summary>
+    /// Blob-encrypted ciphers carry all their content in <see cref="Data"/> and leave Name unused.
+    /// Every other format still stores Name as a structured field, so it stays required there.
+    /// </summary>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var isBlobEncrypted = new Cipher { Data = Data }.IsDataBlobEncrypted();
+
+        if (!isBlobEncrypted && string.IsNullOrWhiteSpace(Name))
+        {
+            yield return new ValidationResult(
+                "The Name field is required.", new[] { nameof(Name) });
+        }
+    }
 
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
     {
