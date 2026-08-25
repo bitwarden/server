@@ -135,11 +135,12 @@ public class RedeemChurnMitigationOfferCommand(
 
         var phases = new List<SubscriptionSchedulePhaseOptions>
         {
-            // Phase 1 is current_phase with StartDate in the past. Any deviation from its
-            // current state causes Stripe to reject the schedule update with "cannot modify
-            // past phase." Mirror items, discounts, metadata, start/end, and proration
-            // verbatim -- DO NOT edit Phase 1 fields here.
-            BuildMirroredPhaseOptions(phase1),
+            // Phase 1 is current_phase with StartDate in the past; mirror its items, metadata,
+            // start/end, and proration verbatim. Phase-level discounts carry only what is still live
+            // on the subscription (by discount id) so a one-time coupon already consumed on the
+            // current invoice -- still recorded on the phase but gone from subscription.Discounts --
+            // isn't re-minted on the wholesale replace.
+            BuildMirroredPhaseOptions(phase1, subscription),
             new()
             {
                 StartDate = phase2.StartDate,
@@ -273,7 +274,8 @@ public class RedeemChurnMitigationOfferCommand(
         return new None();
     }
 
-    private static SubscriptionSchedulePhaseOptions BuildMirroredPhaseOptions(SubscriptionSchedulePhase phase) =>
+    private static SubscriptionSchedulePhaseOptions BuildMirroredPhaseOptions(
+        SubscriptionSchedulePhase phase, Subscription subscription) =>
         new()
         {
             StartDate = phase.StartDate,
@@ -286,9 +288,11 @@ public class RedeemChurnMitigationOfferCommand(
                     Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(i.Discounts?.Select(d => d.CouponId) ?? [])
                 })
                 .ToList(),
-            Discounts = phase.Discounts?
-                .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId })
-                .ToList(),
+            Discounts = subscription.Discounts is { Count: > 0 }
+                ? subscription.Discounts
+                    .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Discount = d.Id })
+                    .ToList()
+                : null,
             Metadata = phase.Metadata,
             ProrationBehavior = phase.ProrationBehavior
         };
