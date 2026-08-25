@@ -17,6 +17,7 @@ namespace Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 public class RotationDaemonEndpointsHandler(
     ICurrentContext currentContext,
     IListDaemonsQuery listDaemonsQuery,
+    IGetDaemonDetailsQuery getDaemonDetailsQuery,
     IRegisterDaemonCommand registerDaemonCommand,
     ISetDaemonStatusCommand setDaemonStatusCommand,
     IDeleteDaemonCommand deleteDaemonCommand,
@@ -28,6 +29,12 @@ public class RotationDaemonEndpointsHandler(
         var daemons = await listDaemonsQuery.ListAsync(orgId);
         return new ListResponseModel<PamDaemonResponseModel>(
             daemons.Select(daemon => new PamDaemonResponseModel(daemon)));
+    }
+
+    public async Task<PamDaemonDetailResponseModel> Get(Guid orgId, Guid id)
+    {
+        var history = await getDaemonDetailsQuery.GetAsync(orgId, id);
+        return new PamDaemonDetailResponseModel(history);
     }
 
     public async Task<RegisterDaemonResponseModel> Post(Guid orgId, RegisterDaemonRequestModel model)

@@ -11,8 +11,8 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Response;
 /// </summary>
 public class PamDaemonResponseModel : ResponseModel
 {
-    public PamDaemonResponseModel(PamDaemonListItem item)
-        : base("pamDaemon")
+    public PamDaemonResponseModel(PamDaemonListItem item, string obj = "pamDaemon")
+        : base(obj)
     {
         ArgumentNullException.ThrowIfNull(item);
 

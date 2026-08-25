@@ -156,6 +156,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListRotationConfigsQuery, ListRotationConfigsQuery>();
         services.AddScoped<IGetRotationConfigDetailsQuery, GetRotationConfigDetailsQuery>();
         services.AddScoped<IListDaemonsQuery, ListDaemonsQuery>();
+        services.AddScoped<IGetDaemonDetailsQuery, GetDaemonDetailsQuery>();
         services.AddScoped<IListTargetSystemsQuery, ListTargetSystemsQuery>();
         services.AddScoped<IListClaimableJobsQuery, ListClaimableJobsQuery>();
         services.AddScoped<IGetRotationCipherQuery, GetRotationCipherQuery>();

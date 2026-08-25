@@ -231,6 +231,41 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             .ToList();
     }
 
+    public async Task<ICollection<PamRotationJobDetails>> GetManyRecentByDaemonIdAsync(Guid daemonId, int limit)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var jobs = await dbContext.PamRotationJobs
+            .Where(j => dbContext.PamRotationAttempts
+                .Any(a => a.JobId == j.Id && a.ClaimedByDaemonId == daemonId))
+            .OrderByDescending(j => j.CreationDate)
+            .Take(limit)
+            .AsNoTracking()
+            .ToListAsync();
+        if (jobs.Count == 0)
+        {
+            return new List<PamRotationJobDetails>();
+        }
+
+        var jobIds = jobs.Select(j => j.Id).ToList();
+        var attempts = await dbContext.PamRotationAttempts
+            .Where(a => a.ClaimedByDaemonId == daemonId && jobIds.Contains(a.JobId))
+            .OrderBy(a => a.CreationDate)
+            .AsNoTracking()
+            .ToListAsync();
+
+        var attemptsByJob = attempts
+            .GroupBy(a => a.JobId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<PamRotationAttempt>)Mapper.Map<List<PamRotationAttempt>>(g.ToList()));
+
+        return jobs
+            .Select(job => PamRotationJobDetails.From(
+                Mapper.Map<PamRotationJob>(job),
+                attemptsByJob.TryGetValue(job.Id, out var jobAttempts) ? jobAttempts : []))
+            .ToList();
+    }
+
     public async Task<PamRotationAttempt?> GetAttemptByIdAsync(Guid attemptId)
     {
         using var scope = ServiceScopeFactory.CreateScope();

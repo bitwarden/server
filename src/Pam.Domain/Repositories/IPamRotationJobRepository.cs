@@ -40,6 +40,14 @@ public interface IPamRotationJobRepository
     /// <summary>Returns every job recorded against the config, each with its attempts, oldest first — the config detail page's attempt history.</summary>
     Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId);
 
+    /// <summary>
+    /// Returns the <paramref name="limit"/> most recent jobs this daemon has worked, newest first, each carrying only
+    /// the attempts the daemon itself recorded — the daemon detail page's recent activity. Matching is on the attempts
+    /// rather than on <see cref="PamRotationJob.ClaimedByDaemonId"/>: the job's claim fields are cleared when it
+    /// resolves, releases or times out, so the attempt is the only durable record of which daemon worked it.
+    /// </summary>
+    Task<ICollection<PamRotationJobDetails>> GetManyRecentByDaemonIdAsync(Guid daemonId, int limit);
+
     Task<PamRotationAttempt?> GetAttemptByIdAsync(Guid attemptId);
 
     /// <summary>

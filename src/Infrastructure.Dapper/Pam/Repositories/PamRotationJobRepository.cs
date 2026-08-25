@@ -97,6 +97,26 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
             .ToList();
     }
 
+    public async Task<ICollection<PamRotationJobDetails>> GetManyRecentByDaemonIdAsync(Guid daemonId, int limit)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        using var results = await connection.QueryMultipleAsync(
+            "[dbo].[PamRotationJob_ReadManyRecentByDaemonId]",
+            new { DaemonId = daemonId, Limit = limit },
+            commandType: CommandType.StoredProcedure);
+
+        var jobs = (await results.ReadAsync<PamRotationJob>()).ToList();
+        var attemptsByJobId = (await results.ReadAsync<PamRotationAttempt>())
+            .GroupBy(attempt => attempt.JobId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        return jobs
+            .Select(job => PamRotationJobDetails.From(
+                job,
+                attemptsByJobId.TryGetValue(job.Id, out var attempts) ? attempts : new List<PamRotationAttempt>()))
+            .ToList();
+    }
+
     public async Task<PamRotationAttempt?> GetAttemptByIdAsync(Guid attemptId)
     {
         await using var connection = new SqlConnection(ConnectionString);

@@ -321,6 +321,7 @@ public class DatabaseContext : DbContext
 
         ePamRotationAttempt.Property(p => p.Id).ValueGeneratedNever();
         ePamRotationAttempt.HasIndex(p => new { p.JobId, p.Status });
+        ePamRotationAttempt.HasIndex(p => new { p.ClaimedByDaemonId, p.JobId });
         ePamRotationAttempt
             .HasOne<PamRotationJob>()
             .WithMany()

@@ -4,6 +4,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260825091239_PamRotationDaemonActivity")]
+    partial class PamRotationDaemonActivity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1246,49 +1249,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("OrganizationApplication", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationDeleteTask", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("CompletedDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("FailureCount")
-                        .HasColumnType("int");
-
-                    b.Property<long>("ItemsDeletedCount")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("LastError")
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<byte>("TaskType")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("CompletedDate", "CreationDate")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.ToTable("OrganizationDeleteTask", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegration", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1647,10 +1607,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("OrganizationId")
-                        .HasDatabaseName("IX_Event_OrganizationId")
-                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("OrganizationId", "SendId", "Date")
                         .HasDatabaseName("IX_Event_OrganizationIdSendIdDate")
@@ -2575,9 +2531,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("AccessRequestId")
                         .HasColumnType("char(36)");
 
-                    b.Property<byte>("Action")
-                        .HasColumnType("tinyint unsigned");
-
                     b.Property<Guid>("CipherId")
                         .HasColumnType("char(36)");
 
@@ -2605,6 +2558,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("RevokedDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint unsigned");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AccessRequestId")
@@ -2612,13 +2568,13 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("CipherId", "Action");
+                    b.HasIndex("CipherId", "Status");
 
-                    b.HasIndex("CollectionId", "Action");
+                    b.HasIndex("CollectionId", "Status");
 
-                    b.HasIndex("NotAfter", "Action");
+                    b.HasIndex("NotAfter", "Status");
 
-                    b.HasIndex("RequesterId", "CipherId", "Action");
+                    b.HasIndex("RequesterId", "CipherId", "Status");
 
                     b.ToTable("AccessLease", (string)null);
                 });
@@ -2627,12 +2583,6 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
-
-                    b.Property<byte>("Action")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<DateTime?>("ActionDate")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("CipherId")
                         .HasColumnType("char(36)");
@@ -2661,8 +2611,14 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("RequesterId")
                         .HasColumnType("char(36)");
 
+                    b.Property<DateTime?>("ResolvedDate")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<Guid?>("RuleId")
                         .HasColumnType("char(36)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint unsigned");
 
                     b.HasKey("Id");
 
@@ -2670,15 +2626,11 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("RuleId");
 
-                    b.HasIndex("CollectionId", "CreationDate");
+                    b.HasIndex("CollectionId", "Status");
 
-                    b.HasIndex("OrganizationId", "Action");
+                    b.HasIndex("OrganizationId", "Status");
 
-                    b.HasIndex("RequesterId", "CreationDate");
-
-                    b.HasIndex("CollectionId", "Action", "NotAfter");
-
-                    b.HasIndex("RequesterId", "CipherId", "Action");
+                    b.HasIndex("RequesterId", "CipherId", "Status");
 
                     b.ToTable("AccessRequest", (string)null);
                 });

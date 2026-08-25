@@ -25,3 +25,8 @@ GO
 CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_JobId_Status]
     ON [dbo].[PamRotationAttempt] ([JobId] ASC, [Status] ASC);
 GO
+
+-- Both of PamRotationJob_ReadManyRecentByDaemonId's result sets seek on ClaimedByDaemonId.
+CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_ClaimedByDaemonId_JobId]
+    ON [dbo].[PamRotationAttempt] ([ClaimedByDaemonId] ASC, [JobId] ASC);
+GO

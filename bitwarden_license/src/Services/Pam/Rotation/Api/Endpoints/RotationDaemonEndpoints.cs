@@ -16,6 +16,12 @@ internal static class RotationDaemonEndpoints
         group.MapGet("", (Guid orgId, RotationDaemonEndpointsHandler handler) => handler.GetAll(orgId))
             .WithName("Pam_Rotation_Daemons_GetAll");
 
+        group.MapGet("{id:guid}", (Guid orgId, Guid id, RotationDaemonEndpointsHandler handler) => handler.Get(orgId, id))
+            .WithName("Pam_Rotation_Daemons_Get")
+            .WithDescription(
+                "Returns one daemon with its recent rotation activity -- the jobs it has worked and the attempts it " +
+                "recorded against them, newest first.");
+
         group.MapPost("", (Guid orgId, RegisterDaemonRequestModel model, RotationDaemonEndpointsHandler handler) => handler.Post(orgId, model))
             .WithName("Pam_Rotation_Daemons_Post")
             .WithDescription(

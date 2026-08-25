@@ -777,6 +777,86 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationAttemptStatus.Rotated, attempt!.Status);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyRecentByDaemonIdAsync_JobWorkedByTwoDaemons_EachSeesOnlyItsOwnAttempt(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IApiKeyRepository apiKeyRepository,
+        IPamDaemonRepository pamDaemonRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IPamRotationJobRepository pamRotationJobRepository)
+    {
+        var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
+            pamDaemonRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
+        var firstClaim = await pamRotationJobRepository.ClaimAsync(
+            fixture.Job.Id, fixture.Daemon.Id, fixture.Now, _releaseDelay);
+        // Errored with budget left: the job goes back to Pending and its claim fields are cleared.
+        var errored = await pamRotationJobRepository.MarkAttemptErroredAsync(
+            firstClaim.AttemptId!.Value, fixture.Daemon.Id, "target unreachable",
+            PamRotationSyncState.TargetUnchanged, fixture.Now, maxAttempts: 5, TimeSpan.Zero);
+        Assert.Equal(PamRotationAttemptResolveOutcome.Resolved, errored.Outcome);
+        Assert.Equal(PamRotationJobStatus.Pending, errored.JobStatus);
+
+        var second = await CreateEnrolledDaemonAsync(apiKeyRepository, pamDaemonRepository, fixture.Organization.Id);
+        await AssignAsync(pamDaemonRepository, second.Id, fixture.Target.Id, fixture.Organization.Id, fixture.Now);
+        var retake = await pamRotationJobRepository.ClaimAsync(
+            fixture.Job.Id, second.Id, fixture.Now.AddMinutes(1), _releaseDelay);
+        Assert.NotNull(retake.AttemptId);
+
+        var forFirst = await pamRotationJobRepository.GetManyRecentByDaemonIdAsync(fixture.Daemon.Id, 10);
+
+        var firstJob = Assert.Single(forFirst);
+        Assert.Equal(fixture.Job.Id, firstJob.Id);
+        Assert.Equal(second.Id, firstJob.ClaimedByDaemonId);
+        var firstAttempt = Assert.Single(firstJob.Attempts);
+        Assert.Equal(firstClaim.AttemptId.Value, firstAttempt.Id);
+        Assert.Equal(PamRotationAttemptStatus.Errored, firstAttempt.Status);
+
+        var forSecond = await pamRotationJobRepository.GetManyRecentByDaemonIdAsync(second.Id, 10);
+        var secondJob = Assert.Single(forSecond);
+        Assert.Equal(fixture.Job.Id, secondJob.Id);
+        var secondAttempt = Assert.Single(secondJob.Attempts);
+        Assert.Equal(retake.AttemptId.Value, secondAttempt.Id);
+        Assert.Equal(PamRotationAttemptStatus.Executing, secondAttempt.Status);
+
+        var idle = await CreateEnrolledDaemonAsync(apiKeyRepository, pamDaemonRepository, fixture.Organization.Id);
+        Assert.Empty(await pamRotationJobRepository.GetManyRecentByDaemonIdAsync(idle.Id, 10));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyRecentByDaemonIdAsync_ReturnsNewestFirstAndHonoursTheLimit(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IApiKeyRepository apiKeyRepository,
+        IPamDaemonRepository pamDaemonRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IPamRotationJobRepository pamRotationJobRepository)
+    {
+        var now = DateTime.UtcNow;
+        var older = now.AddHours(-2);
+        var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
+            pamDaemonRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository, now: older);
+        await pamRotationJobRepository.ClaimAsync(fixture.Job.Id, fixture.Daemon.Id, older, _releaseDelay);
+
+        // A second config on the same target: AtMostOneActiveJobPerConfig rules out a second job on the first one, and
+        // the daemon's assignment is to the target, so it can work both.
+        var newerCipher = await CreateCipherAsync(cipherRepository, fixture.Organization.Id);
+        var newerConfig = await pamRotationConfigRepository.CreateAsync(
+            BuildConfig(fixture.Organization.Id, newerCipher.Id, fixture.Target.Id, now));
+        var newerJob = BuildPendingJob(newerConfig.Id, now);
+        Assert.Equal(PamRotationJobCreateOutcome.Created, await pamRotationJobRepository.CreateGuardedAsync(newerJob));
+        await pamRotationJobRepository.ClaimAsync(newerJob.Id, fixture.Daemon.Id, now, _releaseDelay);
+
+        var all = await pamRotationJobRepository.GetManyRecentByDaemonIdAsync(fixture.Daemon.Id, 10);
+        Assert.Equal(new[] { newerJob.Id, fixture.Job.Id }, all.Select(job => job.Id).ToArray());
+
+        // The cap keeps the newest, not whatever the storage engine returns first.
+        var capped = await pamRotationJobRepository.GetManyRecentByDaemonIdAsync(fixture.Daemon.Id, 1);
+        Assert.Equal(newerJob.Id, Assert.Single(capped).Id);
+    }
+
     private sealed record ClaimableJobFixture(
         Organization Organization,
         PamTargetSystem Target,

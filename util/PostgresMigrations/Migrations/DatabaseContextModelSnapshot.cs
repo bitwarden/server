@@ -2846,6 +2846,8 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ClaimedByDaemonId", "JobId");
+
                     b.HasIndex("JobId", "Status");
 
                     b.ToTable("PamRotationAttempt", (string)null);

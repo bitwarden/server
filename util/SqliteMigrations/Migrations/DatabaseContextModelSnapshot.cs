@@ -2829,6 +2829,8 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ClaimedByDaemonId", "JobId");
+
                     b.HasIndex("JobId", "Status");
 
                     b.ToTable("PamRotationAttempt", (string)null);

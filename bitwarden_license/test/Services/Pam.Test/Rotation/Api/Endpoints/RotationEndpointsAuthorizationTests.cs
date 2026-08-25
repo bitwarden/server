@@ -99,6 +99,17 @@ public class RotationEndpointsAuthorizationTests
     }
 
     [Fact]
+    public void MapPamEndpoints_MapsGetByIdForTheDaemonsResource()
+    {
+        var routes = AdminEndpoints()
+            .Where(e => e.RoutePattern.RawText == $"{AdminRoutePrefix}/daemons/{{id:guid}}")
+            .ToList();
+
+        Assert.Contains(routes,
+            e => e.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods.Contains(HttpMethods.Get));
+    }
+
+    [Fact]
     public void MapPamEndpoints_RotationAdminRoutesNeverAuthorizeProvidersByMembership()
     {
         // A daemon registered here is handed the organization key, which is not a provider's to hold.
