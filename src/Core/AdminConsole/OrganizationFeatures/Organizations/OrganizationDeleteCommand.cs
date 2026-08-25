@@ -1,10 +1,12 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Tools.Services;
@@ -63,7 +65,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 
         await _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
         await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
-        await _organizationRepository.DeleteAsync(organization);
+        await _organizationRepository.DeleteAndCreateDeleteTasksAsync(organization, [OrganizationDeleteTaskType.EventsCleanup]);
         await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
 
@@ -72,7 +74,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
         {
-            throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
+            throw new BadRequestException(new CannotDeleteOrganizationWithKeyConnectorError().Message);
         }
     }
 }

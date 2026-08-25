@@ -142,9 +142,57 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
         Assert.Equal("User not found within organization.", exception.Message);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task FinishProvisionAsync_KeyIdSupplied_RecordsTheUserKeyId(
+        SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
+        User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings,
+        Organization org, OrganizationUser orgUser, string masterPasswordHint)
+    {
+        // Arrange - this flow provisions the user key, so the supplied key id is authoritative
+        user.Key = null;
+        var keyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
+        var model = CreateValidModel(user, accountKeys, kdfSettings, org.Identifier, masterPasswordHint, keyId);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(org.Identifier)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns(orgUser);
+
+        UpdateUserData mockUpdateUserData = (connection, transaction) => Task.CompletedTask;
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .BuildUpdateUserDelegateSetInitialMasterPassword(user, Arg.Any<SetInitialPasswordData>())
+            .Returns(mockUpdateUserData);
+
+        UpdateUserData mockSetUserKeyId = (connection, transaction) => Task.CompletedTask;
+        sutProvider.GetDependency<IUserRepository>()
+            .SetUserKeyId(user.Id, keyId)
+            .Returns(mockSetUserKeyId);
+
+        // Act
+        await sutProvider.Sut.FinishProvisionAsync(user, model);
+
+        // Assert
+        sutProvider.GetDependency<IUserRepository>().Received(1).SetUserKeyId(user.Id, keyId);
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .SetV2AccountCryptographicStateAsync(
+                user.Id,
+                model.AccountKeys,
+                Arg.Do<IEnumerable<UpdateUserData>>(actions =>
+                {
+                    var actionsList = actions.ToList();
+                    Assert.Equal(2, actionsList.Count);
+                    Assert.Same(mockUpdateUserData, actionsList[0]);
+                    Assert.Same(mockSetUserKeyId, actionsList[1]);
+                }));
+    }
+
     private static SetInitialMasterPasswordDataModel CreateValidModel(
         User user, UserAccountKeysData? accountKeys, KdfSettings kdfSettings,
-        string orgSsoIdentifier, string? masterPasswordHint)
+        string orgSsoIdentifier, string? masterPasswordHint, KeyId? containedKeyId = null)
     {
         var salt = user.GetMasterPasswordSalt();
         return new SetInitialMasterPasswordDataModel
@@ -159,7 +207,8 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
-                Kdf = kdfSettings
+                Kdf = kdfSettings,
+                ContainedKeyId = containedKeyId
             },
             AccountKeys = accountKeys,
             OrgSsoIdentifier = orgSsoIdentifier,

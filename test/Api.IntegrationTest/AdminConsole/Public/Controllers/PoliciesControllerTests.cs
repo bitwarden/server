@@ -79,9 +79,12 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         Assert.IsType<Guid>(result.Id);
         Assert.NotEqual(default, result.Id);
         Assert.NotNull(result.Data);
-        Assert.Equal(4, ((JsonElement)result.Data["minComplexity"]).GetInt32());
-        Assert.Equal(128, ((JsonElement)result.Data["minLength"]).GetInt32());
-        Assert.True(((JsonElement)result.Data["requireLower"]).GetBoolean());
+        using (var resultData = JsonDocument.Parse(result.Data))
+        {
+            Assert.Equal(4, resultData.RootElement.GetProperty("minComplexity").GetInt32());
+            Assert.Equal(128, resultData.RootElement.GetProperty("minLength").GetInt32());
+            Assert.True(resultData.RootElement.GetProperty("requireLower").GetBoolean());
+        }
 
         // Assert against the database values
         var policyRepository = _factory.GetService<IPolicyRepository>();
@@ -145,8 +148,11 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         Assert.Equal(policyType, result.Type);
         Assert.Equal(expectedId, result.Id);
         Assert.NotNull(result.Data);
-        Assert.Equal(15, ((JsonElement)result.Data["minLength"]).GetInt32());
-        Assert.True(((JsonElement)result.Data["requireUpper"]).GetBoolean());
+        using (var resultData = JsonDocument.Parse(result.Data))
+        {
+            Assert.Equal(15, resultData.RootElement.GetProperty("minLength").GetInt32());
+            Assert.True(resultData.RootElement.GetProperty("requireUpper").GetBoolean());
+        }
 
         // Assert against the database values
         var policy = await policyRepository.GetByOrganizationIdTypeAsync(_organization.Id, policyType);

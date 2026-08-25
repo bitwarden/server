@@ -19,7 +19,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <param name="orgNameOverride">Optional organization name. Replaces the fixture/preset-supplied name when provided.</param>
     /// <param name="ownerEmailOverride">Optional owner email. Replaces the default <c>owner@&lt;domain&gt;</c> when provided.</param>
     /// <returns>Execution result with organization ID and entity counts</returns>
-    internal PipelineExecutionResult Execute(
+    internal async Task<PipelineExecutionResult> ExecuteAsync(
         string presetName,
         string? password = null,
         int? kdfIterations = null,
@@ -53,13 +53,13 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
         PresetLoader.RegisterRecipe(presetName, reader, services);
 
-        return BuildAndExecute(presetName, services);
+        return await BuildAndExecuteAsync(presetName, services);
     }
 
     /// <summary>
     /// Executes a recipe built programmatically from CLI options.
     /// </summary>
-    internal PipelineExecutionResult Execute(OrganizationVaultOptions options)
+    internal async Task<PipelineExecutionResult> ExecuteAsync(OrganizationVaultOptions options)
     {
         EnsureOwnerEmailUnique(
             options.OwnerEmail,
@@ -121,13 +121,13 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
         builder.Validate();
 
-        return BuildAndExecute(recipeName, services);
+        return await BuildAndExecuteAsync(recipeName, services);
     }
 
     /// <summary>
     /// Executes a recipe for an individual user built programmatically from CLI options.
     /// </summary>
-    internal PipelineExecutionResult Execute(IndividualUserOptions options)
+    internal async Task<PipelineExecutionResult> ExecuteAsync(IndividualUserOptions options)
     {
         var firstName = options.FirstName ?? new Bogus.Faker().Name.FirstName();
         var lastName = options.LastName ?? new Bogus.Faker().Name.LastName();
@@ -150,7 +150,11 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var recipeName = "individual-from-options";
         var builder = services.AddRecipe(recipeName);
 
-        builder.CreateIndividualUser(email, premium, maxStorageGb, options.SelfHosted);
+        DateTime? creationDate = options.AccountAgeDays > 0
+            ? DateTime.UtcNow.AddDays(-options.AccountAgeDays)
+            : null;
+
+        builder.CreateIndividualUser(email, premium, maxStorageGb, options.SelfHosted, creationDate);
         builder.WithGenerator("individual.example");
 
         if (options.GenerateVault)
@@ -161,15 +165,15 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
         builder.Validate();
 
-        return BuildAndExecute(recipeName, services);
+        return await BuildAndExecuteAsync(recipeName, services);
     }
 
-    private PipelineExecutionResult BuildAndExecute(string recipeName, ServiceCollection services)
+    private async Task<PipelineExecutionResult> BuildAndExecuteAsync(string recipeName, ServiceCollection services)
     {
-        using var serviceProvider = services.BuildServiceProvider();
+        await using var serviceProvider = services.BuildServiceProvider();
         var committer = new BulkCommitter(deps.Db, deps.Mapper);
         var executor = new RecipeExecutor(recipeName, serviceProvider, committer);
-        return executor.Execute();
+        return await executor.ExecuteAsync();
     }
 
     /// <summary>

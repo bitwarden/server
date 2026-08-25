@@ -7,6 +7,7 @@ using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -27,7 +28,7 @@ public class PoliciesController : Controller
 {
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
-    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IPolicyRepository _policyRepository;
@@ -39,14 +40,14 @@ public class PoliciesController : Controller
         ICurrentContext currentContext,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
-        IOrganizationRepository organizationRepository,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         ISavePolicyCommand savePolicyCommand,
         IPolicyQuery policyQuery)
     {
         _policyRepository = policyRepository;
         _organizationUserRepository = organizationUserRepository;
         _currentContext = currentContext;
-        _organizationRepository = organizationRepository;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
         _savePolicyCommand = savePolicyCommand;
@@ -85,9 +86,9 @@ public class PoliciesController : Controller
     public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(Guid orgId, [FromQuery] string email,
         [FromQuery] string token, [FromQuery] Guid organizationUserId)
     {
-        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        var organizationAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId);
 
-        if (organization is not { UsePolicies: true })
+        if (organizationAbility is not { UsePolicies: true })
         {
             throw new NotFoundException();
         }
@@ -115,9 +116,9 @@ public class PoliciesController : Controller
     [Authorize<OrgUserLinkedToUserIdRequirement>]
     public async Task<PolicyResponseModel> GetMasterPasswordPolicy(Guid orgId)
     {
-        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        var organizationAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId);
 
-        if (organization is not { UsePolicies: true })
+        if (organizationAbility is not { UsePolicies: true })
         {
             throw new NotFoundException();
         }

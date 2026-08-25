@@ -139,7 +139,7 @@ public static class RecipeBuilderExtensions
             throw new InvalidOperationException("SSO configuration requires a non-empty identifier.");
         }
 
-        builder.AddStep(_ => new CreateSsoConfigStep(identifier, provider, memberDecryptionType));
+        builder.AddAsyncStep(_ => new CreateSsoConfigStep(identifier, provider, memberDecryptionType));
         return builder;
     }
 
@@ -163,16 +163,18 @@ public static class RecipeBuilderExtensions
     /// <param name="premium">Whether the account has premium status</param>
     /// <param name="maxStorageGb">Optional max storage override in GB</param>
     /// <param name="selfHosted">When true, writes a license file after user creation (required for self-hosted premium validation)</param>
+    /// <param name="creationDate">Optional backdated CreationDate for aged-account scenarios. Null uses the current time.</param>
     /// <returns>The builder for fluent chaining</returns>
     public static RecipeBuilder CreateIndividualUser(
-        this RecipeBuilder builder, string email, bool premium, short maxStorageGb, bool selfHosted = false)
+        this RecipeBuilder builder, string email, bool premium, short maxStorageGb, bool selfHosted = false,
+        DateTime? creationDate = null)
     {
         builder.HasIndividualUser = true;
         builder.HasOwner = true;
-        builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb, true));
+        builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb, true, creationDate));
         if (selfHosted)
         {
-            builder.AddStep(sp => new GenerateSelfHostUserLicenseStep(sp.GetRequiredService<ILicensingService>()));
+            builder.AddAsyncStep(sp => new GenerateSelfHostUserLicenseStep(sp.GetRequiredService<ILicensingService>()));
         }
         return builder;
     }
@@ -396,7 +398,7 @@ public static class RecipeBuilderExtensions
                 "Cipher attachments require fixture ciphers. Call UseCiphers() or UsePersonalVaultCiphers() first.");
         }
 
-        builder.AddStep(_ => personal
+        builder.AddAsyncStep(_ => personal
             ? CreateCipherAttachmentsStep.ForPersonalVault(fixture)
             : CreateCipherAttachmentsStep.ForOrganization(fixture));
         return builder;

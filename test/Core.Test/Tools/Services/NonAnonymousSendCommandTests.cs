@@ -3,6 +3,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
@@ -34,7 +35,6 @@ public class NonAnonymousSendCommandTests
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly IEventService _eventService;
-    private readonly IFeatureService _featureService;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
 
     private readonly ILogger<NonAnonymousSendCommand> _logger;
@@ -48,7 +48,6 @@ public class NonAnonymousSendCommandTests
         _currentContext = Substitute.For<ICurrentContext>();
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
         _eventService = Substitute.For<IEventService>();
-        _featureService = Substitute.For<IFeatureService>();
         _logger = Substitute.For<ILogger<NonAnonymousSendCommand>>();
 
         _nonAnonymousSendCommand = new NonAnonymousSendCommand(
@@ -58,7 +57,6 @@ public class NonAnonymousSendCommandTests
             _sendValidationService,
             _sendCoreHelperService,
             _eventService,
-            _featureService,
             _logger
         );
     }
@@ -85,13 +83,13 @@ public class NonAnonymousSendCommandTests
 
         // Configure validation service to throw when DisableSend policy applies
         _sendValidationService.ValidateUserCanSaveAsync(send.UserId.Value, send)
-            .Throws(new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send."));
+            .Throws(new BadRequestException("Due to an Enterprise policy, you are only able to delete an existing Send."));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _nonAnonymousSendCommand.SaveSendAsync(send));
 
-        Assert.Contains("Enterprise Policy", exception.Message);
+        Assert.Contains("Enterprise policy", exception.Message);
 
         // Verify the validation service was called
         await _sendValidationService.Received(1).ValidateUserCanSaveAsync(send.UserId.Value, send);
@@ -136,14 +134,14 @@ public class NonAnonymousSendCommandTests
         {
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
-            await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendCreate && n.Payload.Id == send.Id));
         }
         else
         {
             // For existing Sends
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
-            await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
         }
     }
 
@@ -164,7 +162,7 @@ public class NonAnonymousSendCommandTests
 
         // Configure validation service to throw when HideEmail policy applies
         _sendValidationService.ValidateUserCanSaveAsync(userId, send)
-            .Throws(new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send."));
+            .Throws(new BadRequestException("Due to an Enterprise policy, you are not allowed to hide your email address from recipients when creating or editing a Send."));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -186,8 +184,8 @@ public class NonAnonymousSendCommandTests
         }
 
         // Verify push notification wasn't sent
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Theory]
@@ -226,14 +224,14 @@ public class NonAnonymousSendCommandTests
         {
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
-            await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendCreate && n.Payload.Id == send.Id));
         }
         else
         {
             // For existing Sends
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
-            await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
         }
     }
 
@@ -253,13 +251,13 @@ public class NonAnonymousSendCommandTests
 
         // Configure validation service to throw when DisableSend policy applies in vNext implementation
         _sendValidationService.ValidateUserCanSaveAsync(userId, send)
-            .Returns(Task.FromException(new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.")));
+            .Returns(Task.FromException(new BadRequestException("Due to an Enterprise policy, you are only able to delete an existing Send.")));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _nonAnonymousSendCommand.SaveSendAsync(send));
 
-        Assert.Contains("Enterprise Policy", exception.Message);
+        Assert.Contains("Enterprise policy", exception.Message);
 
         // Verify validation service was called
         await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
@@ -267,8 +265,8 @@ public class NonAnonymousSendCommandTests
         // Verify repository and notification methods were not called
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Theory]
@@ -307,14 +305,14 @@ public class NonAnonymousSendCommandTests
         {
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
-            await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendCreate && n.Payload.Id == send.Id));
         }
         else
         {
             // For existing Sends
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
-            await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
         }
     }
 
@@ -336,7 +334,7 @@ public class NonAnonymousSendCommandTests
 
         // Configure validation service to throw when DisableHideEmail policy applies in vNext implementation
         _sendValidationService.ValidateUserCanSaveAsync(userId, send)
-            .Throws(new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send."));
+            .Throws(new BadRequestException("Due to an Enterprise policy, you are not allowed to hide your email address from recipients when creating or editing a Send."));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -352,8 +350,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
 
         // Verify push notification wasn't sent
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Theory]
@@ -392,14 +390,14 @@ public class NonAnonymousSendCommandTests
         {
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
-            await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendCreate && n.Payload.Id == send.Id));
         }
         else
         {
             // For existing Sends
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
-            await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
         }
     }
 
@@ -434,7 +432,7 @@ public class NonAnonymousSendCommandTests
         Assert.NotEqual(initialDate, send.RevisionDate);
 
         // Verify push notification was sent for the update
-        await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
     }
 
     [Fact]
@@ -462,8 +460,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -491,8 +489,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -526,8 +524,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -566,8 +564,8 @@ public class NonAnonymousSendCommandTests
         // Verify no repository or notification methods were called after validation failed
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -600,8 +598,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -634,8 +632,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -669,8 +667,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -698,8 +696,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -733,8 +731,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -802,8 +800,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -837,8 +835,8 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
@@ -1137,7 +1135,7 @@ public class NonAnonymousSendCommandTests
 
         // Verify no repository updates occurred
         await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
         await _sendFileStorageService.DidNotReceive()
             .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
     }
@@ -1168,7 +1166,7 @@ public class NonAnonymousSendCommandTests
 
         // Verify no repository updates occurred
         await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
         await _sendFileStorageService.DidNotReceive()
             .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
     }
@@ -1199,7 +1197,7 @@ public class NonAnonymousSendCommandTests
 
         // Verify no repository updates occurred
         await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
         await _sendFileStorageService.DidNotReceive()
             .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
     }
@@ -1230,7 +1228,7 @@ public class NonAnonymousSendCommandTests
 
         // Verify no repository updates occurred
         await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
         await _sendFileStorageService.DidNotReceive()
             .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
     }
@@ -1267,7 +1265,7 @@ public class NonAnonymousSendCommandTests
 
         // Verify repository was updated
         await _sendRepository.Received(1).ReplaceAsync(send);
-        await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
 
         // Verify file storage service was called
         await _sendFileStorageService.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
@@ -1441,7 +1439,7 @@ public class NonAnonymousSendCommandTests
 
         await _sendFileStorageService.Received(1).DeleteFileAsync(send, fileData.Id);
         await _sendRepository.Received(1).DeleteAsync(send);
-        await _pushNotificationService.Received(1).PushSyncSendDeleteAsync(send);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendDelete && n.Payload.Id == send.Id));
         Assert.Equal(new[] { "file", "db" }, callOrder);
     }
 
@@ -1507,7 +1505,7 @@ public class NonAnonymousSendCommandTests
 
     [Theory]
     [MemberData(nameof(SendCreatedEventTypeData))]
-    public async Task SaveSendAsync_NewSend_FlagOn_LogsExpectedEventType(
+    public async Task SaveSendAsync_NewSend_LogsExpectedEventType(
         SendType sendType, AuthType authType, EventType expectedEventType)
     {
         var userId = Guid.NewGuid();
@@ -1519,7 +1517,6 @@ public class NonAnonymousSendCommandTests
             AuthType = authType,
         };
 
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
         _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
 
         await _nonAnonymousSendCommand.SaveSendAsync(send);
@@ -1540,7 +1537,6 @@ public class NonAnonymousSendCommandTests
             AuthType = null,
         };
 
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
         _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
 
         await _nonAnonymousSendCommand.SaveSendAsync(send);
@@ -1548,30 +1544,10 @@ public class NonAnonymousSendCommandTests
         await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), EventType.Send_Created_Text);
     }
 
-    [Fact]
-    public async Task SaveSendAsync_NewSend_FlagOff_DoesNotLogEvent()
-    {
-        var userId = Guid.NewGuid();
-        var send = new Send
-        {
-            Id = default,
-            Type = SendType.Text,
-            UserId = userId,
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
-        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
-
-        await _nonAnonymousSendCommand.SaveSendAsync(send);
-
-        await _sendRepository.Received(1).CreateAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
-    }
-
     [Theory]
     [InlineData(SendType.Text, EventType.Send_Edited_Text)]
     [InlineData(SendType.File, EventType.Send_Edited_File)]
-    public async Task SaveSendAsync_ExistingSend_FlagOn_LogsExpectedEventType(
+    public async Task SaveSendAsync_ExistingSend_LogsExpectedEventType(
         SendType sendType, EventType expectedEventType)
     {
         var userId = Guid.NewGuid();
@@ -1582,39 +1558,18 @@ public class NonAnonymousSendCommandTests
             UserId = userId,
         };
 
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
         _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
 
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
         await _sendRepository.Received(1).UpsertAsync(send);
         await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
-    }
-
-    [Fact]
-    public async Task SaveSendAsync_ExistingSend_FlagOff_DoesNotLogEvent()
-    {
-        var userId = Guid.NewGuid();
-        var send = new Send
-        {
-            Id = Guid.NewGuid(),
-            Type = SendType.Text,
-            UserId = userId,
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
-        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
-
-        await _nonAnonymousSendCommand.SaveSendAsync(send);
-
-        await _sendRepository.Received(1).UpsertAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Theory]
     [InlineData(SendType.Text, EventType.Send_Deleted_Text)]
     [InlineData(SendType.File, EventType.Send_Deleted_File)]
-    public async Task DeleteSendAsync_FlagOn_LogsExpectedEventType(
+    public async Task DeleteSendAsync_LogsExpectedEventType(
         SendType sendType, EventType expectedEventType)
     {
         var userId = Guid.NewGuid();
@@ -1625,31 +1580,10 @@ public class NonAnonymousSendCommandTests
             UserId = userId,
         };
 
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
-
         await _nonAnonymousSendCommand.DeleteSendAsync(send);
 
         await _sendRepository.Received(1).DeleteAsync(send);
-        await _pushNotificationService.Received(1).PushSyncSendDeleteAsync(send);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendDelete && n.Payload.Id == send.Id));
         await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
-    }
-
-    [Fact]
-    public async Task DeleteSendAsync_FlagOff_DoesNotLogEvent()
-    {
-        var userId = Guid.NewGuid();
-        var send = new Send
-        {
-            Id = Guid.NewGuid(),
-            Type = SendType.Text,
-            UserId = userId,
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
-
-        await _nonAnonymousSendCommand.DeleteSendAsync(send);
-
-        await _sendRepository.Received(1).DeleteAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 }

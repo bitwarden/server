@@ -46,6 +46,12 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// is not enrolled in account recovery.
     /// </summary>
     public string? ResetPasswordKey { get; set; }
+    /// <summary>
+    /// The V2 user key wrapped with the V1 user key, as JSON. Set during a V1 to V2 upgrade rotation.
+    /// An Organization admin reaches the V1 user key through account recovery, so the admin can unwrap
+    /// the V2 user key from this token and update <see cref="ResetPasswordKey"/> to it. NULL at all other times.
+    /// </summary>
+    public string? V2UpgradeToken { get; set; }
     /// <inheritdoc cref="OrganizationUserStatusType"/>
     public OrganizationUserStatusType Status { get; set; }
     /// <summary>
@@ -160,14 +166,23 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     public OrganizationUser UpdateOrganizationUser(OrganizationUserType organizationUserType,
         Permissions? permissions,
         bool accessSecretsManager,
+        bool accessPam,
         TimeProvider timeProvider)
     {
-        if (permissions is not null)
+        if (organizationUserType != OrganizationUserType.Custom)
+        {
+            // Custom permissions only apply to the Custom role. Clear them so a member demoted from Custom doesn't
+            // keep a stale permissions blob.
+            Permissions = null;
+        }
+        else if (permissions is not null)
         {
             SetPermissions(permissions);
         }
+
         Type = organizationUserType;
         AccessSecretsManager = accessSecretsManager;
+        AccessPam = accessPam;
         RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
         return this;
     }

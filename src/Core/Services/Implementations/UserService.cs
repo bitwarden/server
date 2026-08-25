@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -20,6 +21,7 @@ using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -236,7 +238,10 @@ public class UserService : UserManager<User>, IUserService
                     if (orgCount <= 1)
                     {
                         await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
-                        await _organizationRepository.DeleteAsync(org);
+                        // This is a right-to-erasure flow, so the organization's event logs have to
+                        // be purged from storage too, not just its database rows.
+                        await _organizationRepository.DeleteAndCreateDeleteTasksAsync(
+                            org, [OrganizationDeleteTaskType.EventsCleanup]);
                         deletedOrg = true;
                     }
                 }
@@ -246,7 +251,7 @@ public class UserService : UserManager<User>, IUserService
             {
                 return IdentityResult.Failed(new IdentityError
                 {
-                    Description = "Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.",
+                    Description = new SoleOwnerError().Message,
                 });
             }
         }
@@ -325,8 +330,16 @@ public class UserService : UserManager<User>, IUserService
         var result = await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationHash);
         if (result.Succeeded)
         {
-            var setRegisterFinishUserDataTask = _userRepository.UpdateMasterPasswordUnlockData(user.Id, registerFinishData);
-            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, registerFinishData.UserAccountKeysData, [setRegisterFinishUserDataTask]);
+            var updateUserDataActions = new List<UpdateUserData>
+            {
+                _userRepository.UpdateMasterPasswordUnlockData(user.Id, registerFinishData)
+            };
+            if (registerFinishData.UserKeyId is not null)
+            {
+                updateUserDataActions.Add(_userRepository.SetUserKeyId(user.Id, registerFinishData.UserKeyId));
+            }
+
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, registerFinishData.UserAccountKeysData, updateUserDataActions);
         }
         return result;
     }

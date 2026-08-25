@@ -33,181 +33,45 @@ public class SendsController : Controller
     private readonly IUserService _userService;
     private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
-    private readonly IAnonymousSendCommand _anonymousSendCommand;
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
     private readonly ISendOwnerQuery _sendOwnerQuery;
     private readonly ILogger<SendsController> _logger;
-    private readonly IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IEventService _eventService;
     private readonly ISendEventClassifier _sendEventClassifier;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SendsController(
         ISendRepository sendRepository,
         IUserService userService,
         ISendAuthorizationService sendAuthorizationService,
-        IAnonymousSendCommand anonymousSendCommand,
         INonAnonymousSendCommand nonAnonymousSendCommand,
         ISendOwnerQuery sendOwnerQuery,
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
-        IFeatureService featureService,
         IPushNotificationService pushNotificationService,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         IEventService eventService,
-        ISendEventClassifier sendEventClassifier
+        ISendEventClassifier sendEventClassifier,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService
     )
     {
         _sendRepository = sendRepository;
         _userService = userService;
         _sendAuthorizationService = sendAuthorizationService;
-        _anonymousSendCommand = anonymousSendCommand;
         _nonAnonymousSendCommand = nonAnonymousSendCommand;
         _sendOwnerQuery = sendOwnerQuery;
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
-        _featureService = featureService;
         _pushNotificationService = pushNotificationService;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _eventService = eventService;
         _sendEventClassifier = sendEventClassifier;
+        _featureService = featureService;
     }
 
     #region Anonymous endpoints
-
-    [AllowAnonymous]
-    [HttpPost("access/{id}")]
-    [ProducesResponseType<SendAccessResponseModel>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<SendAccessResponseModel> Access(string id, [FromBody] SendAccessRequestModel model)
-    {
-        // Uncomment whenever we want to require the `send-id` header
-        //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Send-Id") ||
-        //    _currentContext.HttpContext.Request.Headers["Send-Id"] != id)
-        //{
-        //    throw new BadRequestException("Invalid Send-Id header.");
-        //}
-
-        var guid = new Guid(CoreHelpers.Base64UrlDecode(id));
-        var send = await _sendRepository.GetByIdAsync(guid);
-
-        if (send == null)
-        {
-            throw new BadRequestException("Could not locate send");
-        }
-
-        if (send.AuthType == AuthType.Email && send.Emails is not null)
-        {
-            throw new NotFoundException();
-        }
-
-        var sendAuthResult =
-            await _sendAuthorizationService.AccessAsync(send, model.Password);
-        if (sendAuthResult.Equals(SendAccessResult.PasswordRequired))
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        if (sendAuthResult.Equals(SendAccessResult.PasswordInvalid))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException("Invalid password.");
-        }
-
-        if (sendAuthResult.Equals(SendAccessResult.Denied))
-        {
-            throw new NotFoundException();
-        }
-
-        var sendResponse = new SendAccessResponseModel(send);
-        if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
-        {
-            var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
-            sendResponse.CreatorIdentifier = creator.Email;
-        }
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
-            && send.UserId.HasValue
-            && send.Type == SendType.Text)
-        {
-            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
-                send.UserId.Value, accessorEmail: null);
-
-            await _eventService.LogSendEventAsync(
-                send.UserId.Value,
-                send.Id,
-                EventType.Send_Accessed_Text,
-                orgContext);
-        }
-
-        return sendResponse;
-    }
-
-    [AllowAnonymous]
-    [HttpPost("{encodedSendId}/access/file/{fileId}")]
-    [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<SendFileDownloadDataResponseModel> GetSendFileDownloadData(string encodedSendId,
-        string fileId, [FromBody] SendAccessRequestModel model)
-    {
-        // Uncomment whenever we want to require the `send-id` header
-        //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Send-Id") ||
-        //    _currentContext.HttpContext.Request.Headers["Send-Id"] != encodedSendId)
-        //{
-        //    throw new BadRequestException("Invalid Send-Id header.");
-        //}
-
-        var sendId = new Guid(CoreHelpers.Base64UrlDecode(encodedSendId));
-        var send = await _sendRepository.GetByIdAsync(sendId);
-
-        if (send == null)
-        {
-            throw new BadRequestException("Could not locate send");
-        }
-
-        if (send.AuthType == AuthType.Email && send.Emails is not null)
-        {
-            throw new NotFoundException();
-        }
-
-        var (url, result) = await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId,
-            model.Password);
-
-        if (result.Equals(SendAccessResult.PasswordRequired))
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        if (result.Equals(SendAccessResult.PasswordInvalid))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException("Invalid password.");
-        }
-
-        if (result.Equals(SendAccessResult.Denied))
-        {
-            throw new NotFoundException();
-        }
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
-        {
-            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
-                send.UserId.Value, accessorEmail: null);
-
-            await _eventService.LogSendEventAsync(
-                send.UserId.Value,
-                send.Id,
-                EventType.Send_Accessed_File,
-                orgContext);
-        }
-
-        return new SendFileDownloadDataResponseModel { Id = fileId, Url = url };
-    }
 
     [AllowAnonymous]
     [HttpPost("file/validate/azure")]
@@ -257,6 +121,10 @@ public class SendsController : Controller
     {
         var sendId = new Guid(id);
         var send = await _sendOwnerQuery.Get(sendId, User);
+        if (send.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            throw new NotFoundException();
+        }
         return new SendResponseModel(send);
     }
 
@@ -264,10 +132,13 @@ public class SendsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<SendResponseModel>> GetAll()
     {
-        var sends = await _sendOwnerQuery.GetOwned(User);
+        var sends = (await _sendOwnerQuery.GetOwned(User)).AsEnumerable();
+        if (!_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            sends = sends.Where(s => s.Type != SendType.Item);
+        }
         var responses = sends.Select(s => new SendResponseModel(s));
         var result = new ListResponseModel<SendResponseModel>(responses);
-
         return result;
     }
 
@@ -285,7 +156,7 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
+        if (!INonAnonymousSendCommand.SendCanBeAccessed(send) || (send.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing)))
         {
             throw new NotFoundException();
         }
@@ -311,8 +182,7 @@ public class SendsController : Controller
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
-            && send.UserId.HasValue
+        if (send.UserId.HasValue
             && send.Type == SendType.Text)
         {
             var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
@@ -351,7 +221,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
+        if (send.UserId.HasValue)
         {
             var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
                 send.UserId.Value,
@@ -373,7 +243,15 @@ public class SendsController : Controller
     {
         model.ValidateCreation();
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        if (model.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            throw new BadRequestException("Item type Sends are not yet enabled");
+        }
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
+        if (!hasPremium && model.Type == SendType.Item)
+        {
+            throw new BadRequestException("Item type Sends require a premium membership");
+        }
 
         if (!hasPremium && !string.IsNullOrWhiteSpace(model.Emails))
         {
@@ -480,9 +358,17 @@ public class SendsController : Controller
     public async Task<SendResponseModel> Put(string id, [FromBody] SendRequestModel model)
     {
         model.ValidateEdit();
+        if (model.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            throw new BadRequestException("Item type Sends are not yet enabled");
+        }
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
 
+        if (!hasPremium && model.Type == SendType.Item)
+        {
+            throw new BadRequestException("Item type Sends require a premium membership");
+        }
         if (!hasPremium && !string.IsNullOrWhiteSpace(model.Emails))
         {
             throw new BadRequestException("Email verified Sends require a premium membership");
@@ -492,6 +378,10 @@ public class SendsController : Controller
         if (send == null || send.UserId != userId)
         {
             throw new NotFoundException();
+        }
+        if (send.Type != model.Type)
+        {
+            throw new BadRequestException("Cannot change a Send's type");
         }
 
         await _nonAnonymousSendCommand.SaveSendAsync(model.UpdateSend(send, _sendAuthorizationService));

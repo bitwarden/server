@@ -18,6 +18,7 @@ public static class Claims
     public const string ProviderServiceUser = "providerserviceuser";
 
     public const string SecretsManagerAccess = "accesssecretsmanager";
+    public const string PamAccess = "accesspam";
 
     // Service Account
     public const string Organization = "organization";
@@ -40,6 +41,7 @@ public static class Claims
         public const string ManageUsers = "manageusers";
         public const string ManageResetPassword = "manageresetpassword";
         public const string ManageScim = "managescim";
+        public const string ManageAccessRules = "manageaccessrules";
     }
 
     /// <summary>

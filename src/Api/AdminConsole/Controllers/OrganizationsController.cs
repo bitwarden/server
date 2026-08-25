@@ -19,6 +19,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
@@ -143,10 +144,13 @@ public class OrganizationsController : Controller
     public async Task<ListResponseModel<ProfileOrganizationResponseModel>> GetUser()
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
+        var organizationsTask = _organizationUserRepository.GetManyDetailsByUserAsync(userId,
             OrganizationUserStatusType.Confirmed);
+        var claimingTask = _userService.GetOrganizationsClaimingUserAsync(userId);
+        await Task.WhenAll(organizationsTask, claimingTask);
 
-        var organizationsClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
+        var organizations = await organizationsTask;
+        var organizationsClaimingActiveUser = await claimingTask;
         var organizationIdsClaimingActiveUser = organizationsClaimingActiveUser.Select(o => o.Id);
 
         var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingActiveUser));
@@ -273,12 +277,12 @@ public class OrganizationsController : Controller
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector && user.UsesKeyConnector)
         {
-            throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
+            throw new BadRequestException(new LeaveOrgSsoBlockedError().Message);
         }
 
         if ((await _userService.GetOrganizationsClaimingUserAsync(user.Id)).Any(x => x.Id == id))
         {
-            throw new BadRequestException("Claimed user account cannot leave claiming organization. Contact your organization administrator for additional details.");
+            throw new BadRequestException(new LeaveOrgClaimedAccountError().Message);
         }
 
         await _removeOrganizationUserCommand.UserLeaveAsync(id, user.Id);

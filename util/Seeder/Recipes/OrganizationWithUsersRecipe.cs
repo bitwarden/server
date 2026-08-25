@@ -4,6 +4,7 @@ using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
@@ -35,10 +36,19 @@ public class OrganizationWithUsersRecipe(
         // Generate organization keys
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
         var organization = OrganizationSeeder.Create(
-            name, domain, seats, manglerService, orgKeys.PublicKey, orgKeys.PrivateKey);
+            new OrganizationSeed
+            {
+                Name = name,
+                Domain = domain,
+                Seats = seats,
+                PublicKey = orgKeys.PublicKey,
+                PrivateKey = orgKeys.PrivateKey
+            },
+            manglerService);
 
         // Create owner with SDK-generated keys
-        var (ownerUser, _) = UserSeeder.Create($"owner@{domain}", passwordHasher, manglerService);
+        var (ownerUser, _) = UserSeeder.Create(
+            new UserSeed { Email = $"owner@{domain}" }, passwordHasher, manglerService);
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
@@ -47,7 +57,8 @@ public class OrganizationWithUsersRecipe(
         var additionalOrgUsers = new List<OrganizationUser>();
         for (var i = 0; i < users; i++)
         {
-            var (additionalUser, _) = UserSeeder.Create($"user{i}@{domain}", passwordHasher, manglerService);
+            var (additionalUser, _) = UserSeeder.Create(
+                new UserSeed { Email = $"user{i}@{domain}" }, passwordHasher, manglerService);
             additionalUsers.Add(additionalUser);
 
             // Generate org key for confirmed/revoked users
@@ -67,8 +78,8 @@ public class OrganizationWithUsersRecipe(
         db.Add(mapper.Map<EfOrganizationUser>(ownerOrgUser));
 
         // Map and BulkCopy additional users
-        var efAdditionalUsers = additionalUsers.Select(u => mapper.Map<EfUser>(u)).ToList();
-        var efAdditionalOrgUsers = additionalOrgUsers.Select(ou => mapper.Map<EfOrganizationUser>(ou)).ToList();
+        var efAdditionalUsers = additionalUsers.Select(mapper.Map<EfUser>).ToList();
+        var efAdditionalOrgUsers = additionalOrgUsers.Select(mapper.Map<EfOrganizationUser>).ToList();
 
         db.BulkCopy(efAdditionalUsers);
         db.BulkCopy(efAdditionalOrgUsers);

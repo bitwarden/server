@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -200,7 +201,15 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         await OrganizationUpdateStorage(id);
     }
 
-    public override async Task DeleteAsync(Core.AdminConsole.Entities.Organization organization)
+    public override Task DeleteAsync(Core.AdminConsole.Entities.Organization organization)
+        => DeleteInternalAsync(organization, []);
+
+    public Task DeleteAndCreateDeleteTasksAsync(Core.AdminConsole.Entities.Organization organization,
+        IEnumerable<OrganizationDeleteTaskType> taskTypes)
+        => DeleteInternalAsync(organization, taskTypes);
+
+    private async Task DeleteInternalAsync(Core.AdminConsole.Entities.Organization organization,
+        IEnumerable<OrganizationDeleteTaskType> deleteTaskTypes)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -231,6 +240,30 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.OrganizationIntegrations.Where(oi => oi.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            // The PAM leasing tables need the same treatment, and additionally reference each other:
+            // AccessRequest.ExtensionOfLeaseId -> AccessLease and AccessLease.AccessRequestId -> AccessRequest are
+            // both Restrict, while Organization cascades to both. Whichever cascade the provider fired first would
+            // be blocked by the other, so an organization holding an extended lease could not be deleted at all.
+            // Detaching the extension links breaks that cycle; AccessDecision then cascades from AccessRequest, and
+            // clearing the requests first releases their AccessRequest.RuleId hold on the rules removed below.
+            await dbContext.AccessRequests
+                .Where(r => r.OrganizationId == organization.Id && r.ExtensionOfLeaseId != null)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.ExtensionOfLeaseId, (Guid?)null));
+            await dbContext.AccessLeases.Where(l => l.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.AccessRequests.Where(r => r.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            // Detach the collections before removing the rules they point at. Organization cascades to both
+            // Collection and AccessRule while Collection -> AccessRule does not, so leaving this to the database
+            // would make the delete depend on which of those two cascade paths the provider happens to apply
+            // first. Clearing the association explicitly keeps the outcome the same on all four databases.
+            await dbContext.Collections
+                .Where(c => c.OrganizationId == organization.Id && c.AccessRuleId != null)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.AccessRuleId, (Guid?)null));
+            await dbContext.AccessRules.Where(ar => ar.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
             await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
@@ -269,8 +302,28 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
             dbContext.Remove(orgEntity);
 
-            await organizationDeleteTransaction.CommitAsync();
+            // Atomically enqueue the cleanup tasks within the same transaction as the
+            // deletion, so durable downstream cleanup is never lost if the delete commits.
+            // One row is created per supplied task type.
+            var creationDate = DateTime.UtcNow;
+            var deleteTasks = deleteTaskTypes
+                .Select(taskType =>
+                {
+                    var deleteTask = new Dirt.Models.OrganizationDeleteTask
+                    {
+                        OrganizationId = organization.Id,
+                        TaskType = taskType,
+                        CreationDate = creationDate,
+                        RevisionDate = creationDate,
+                    };
+                    deleteTask.SetNewId();
+                    return deleteTask;
+                })
+                .ToList();
+            await dbContext.OrganizationDeleteTasks.AddRangeAsync(deleteTasks);
+
             await dbContext.SaveChangesAsync();
+            await organizationDeleteTransaction.CommitAsync();
         }
     }
 
@@ -386,7 +439,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     organization.Seats > 0 &&
                     organization.Status == OrganizationStatusType.Created &&
                     !organization.UseSecretsManager &&
-                    planTypes.Contains(organization.PlanType)
+                    planTypes.Contains(organization.PlanType) &&
+                    !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == organization.Id)
                 select organization;
 
             return await query.ToArrayAsync();

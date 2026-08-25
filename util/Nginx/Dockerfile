@@ -1,4 +1,4 @@
-FROM nginx:1.31-alpine3.23
+FROM nginx:1.31-alpine3.24
 
 LABEL com.bitwarden.product="bitwarden"
 
@@ -21,6 +21,6 @@ EXPOSE 8443
 RUN chmod +x /entrypoint.sh \
     && chmod +x /logrotate.sh
 
-HEALTHCHECK CMD wget --quiet --tries=1 --no-check-certificate --output-document=/dev/null https://localhost:8443/alive || wget --quiet --tries=1 --output-document=/dev/null http://localhost:8080/alive || exit 1
+HEALTHCHECK CMD wget -Y off --quiet --tries=1 --no-check-certificate --output-document=/dev/null https://localhost:8443/alive || wget -Y off --quiet --tries=1 --output-document=/dev/null http://localhost:8080/alive || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
