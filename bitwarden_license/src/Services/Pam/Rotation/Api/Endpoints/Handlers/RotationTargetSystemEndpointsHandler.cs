@@ -1,9 +1,9 @@
 ﻿using Bit.Core.Context;
 using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Rotation.Api.Models.Request;
 using Bit.Services.Pam.Rotation.Api.Models.Response;
 using Bit.Services.Pam.Rotation.Commands.Interfaces;
-using Bit.Services.Pam.Rotation.Queries.Interfaces;
 
 namespace Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 
@@ -15,7 +15,7 @@ namespace Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 /// </summary>
 public class RotationTargetSystemEndpointsHandler(
     ICurrentContext currentContext,
-    IListTargetSystemsQuery listTargetSystemsQuery,
+    IPamTargetSystemRepository targetSystemRepository,
     IRegisterTargetSystemCommand registerTargetSystemCommand,
     ISetTargetSystemStatusCommand setTargetSystemStatusCommand,
     IRenameTargetSystemCommand renameTargetSystemCommand,
@@ -23,7 +23,7 @@ public class RotationTargetSystemEndpointsHandler(
 {
     public async Task<ListResponseModel<PamTargetSystemResponseModel>> GetAll(Guid orgId)
     {
-        var targetSystems = await listTargetSystemsQuery.ListAsync(orgId);
+        var targetSystems = await targetSystemRepository.GetManyByOrganizationIdAsync(orgId);
         return new ListResponseModel<PamTargetSystemResponseModel>(
             targetSystems.Select(targetSystem => new PamTargetSystemResponseModel(targetSystem)));
     }

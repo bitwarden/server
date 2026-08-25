@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Rotation.Api.Models.Response;
-using Bit.Services.Pam.Rotation.Queries.Interfaces;
 
 namespace Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 
@@ -14,12 +14,14 @@ namespace Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 /// </summary>
 public class RotationDaemonJobsEndpointsHandler(
     ICurrentContext currentContext,
-    IListClaimableJobsQuery listClaimableJobsQuery)
+    IPamRotationJobRepository jobRepository,
+    TimeProvider timeProvider)
 {
     public async Task<ListResponseModel<ClaimableRotationJobResponseModel>> GetJobs()
     {
         var daemonId = currentContext.PamDaemonId!.Value;
-        var jobs = await listClaimableJobsQuery.ListAsync(daemonId);
+        var jobs = await jobRepository.GetManyClaimableByDaemonIdAsync(
+            daemonId, timeProvider.GetUtcNow().UtcDateTime);
 
         return new ListResponseModel<ClaimableRotationJobResponseModel>(
             jobs.Select(job => new ClaimableRotationJobResponseModel(job)));

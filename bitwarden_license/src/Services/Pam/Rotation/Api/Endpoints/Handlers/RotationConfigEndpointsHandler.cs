@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.HttpExtensions;
 using Bit.Pam;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Rotation.Api.Models.Request;
 using Bit.Services.Pam.Rotation.Api.Models.Response;
 using Bit.Services.Pam.Rotation.Commands.Interfaces;
@@ -22,7 +23,7 @@ namespace Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 public class RotationConfigEndpointsHandler(
     ICurrentContext currentContext,
     TimeProvider timeProvider,
-    IListRotationConfigsQuery listRotationConfigsQuery,
+    IPamRotationConfigRepository configRepository,
     IGetRotationConfigDetailsQuery getRotationConfigDetailsQuery,
     ICreateRotationConfigCommand createRotationConfigCommand,
     IUpdateRotationSettingsCommand updateRotationSettingsCommand,
@@ -35,7 +36,7 @@ public class RotationConfigEndpointsHandler(
 {
     public async Task<ListResponseModel<PamRotationConfigResponseModel>> GetAll(Guid orgId)
     {
-        var configs = await listRotationConfigsQuery.ListAsync(orgId);
+        var configs = await configRepository.GetManyDetailsByOrganizationIdAsync(orgId);
         var now = timeProvider.GetUtcNow().UtcDateTime;
         return new ListResponseModel<PamRotationConfigResponseModel>(
             configs.Select(config => new PamRotationConfigResponseModel(

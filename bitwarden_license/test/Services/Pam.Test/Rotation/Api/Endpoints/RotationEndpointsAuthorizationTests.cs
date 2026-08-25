@@ -170,7 +170,6 @@ public class RotationEndpointsAuthorizationTests
         services.AddSingleton(currentContext);
         services.AddSingleton(Substitute.For<IPamDaemonRepository>());
         services.AddSingleton(Substitute.For<IPamRotationJobRepository>());
-        services.AddSingleton(Substitute.For<IListClaimableJobsQuery>());
         services.AddSingleton(Substitute.For<IClaimRotationJobCommand>());
         services.AddSingleton(Substitute.For<IGetRotationCipherQuery>());
         services.AddSingleton(Substitute.For<ISubmitCipherUpdateCommand>());
