@@ -46,6 +46,15 @@ public class SsoConfigurationData
     }
     public string KeyConnectorUrl { get; set; }
 
+    /// <summary>
+    /// When enabled, SSO login will not just-in-time (JIT) provision a brand-new account for a user
+    /// who has no existing Bitwarden account and no existing organization membership. Such logins are
+    /// rejected instead of creating an account. Existing users, admin-invited users, and
+    /// SCIM-provisioned users all arrive with a pre-existing organization membership and are
+    /// unaffected. Defaults to false (JIT provisioning enabled).
+    /// </summary>
+    public bool DisableJitProvisioning { get; set; }
+
     // OIDC
     public string Authority { get; set; }
     public string ClientId { get; set; }

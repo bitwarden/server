@@ -2,10 +2,14 @@
 using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -930,5 +934,184 @@ public class AccountControllerTest
         var ex = Assert.Throws<Exception>(() =>
             sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken));
         Assert.Equal("InvalidSsoToken", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateUserAndOrgUserConditionallyAsync_JitProvisioningDisabled_NetNewLogin_ThrowsPreexistingMembershipException(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange — net-new login: no existing Bitwarden user and no pre-existing
+        // OrganizationUser (no admin invite, no SCIM row). With JIT provisioning disabled,
+        // the guard must refuse to create an account. This is the SSO email-fallback
+        // provisioning vector the setting is designed to close.
+        var orgId = Guid.NewGuid();
+        var providerUserId = "spoof-external-id";
+        var email = "ceo@example.com";
+        var organization = new Organization { Id = orgId, Name = "Org" };
+
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
+
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Email, email),
+            new Claim(JwtClaimTypes.Name, "Spoofed CEO")
+        } as IEnumerable<Claim>;
+        var config = new SsoConfigurationData { DisableJitProvisioning = true };
+
+        var method = typeof(AccountController).GetMethod(
+            "CreateUserAndOrgUserConditionallyAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        // Act + Assert
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
+        {
+            orgId.ToString(),
+            providerUserId,
+            claims,
+            null!,
+            config
+        })!;
+
+        var ex = await Assert.ThrowsAsync<SsoAuthnRequiresPreexistingMembershipException>(async () => await task);
+        Assert.Equal(orgId, ex.OrganizationId);
+        Assert.Equal("Org", ex.OrganizationDisplayName);
+        Assert.Equal(email, ex.UserEmail);
+
+        // Security invariant: nothing is provisioned — no user, no org user, no SSO link.
+        await sutProvider.GetDependency<IRegisterUserCommand>().DidNotReceive()
+            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), Arg.Any<Organization>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
+            .CreateAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<ISsoUserRepository>().DidNotReceive()
+            .CreateAsync(Arg.Any<SsoUser>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateUserAndOrgUserConditionallyAsync_JitProvisioningDisabled_WithPreexistingInvitedOrgUser_ProvisionsAccount(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange — a SCIM-provisioned (or admin-invited) user: no User record yet, but a
+        // pre-existing Invited OrganizationUser row (UserId null). Even with JIT disabled the
+        // guard must NOT fire — this user was authorized out-of-band, so their first SSO login
+        // still provisions the account (Scenario 3). This proves SCIM/invite flows are unaffected.
+        var orgId = Guid.NewGuid();
+        var providerUserId = "scim-external-id";
+        var email = "invited.scim@example.com";
+        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
+        var invitedOrgUser = new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            UserId = null,
+            Email = email,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.User
+        };
+
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(orgId, email).Returns(invitedOrgUser);
+
+        // Two-factor policy lookup must return a concrete (disabled) status so provisioning proceeds.
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(orgId, PolicyType.TwoFactorAuthentication)
+            .Returns(new PolicyStatus(orgId, PolicyType.TwoFactorAuthentication));
+
+        sutProvider.GetDependency<ISsoUserRepository>()
+            .GetByUserIdOrganizationIdAsync(orgId, Arg.Any<Guid>()).Returns((SsoUser?)null);
+
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Email, email),
+            new Claim(JwtClaimTypes.Name, "SCIM User")
+        } as IEnumerable<Claim>;
+        var config = new SsoConfigurationData { DisableJitProvisioning = true };
+
+        var method = typeof(AccountController).GetMethod(
+            "CreateUserAndOrgUserConditionallyAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        // Act
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
+        {
+            orgId.ToString(),
+            providerUserId,
+            claims,
+            null!,
+            config
+        })!;
+        await task;
+
+        // Assert — the guard did not fire; the invited user was provisioned (Scenario 3):
+        // a new User was registered and the SSO link was written with the incoming ExternalId.
+        await sutProvider.GetDependency<IRegisterUserCommand>().Received(1)
+            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), organization);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Id == invitedOrgUser.Id));
+        await sutProvider.GetDependency<ISsoUserRepository>().Received(1)
+            .CreateAsync(Arg.Is<SsoUser>(s => s.OrganizationId == orgId && s.ExternalId == providerUserId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateUserAndOrgUserConditionallyAsync_JitProvisioningEnabled_NetNewLogin_ProvisionsNewAccount(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange — regression guard: with JIT provisioning enabled (the default), a net-new
+        // login with no existing user and no org user still provisions a brand-new account
+        // (Scenario 2). Confirms the new setting is inert when left off.
+        var orgId = Guid.NewGuid();
+        var providerUserId = "new-external-id";
+        var email = "brand.new@example.com";
+        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
+
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(orgId, PolicyType.TwoFactorAuthentication)
+            .Returns(new PolicyStatus(orgId, PolicyType.TwoFactorAuthentication));
+        sutProvider.GetDependency<ISsoUserRepository>()
+            .GetByUserIdOrganizationIdAsync(orgId, Arg.Any<Guid>()).Returns((SsoUser?)null);
+
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Email, email),
+            new Claim(JwtClaimTypes.Name, "Brand New")
+        } as IEnumerable<Claim>;
+        var config = new SsoConfigurationData(); // DisableJitProvisioning defaults to false
+
+        var method = typeof(AccountController).GetMethod(
+            "CreateUserAndOrgUserConditionallyAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        // Act
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
+        {
+            orgId.ToString(),
+            providerUserId,
+            claims,
+            null!,
+            config
+        })!;
+        await task;
+
+        // Assert — a new user, org user, and SSO link are all created (Scenario 2 unchanged).
+        await sutProvider.GetDependency<IRegisterUserCommand>().Received(1)
+            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), organization);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .CreateAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.OrganizationId == orgId &&
+                ou.Status == OrganizationUserStatusType.Invited &&
+                ou.Type == OrganizationUserType.User));
+        await sutProvider.GetDependency<ISsoUserRepository>().Received(1)
+            .CreateAsync(Arg.Is<SsoUser>(s => s.OrganizationId == orgId && s.ExternalId == providerUserId));
     }
 }
