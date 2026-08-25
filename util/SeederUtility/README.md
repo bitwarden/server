@@ -56,7 +56,7 @@ dotnet run -- individual --subscription premium --first-name Jane --last-name Sm
 dotnet run -- individual --subscription free --account-age-days 365
 ```
 
-Add `--self-hosted` when targeting a self-hosted instance — without it, premium status won't be recognized. The license file is only written when `licenseCertificatePath` and `licenseCertificatePassword` point at a PFX that carries the private key of a trusted Bitwarden licensing certificate (the dev or prod licensing cert); a self-hosted instance rejects licenses signed by any other key. With no such certificate configured — or a mismatched one — the seeder logs a warning and skips license generation rather than writing a file the instance won't accept; the account is still created, just without recognized premium.
+Add `--self-hosted` when targeting a self-hosted instance; without it, premium status won't be recognized. A license is written only when `licenseCertificatePath` and `licenseCertificatePassword` point at a PFX holding the Bitwarden **development** licensing key; the production certificate is deliberately not trusted. With no matching certificate, the seeder logs a warning and skips license generation, so the account is still created, just without recognized premium.
 
 Use `--account-age-days N` to backdate the account's `CreationDate` by `N` days (default `0` = today) for scenarios that depend on account age. Only `CreationDate` is backdated; the revision dates stay at the seed time.
 
