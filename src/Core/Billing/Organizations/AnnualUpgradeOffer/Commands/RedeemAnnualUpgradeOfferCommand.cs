@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.Schedules;
@@ -75,7 +76,8 @@ public class RedeemAnnualUpgradeOfferCommand(
             {
                 Price = line.TargetPriceId,
                 Quantity = line.Item.Quantity,
-                Discounts = ItemDiscounts(line.Item)
+                Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
+                    line.Item.Discounts?.Select(d => d?.Source?.CouponId) ?? [])
             })
             .ToList();
 
@@ -128,20 +130,12 @@ public class RedeemAnnualUpgradeOfferCommand(
             {
                 StartDate = phase1.StartDate,
                 EndDate = phase1.EndDate,
-                Items = [.. phase1.Items.Select(i =>
+                Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
                 {
-                    var itemDiscounts = i.Discounts is { Count: > 0 } ?
-                        i.Discounts.Select(d => new SubscriptionSchedulePhaseItemDiscountOptions
-                        {
-                            Coupon = d.CouponId
-                        }).ToList() : null;
-
-                    return new SubscriptionSchedulePhaseItemOptions
-                    {
-                        Price = i.PriceId,
-                        Quantity = i.Quantity,
-                        Discounts = itemDiscounts
-                    };
+                    Price = i.PriceId,
+                    Quantity = i.Quantity,
+                    Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
+                        i.Discounts?.Select(d => d.CouponId) ?? [])
                 })],
                 Discounts = ReusedPhaseDiscounts(subscription),
                 // Only the marker's presence is read; the value is for triage.
@@ -205,16 +199,4 @@ public class RedeemAnnualUpgradeOfferCommand(
         subscription.Discounts is { Count: > 0 }
             ? [.. subscription.Discounts.Select(discount => new SubscriptionSchedulePhaseDiscountOptions { Discount = discount.Id })]
             : null;
-
-    // An item-bound coupon does not travel with the customer or subscription discounts.
-    // Out-of-scope coupons are accepted and applied as zero, so copying can only help.
-    private static List<SubscriptionSchedulePhaseItemDiscountOptions>? ItemDiscounts(SubscriptionItem item)
-    {
-        var discounts = item.Discounts?
-            .Where(discount => !string.IsNullOrEmpty(discount?.Source?.CouponId))
-            .Select(discount => new SubscriptionSchedulePhaseItemDiscountOptions { Coupon = discount!.Source.CouponId })
-            .ToList();
-
-        return discounts is { Count: > 0 } ? discounts : null;
-    }
 }
