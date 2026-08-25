@@ -1,4 +1,5 @@
-﻿using Stripe;
+﻿using Microsoft.Extensions.Logging;
+using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;
 
 namespace Bit.Core.Billing.Extensions;
@@ -178,5 +179,43 @@ public static class DiscountExtensions
         }
 
         return discounts.Count == 0 ? null : discounts;
+    }
+
+    /// <summary>
+    /// Throws when <paramref name="subscription"/> is missing an expansion the discount builders rely on:
+    /// <c>discounts</c> / <c>customer</c> (their absence would silently drop discounts), and <c>test_clock</c>
+    /// when the subscription is on one (its absence resolves the current phase against the wrong time, which
+    /// flips the current-vs-future decision that drives discount carry-over). Logs before throwing.
+    /// </summary>
+    /// <param name="subscription">The subscription to check for missing expansions.</param>
+    /// <param name="logger">Logger used to record the failure before throwing.</param>
+    public static void RequireScheduleDiscountExpansions(Subscription subscription, ILogger logger)
+    {
+        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(discount => discount is null))
+        {
+            logger.LogError(
+                "Subscription {SubscriptionId} was loaded without expanding \"discounts\"; existing discounts would be silently dropped",
+                subscription.Id);
+            throw new InvalidOperationException(
+                $"Subscription {subscription.Id} was loaded without expanding \"discounts\". Expand \"discounts.source.coupon\" first.");
+        }
+
+        if (subscription.Customer is null)
+        {
+            logger.LogError(
+                "Subscription {SubscriptionId} was loaded without expanding \"customer\"; a customer-level coupon would be silently dropped",
+                subscription.Id);
+            throw new InvalidOperationException(
+                $"Subscription {subscription.Id} was loaded without expanding \"customer\". Expand \"customer.discount.source.coupon\" first.");
+        }
+
+        if (subscription.TestClockId is not null && subscription.TestClock is null)
+        {
+            logger.LogError(
+                "Subscription {SubscriptionId} is on test clock {TestClockId}, which was not expanded",
+                subscription.Id, subscription.TestClockId);
+            throw new InvalidOperationException(
+                $"Subscription {subscription.Id} is on a test clock that was not expanded. Expand \"test_clock\" first.");
+        }
     }
 }

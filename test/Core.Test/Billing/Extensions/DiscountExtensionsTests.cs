@@ -1,4 +1,6 @@
 ﻿using Bit.Core.Billing.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
+using Newtonsoft.Json;
 using Stripe;
 using Xunit;
 
@@ -274,5 +276,57 @@ public class DiscountExtensionsTests
     public void BuildSubscriptionLevelDiscounts_Empty_ReturnsNull()
     {
         Assert.Null(DiscountExtensions.BuildSubscriptionLevelDiscounts(Sub(), []));
+    }
+
+    // ---- RequireScheduleDiscountExpansions ----
+
+    [Fact]
+    public void RequireScheduleDiscountExpansions_UnexpandedDiscounts_Throws()
+    {
+        // Stripe.net's Subscription.Discounts setter throws on a null element (it assumes fully
+        // expanded input), so an unexpanded discount ID can only be reproduced the way Stripe.net
+        // itself produces one: deserializing a subscription whose "discounts" array holds bare ID
+        // strings instead of expanded objects.
+        var sub = JsonConvert.DeserializeObject<Subscription>("""{"id":"sub_1","discounts":["di_1"]}""");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            DiscountExtensions.RequireScheduleDiscountExpansions(sub!, NullLogger.Instance));
+    }
+
+    [Fact]
+    public void RequireScheduleDiscountExpansions_MissingCustomer_Throws()
+    {
+        var sub = new Subscription { Id = "sub_1", Customer = null };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            DiscountExtensions.RequireScheduleDiscountExpansions(sub, NullLogger.Instance));
+    }
+
+    [Fact]
+    public void RequireScheduleDiscountExpansions_TestClockIdWithoutExpansion_Throws()
+    {
+        var sub = new Subscription
+        {
+            Id = "sub_1",
+            Customer = new Customer(),
+            TestClockId = "clock_1",
+            TestClock = null
+        };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            DiscountExtensions.RequireScheduleDiscountExpansions(sub, NullLogger.Instance));
+    }
+
+    [Fact]
+    public void RequireScheduleDiscountExpansions_FullyExpanded_DoesNotThrow()
+    {
+        var sub = new Subscription
+        {
+            Id = "sub_1",
+            Discounts = null,
+            Customer = new Customer()
+        };
+
+        DiscountExtensions.RequireScheduleDiscountExpansions(sub, NullLogger.Instance);
     }
 }
