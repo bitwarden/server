@@ -65,6 +65,12 @@ public class OrganizationAccessPolicyScene(
             throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
         }
 
+        if (!organization.UseSecretsManager)
+        {
+            throw new InvalidOperationException(
+                $"Organization {request.OrganizationId} does not have Secrets Manager enabled.");
+        }
+
         var policies = request.Grants.Select(BuildPolicy).ToList();
 
         var created = await accessPolicyRepository.CreateManyAsync(policies);

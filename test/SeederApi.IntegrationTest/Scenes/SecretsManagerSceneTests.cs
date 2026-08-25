@@ -1,7 +1,9 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using Bit.Core.Billing.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.RustSDK;
+using Bit.Seeder.Options;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
@@ -129,6 +131,35 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
         Assert.False(serviceAccountPolicy.Write);
     }
 
+    [Fact]
+    public async Task OrganizationProjectScene_OrganizationWithoutSecretsManager_ReturnsBadRequest()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, _, organizationKeyB64) = await SeedNonSmOrganizationAsync(playId, ownerUserId);
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(OrganizationProjectScene),
+            Arguments = JsonSerializer.SerializeToElement(new OrganizationProjectScene.Request
+            {
+                OrganizationId = organizationId,
+                OrganizationKeyB64 = organizationKeyB64,
+                Name = "Production"
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("does not have Secrets Manager enabled", body);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        Assert.False(await db.Project.AnyAsync(p => p.OrganizationId == organizationId));
+    }
+
     private async Task<Guid> SeedUserAsync(string playId)
     {
         var result = await PostSceneAsync(playId, "SingleUserScene", new SingleUserScene.Request
@@ -154,6 +185,25 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
             EnableSecretsManager = true,
             SmSeats = 10,
             SmServiceAccounts = 10
+        });
+
+        return (result.GetProperty("organizationId").GetGuid(),
+            result.GetProperty("organizationUserId").GetGuid(),
+            result.GetProperty("organizationKeyB64").GetString()!);
+    }
+
+    private async Task<(Guid OrganizationId, Guid OrgUserId, string OrganizationKeyB64)> SeedNonSmOrganizationAsync(
+        string playId, Guid ownerUserId)
+    {
+        var result = await PostSceneAsync(playId, "SingleOrganizationScene", new SingleOrganizationScene.Request
+        {
+            OwnerUserId = ownerUserId,
+            PlanType = PlanType.EnterpriseAnnually,
+            Name = "No SM Org",
+            Domain = $"nosm-{Guid.NewGuid():N}.example.com",
+            Seats = 10,
+            EnableSecretsManager = false,
+            Overrides = new OrganizationOverrides { UseSecretsManager = false }
         });
 
         return (result.GetProperty("organizationId").GetGuid(),

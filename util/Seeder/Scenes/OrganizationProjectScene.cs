@@ -39,6 +39,12 @@ public class OrganizationProjectScene(
             throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
         }
 
+        if (!organization.UseSecretsManager)
+        {
+            throw new InvalidOperationException(
+                $"Organization {request.OrganizationId} does not have Secrets Manager enabled.");
+        }
+
         var project = new Project
         {
             OrganizationId = organization.Id,
