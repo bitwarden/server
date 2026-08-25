@@ -7,14 +7,14 @@ namespace Bit.Services.Pam.Api.Models.Request;
 public class AccessRuleRequestModel
 {
     /// <summary>
-    /// The rule's display name, shown wherever rules are listed and managed. Required; up to 256 characters.
+    /// The rule's display name, shown wherever rules are listed and managed.
     /// </summary>
     [Required]
     [StringLength(256)]
     public string Name { get; set; } = null!;
 
     /// <summary>
-    /// Optional free-text describing the rule's intent. Has no effect on evaluation; surfaced to admins only.
+    /// Free-text describing the rule's intent. Has no effect on evaluation; surfaced to admins only.
     /// </summary>
     public string? Description { get; set; }
 
@@ -27,8 +27,7 @@ public class AccessRuleRequestModel
     /// <summary>
     /// The conditions that decide how access is granted under this rule — for example requiring human approval,
     /// or restricting to certain source IPs. Sent as a JSON array of condition objects and stored verbatim.
-    /// Required — a null or omitted value is rejected; an empty array means the rule imposes no conditions, so
-    /// requests under it resolve automatically.
+    /// An empty array means the rule imposes no conditions, so requests under it resolve automatically.
     /// </summary>
     [Required]
     public object Conditions { get; set; } = null!;
