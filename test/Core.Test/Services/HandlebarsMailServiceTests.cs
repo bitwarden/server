@@ -20,6 +20,11 @@ namespace Bit.Core.Test.Services;
 
 public class HandlebarsMailServiceTests
 {
+    // CoreHelpers.PreventEmailAutoLinking inserts this after "." and "@" so mail clients
+    // do not auto-link organization names that look like domains. Handlebars encodes it as
+    // &#8204; in HTML parts; text templates triple-stache the value so it stays raw.
+    private const string ZeroWidthNonJoiner = "\u200C";
+
     private readonly HandlebarsMailService _sut;
 
     private readonly GlobalSettings _globalSettings;
@@ -356,8 +361,9 @@ public class HandlebarsMailServiceTests
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
             m.Subject == "Acme.Corp seat limit reached" &&
-            m.HtmlContent.Contains("Acme.Corp has reached the seat limit of 5") &&
-            m.TextContent.Contains("Acme.Corp has reached the seat limit of 5") &&
+            m.HtmlContent.Contains("Acme.&#8204;Corp has reached the seat limit of 5") &&
+            m.TextContent.Contains($"Acme.{ZeroWidthNonJoiner}Corp has reached the seat limit of 5") &&
+            !m.TextContent.Contains("&#8204;") &&
             !m.HtmlContent.Contains("[dot]") &&
             !m.HtmlContent.Contains("Your organization has reached") &&
             m.Category == "OrganizationSeatsMaxReached"));
@@ -375,8 +381,8 @@ public class HandlebarsMailServiceTests
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
             m.Subject == "Acme.Corp Secrets Manager seat limit reached" &&
-            m.HtmlContent.Contains("Acme.Corp has reached the Secrets Manager seat limit of 5") &&
-            m.TextContent.Contains("Acme.Corp has reached the Secrets Manager seat limit of 5") &&
+            m.HtmlContent.Contains("Acme.&#8204;Corp has reached the Secrets Manager seat limit of 5") &&
+            m.TextContent.Contains($"Acme.{ZeroWidthNonJoiner}Corp has reached the Secrets Manager seat limit of 5") &&
             !m.HtmlContent.Contains("[dot]") &&
             !m.HtmlContent.Contains("Your organization has reached") &&
             m.Category == "OrganizationSmSeatsMaxReached"));
@@ -395,8 +401,8 @@ public class HandlebarsMailServiceTests
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
             m.Subject == "Acme.Corp Secrets Manager machine accounts limit reached" &&
-            m.HtmlContent.Contains("Acme.Corp has reached the Secrets Manager machine accounts limit of 5") &&
-            m.TextContent.Contains("Acme.Corp has reached the Secrets Manager machine accounts limit of 5") &&
+            m.HtmlContent.Contains("Acme.&#8204;Corp has reached the Secrets Manager machine accounts limit of 5") &&
+            m.TextContent.Contains($"Acme.{ZeroWidthNonJoiner}Corp has reached the Secrets Manager machine accounts limit of 5") &&
             !m.HtmlContent.Contains("[dot]") &&
             m.HtmlContent.Contains("&copy; " + currentYear + " Bitwarden Inc.") &&
             !m.HtmlContent.Contains("Your organization has reached") &&
@@ -424,8 +430,8 @@ public class HandlebarsMailServiceTests
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
             m.HtmlContent.Contains("your Bitwarden organization license for <b") &&
-            m.HtmlContent.Contains("Acme.Corp</b> has expired and must be updated for continued use") &&
-            m.TextContent.Contains("your Bitwarden organization license for Acme.Corp has expired and must be updated for continued use") &&
+            m.HtmlContent.Contains("Acme.&#8204;Corp</b> has expired and must be updated for continued use") &&
+            m.TextContent.Contains($"your Bitwarden organization license for Acme.{ZeroWidthNonJoiner}Corp has expired and must be updated for continued use") &&
             !m.HtmlContent.Contains("[dot]") &&
             !m.TextContent.Contains("[dot]") &&
             m.Category == "LicenseExpired"));
@@ -439,14 +445,14 @@ public class HandlebarsMailServiceTests
 
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
-            m.HtmlContent.Contains("Your Bitwarden organization, Acme.Corp, is no longer managed by Best.MSP.") &&
+            m.HtmlContent.Contains("Your Bitwarden organization, Acme.&#8204;Corp, is no longer managed by Best.&#8204;MSP.") &&
             !m.HtmlContent.Contains("[dot]") &&
             m.HtmlContent.Contains("going to Admin Console in the web app, then selecting your organization, Billing, and") &&
             m.HtmlContent.Contains(">Payment Details</a>") &&
             m.HtmlContent.Contains("/billing/payment-details") &&
             !m.HtmlContent.Contains("/billing/payment-method") &&
             m.HtmlContent.Contains("https://bitwarden.com/help/update-billing-info/#update-billing-for-organizations") &&
-            m.TextContent.Contains("Your Bitwarden organization, Acme.Corp, is no longer managed by Best.MSP.") &&
+            m.TextContent.Contains($"Your Bitwarden organization, Acme.{ZeroWidthNonJoiner}Corp, is no longer managed by Best.{ZeroWidthNonJoiner}MSP.") &&
             !m.TextContent.Contains("[dot]") &&
             m.TextContent.Contains("Or click the following link:") &&
             m.TextContent.Contains("/billing/payment-details") &&
@@ -471,12 +477,12 @@ public class HandlebarsMailServiceTests
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
             m.Subject == "Accept your Sponsored Families Plan" &&
-            m.HtmlContent.Contains("Acme.Corp has sponsored a free Families plan for you!") &&
+            m.HtmlContent.Contains("Acme.&#8204;Corp has sponsored a free Families plan for you!") &&
             m.HtmlContent.Contains(expectedCopy) &&
             m.HtmlContent.Contains("If you do not recognize this account, please ignore this message.") &&
             m.HtmlContent.Contains("/accept-families-for-enterprise?token=token") &&
             !m.HtmlContent.Contains("[dot]") &&
-            m.TextContent.Contains("Acme.Corp has sponsored a free Families plan for you!") &&
+            m.TextContent.Contains($"Acme.{ZeroWidthNonJoiner}Corp has sponsored a free Families plan for you!") &&
             m.TextContent.Contains(expectedCopy) &&
             m.TextContent.Contains("If you do not recognize this account, please ignore this message.") &&
             m.TextContent.Contains("/accept-families-for-enterprise?token=token&email=") &&
@@ -513,11 +519,11 @@ public class HandlebarsMailServiceTests
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
             m.Subject == "Your Sponsored Families Plan has been removed" &&
-            m.HtmlContent.Contains("Acme.Corp has removed the Sponsored Families Plan. You can no longer redeem this benefit or access an existing family vault.") &&
+            m.HtmlContent.Contains("Acme.&#8204;Corp has removed the Sponsored Families Plan. You can no longer redeem this benefit or access an existing family vault.") &&
             !m.HtmlContent.Contains("[dot]") &&
             m.HtmlContent.Contains("Contact your organization admin for more information.") &&
             m.HtmlContent.Contains($"/organizations/{organizationId}/billing/subscription\" target=\"_blank\" clicktracking=off>") &&
-            m.TextContent.Contains("Acme.Corp has removed the Sponsored Families Plan. You can no longer redeem this benefit or access an existing family vault.") &&
+            m.TextContent.Contains($"Acme.{ZeroWidthNonJoiner}Corp has removed the Sponsored Families Plan. You can no longer redeem this benefit or access an existing family vault.") &&
             !m.TextContent.Contains("[dot]") &&
             m.TextContent.Contains($"Or click the following link:") &&
             m.TextContent.Contains($"/organizations/{organizationId}/billing/subscription") &&

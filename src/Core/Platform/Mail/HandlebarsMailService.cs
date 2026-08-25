@@ -320,7 +320,7 @@ public class HandlebarsMailService : IMailService
         {
             MaxSeatCount = maxSeatCount,
             VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id),
-            OrganizationName = organization.DisplayName()
+            OrganizationName = CoreHelpers.PreventEmailAutoLinking(organization.DisplayName())
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsMaxReached", model);
@@ -674,7 +674,7 @@ public class HandlebarsMailService : IMailService
         var model = new LicenseExpiredViewModel();
         if (organizationName != null)
         {
-            model.OrganizationName = organizationName;
+            model.OrganizationName = CoreHelpers.PreventEmailAutoLinking(organizationName);
         }
         await AddMessageContentAsync(message, "LicenseExpired", model);
         message.Category = "LicenseExpired";
@@ -1398,8 +1398,8 @@ public class HandlebarsMailService : IMailService
         var model = new ProviderUpdatePaymentMethodViewModel
         {
             OrganizationId = organizationId.ToString(),
-            OrganizationName = organizationName,
-            ProviderName = providerName,
+            OrganizationName = CoreHelpers.PreventEmailAutoLinking(organizationName),
+            ProviderName = CoreHelpers.PreventEmailAutoLinking(providerName),
             SiteName = _globalSettings.SiteName,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
         };
@@ -1434,7 +1434,7 @@ public class HandlebarsMailService : IMailService
             message.Category = "FamiliesForEnterpriseOffer";
             var model = new FamiliesForEnterpriseOfferViewModel
             {
-                SponsorOrgName = sponsorOrgName,
+                SponsorOrgName = CoreHelpers.PreventEmailAutoLinking(sponsorOrgName),
                 SponsoredEmail = WebUtility.UrlEncode(invite.Email),
                 ExistingAccount = invite.ExistingAccount,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -1524,7 +1524,7 @@ public class HandlebarsMailService : IMailService
         {
             MaxSeatCount = maxSeatCount,
             VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id),
-            OrganizationName = organization.DisplayName()
+            OrganizationName = CoreHelpers.PreventEmailAutoLinking(organization.DisplayName())
         };
 
         await AddMessageContentAsync(message, "OrganizationSmSeatsMaxReached", model);
@@ -1540,7 +1540,7 @@ public class HandlebarsMailService : IMailService
         {
             MaxServiceAccountsCount = maxSeatCount,
             VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id),
-            OrganizationName = organization.DisplayName()
+            OrganizationName = CoreHelpers.PreventEmailAutoLinking(organization.DisplayName())
         };
 
         await AddMessageContentAsync(message, "OrganizationSmServiceAccountsMaxReached", model);
@@ -1596,7 +1596,7 @@ public class HandlebarsMailService : IMailService
         var model = new FamiliesForEnterpriseRemoveOfferViewModel
         {
             SponsoredOrganizationId = organizationId,
-            SponsoringOrgName = organizationName,
+            SponsoringOrgName = CoreHelpers.PreventEmailAutoLinking(organizationName),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
         };
         await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRemovedFromFamilyUser", model);

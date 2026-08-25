@@ -498,6 +498,20 @@ public static class CoreHelpers
     /// result: the mail templates are rendered by Handlebars, which HTML-encodes interpolated
     /// values ({{ }}) by default. Encoding here as well produced double-encoded output.
     /// </summary>
+    /// <summary>
+    /// Keeps a display value from being auto-linked by mail clients (e.g. Gmail turning
+    /// "Client.Org" into a hyperlink) by inserting a zero-width non-joiner after each "."
+    /// and "@". The visible text is unchanged, unlike <see cref="SanitizeForEmail"/> which
+    /// rewrites it to "[dot]"/"[at]".
+    /// </summary>
+    public static string PreventEmailAutoLinking(string value)
+    {
+        const string zeroWidthNonJoiner = "\u200C";
+        return value
+            .Replace(".", $".{zeroWidthNonJoiner}")
+            .Replace("@", $"@{zeroWidthNonJoiner}");
+    }
+
     public static string SanitizeForEmail(string value)
     {
         var cleanedValue = value.Replace("@", "[at]");
