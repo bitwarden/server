@@ -219,6 +219,64 @@ public class PamDaemonRepositoryTests
         Assert.Equal(originalApiKeyId, persisted.ApiKeyId);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task DeleteAsync_RemovesTheDaemonWithItsCredentialAndAssignments(
+        IApiKeyRepository apiKeyRepository,
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IPamDaemonRepository pamDaemonRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var target = await pamTargetSystemRepository.CreateAsync(new PamTargetSystem
+        {
+            OrganizationId = organization.Id,
+            Name = $"target-{Guid.NewGuid()}",
+            Method = PamTargetSystemMethod.Automatic,
+            Kind = PamTargetSystemKind.Mssql,
+            Status = PamTargetSystemStatus.Active,
+            CreationDate = now,
+            RevisionDate = now,
+        });
+        var apiKey = await apiKeyRepository.CreateAsync(BuildDaemonApiKey());
+        var daemon = await pamDaemonRepository.CreateAsync(new PamDaemon
+        {
+            OrganizationId = organization.Id,
+            Name = "doomed-daemon",
+            ApiKeyId = apiKey.Id,
+            Status = PamDaemonStatus.Enabled,
+        });
+        // A daemon with assignments cannot be deleted row-by-row: that FK is ON DELETE NO ACTION.
+        await pamDaemonRepository.CreateAssignmentAsync(new PamDaemonTargetAssignment
+        {
+            Id = CombGuid.Generate(),
+            DaemonId = daemon.Id,
+            TargetSystemId = target.Id,
+            OrganizationId = organization.Id,
+            CreationDate = now,
+        });
+
+        var survivingKey = await apiKeyRepository.CreateAsync(BuildDaemonApiKey("survivor"));
+        var survivor = await pamDaemonRepository.CreateAsync(new PamDaemon
+        {
+            OrganizationId = organization.Id,
+            Name = "surviving-daemon",
+            ApiKeyId = survivingKey.Id,
+            Status = PamDaemonStatus.Enabled,
+        });
+
+        // The delete reads ApiKeyId from the stored row, so this value must be ignored.
+        daemon.ApiKeyId = survivingKey.Id;
+        await pamDaemonRepository.DeleteAsync(daemon);
+
+        Assert.Null(await pamDaemonRepository.GetByIdAsync(daemon.Id));
+        Assert.Null(await apiKeyRepository.GetByIdAsync(apiKey.Id));
+        Assert.Empty(await pamDaemonRepository.GetAssignmentsByOrganizationIdAsync(organization.Id));
+
+        Assert.NotNull(await pamDaemonRepository.GetByIdAsync(survivor.Id));
+        Assert.NotNull(await apiKeyRepository.GetByIdAsync(survivingKey.Id));
+    }
+
     private static ApiKey BuildDaemonApiKey(string identifier = "daemon") => new()
     {
         ServiceAccountId = null,

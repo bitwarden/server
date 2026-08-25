@@ -102,6 +102,12 @@ public class PamDaemonRepository : Repository<CoreEntity, EfModel, Guid>, IPamDa
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         var now = DateTime.UtcNow;
+        // obj.ApiKeyId is not trusted here -- the stored row decides which credential goes.
+        var apiKeyId = await dbContext.PamDaemons
+            .Where(d => d.Id == obj.Id)
+            .Select(d => d.ApiKeyId)
+            .FirstOrDefaultAsync();
+
         var claimedJobIds = await dbContext.PamRotationJobs
             .Where(j => j.ClaimedByDaemonId == obj.Id && j.Status == PamRotationJobStatus.Claimed)
             .Select(j => j.Id)
@@ -130,6 +136,12 @@ public class PamDaemonRepository : Repository<CoreEntity, EfModel, Guid>, IPamDa
             .ExecuteDeleteAsync();
 
         await dbContext.PamDaemons.Where(d => d.Id == obj.Id).ExecuteDeleteAsync();
+
+        // The daemon -> ApiKey FK is NO ACTION as well, so the credential goes last.
+        if (apiKeyId != Guid.Empty)
+        {
+            await dbContext.ApiKeys.Where(k => k.Id == apiKeyId).ExecuteDeleteAsync();
+        }
 
         await transaction.CommitAsync();
     }

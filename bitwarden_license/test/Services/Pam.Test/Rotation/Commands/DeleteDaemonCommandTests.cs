@@ -1,6 +1,4 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.SecretsManager.Entities;
-using Bit.Core.SecretsManager.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -30,7 +28,6 @@ public class DeleteDaemonCommandTests
             () => sutProvider.Sut.DeleteAsync(organizationId, actingUserId, daemonId));
 
         await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
-        await sutProvider.GetDependency<IApiKeyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -44,45 +41,24 @@ public class DeleteDaemonCommandTests
             () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), actingUserId, daemon.Id));
 
         await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
-        await sutProvider.GetDependency<IApiKeyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_DeletesDaemonThenApiKey(Guid actingUserId, PamDaemon daemon, ApiKey apiKey)
+    public async Task DeleteAsync_DeletesTheDaemonThroughTheRepositoryCascade(Guid actingUserId, PamDaemon daemon)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
-        sutProvider.GetDependency<IApiKeyRepository>().GetByIdAsync(daemon.ApiKeyId).Returns(apiKey);
-
-        await sutProvider.Sut.DeleteAsync(daemon.OrganizationId, actingUserId, daemon.Id);
-
-        // The daemon row must be removed before its credential -- the PamDaemon -> ApiKey FK is ON DELETE NO ACTION.
-        Received.InOrder(() =>
-        {
-            sutProvider.GetDependency<IPamDaemonRepository>().DeleteAsync(daemon);
-            sutProvider.GetDependency<IApiKeyRepository>().DeleteAsync(apiKey);
-        });
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteAsync_ApiKeyAlreadyGone_StillDeletesDaemonWithoutThrowing(Guid actingUserId, PamDaemon daemon)
-    {
-        var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
-        sutProvider.GetDependency<IApiKeyRepository>().GetByIdAsync(daemon.ApiKeyId).Returns((ApiKey?)null);
 
         await sutProvider.Sut.DeleteAsync(daemon.OrganizationId, actingUserId, daemon.Id);
 
         await sutProvider.GetDependency<IPamDaemonRepository>().Received(1).DeleteAsync(daemon);
-        await sutProvider.GetDependency<IApiKeyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_EmitsAttemptThenOutcome(Guid actingUserId, PamDaemon daemon, ApiKey apiKey)
+    public async Task DeleteAsync_EmitsAttemptThenOutcome(Guid actingUserId, PamDaemon daemon)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
-        sutProvider.GetDependency<IApiKeyRepository>().GetByIdAsync(daemon.ApiKeyId).Returns(apiKey);
 
         await sutProvider.Sut.DeleteAsync(daemon.OrganizationId, actingUserId, daemon.Id);
 

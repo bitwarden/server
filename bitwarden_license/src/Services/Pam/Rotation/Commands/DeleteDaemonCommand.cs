@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.SecretsManager.Repositories;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
@@ -12,18 +11,15 @@ namespace Bit.Services.Pam.Rotation.Commands;
 public class DeleteDaemonCommand : IDeleteDaemonCommand
 {
     private readonly IPamDaemonRepository _daemonRepository;
-    private readonly IApiKeyRepository _apiKeyRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public DeleteDaemonCommand(
         IPamDaemonRepository daemonRepository,
-        IApiKeyRepository apiKeyRepository,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _daemonRepository = daemonRepository;
-        _apiKeyRepository = apiKeyRepository;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -50,16 +46,7 @@ public class DeleteDaemonCommand : IDeleteDaemonCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Remove the daemon first (PamDaemon_DeleteById clears its target assignments in the same transaction, since
-        // that FK is ON DELETE NO ACTION), then delete its ApiKey credential. Order matters: the PamDaemon -> ApiKey
-        // FK is also NO ACTION, so the referencing daemon row must be gone before the credential can be deleted.
         await _daemonRepository.DeleteAsync(daemon);
-
-        var apiKey = await _apiKeyRepository.GetByIdAsync(daemon.ApiKeyId);
-        if (apiKey is not null)
-        {
-            await _apiKeyRepository.DeleteAsync(apiKey);
-        }
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
     }

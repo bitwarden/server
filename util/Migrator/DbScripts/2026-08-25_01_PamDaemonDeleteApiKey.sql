@@ -1,11 +1,15 @@
-CREATE PROCEDURE [dbo].[PamDaemon_DeleteById]
+-- PAM rotation: fold the daemon's dbo.ApiKey delete into [dbo].[PamDaemon_DeleteById], so the daemon and the
+-- credential that authenticates it are removed in one transaction rather than by two calls from
+-- DeleteDaemonCommand.
+
+CREATE OR ALTER PROCEDURE [dbo].[PamDaemon_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
-    -- DeleteDaemonCommand's cascade, in one transaction. Two FKs into this daemon are ON DELETE NO ACTION --
-    -- PamDaemonTargetAssignment -> PamDaemon (Organization carries the only cascade path back to that table) and
-    -- PamDaemon -> ApiKey -- so the assignments go before the daemon row, and the daemon row before its credential.
+    -- Two FKs into this daemon are ON DELETE NO ACTION -- PamDaemonTargetAssignment -> PamDaemon (Organization
+    -- carries the only cascade path back to that table) and PamDaemon -> ApiKey -- so the assignments go before the
+    -- daemon row, and the daemon row before its credential.
     SET XACT_ABORT ON
 
     DECLARE @Now DATETIME2(7) = GETUTCDATE()
@@ -50,3 +54,4 @@ BEGIN
 
     COMMIT TRANSACTION
 END
+GO

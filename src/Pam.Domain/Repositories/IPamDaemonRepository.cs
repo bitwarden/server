@@ -4,6 +4,12 @@ using Bit.Pam.Models;
 
 namespace Bit.Pam.Repositories;
 
+/// <remarks>
+/// <c>DeleteAsync</c> is a cascade, not a plain row delete: in one transaction it clears the daemon's target
+/// assignments, releases the jobs it currently holds, deletes the daemon, and deletes the <c>dbo.ApiKey</c> row that
+/// authenticates it. The credential is deleted with the daemon rather than by the caller because a key that outlives
+/// its daemon is still a working credential.
+/// </remarks>
 public interface IPamDaemonRepository : IRepository<PamDaemon, Guid>
 {
     Task<ICollection<PamDaemon>> GetManyByOrganizationIdAsync(Guid organizationId);

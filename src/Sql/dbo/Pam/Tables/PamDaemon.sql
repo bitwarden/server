@@ -13,8 +13,8 @@ CREATE TABLE [dbo].[PamDaemon] (
     [RevisionDate]      DATETIME2(7)        NOT NULL,
     CONSTRAINT [PK_PamDaemon] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_PamDaemon_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
-    -- No cascade: RevokeDaemonCommand deletes the ApiKey row explicitly (SM-style credential revocation) while
-    -- keeping this row for history/audit -- an implicit cascade here would delete the daemon out from under it.
+    -- No cascade: it would fire the wrong way round, deleting the daemon when its credential goes.
+    -- PamDaemon_DeleteById deletes both rows, daemon first, in one transaction.
     CONSTRAINT [FK_PamDaemon_ApiKey] FOREIGN KEY ([ApiKeyId]) REFERENCES [dbo].[ApiKey] ([Id]) ON DELETE NO ACTION
 );
 GO
