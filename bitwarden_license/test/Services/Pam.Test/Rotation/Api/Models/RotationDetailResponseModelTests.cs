@@ -9,9 +9,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Rotation.Api.Models;
 
 /// <summary>
-/// Locks the wire shape of the daemon detail read. The admin surface parses it by extending its list-item response
-/// class and reading the activity off the same object, so a detail model that nests its subject under a property (or
-/// renames a timestamp) deserializes to a page of blanks with no error anywhere. Property lookup on the client is
+/// Locks the wire shape of the two rotation detail reads: the subject's fields on the response itself, not nested
+/// under a property, and the history under the timestamp names the server emits. Property lookup on the client is
 /// insensitive to the first character's case, so these assertions are about the names and the nesting, not the
 /// casing.
 /// </summary>
@@ -47,7 +46,31 @@ public class RotationDetailResponseModelTests
         AssertJobShape(json);
     }
 
-    /// <summary>The job and attempt timestamps the history table renders, under the names the server actually emits.</summary>
+    [Fact]
+    public void ConfigDetail_CarriesTheConfigFieldsAndItsHistoryOnOneObject()
+    {
+        var config = new PamRotationConfigDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            CipherId = Guid.NewGuid(),
+            TargetSystemId = Guid.NewGuid(),
+            TargetSystemName = "prod-mssql",
+            TargetSystemMethod = PamTargetSystemMethod.Automatic,
+            AccountIdentity = "svc-account",
+            CreationDate = _created,
+            RevisionDate = _created,
+        };
+        var history = new PamRotationConfigHistory(config, [Job(Guid.NewGuid())]);
+
+        var json = Serialize(new PamRotationConfigDetailResponseModel(history, awaitingManualRotation: false));
+
+        Assert.Equal(config.Id, json.GetProperty("Id").GetGuid());
+        Assert.Equal(config.TargetSystemName, json.GetProperty("TargetSystemName").GetString());
+        Assert.Equal(config.AccountIdentity, json.GetProperty("AccountIdentity").GetString());
+        AssertJobShape(json);
+    }
+
     private static void AssertJobShape(JsonElement json)
     {
         var job = Assert.Single(json.GetProperty("Jobs").EnumerateArray().ToList());

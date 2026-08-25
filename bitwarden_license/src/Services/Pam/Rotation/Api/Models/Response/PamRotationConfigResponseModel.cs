@@ -12,8 +12,9 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Response;
 /// </summary>
 public class PamRotationConfigResponseModel : ResponseModel
 {
-    public PamRotationConfigResponseModel(PamRotationConfigDetails config, bool awaitingManualRotation)
-        : base("pamRotationConfig")
+    public PamRotationConfigResponseModel(
+        PamRotationConfigDetails config, bool awaitingManualRotation, string obj = "pamRotationConfig")
+        : base(obj)
     {
         ArgumentNullException.ThrowIfNull(config);
 

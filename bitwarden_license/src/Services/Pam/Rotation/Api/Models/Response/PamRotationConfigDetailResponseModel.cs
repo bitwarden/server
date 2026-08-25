@@ -2,19 +2,23 @@
 
 namespace Bit.Services.Pam.Rotation.Api.Models.Response;
 
-/// <summary>A rotation config's detail view: the config summary together with its full job/attempt history, oldest first.</summary>
-public class PamRotationConfigDetailResponseModel
+/// <summary>
+/// A rotation config's detail view: the list shape flattened onto the same object, plus the config's full job/attempt
+/// history. The managed-credential surface renders its header from the config fields and the history section from
+/// <see cref="Jobs"/>, so both arrive in one response -- the same shape
+/// <see cref="PamDaemonDetailResponseModel"/> returns for a daemon.
+/// </summary>
+public class PamRotationConfigDetailResponseModel : PamRotationConfigResponseModel
 {
     public PamRotationConfigDetailResponseModel(PamRotationConfigHistory history, bool awaitingManualRotation)
+        : base(
+            history?.Config ?? throw new ArgumentNullException(nameof(history)),
+            awaitingManualRotation,
+            "pamRotationConfigDetails")
     {
-        ArgumentNullException.ThrowIfNull(history);
-
-        Config = new PamRotationConfigResponseModel(history.Config, awaitingManualRotation);
         Jobs = history.Jobs.Select(job => new PamRotationJobResponseModel(job)).ToList();
     }
 
-    public PamRotationConfigResponseModel Config { get; }
-
-    /// <summary>Every job recorded against the config, oldest first, each carrying its own attempts.</summary>
+    /// <summary>Every job recorded against the config, newest first, each carrying its own attempts (oldest first).</summary>
     public IReadOnlyList<PamRotationJobResponseModel> Jobs { get; }
 }
