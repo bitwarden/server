@@ -59,6 +59,7 @@ internal sealed class HubInvocationRecorder
     {
         while (_invocations.Reader.TryRead(out _))
         {
+            // Reading is the discard; there is nothing to do with what comes out.
         }
     }
 
