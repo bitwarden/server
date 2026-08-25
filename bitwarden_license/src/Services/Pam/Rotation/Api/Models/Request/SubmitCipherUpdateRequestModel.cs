@@ -10,10 +10,17 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Request;
 /// </summary>
 public class SubmitCipherUpdateRequestModel
 {
+    /// <summary>
+    /// The rotated cipher's encrypted JSON blob, written back verbatim -- opaque ciphertext to the server.
+    /// </summary>
     [Required]
     [StringLength(500000)]
     public string Data { get; set; } = null!;
 
+    /// <summary>
+    /// The cipher revision date the daemon read before rotating. A mismatch at write time means a user edited
+    /// the cipher concurrently, and the write is rejected rather than overwriting their change.
+    /// </summary>
     [Required]
     public DateTime LastKnownRevisionDate { get; set; }
 }

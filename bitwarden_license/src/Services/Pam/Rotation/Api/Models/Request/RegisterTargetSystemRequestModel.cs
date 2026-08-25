@@ -14,20 +14,30 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Request;
 /// </summary>
 public class RegisterTargetSystemRequestModel : IValidatableObject
 {
+    /// <summary>The target system's display name, shown wherever targets are listed and managed.</summary>
     [Required]
     [StringLength(200)]
     public string Name { get; set; } = null!;
 
+    /// <summary>
+    /// How the target's credentials are rotated -- by a rotation daemon (automatic) or by a human out of band
+    /// (manual). Decides which of the remaining fields apply.
+    /// </summary>
     [Required]
     public PamTargetSystemMethod Method { get; set; }
 
-    /// <summary>The automatic connector kind. Required when <see cref="Method"/> is Automatic; must be absent otherwise.</summary>
+    /// <summary>The connector an automatic target is rotated through.</summary>
     public PamTargetSystemKind? Kind { get; set; }
 
-    /// <summary>Required when <see cref="Method"/> is Automatic; must be absent otherwise.</summary>
+    /// <summary>
+    /// The password-generation constraints the daemon must satisfy when rotating credentials on this target.
+    /// </summary>
     public PamPasswordPolicyRequestModel? PasswordPolicy { get; set; }
 
-    /// <summary>Required when <see cref="Method"/> is Automatic; must be absent otherwise.</summary>
+    /// <summary>
+    /// Whether the connector can terminate the account's live sessions after a rotation; gates whether rotation
+    /// configs on this target may request session termination.
+    /// </summary>
     public bool? SupportsSessionTermination { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

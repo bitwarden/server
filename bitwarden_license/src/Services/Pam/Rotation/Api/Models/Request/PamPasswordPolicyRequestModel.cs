@@ -10,17 +10,26 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Request;
 /// </summary>
 public class PamPasswordPolicyRequestModel : IValidatableObject
 {
+    /// <summary>The shortest password the daemon may generate.</summary>
     [Required]
     [Range(1, 128)]
     public int MinLength { get; set; }
 
+    /// <summary>The longest password the daemon may generate.</summary>
     [Required]
     [Range(1, 128)]
     public int MaxLength { get; set; }
 
+    /// <summary>Whether generated passwords include uppercase letters.</summary>
     public bool IncludeUppercase { get; set; }
+
+    /// <summary>Whether generated passwords include lowercase letters.</summary>
     public bool IncludeLowercase { get; set; }
+
+    /// <summary>Whether generated passwords include digits.</summary>
     public bool IncludeDigits { get; set; }
+
+    /// <summary>Whether generated passwords include symbols.</summary>
     public bool IncludeSymbols { get; set; }
 
     public PamPasswordPolicy ToPasswordPolicy() => new()

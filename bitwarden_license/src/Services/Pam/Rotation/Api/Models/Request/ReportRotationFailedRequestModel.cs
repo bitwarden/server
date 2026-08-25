@@ -12,13 +12,25 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Request;
 /// </summary>
 public class ReportRotationFailedRequestModel
 {
+    /// <summary>
+    /// Whether the failure left the target system's password changed -- that is, whether the vault credential
+    /// still matches the target. Recorded on the attempt so an operator can tell a clean failure from
+    /// credential drift.
+    /// </summary>
     [Required]
     public PamRotationSyncState SyncState { get; set; }
 
+    /// <summary>
+    /// A bounded, daemon-defined token classifying the failure -- never raw target-system output.
+    /// </summary>
     [Required]
     [StringLength(100)]
     public string ErrorCode { get; set; } = null!;
 
+    /// <summary>
+    /// Additional human-readable context for the failure, subject to the same no-raw-target-output contract as
+    /// <see cref="ErrorCode"/>.
+    /// </summary>
     [StringLength(500)]
     public string? Detail { get; set; }
 
