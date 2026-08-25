@@ -1,8 +1,8 @@
--- PAM Credential Rotation: PamTargetSystem / PamDaemon / PamDaemonTargetAssignment / PamRotationConfig /
--- PamRotationJob / PamRotationAttempt tables + procedures, plus the AccessLease natural-expiry sweep procedure
--- (AccessLease itself is untouched -- see src/Sql/dbo/Pam/Tables/AccessLease.sql).
+-- PAM credential rotation, daemon surface. Tables PamTargetSystem / PamDaemon /
+-- PamDaemonTargetAssignment / PamRotationConfig / PamRotationJob / PamRotationAttempt and their procedures, the
+-- rotation columns on the PAM access-audit event store, the ApiKey read the daemon's token issuance needs, and the
+-- AccessLease natural-expiry sweep. AccessLease itself is untouched -- see src/Sql/dbo/Pam/Tables/AccessLease.sql.
 
--- PamTargetSystem
 IF OBJECT_ID('[dbo].[PamTargetSystem]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[PamTargetSystem] (
@@ -1372,3 +1372,317 @@ BEGIN
 END
 GO
 
+-- Extend the PAM append-only access-audit event store ([dbo].[AccessAuditEvent]) to carry credential-rotation
+-- events (rotation lifecycle + fleet/target administration -- see Bit.Pam.Enums.AccessAuditEventKind). Same
+-- self-contained model as the existing store: TargetSystemName/DaemonName are supplied by the rotation commands
+-- (snapshotted at write, same pattern as RuleName), not JOINed -- a target system or daemon can be deleted in the
+-- same action. RotationConfigId/RotationJobId/RotationSource/SyncState are stored as-is (SyncState/RotationSource
+-- match Bit.Pam.Enums.PamRotationSyncState/PamRotationSource).
+
+IF COL_LENGTH('[dbo].[AccessAuditEvent]', 'TargetSystemId') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[AccessAuditEvent] ADD
+        [TargetSystemId]    UNIQUEIDENTIFIER    NULL,
+        [TargetSystemName]  NVARCHAR(200)       NULL,
+        [DaemonId]          UNIQUEIDENTIFIER    NULL,
+        [DaemonName]        NVARCHAR(200)       NULL,
+        [RotationConfigId]  UNIQUEIDENTIFIER    NULL,
+        [RotationJobId]     UNIQUEIDENTIFIER    NULL,
+        [RotationSource]    TINYINT             NULL,
+        [SyncState]         TINYINT             NULL;
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[AccessAuditEvent_Create]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @CorrelationId UNIQUEIDENTIFIER,
+    @Kind TINYINT,
+    @Phase TINYINT,
+    @OccurredAt DATETIME2(7),
+    @ActorId UNIQUEIDENTIFIER = NULL,
+    @RequesterId UNIQUEIDENTIFIER = NULL,
+    @CollectionId UNIQUEIDENTIFIER = NULL,
+    @CipherId UNIQUEIDENTIFIER = NULL,
+    @AccessRequestId UNIQUEIDENTIFIER = NULL,
+    @AccessLeaseId UNIQUEIDENTIFIER = NULL,
+    @AccessRuleId UNIQUEIDENTIFIER = NULL,
+    @RuleName NVARCHAR(256) = NULL,
+    @Detail NVARCHAR(MAX) = NULL,
+    @LeaseNotBefore DATETIME2(7) = NULL,
+    @LeaseNotAfter DATETIME2(7) = NULL,
+    @TargetSystemId UNIQUEIDENTIFIER = NULL,
+    @TargetSystemName NVARCHAR(200) = NULL,
+    @DaemonId UNIQUEIDENTIFIER = NULL,
+    @DaemonName NVARCHAR(200) = NULL,
+    @RotationConfigId UNIQUEIDENTIFIER = NULL,
+    @RotationJobId UNIQUEIDENTIFIER = NULL,
+    @RotationSource TINYINT = NULL,
+    @SyncState TINYINT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    -- Snapshot the display names into the row at write time so the audit event is self-contained: a later delete or
+    -- rename cannot change what this event says. Actor/requester/cipher/collection names are resolved by id from the
+    -- live tables once, here, and frozen (cipher/collection names are encrypted EncString, stored as-is for the client
+    -- to decrypt); a name is NULL where its id is NULL or the row is gone. The rule/target-system/daemon names are
+    -- supplied by the caller (@RuleName/@TargetSystemName/@DaemonName), not JOINed -- those entities can be deleted or
+    -- renamed in the same action, so their names are captured by the command before then.
+    INSERT INTO [dbo].[AccessAuditEvent]
+    (
+        [Id],
+        [OrganizationId],
+        [CorrelationId],
+        [Kind],
+        [Phase],
+        [OccurredAt],
+        [ActorId],
+        [RequesterId],
+        [CollectionId],
+        [CipherId],
+        [AccessRequestId],
+        [AccessLeaseId],
+        [AccessRuleId],
+        [Detail],
+        [LeaseNotBefore],
+        [LeaseNotAfter],
+        [ActorName],
+        [ActorEmail],
+        [RequesterName],
+        [RequesterEmail],
+        [CipherName],
+        [CollectionName],
+        [RuleName],
+        [TargetSystemId],
+        [TargetSystemName],
+        [DaemonId],
+        [DaemonName],
+        [RotationConfigId],
+        [RotationJobId],
+        [RotationSource],
+        [SyncState]
+    )
+    SELECT
+        @Id,
+        @OrganizationId,
+        @CorrelationId,
+        @Kind,
+        @Phase,
+        @OccurredAt,
+        @ActorId,
+        @RequesterId,
+        @CollectionId,
+        @CipherId,
+        @AccessRequestId,
+        @AccessLeaseId,
+        @AccessRuleId,
+        @Detail,
+        @LeaseNotBefore,
+        @LeaseNotAfter,
+        AU.[Name],
+        AU.[Email],
+        RU.[Name],
+        RU.[Email],
+        JSON_VALUE(C.[Data], '$.Name'),
+        COL.[Name],
+        @RuleName,
+        @TargetSystemId,
+        @TargetSystemName,
+        @DaemonId,
+        @DaemonName,
+        @RotationConfigId,
+        @RotationJobId,
+        @RotationSource,
+        @SyncState
+    FROM (SELECT 1 AS [X]) Seed
+    LEFT JOIN [dbo].[User] AU ON AU.[Id] = @ActorId
+    LEFT JOIN [dbo].[User] RU ON RU.[Id] = @RequesterId
+    LEFT JOIN [dbo].[Cipher] C ON C.[Id] = @CipherId
+    LEFT JOIN [dbo].[Collection] COL ON COL.[Id] = @CollectionId
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[AccessAuditEvent_ReadManyByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Since DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    -- Reads the PAM access-audit trail for an entire organization from the append-only [AccessAuditEvent] store: every
+    -- stored event on or after @Since, newest first. Fully SELF-CONTAINED -- the actor/requester/cipher/collection/rule/
+    -- target-system/daemon display names were resolved and frozen into the row at write time (see
+    -- AccessAuditEvent_Create), so this read touches no other table and a later delete or rename of a referenced entity
+    -- cannot erase or rewrite the event. Cipher/collection names are encrypted (EncString), decrypted client-side.
+    -- Org-scoped: the caller is authorized by the AccessEventLogs permission at the endpoint. Kind matches
+    -- Bit.Pam.Enums.AccessAuditEventKind; Phase matches Bit.Pam.Enums.AccessAuditEventPhase; RotationSource matches
+    -- Bit.Pam.Enums.PamRotationSource; SyncState matches Bit.Pam.Enums.PamRotationSyncState. Time-derived expiry kinds
+    -- are not written by any action yet (deferred).
+    SELECT
+        [Kind],
+        [Phase],
+        [CorrelationId],
+        [OccurredAt],
+        [OrganizationId],
+        [ActorId],
+        [RequesterId],
+        [CollectionId],
+        [CipherId],
+        [AccessRequestId],
+        [AccessLeaseId],
+        [AccessRuleId],
+        [Detail],
+        [LeaseNotBefore],
+        [LeaseNotAfter],
+        [ActorName],
+        [ActorEmail],
+        [RequesterName],
+        [RequesterEmail],
+        [CipherName],
+        [CollectionName],
+        [RuleName],
+        [TargetSystemId],
+        [TargetSystemName],
+        [DaemonId],
+        [DaemonName],
+        [RotationConfigId],
+        [RotationJobId],
+        [RotationSource],
+        [SyncState]
+    FROM [dbo].[AccessAuditEvent]
+    WHERE [OrganizationId] = @OrganizationId
+        AND [OccurredAt] >= @Since
+    ORDER BY [OccurredAt] DESC
+END
+GO
+
+-- The generic Repository<T, TId>.GetByIdAsync convention calls [dbo].[{Table}_ReadById] -- [dbo].[ApiKey] never
+-- had one (only ApiKey_ReadByServiceAccountId and the ServiceAccount-joined ApiKeyDetails_ReadById), because every
+-- prior caller looked ApiKey up by ServiceAccountId or ApiKeyDetails. PAM's rotation-daemon credential is a bare
+-- ApiKey row (ServiceAccountId NULL, owner link inverted via PamDaemon.ApiKeyId -- see Bit.Pam.Entities.PamDaemon),
+-- and PamDaemonClientProvider resolves the daemon's OAuth client via IApiKeyRepository.GetByIdAsync(apiKeyId), so
+-- this procedure is required for daemon token issuance to work at all.
+
+CREATE OR ALTER PROCEDURE [dbo].[ApiKey_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ApiKeyView]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+-- The daemon detail page's recent-activity history (GET organizations/{orgId}/rotation/daemons/{id}), plus the
+-- index it seeks on.
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationAttempt_ClaimedByDaemonId_JobId' AND [object_id] = OBJECT_ID('[dbo].[PamRotationAttempt]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_ClaimedByDaemonId_JobId]
+        ON [dbo].[PamRotationAttempt] ([ClaimedByDaemonId] ASC, [JobId] ASC);
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_ReadManyRecentByDaemonId]
+    @DaemonId UNIQUEIDENTIFIER,
+    @Limit INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    -- The daemon detail page's recent activity, returned as two result sets so the caller can zip each job to its
+    -- attempts (IPamRotationJobRepository.GetManyRecentByDaemonIdAsync, grouping the second set by JobId) without an
+    -- N+1:
+    --   1) the @Limit most recent jobs the daemon has attempted, newest first.
+    --   2) that daemon's attempts against those jobs, oldest-first within a job.
+    -- Membership is decided by PamRotationAttempt.ClaimedByDaemonId, not PamRotationJob.ClaimedByDaemonId: the job's
+    -- claim fields are cleared when it resolves, releases or times out, so only the attempt still records who worked
+    -- it. The attempt result set is filtered to @DaemonId too, so a job two daemons worked returns only this one's.
+    SELECT TOP (@Limit) J.*
+    INTO #Jobs
+    FROM [dbo].[PamRotationJob] J
+    WHERE EXISTS (
+        SELECT 1
+        FROM [dbo].[PamRotationAttempt] A
+        WHERE A.[JobId] = J.[Id]
+            AND A.[ClaimedByDaemonId] = @DaemonId
+    )
+    ORDER BY J.[CreationDate] DESC
+
+    SELECT *
+    FROM #Jobs
+    ORDER BY [CreationDate] DESC
+
+    SELECT A.*
+    FROM [dbo].[PamRotationAttempt] A
+    INNER JOIN #Jobs J ON J.[Id] = A.[JobId]
+    WHERE A.[ClaimedByDaemonId] = @DaemonId
+    ORDER BY A.[JobId], A.[CreationDate] ASC
+
+    DROP TABLE #Jobs
+END
+GO
+
+-- Daemon hard-delete, which the generic Repository<PamDaemon, Guid>.DeleteAsync convention invokes: the daemon's
+-- target assignments, then the daemon row, then the dbo.ApiKey credential that authenticates it, in one
+-- transaction.
+
+CREATE OR ALTER PROCEDURE [dbo].[PamDaemon_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+    -- DeleteDaemonCommand's cascade, in one transaction. Two FKs into this daemon are ON DELETE NO ACTION --
+    -- PamDaemonTargetAssignment -> PamDaemon (Organization carries the only cascade path back to that table) and
+    -- PamDaemon -> ApiKey -- so the assignments go before the daemon row, and the daemon row before its credential.
+    SET XACT_ABORT ON
+
+    DECLARE @Now DATETIME2(7) = GETUTCDATE()
+    DECLARE @ApiKeyId UNIQUEIDENTIFIER
+
+    BEGIN TRANSACTION
+
+    -- The stored row decides which credential goes; the caller's ApiKeyId is not trusted.
+    SELECT @ApiKeyId = [ApiKeyId]
+    FROM [dbo].[PamDaemon]
+    WHERE [Id] = @Id
+
+    -- PamRotationJob.ClaimedByDaemonId has no FK back to PamDaemon, and PamRotationJob_ReleaseExpiredLeases inner
+    -- joins PamDaemon to find stale claimants -- so a job still claimed when its daemon disappears becomes invisible
+    -- to the release sweep and only clears at PamRotationJob_TimeoutDue's much later ExpiresAt, blocking any
+    -- replacement job for that config in the meantime. Release them here instead, while the claim is still visible.
+    UPDATE AT
+    SET AT.[Status] = 3, -- Abandoned
+        AT.[ResolvedDate] = @Now
+    FROM [dbo].[PamRotationAttempt] AT
+    INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = AT.[JobId]
+    WHERE AT.[Status] = 0 -- Executing
+        AND J.[ClaimedByDaemonId] = @Id
+        AND J.[Status] = 1 -- Claimed
+
+    UPDATE [dbo].[PamRotationJob]
+    SET [Status] = 0, -- Pending
+        [ClaimedByDaemonId] = NULL,
+        [ClaimedAt] = NULL,
+        [NextClaimableAt] = @Now
+    WHERE [ClaimedByDaemonId] = @Id
+        AND [Status] = 1 -- Claimed
+
+    DELETE FROM [dbo].[PamDaemonTargetAssignment]
+    WHERE [DaemonId] = @Id
+
+    DELETE FROM [dbo].[PamDaemon]
+    WHERE [Id] = @Id
+
+    DELETE FROM [dbo].[ApiKey]
+    WHERE [Id] = @ApiKeyId
+
+    COMMIT TRANSACTION
+END
+GO

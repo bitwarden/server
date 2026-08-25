@@ -5,7 +5,7 @@
 namespace Bit.SqliteMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class PamRotation : Migration
+public partial class PamRotationDaemon : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -255,6 +255,11 @@ public partial class PamRotation : Migration
             name: "IX_PamDaemonTargetAssignment_TargetSystemId",
             table: "PamDaemonTargetAssignment",
             column: "TargetSystemId");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_PamRotationAttempt_ClaimedByDaemonId_JobId",
+            table: "PamRotationAttempt",
+            columns: new[] { "ClaimedByDaemonId", "JobId" });
 
         migrationBuilder.CreateIndex(
             name: "IX_PamRotationAttempt_JobId_Status",
