@@ -82,7 +82,7 @@ public class AcceptOrganizationInviteLinkCommand(
         }
 
         var acceptResult = existingOrganizationUser is not null
-            ? await AcceptExistingInviteAsync(organization, existingOrganizationUser, user, autoConfirmPolicyEnabled)
+            ? await AcceptExistingOrgUserAsync(organization, existingOrganizationUser, user, autoConfirmPolicyEnabled)
             : await CreateNewMembershipAsync(organization, user, autoConfirmPolicyEnabled);
         if (acceptResult.IsError)
         {
@@ -123,13 +123,7 @@ public class AcceptOrganizationInviteLinkCommand(
         return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 
-    /// <summary>
-    /// Accepts an existing membership: either a pending email invitation, which already occupies a seat, or a
-    /// Staged provisioning row, which does not. Staged members are excluded from the organization's occupied
-    /// seat count, so promoting one to Accepted consumes capacity exactly like a brand-new membership and must
-    /// reserve a seat first.
-    /// </summary>
-    private async Task<CommandResult<OrganizationUser>> AcceptExistingInviteAsync(
+    private async Task<CommandResult<OrganizationUser>> AcceptExistingOrgUserAsync(
         Organization organization, OrganizationUser existingOrganizationUser, User user, bool autoConfirmPolicyEnabled)
     {
         if (existingOrganizationUser.Status == OrganizationUserStatusType.Staged)
