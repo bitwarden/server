@@ -24,9 +24,14 @@ public class MemberUpdateRequestModel : MemberBaseModel, IValidatableObject
         existingUser.Type = Type.Value;
         existingUser.ExternalId = ExternalId;
 
-        // Permissions property is optional for backwards compatibility with existing usage
-        if (existingUser.Type is OrganizationUserType.Custom && Permissions is not null)
+        if (existingUser.Type is not OrganizationUserType.Custom)
         {
+            // Clear any permissions left over from a previous Custom role.
+            existingUser.Permissions = null;
+        }
+        else if (Permissions is not null)
+        {
+            // Permissions property is optional for backwards compatibility with existing usage
             existingUser.SetPermissions(Permissions.ToData());
         }
 

@@ -303,6 +303,7 @@ public static partial class FeatureFlagKeys
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
     public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
+    public const string OrganizationEventCleanup = "pm-33527-organization-event-cleanup";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";

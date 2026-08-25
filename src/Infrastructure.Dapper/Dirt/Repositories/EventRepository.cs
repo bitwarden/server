@@ -154,6 +154,20 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         }
     }
 
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        // The procedure deletes a bounded number of rows per call (its @MaxRows default), so a
+        // single call completes well within the timeout and the caller's claim lease; the caller
+        // loops until 0 is returned.
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            $"[{Schema}].[Event_DeleteManyByOrganizationId]",
+            new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure,
+            commandTimeout: 300,
+            cancellationToken: cancellationToken));
+    }
+
     public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
         DateTime startDate, DateTime endDate,
         PageOptions pageOptions)
