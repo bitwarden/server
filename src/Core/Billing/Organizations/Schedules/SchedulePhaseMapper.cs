@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Organizations.Models;
+﻿using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Stripe;
 using Plan = Bit.Core.Models.StaticStore.Plan;
@@ -52,9 +53,7 @@ internal static class SchedulePhaseMapper
             {
                 Price = i.PriceId,
                 Quantity = i.Quantity,
-                Discounts = i.Discounts is { Count: > 0 }
-                    ? i.Discounts.Select(d => new SubscriptionSchedulePhaseItemDiscountOptions { Coupon = d.CouponId }).ToList()
-                    : null
+                Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(i.Discounts?.Select(d => d.CouponId) ?? [])
             })
             .ToList();
 
