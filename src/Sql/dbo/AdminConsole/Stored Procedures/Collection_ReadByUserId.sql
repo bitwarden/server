@@ -17,9 +17,6 @@ BEGIN
         UCD.[DefaultUserCollectionEmail],
         UCD.[Type],
         UCD.[AccessRuleId],
-        -- Whether the collection is governed by an access rule that is currently switched on.
-        -- The rule row is functionally determined by [AccessRuleId], which is in the GROUP BY, so
-        -- MAX() picks the one value the group has rather than aggregating across rules.
         MAX(CASE WHEN AR.[Enabled] = 1 THEN 1 ELSE 0 END) AS [HasEnabledAccessRule]
     FROM
         [dbo].[UserCollectionDetails](@UserId) UCD
