@@ -507,7 +507,7 @@ public class CoreHelpersTests
         Assert.DoesNotContain("&quot;", result);
     }
 
-[Theory]
+    [Theory]
     [InlineData("Client.Org", "Client.\u200COrg")]
     [InlineData("40167 Max.Seats", "40167 Max.\u200CSeats")]
     [InlineData("admin@example.com", "admin@\u200Cexample.\u200Ccom")]
