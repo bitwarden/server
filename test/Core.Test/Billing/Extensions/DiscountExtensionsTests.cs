@@ -167,4 +167,112 @@ public class DiscountExtensionsTests
 
         Assert.Empty(result);
     }
+
+    // Live discount: builders read the coupon id off Source.CouponId (populated when
+    // "discounts.source" is expanded), and emit the discount by its own Id at phase/sub scope.
+    private static Discount LiveDiscount(string discountId, string couponId) =>
+        new() { Id = discountId, Source = new DiscountSource { CouponId = couponId } };
+
+    private static Subscription Sub(Discount? customer = null, params Discount[] discounts) =>
+        new()
+        {
+            Customer = new Customer { Discount = customer },
+            Discounts = discounts.Length == 0 ? null : [.. discounts]
+        };
+
+    // ---- BuildPhaseLevelDiscounts ----
+
+    [Fact]
+    public void BuildPhaseLevelDiscounts_LiveSubscriptionDiscount_CarriedByDiscountId()
+    {
+        var result = DiscountExtensions.BuildPhaseLevelDiscounts(
+            Sub(discounts: LiveDiscount("di_1", "cpn_1")), []);
+
+        Assert.Single(result!);
+        Assert.Equal("di_1", result![0].Discount);
+        Assert.Null(result[0].Coupon);
+    }
+
+    [Fact]
+    public void BuildPhaseLevelDiscounts_CustomerCoupon_CarriedByCouponId_First()
+    {
+        var result = DiscountExtensions.BuildPhaseLevelDiscounts(
+            Sub(customer: LiveDiscount("di_c", "cpn_customer"), discounts: LiveDiscount("di_1", "cpn_1")), []);
+
+        Assert.Equal(2, result!.Count);
+        Assert.Equal("cpn_customer", result[0].Coupon);
+        Assert.Equal("di_1", result[1].Discount);
+    }
+
+    [Fact]
+    public void BuildPhaseLevelDiscounts_PreservedFutureCoupons_CarriedByCouponId()
+    {
+        var result = DiscountExtensions.BuildPhaseLevelDiscounts(
+            Sub(), [], preservedCouponIds: ["cpn_future"]);
+
+        Assert.Single(result!);
+        Assert.Equal("cpn_future", result![0].Coupon);
+    }
+
+    [Fact]
+    public void BuildPhaseLevelDiscounts_NewCoupons_CarriedByCouponId()
+    {
+        var result = DiscountExtensions.BuildPhaseLevelDiscounts(Sub(), ["cpn_new"]);
+
+        Assert.Single(result!);
+        Assert.Equal("cpn_new", result![0].Coupon);
+    }
+
+    [Fact]
+    public void BuildPhaseLevelDiscounts_CouponAppearsOnCustomerAndSubscription_DeDuped()
+    {
+        var result = DiscountExtensions.BuildPhaseLevelDiscounts(
+            Sub(customer: LiveDiscount("di_c", "shared"), discounts: LiveDiscount("di_1", "shared")), []);
+
+        Assert.Single(result!);
+        Assert.Equal("shared", result![0].Coupon);
+    }
+
+    [Fact]
+    public void BuildPhaseLevelDiscounts_Empty_ReturnsNull()
+    {
+        Assert.Null(DiscountExtensions.BuildPhaseLevelDiscounts(Sub(), []));
+    }
+
+    // ---- BuildPhaseItemLevelDiscounts ----
+
+    [Fact]
+    public void BuildPhaseItemLevelDiscounts_CouponIds_CarriedByCouponId_DeDuped()
+    {
+        var result = DiscountExtensions.BuildPhaseItemLevelDiscounts(["cpn_a", "cpn_a", "cpn_b"]);
+
+        Assert.Equal(2, result!.Count);
+        Assert.Equal("cpn_a", result[0].Coupon);
+        Assert.Equal("cpn_b", result[1].Coupon);
+    }
+
+    [Fact]
+    public void BuildPhaseItemLevelDiscounts_NullAndEmptySkipped_ReturnsNullWhenAllEmpty()
+    {
+        Assert.Null(DiscountExtensions.BuildPhaseItemLevelDiscounts([null, "", null]));
+    }
+
+    // ---- BuildSubscriptionLevelDiscounts ----
+
+    [Fact]
+    public void BuildSubscriptionLevelDiscounts_LiveDiscount_ByDiscountId_NewByCoupon()
+    {
+        var result = DiscountExtensions.BuildSubscriptionLevelDiscounts(
+            Sub(discounts: LiveDiscount("di_1", "cpn_1")), ["cpn_new"]);
+
+        Assert.Equal(2, result!.Count);
+        Assert.Equal("di_1", result[0].Discount);
+        Assert.Equal("cpn_new", result[1].Coupon);
+    }
+
+    [Fact]
+    public void BuildSubscriptionLevelDiscounts_Empty_ReturnsNull()
+    {
+        Assert.Null(DiscountExtensions.BuildSubscriptionLevelDiscounts(Sub(), []));
+    }
 }
