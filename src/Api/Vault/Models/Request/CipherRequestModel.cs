@@ -99,6 +99,7 @@ public class CipherRequestModel : IValidatableObject
         }
     }
 
+    /// <summary>
     /// True when this cipher is owned by an organization, and so is encrypted with the organization
     /// key rather than the acting user's key.
     /// </summary>
