@@ -44,17 +44,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
 
-        // Read models behind the approver inbox, the caller's own requests, the lease surfaces, and the per-cipher
-        // pre-check and access-state snapshot.
+        // Read models behind the approver inbox, the lease surfaces, and the per-cipher pre-check and access-state
+        // snapshot.
         services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
         services.AddScoped<IGetCipherAccessStateQuery, GetCipherAccessStateQuery>();
         services.AddScoped<IGetAccessRequestDetailsQuery, GetAccessRequestDetailsQuery>();
         services.AddScoped<IListInboxRequestsQuery, ListInboxRequestsQuery>();
         services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
-        services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
         services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
         services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
-        services.AddScoped<IListMyActiveAccessLeasesQuery, ListMyActiveAccessLeasesQuery>();
         services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
 
         // Access-request and lease write path.

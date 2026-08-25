@@ -3,6 +3,7 @@ using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Models;
@@ -53,7 +54,7 @@ public class AccessRequestEndpointsHandlerTests
     {
         SetupUser(sutProvider, userId);
         row.Status = AccessRequestStatus.Pending;
-        sutProvider.GetDependency<IListMyAccessRequestsQuery>().GetMineAsync(userId).Returns([row]);
+        sutProvider.GetDependency<IAccessRequestRepository>().GetManyByRequesterIdAsync(userId).Returns([row]);
 
         var result = (await sutProvider.Sut.GetMine(_user)).Data.ToList();
 
@@ -67,7 +68,7 @@ public class AccessRequestEndpointsHandlerTests
         Guid userId, SutProvider<AccessRequestEndpointsHandler> sutProvider)
     {
         SetupUser(sutProvider, userId);
-        sutProvider.GetDependency<IListMyAccessRequestsQuery>().GetMineAsync(userId).Returns([]);
+        sutProvider.GetDependency<IAccessRequestRepository>().GetManyByRequesterIdAsync(userId).Returns([]);
 
         var result = await sutProvider.Sut.GetMine(_user);
 
