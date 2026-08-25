@@ -144,10 +144,13 @@ public class OrganizationsController : Controller
     public async Task<ListResponseModel<ProfileOrganizationResponseModel>> GetUser()
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
+        var organizationsTask = _organizationUserRepository.GetManyDetailsByUserAsync(userId,
             OrganizationUserStatusType.Confirmed);
+        var claimingTask = _userService.GetOrganizationsClaimingUserAsync(userId);
+        await Task.WhenAll(organizationsTask, claimingTask);
 
-        var organizationsClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
+        var organizations = await organizationsTask;
+        var organizationsClaimingActiveUser = await claimingTask;
         var organizationIdsClaimingActiveUser = organizationsClaimingActiveUser.Select(o => o.Id);
 
         var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingActiveUser));

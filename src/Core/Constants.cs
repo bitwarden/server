@@ -111,6 +111,7 @@ public static class Constants
     public static class BrowserExtensions
     {
         public const string ChromeId = "chrome-extension://nngceckbapebfimnlniiiahkandclblb/";
+        public const string ChromeBetaId = "chrome-extension://hccnnhgbibccigepcmlgppchkpfdophk/";
         public const string EdgeId = "chrome-extension://jbkfoedolllekgbhcbcoahefnbanhhlh/";
         public const string OperaId = "chrome-extension://ccnckbpmaceehanjmeomladnmlffdjgn/";
     }
@@ -140,7 +141,6 @@ public static partial class FeatureFlagKeys
     public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
-    public const string PolicyDrawers = "pm-34804-policy-drawers";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
     public const string ChangeMemberEmailNoMp = "pm-28365-change-member-email-no-mp";
@@ -302,6 +302,7 @@ public static partial class FeatureFlagKeys
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
     public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
+    public const string OrganizationEventCleanup = "pm-33527-organization-event-cleanup";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";

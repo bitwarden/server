@@ -25,6 +25,22 @@ public static class DataProtectionServiceCollectionExtensions
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
         {
+            if (env.IsDevelopment())
+            {
+                return;
+            }
+
+            builder.PersistKeysToAzureBlobStorage(
+                globalSettings.Storage.ConnectionString,
+                "aspnet-dataprotection",
+                "keys.xml");
+
+            if (globalSettings.DataProtection.KeyProtectionPolicy ==
+                GlobalSettings.DataProtectionSettings.KeyProtectionPolicyType.StorageManaged)
+            {
+                return;
+            }
+
             var pending = globalSettings.DataProtection.PendingProtection;
 
             X509Certificate2? dataProtectionCert = null;
@@ -54,35 +70,30 @@ public static class DataProtectionServiceCollectionExtensions
                 );
             }
 
-            if (!env.IsDevelopment())
+            if (dataProtectionCert is null)
             {
-                if (dataProtectionCert is null)
-                {
-                    var message = CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint)
-                        ? $"No data protection certificate could be found with thumbprint '{globalSettings.DataProtection.CertificateThumbprint}'. Verify the certificate is installed in the current user's certificate store."
-                        : "A data protection certificate could not be acquired and one is required when running in non-development cloud environments. Please make sure your configuration has a valid connection string to azure blob storage.";
-                    throw new InvalidOperationException(message);
-                }
+                var message = CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint)
+                    ? $"No data protection certificate could be found with thumbprint '{globalSettings.DataProtection.CertificateThumbprint}'. Verify the certificate is installed in the current user's certificate store."
+                    : "A data protection certificate could not be acquired and one is required when running in non-development cloud environments. Please make sure your configuration has a valid connection string to azure blob storage.";
+                throw new InvalidOperationException(message);
+            }
 
-                builder
-                    .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
-                    .ProtectKeysWithCertificate(dataProtectionCert);
+            builder.ProtectKeysWithCertificate(dataProtectionCert);
 
-                var unprotectCertificates = globalSettings.DataProtection.UnprotectCertificates
-                    .Index()
-                    .Where(i => i.Item.Enabled)
-                    .Select(i => DownloadRequiredCertFromBlobStorage(
-                        globalSettings.Storage.ConnectionString,
-                        "certificates",
-                        i.Item.FileName,
-                        i.Item.Password,
-                        $"Unprotect {i.Index}"
-                    )).ToArray();
+            var unprotectCertificates = globalSettings.DataProtection.UnprotectCertificates
+                .Index()
+                .Where(i => i.Item.Enabled)
+                .Select(i => DownloadRequiredCertFromBlobStorage(
+                    globalSettings.Storage.ConnectionString,
+                    "certificates",
+                    i.Item.FileName,
+                    i.Item.Password,
+                    $"Unprotect {i.Index}"
+                )).ToArray();
 
-                if (unprotectCertificates.Length > 0)
-                {
-                    builder.UnprotectKeysWithAnyCertificate(unprotectCertificates);
-                }
+            if (unprotectCertificates.Length > 0)
+            {
+                builder.UnprotectKeysWithAnyCertificate(unprotectCertificates);
             }
         }
     }
