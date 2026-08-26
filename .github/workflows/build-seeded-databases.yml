@@ -131,18 +131,21 @@ jobs:
           client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Retrieve data protection key
-        id: retrieve-secret
+        id: secrets
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
           keyvault: gh-org-bitwarden
           secrets: "DP-KEY-XML"
 
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
       - name: Log in to Azure for ACR
         uses: bitwarden/gh-actions/azure-login@main
         with:
-          subscription_id: ${{ secrets.AZURE_SEEDER_SUBSCRIPTION_ID }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          client_id: ${{ secrets.AZURE_SEEDER_CLIENT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID_SEEDER }}
 
       - name: Log in to ACR
         run: az acr login -n "${_AZ_REGISTRY_NAME}"
@@ -157,7 +160,7 @@ jobs:
           GIT_SHA: ${{ github.sha }}
           MATRIX_PRESET: ${{ matrix.preset }}
           MATRIX_DATABASE: ${{ matrix.database }}
-          DP_KEY_XML: ${{ steps.retrieve-secret.outputs.DP-KEY-XML }}
+          DP_KEY_XML: ${{ steps.secrets.outputs.DP-KEY-XML }}
         run: |
           GIT_SHA="${GIT_SHA:0:7}" \
           bash util/SeederUtility/scripts/build-seeded-image.sh \
