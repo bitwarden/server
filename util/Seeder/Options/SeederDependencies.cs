@@ -6,6 +6,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Options;
 
@@ -18,7 +19,9 @@ public sealed record SeederDependencies(
     IPasswordHasher<User> PasswordHasher,
     IManglerService ManglerService,
     ILicensingService LicensingService,
-    IAttachmentStorageService AttachmentStorageService)
+    IAttachmentStorageService AttachmentStorageService,
+    ISeederLicenseSigner LicenseSigner,
+    ILoggerFactory LoggerFactory)
 {
     /// <summary>
     /// Optional progress reporter. When null, the pipeline runs silently.

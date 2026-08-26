@@ -18,6 +18,8 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddSeederApiServices(this IServiceCollection services)
     {
+        services.TryAddSingleton<ISeederLicenseSigner, SeederLicenseSigner>();
+
         services.AddScoped<ISceneExecutor, SceneExecutor>();
         services.AddScoped<IQueryExecutor, QueryExecutor>();
 
