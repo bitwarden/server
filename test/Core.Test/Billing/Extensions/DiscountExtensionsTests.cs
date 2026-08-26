@@ -79,6 +79,36 @@ public class DiscountExtensionsTests
         Assert.Null(DiscountExtensions.BuildPhaseLevelDiscounts(Sub(), []));
     }
 
+    // ---- BuildCurrentPhaseDiscounts ----
+
+    [Fact]
+    public void BuildCurrentPhaseDiscounts_LiveDiscounts_CarriedByDiscountId()
+    {
+        var result = DiscountExtensions.BuildCurrentPhaseDiscounts(
+            Sub(discounts: LiveDiscount("di_1", "cpn_1")));
+
+        Assert.Single(result!);
+        Assert.Equal("di_1", result![0].Discount);
+        Assert.Null(result[0].Coupon);
+    }
+
+    [Fact]
+    public void BuildCurrentPhaseDiscounts_CustomerCoupon_NotIncluded()
+    {
+        var result = DiscountExtensions.BuildCurrentPhaseDiscounts(
+            Sub(customer: LiveDiscount("di_c", "cpn_customer"), discounts: LiveDiscount("di_1", "cpn_1")));
+
+        Assert.Single(result!);
+        Assert.Equal("di_1", result![0].Discount);
+    }
+
+    [Fact]
+    public void BuildCurrentPhaseDiscounts_Empty_ReturnsNull()
+    {
+        Assert.Null(DiscountExtensions.BuildCurrentPhaseDiscounts(
+            Sub(customer: LiveDiscount("di_c", "cpn_customer"))));
+    }
+
     // ---- BuildPhaseItemLevelDiscounts ----
 
     [Fact]

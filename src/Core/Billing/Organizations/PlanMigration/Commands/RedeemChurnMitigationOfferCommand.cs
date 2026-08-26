@@ -288,11 +288,7 @@ public class RedeemChurnMitigationOfferCommand(
                     Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(i.Discounts?.Select(d => d.CouponId) ?? [])
                 })
                 .ToList(),
-            Discounts = subscription.Discounts is { Count: > 0 }
-                ? subscription.Discounts
-                    .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Discount = d.Id })
-                    .ToList()
-                : null,
+            Discounts = DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
             Metadata = phase.Metadata,
             ProrationBehavior = phase.ProrationBehavior
         };

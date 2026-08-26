@@ -173,6 +173,12 @@ public class UpdatePremiumStorageCommand(
             // need plan-aware price resolution (e.g. matching Phase 2's seat price to a plan).
             var storagePriceId = premiumPlan.Storage.StripePriceId;
 
+            List<SubscriptionSchedulePhaseDiscountOptions>? DiscountsForPhase(SubscriptionSchedulePhase phase) =>
+                phase.StartDate > now
+                    ? DiscountExtensions.BuildPhaseLevelDiscounts(
+                        subscription, [], preservedCouponIds: phase.Discounts?.Select(d => d.CouponId))
+                    : DiscountExtensions.BuildCurrentPhaseDiscounts(subscription);
+
             var phases = new List<SubscriptionSchedulePhaseOptions>();
 
             // Stripe rejects schedule updates that include phases whose end_date is in the past.
@@ -184,7 +190,7 @@ public class UpdatePremiumStorageCommand(
                     StartDate = phase1.StartDate,
                     EndDate = phase1.EndDate,
                     Items = BuildPhaseItemsWithStorage(phase1.Items, storagePriceId, additionalStorageGb),
-                    Discounts = DiscountExtensions.BuildPhaseLevelDiscounts(subscription, []),
+                    Discounts = DiscountsForPhase(phase1),
                     Metadata = phase1.Metadata,
                     ProrationBehavior = phase1.ProrationBehavior
                 });
@@ -204,9 +210,7 @@ public class UpdatePremiumStorageCommand(
                     StartDate = phase2.StartDate,
                     EndDate = phase2.EndDate,
                     Items = BuildPhaseItemsWithStorage(phase2.Items, storagePriceId, additionalStorageGb),
-                    Discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
-                        subscription, [],
-                        preservedCouponIds: phase2.StartDate > now ? phase2.Discounts?.Select(d => d.CouponId) : null),
+                    Discounts = DiscountsForPhase(phase2),
                     Metadata = phase2.Metadata,
                     ProrationBehavior = phase2.ProrationBehavior
                 });

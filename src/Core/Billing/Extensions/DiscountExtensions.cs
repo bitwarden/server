@@ -70,6 +70,23 @@ public static class DiscountExtensions
     }
 
     /// <summary>
+    /// Discounts for a phase that is already active (its start date is in the past): carries only the
+    /// discounts still live on the subscription, by discount id. Unlike <see cref="BuildPhaseLevelDiscounts"/>,
+    /// the customer's coupon is deliberately omitted. When a phase carries explicit discounts Stripe
+    /// suppresses the customer-level coupon, so listing it would newly stack it onto the current period
+    /// (an over-charge in the customer's favor); when the phase carries none, the customer coupon still
+    /// cascades on its own. Either way the active phase's effective discount is unchanged. Returns null
+    /// when empty; an empty array would delete the phase's discounts.
+    /// </summary>
+    /// <param name="subscription">The live subscription whose active-phase discounts are carried forward.</param>
+    public static List<SubscriptionSchedulePhaseDiscountOptions>? BuildCurrentPhaseDiscounts(Subscription subscription) =>
+        subscription.Discounts is { Count: > 0 }
+            ? subscription.Discounts
+                .Select(discount => new SubscriptionSchedulePhaseDiscountOptions { Discount = discount.Id })
+                .ToList()
+            : null;
+
+    /// <summary>
     /// Subscription-scope equivalent of <see cref="BuildPhaseLevelDiscounts"/>: live discounts by
     /// discount id, customer and new coupons by coupon id. Returns null when empty.
     /// </summary>

@@ -687,10 +687,11 @@ public class UpdatePremiumStorageCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithFuturePhase2_CarriesCustomerDiscountIntoBothPhases(User user)
+    public async Task Run_WithFuturePhase2_CarriesCustomerDiscountIntoFuturePhaseOnly(User user)
     {
-        // The customer coupon carries onto every phase (Stripe re-applying the same coupon id is
-        // idempotent), and Phase 2 additionally preserves its own future coupon.
+        // The customer coupon is carried explicitly onto the future Phase 2 (whose own explicit
+        // discounts would otherwise suppress it), alongside Phase 2's preserved coupon. The active
+        // Phase 1 carries no explicit discount, so the customer coupon keeps cascading there on its own.
         user.Premium = true;
         user.MaxStorageGb = 5;
         user.Storage = 2L * 1024 * 1024 * 1024;
@@ -712,17 +713,17 @@ public class UpdatePremiumStorageCommandTests
             schedule.Id,
             Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
                 opts.Phases.Count == 2 &&
-                opts.Phases[0].Discounts != null &&
-                opts.Phases[0].Discounts.Any(d => d.Coupon == "retention") &&
+                opts.Phases[0].Discounts == null &&
                 opts.Phases[1].Discounts != null &&
                 opts.Phases[1].Discounts.Any(d => d.Coupon == "retention") &&
                 opts.Phases[1].Discounts.Any(d => d.Coupon == "coupon_123")));
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithPhase2Active_CarriesCustomerDiscountIntoActivePhase(User user)
+    public async Task Run_WithPhase2Active_DoesNotInjectCustomerDiscountIntoActivePhase(User user)
     {
-        // Phase 2 is the active phase: the customer coupon still carries onto it.
+        // Phase 2 is the active phase and has no live discount, so the customer coupon is not injected
+        // there (it cascades on its own); injecting it would newly stack it onto the current period.
         user.Premium = true;
         user.MaxStorageGb = 5;
         user.Storage = 2L * 1024 * 1024 * 1024;
@@ -744,8 +745,39 @@ public class UpdatePremiumStorageCommandTests
             schedule.Id,
             Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
                 opts.Phases.Count == 1 &&
+                opts.Phases[0].Discounts == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithSchedule_CurrentPhaseWithLiveDiscount_DoesNotStackCustomerCoupon(User user)
+    {
+        // Active phase already carries a live discount, so the customer coupon is suppressed by Stripe.
+        // The rebuild must carry only the live discount (by id) -- listing the customer coupon too would
+        // newly stack it onto the current period.
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        subscription.Customer.Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } };
+        subscription.Discounts = [new Discount { Id = "di_live", Source = new DiscountSource { Coupon = new Coupon { Id = "live_coupon" } } }];
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(user, 9);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
                 opts.Phases[0].Discounts != null &&
-                opts.Phases[0].Discounts.Any(d => d.Coupon == "retention")));
+                opts.Phases[0].Discounts.Any(d => d.Discount == "di_live") &&
+                opts.Phases[0].Discounts.All(d => d.Coupon != "retention")));
     }
 
     [Theory, BitAutoData]
