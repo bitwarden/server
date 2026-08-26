@@ -161,6 +161,37 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
         Assert.False(await db.Project.AnyAsync(p => p.OrganizationId == organizationId));
     }
 
+    [Fact]
+    public async Task OrganizationSecretScene_ProjectNotInOrganization_ReturnsBadRequest()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, _, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(OrganizationSecretScene),
+            Arguments = JsonSerializer.SerializeToElement(new OrganizationSecretScene.Request
+            {
+                OrganizationId = organizationId,
+                OrganizationKeyB64 = organizationKeyB64,
+                Key = "DB_PASSWORD",
+                Value = "s3cret",
+                ProjectIds = [Guid.NewGuid()]
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("not in organization", body);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        Assert.False(await db.Secret.AnyAsync(s => s.OrganizationId == organizationId));
+    }
+
     private async Task<Guid> SeedUserAsync(string playId)
     {
         var result = await PostSceneAsync(playId, "SingleUserScene", new SingleUserScene.Request

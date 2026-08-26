@@ -14,6 +14,7 @@ namespace Bit.Seeder.Scenes;
 public class OrganizationSecretScene(
     IOrganizationRepository organizationRepository,
     ISecretRepository secretRepository,
+    IProjectRepository projectRepository,
     IManglerService manglerService) : IScene<OrganizationSecretScene.Request, OrganizationSecretScene.Result>
 {
     public class Request
@@ -37,6 +38,8 @@ public class OrganizationSecretScene(
     public async Task<SceneResult<Result>> SeedAsync(Request request)
     {
         var organization = await organizationRepository.GetSecretsManagerOrganizationOrThrowAsync(request.OrganizationId);
+
+        await projectRepository.ThrowIfProjectsNotInOrganizationAsync(request.ProjectIds, organization.Id);
 
         var secret = SecretSeeder.Create(
             organization.Id,
