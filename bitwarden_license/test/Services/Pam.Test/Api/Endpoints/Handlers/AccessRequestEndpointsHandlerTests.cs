@@ -54,7 +54,8 @@ public class AccessRequestEndpointsHandlerTests
     {
         SetupUser(sutProvider, userId);
         row.Status = AccessRequestStatus.Pending;
-        sutProvider.GetDependency<IAccessRequestRepository>().GetManyByRequesterIdAsync(userId).Returns([row]);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetManyByRequesterIdAsync(userId, Arg.Any<DateTime>()).Returns([row]);
 
         var result = (await sutProvider.Sut.GetMine(_user)).Data.ToList();
 
@@ -68,7 +69,8 @@ public class AccessRequestEndpointsHandlerTests
         Guid userId, SutProvider<AccessRequestEndpointsHandler> sutProvider)
     {
         SetupUser(sutProvider, userId);
-        sutProvider.GetDependency<IAccessRequestRepository>().GetManyByRequesterIdAsync(userId).Returns([]);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetManyByRequesterIdAsync(userId, Arg.Any<DateTime>()).Returns([]);
 
         var result = await sutProvider.Sut.GetMine(_user);
 

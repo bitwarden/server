@@ -92,7 +92,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         return Mapper.Map<List<CoreEntity>>(leases);
     }
 
-    public async Task<ICollection<CoreEntity>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since)
+    public async Task<ICollection<CoreEntity>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds,
+        DateTime since, DateTime now)
     {
         var ids = collectionIds.ToList();
         if (ids.Count == 0)
@@ -105,17 +106,34 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
 
         // A revoked/cancelled lease's end is its RevokedDate; an expired lease's end is its NotAfter.
         // `RevokedDate ?? NotAfter` is exactly that: RevokedDate is set only for Revoked/Cancelled leases.
+        //
+        // Ended-ness is derived here rather than read off Status, because nothing writes Expired: a lease whose
+        // window merely closed is still stored Active, so matching on Status alone hid every naturally expired lease
+        // from this view (PM-42355). Expressed inline rather than through AccessLease.StatusAsOf so EF can translate
+        // it to the WHERE clause instead of over-fetching every active lease to filter in memory. Mirrors
+        // AccessLease_ReadManyEndedByCollectionIds.
         var leases = await dbContext.AccessLeases
             .Where(l => ids.Contains(l.CollectionId)
-                && (l.Status == AccessLeaseStatus.Expired || l.Status == AccessLeaseStatus.Revoked || l.Status == AccessLeaseStatus.Cancelled)
                 && (
+                    // Ended early (Revoked, Cancelled): its end is RevokedDate, whatever its window says.
                     ((l.Status == AccessLeaseStatus.Revoked || l.Status == AccessLeaseStatus.Cancelled) && l.RevokedDate >= since)
-                    || (l.Status == AccessLeaseStatus.Expired && l.NotAfter >= since)
+                    // Window closed: its end is NotAfter. Active is the case that was missing; a stored Expired
+                    // stays matched so such a row is still read.
+                    || ((l.Status == AccessLeaseStatus.Active || l.Status == AccessLeaseStatus.Expired)
+                        && l.NotAfter <= now && l.NotAfter >= since)
                 ))
             .OrderByDescending(l => l.RevokedDate ?? l.NotAfter)
             .AsNoTracking()
             .ToListAsync();
-        return Mapper.Map<List<CoreEntity>>(leases);
+
+        // The procedure projects [Status] in its SELECT; do the same after materializing so a caller reading
+        // Status on a returned lease sees Expired rather than the stored Active.
+        var ended = Mapper.Map<List<CoreEntity>>(leases);
+        foreach (var lease in ended)
+        {
+            lease.Status = lease.StatusAsOf(now);
+        }
+        return ended;
     }
 
     /// <remarks>

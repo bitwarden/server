@@ -63,17 +63,19 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
             throw new ConflictException("This request has already been resolved.");
         }
 
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
         // An approved request that has minted a lease is governed by that lease, not the request: end it via lease
-        // revoke while active, and once the lease has ended the request is terminal history.
+        // revoke while active, and once the lease has ended the request is terminal history. Which of those two it is
+        // has to be judged against the clock -- a lapsed lease is stored Active, so reading the status raw pointed the
+        // caller at a Revoke that would itself be refused.
         var lease = await _accessLeaseRepository.GetByAccessRequestIdAsync(requestId);
         if (lease is not null)
         {
-            throw lease.Status == AccessLeaseStatus.Active
+            throw lease.StatusAsOf(now) == AccessLeaseStatus.Active
                 ? new ConflictException("This request has an active lease; revoke the lease instead.")
                 : new ConflictException("This request has already been resolved.");
         }
-
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // audit (before/after): record the cancel attempt, then the outcome around the point of no return. Both the
         // requester withdrawing and a manager retracting settle the request to the single RequestCancelled kind.

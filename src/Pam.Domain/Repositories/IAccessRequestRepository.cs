@@ -23,8 +23,10 @@ public interface IAccessRequestRepository
     /// produced lease, and the complete decision list) for the dedicated request page, or null if no request has the
     /// id. Unlike <see cref="GetByIdAsync"/> this populates the display-name fields. Authorization (the caller is the
     /// requester or can manage the request's collection) is enforced by the calling query, not this read.
+    /// <paramref name="now"/> projects the produced lease's status — see
+    /// <see cref="AccessRequestDetails.ProducedLeaseStatus"/>.
     /// </summary>
-    Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id);
+    Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id, DateTime now);
 
     /// <summary>
     /// Returns the caller's pending (unresolved) lease request for the cipher, or null if there is none.
@@ -41,8 +43,10 @@ public interface IAccessRequestRepository
     /// <summary>
     /// Returns the caller's own lease requests across every organization they belong to, regardless of status, most
     /// recent first and capped server-side. Display-name fields are not populated for this caller-scoped surface.
+    /// <paramref name="now"/> projects each produced lease's status — see
+    /// <see cref="AccessRequestDetails.ProducedLeaseStatus"/>.
     /// </summary>
-    Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId);
+    Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime now);
 
     /// <summary>
     /// Returns the pending approver-inbox rows for the given collections, joined with their denormalized display
@@ -53,9 +57,10 @@ public interface IAccessRequestRepository
     /// <summary>
     /// Returns the resolved approver-inbox rows (anything no longer pending) created on or after
     /// <paramref name="since"/> for the given collections. An empty <paramref name="collectionIds"/> yields an empty
-    /// result.
+    /// result. <paramref name="since"/> bounds the history window; <paramref name="now"/> is the separate read clock
+    /// that projects each produced lease's status — see <see cref="AccessRequestDetails.ProducedLeaseStatus"/>.
     /// </summary>
-    Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since);
+    Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since, DateTime now);
 
     /// <summary>
     /// Atomically transitions a pending request to <paramref name="status"/> (setting its resolved date) and records

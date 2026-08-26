@@ -48,14 +48,17 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
             throw new NotFoundException();
         }
 
-        if (lease.Status != AccessLeaseStatus.Active)
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        // Projected against the clock rather than read raw: a lease whose window has closed is still stored Active
+        // (nothing writes Expired), so ending one here would restate a lease that ran out on its own as an operator
+        // action -- stamping RevokedDate/RevokedBy and appending a Deny decision for an end that already happened.
+        if (lease.StatusAsOf(now) != AccessLeaseStatus.Active)
         {
             throw new ConflictException("This lease is not active.");
         }
 
         var endStatus = isHolder ? AccessLeaseStatus.Cancelled : AccessLeaseStatus.Revoked;
-
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // The reason has no dedicated column, so it is preserved as a human decision against the originating request.
         var auditDecision = new AccessDecision

@@ -86,7 +86,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         return Mapper.Map<CoreEntity>(request);
     }
 
-    public async Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id)
+    public async Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -108,7 +108,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         if (producedLeases.TryGetValue(id, out var lease))
         {
             details.ProducedLeaseId = lease.Id;
-            details.ProducedLeaseStatus = lease.Status;
+            details.ProducedLeaseStatus = lease.StatusAsOf(now);
         }
 
         var decisionsByRequest = await GetDecisionsByRequestIdsAsync(dbContext, new[] { id });
@@ -120,7 +120,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         return details;
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId)
+    public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -149,7 +149,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
             if (producedLeasesByRequest.TryGetValue(request.Id, out var lease))
             {
                 details.ProducedLeaseId = lease.Id;
-                details.ProducedLeaseStatus = lease.Status;
+                details.ProducedLeaseStatus = lease.StatusAsOf(now);
             }
             if (decisionsByRequest.TryGetValue(request.Id, out var decisions))
             {
@@ -199,7 +199,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         }).ToList();
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since)
+    public async Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since, DateTime now)
     {
         var ids = collectionIds.ToList();
         if (ids.Count == 0)
@@ -234,7 +234,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
             if (producedLeasesByRequest.TryGetValue(request.Id, out var lease))
             {
                 details.ProducedLeaseId = lease.Id;
-                details.ProducedLeaseStatus = lease.Status;
+                details.ProducedLeaseStatus = lease.StatusAsOf(now);
             }
             if (decisionsByRequest.TryGetValue(request.Id, out var decisions))
             {

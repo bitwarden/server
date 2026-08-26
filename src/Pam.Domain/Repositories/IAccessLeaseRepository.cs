@@ -31,12 +31,19 @@ public interface IAccessLeaseRepository
     Task<ICollection<AccessLease>> GetManyActiveByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now);
 
     /// <summary>
-    /// Returns the ended leases (status Expired, Revoked, or Cancelled) on the given collections that ended on or after
-    /// <paramref name="since"/> — the governance history view over a set of caller-manageable collections. A
-    /// revoked/cancelled lease's end is its revoked date; an expired lease's end is its not-after. Returns an empty
-    /// collection when none qualify.
+    /// Returns the ended leases (Expired, Revoked, or Cancelled as of <paramref name="now"/>) on the given
+    /// collections that ended on or after <paramref name="since"/> — the governance history view over a set of
+    /// caller-manageable collections. A revoked/cancelled lease's end is its revoked date; an expired lease's end is
+    /// its not-after. Returns an empty collection when none qualify.
     /// </summary>
-    Task<ICollection<AccessLease>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since);
+    /// <remarks>
+    /// Ended-ness is derived against <paramref name="now"/>, not read from the stored status: nothing writes
+    /// <see cref="AccessLeaseStatus.Expired"/>, so a lease whose window merely closed is still stored Active and
+    /// would otherwise appear in neither this view nor the active one (PM-42355). The returned leases carry the
+    /// projected status, so <see cref="AccessLease.Status"/> reads Expired on them.
+    /// </remarks>
+    Task<ICollection<AccessLease>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since,
+        DateTime now);
 
     /// <summary>
     /// Race-safely mints the active lease for an approved request, copying the request's window. The insert

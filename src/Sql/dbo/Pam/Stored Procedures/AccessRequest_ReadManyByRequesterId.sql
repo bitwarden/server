@@ -1,8 +1,13 @@
 CREATE PROCEDURE [dbo].[AccessRequest_ReadManyByRequesterId]
-    @RequesterId UNIQUEIDENTIFIER
+    @RequesterId UNIQUEIDENTIFIER,
+    @Now DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
+
+    -- @Now defaults so a rolling deployment stays safe: an older server that predates this parameter calls the
+    -- procedure without it and gets the database clock, which projects the same result.
+    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- The caller's own requests, returned as two result sets so the caller can attach each request's decision list
     -- without an N+1:
@@ -25,6 +30,7 @@ BEGIN
     ORDER BY [CreationDate] DESC
 
     -- A request produces at most one lease ([IX_AccessLease_AccessRequestId] is unique), so this joins at most one row.
+    -- ProducedLeaseStatus is projected against @Now, as in AccessRequest_ReadDetailsById.
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -40,7 +46,9 @@ BEGIN
         LR.[ResolvedDate],
         LR.[RuleId],
         PL.[Id] AS [ProducedLeaseId],
-        PL.[Status] AS [ProducedLeaseStatus]
+        -- Expired is never stored; derive it against @Now off the lease's own NotAfter. See
+        -- AccessRequest_ReadDetailsById for why the request's NotAfter will not do.
+        CASE WHEN PL.[Status] = 0 AND PL.[NotAfter] <= @Now THEN 1 ELSE PL.[Status] END AS [ProducedLeaseStatus]
     FROM [dbo].[AccessRequest] LR
     INNER JOIN @RequestIds RI ON RI.[Id] = LR.[Id]
     LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = LR.[Id]

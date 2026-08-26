@@ -406,11 +406,64 @@ public class LeaseRepositoryTests
         await accessLeaseRepository.RevokeAsync(oldLease, AccessLeaseStatus.Revoked, BuildAuditDecision(oldLease, now.AddDays(-150)), now.AddDays(-150));
 
         var result = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
-            new[] { activeLease.CollectionId, revLease.CollectionId, oldLease.CollectionId }, since);
+            new[] { activeLease.CollectionId, revLease.CollectionId, oldLease.CollectionId }, since, now);
 
         Assert.Single(result);
         Assert.Equal(revLease.Id, result.First().Id);
         Assert.Equal(AccessLeaseStatus.Revoked, result.First().Status);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyEndedByCollectionIdsAsync_LapsedLease_IsProjectedExpiredAndIncluded(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        // A lease whose window simply closed is never written back to Expired -- nothing writes that status -- so
+        // matching this view on the stored status alone hid every naturally expired lease: out of the active read
+        // (its window has closed) and never into this one (PM-42355). Ended-ness is derived against `now` instead.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+
+        // Lapsed an hour ago, inside the history window -- included, projected Expired.
+        var (lapsedReq, lapsedDec, lapsedLease) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddHours(-3), now.AddHours(-1));
+        await SeedActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, lapsedReq, lapsedDec, lapsedLease, now.AddHours(-3));
+
+        // Lapsed before the history window -- excluded by @Since, exactly as a revoked lease that old would be.
+        var (staleReq, staleDec, staleLease) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddDays(-200), now.AddDays(-190));
+        await SeedActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, staleReq, staleDec, staleLease, now.AddDays(-200));
+
+        // Still inside its window -- not ended at all, excluded.
+        var (liveReq, liveDec, liveLease) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, liveReq, liveDec, liveLease, now);
+
+        // The premise: all three rows are still stored Active. Nothing swept the lapsed ones.
+        foreach (var id in new[] { lapsedLease.Id, staleLease.Id, liveLease.Id })
+        {
+            Assert.Equal(AccessLeaseStatus.Active, (await accessLeaseRepository.GetByIdAsync(id))!.Status);
+        }
+
+        var collectionIds = new[] { lapsedLease.CollectionId, staleLease.CollectionId, liveLease.CollectionId };
+        var ended = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
+            collectionIds, now.AddDays(-90), now);
+
+        var row = Assert.Single(ended);
+        Assert.Equal(lapsedLease.Id, row.Id);
+        // Projected, not stored -- the row read back through GetByIdAsync above still says Active.
+        Assert.Equal(AccessLeaseStatus.Expired, row.Status);
+        Assert.Null(row.RevokedDate);
+
+        // The same lease read before its window closed is neither ended nor expired: the status follows the clock.
+        Assert.Empty(await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
+            collectionIds, now.AddDays(-90), now.AddHours(-2)));
+        Assert.Contains(
+            await accessLeaseRepository.GetManyActiveByCollectionIdsAsync(collectionIds, now.AddHours(-2)),
+            l => l.Id == lapsedLease.Id);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -432,14 +485,14 @@ public class LeaseRepositoryTests
         await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, request, decision, lease, now);
 
         // The auto-approval already recorded one automatic decision against the request.
-        var beforeRevoke = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
+        var beforeRevoke = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
         Assert.Single(beforeRevoke!.Decisions);
 
         var first = BuildAuditDecision(lease, now);
         first.ApproverId = firstRevokerId;
         await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Revoked, first, now);
 
-        var afterFirst = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
+        var afterFirst = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
         Assert.Equal(2, afterFirst!.Decisions.Count);
 
         // A second revoke finds the lease already ended.
@@ -452,7 +505,7 @@ public class LeaseRepositoryTests
         Assert.Equal(firstRevokerId, persisted.RevokedBy);
 
         // No verdict was appended for the lease the second call did not end.
-        var afterSecond = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
+        var afterSecond = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
         Assert.Equal(2, afterSecond!.Decisions.Count);
         Assert.DoesNotContain(afterSecond.Decisions, d => d.ApproverId == secondRevokerId);
     }
@@ -491,12 +544,12 @@ public class LeaseRepositoryTests
         await accessLeaseRepository.RevokeAsync(staleLease, AccessLeaseStatus.Revoked, auditDecision, now);
 
         // The verdict landed on the lease's real originating request...
-        var owning = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
+        var owning = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
         Assert.Equal(2, owning!.Decisions.Count);
         Assert.Contains(owning.Decisions, d => d.ApproverId == revokerId);
 
         // ...and not on the request the caller named.
-        var unrelated = await accessRequestRepository.GetDetailsByIdAsync(otherRequest.Id);
+        var unrelated = await accessRequestRepository.GetDetailsByIdAsync(otherRequest.Id, now);
         Assert.Single(unrelated!.Decisions);
         Assert.DoesNotContain(unrelated.Decisions, d => d.ApproverId == revokerId);
     }
@@ -533,7 +586,7 @@ public class LeaseRepositoryTests
 
         // ...and it counts as ended for the governance history view.
         var ended = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
-            new[] { lease.CollectionId }, now.AddDays(-1));
+            new[] { lease.CollectionId }, now.AddDays(-1), now);
         Assert.Equal(AccessLeaseStatus.Cancelled, Assert.Single(ended).Status);
     }
 
@@ -571,7 +624,7 @@ public class LeaseRepositoryTests
             firstLease, AccessLeaseStatus.Revoked, BuildAuditDecision(firstLease, now), now);
 
         var ended = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
-            new[] { collectionId }, now.AddDays(-1));
+            new[] { collectionId }, now.AddDays(-1), now);
 
         Assert.Equal(2, ended.Count);
         Assert.Equal(firstLease.Id, ended.First().Id);
@@ -587,7 +640,7 @@ public class LeaseRepositoryTests
         var now = DateTime.UtcNow;
 
         Assert.Empty(await accessLeaseRepository.GetManyActiveByCollectionIdsAsync([], now));
-        Assert.Empty(await accessLeaseRepository.GetManyEndedByCollectionIdsAsync([], now.AddDays(-1)));
+        Assert.Empty(await accessLeaseRepository.GetManyEndedByCollectionIdsAsync([], now.AddDays(-1), now));
     }
 
     [DatabaseTheory, DatabaseData]

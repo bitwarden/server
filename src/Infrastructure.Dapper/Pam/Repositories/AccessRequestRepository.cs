@@ -67,23 +67,23 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         return results.FirstOrDefault();
     }
 
-    public async Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id)
+    public async Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
             $"[{Schema}].[AccessRequest_ReadDetailsById]",
-            new { Id = id },
+            new { Id = id, Now = now },
             commandType: CommandType.StoredProcedure);
 
         return (await ReadDetailsWithDecisionsAsync(results)).FirstOrDefault();
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId)
+    public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
             $"[{Schema}].[AccessRequest_ReadManyByRequesterId]",
-            new { RequesterId = requesterId },
+            new { RequesterId = requesterId, Now = now },
             commandType: CommandType.StoredProcedure);
 
         return await ReadDetailsWithDecisionsAsync(results);
@@ -106,7 +106,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         return results.ToList();
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since)
+    public async Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since, DateTime now)
     {
         var ids = collectionIds.ToList();
         if (ids.Count == 0)
@@ -117,7 +117,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
             $"[{Schema}].[AccessRequest_ReadInboxHistoryByCollectionIds]",
-            new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since },
+            new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since, Now = now },
             commandType: CommandType.StoredProcedure);
 
         return await ReadDetailsWithDecisionsAsync(results);
