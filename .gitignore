@@ -10,8 +10,7 @@
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
-# core.ignorecase treats *.user above as matching the Bit.Subscriptions.User library directory
-# on case-insensitive checkouts, so re-include it explicitly.
+# Re-include Subscriptions.User: on case-insensitive checkouts *.user above matches this dir.
 !src/Libraries/Subscriptions.User/
 
 # Build results

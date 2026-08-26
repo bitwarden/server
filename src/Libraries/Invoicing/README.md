@@ -7,10 +7,10 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 
 ## Public surface
 
-`AddInvoicing()` registers everything the library needs, including the feature flag keys the library
-owns (`InvoicingFeatureFlags`) as known flags. The feature
-libraries above gate on those keys without depending on Core for them. The projection types land in
-a later change.
+`AddInvoicing()` registers the projection service and the feature flag keys the library owns
+(`InvoicingFeatureFlags`) as known flags. The public surface is `IInvoicePreviewService` and the
+`InvoicePreview` record family under `InvoicePreviews/Models/` (including `PlanTierType`). The
+service, builder, mappers, reference table, and Stripe client are internal.
 
 ## Stripe boundary
 
@@ -19,18 +19,30 @@ hydrate invoice and subscription data — and projects the results into the vend
 its public surface. Feature libraries above it never call Stripe themselves; they consume preview
 data through this surface, and reference Stripe SDK types only to pass data to and from it.
 
+### Proration months come from the line period
+
+`invoice.period_end` means different things depending on `proration_behavior`: under `always_invoice`
+it is the moment of change ("now"); under Stripe's default `create_prorations` it is the current
+period end. A proration line's own period is stable across both — it always spans
+`[change moment, period end]` (Stripe: "For prorations, this starts when the proration was calculated,
+and ends at the period end of the subscription"). So `ProrationMapper` measures the remaining term as
+`line.Period.End - line.Period.Start`, never against `invoice.period_end`. Confirmed against the Stripe
+docs and a live test-clock preview (annual plan: the line-span formula yields 12 months where
+`line.End - invoice.period_end` would yield 1).
+
 ## Core debt
 
-This library depends on `Core` as a documented deviation from the rule restricting Libraries from referencing Core, per ADR-0032, pending extraction into
-`Bit.Integrations.Billing`:
+This library depends on `Core` as a documented deviation from the rule restricting Libraries from referencing Core, per ADR-0032:
 
 | From Core | Used for |
 | --- | --- |
-| `IStripeAdapter` | Hydrating Stripe invoice/subscription data |
-| `IPricingClient` | Resolving plan and price data |
-| `ISubscriptionDiscountService` | Applying discounts to the preview |
-| `SponsoredPlans` | Sponsorship pricing rules |
-| `ISubscriber` | The organization or user being billed |
+| `IStripeAdapter` | Fetching the preview invoice from Stripe |
+| `StripeConstants` | The `purchasable_reference` metadata key and reference values |
+| `PlanCadenceType` | The billing cadence carried on the preview |
+| `ProductType` | Routing a reference to its product family |
+| `BitwardenDiscountType` | The type of a projected discount |
+| `Storage` | Storage figures on the subscription preview |
+| `EnumMemberJsonConverter` | Serializing the projected enums (cadence, tier, discount type) as their EnumMember string values |
 
 Depending on `Core` for these is fine for now; this table exists so they're known, not because
 they're queued up for extraction.
