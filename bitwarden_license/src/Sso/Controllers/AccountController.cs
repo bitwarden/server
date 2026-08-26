@@ -803,6 +803,9 @@ public class AccountController : Controller
 
         if (_globalSettings.SelfHosted)
         {
+            _logger.LogInformation(
+                "SSO auto provisioning failed: self-hosted instance at seat cap for organization {OrganizationId}.",
+                organization.Id);
             throw new SsoAuthnNoSeatsAvailableException();
         }
 
