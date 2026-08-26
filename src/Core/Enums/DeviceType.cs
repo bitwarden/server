@@ -58,4 +58,6 @@ public enum DeviceType : byte
     LinuxCLI = 25,
     [Display(Name = "DuckDuckGo")]
     DuckDuckGoBrowser = 26,
+    [Display(Name = "DuckDuckGo Extension")]
+    DuckDuckGoExtension = 27,
 }
