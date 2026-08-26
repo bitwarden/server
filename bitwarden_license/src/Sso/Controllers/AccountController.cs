@@ -365,6 +365,19 @@ public class AccountController : Controller
 
                 return Redirect(redirectUrl);
             }
+            catch (SsoAuthnNoSeatsAvailableException)
+            {
+                // Sign out the external auth cookie and redirect directly to the client's
+                // terminal error page.
+                await HttpContext.SignOutAsync(
+                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+
+                var redirectUrl = SsoRedirectUrlBuilder.BuildSsoLoginFailedRedirectUrl(
+                    _globalSettings.BaseServiceUri.VaultWithHash,
+                    SsoRedirectUrlBuilder.SsoLoginFailedErrorKind.NoSeatsAvailable);
+
+                return Redirect(redirectUrl);
+            }
 #nullable restore
         }
 
@@ -766,10 +779,11 @@ public class AccountController : Controller
 
     /// <summary>
     /// Verifies the org has room to consume one additional seat and, on cloud with
-    /// autoscale enabled, attempts to grow the seat cap by one. Throws NoSeatsAvailable
-    /// when neither is possible. No-op when <see cref="Organization.Seats"/> is null
-    /// (unlimited). Call before any transition that will move a row into a status
-    /// counted by the occupied-seat query (Invited / Accepted / Confirmed).
+    /// autoscale enabled, attempts to grow the seat cap by one. Throws
+    /// <see cref="SsoAuthnNoSeatsAvailableException"/> when neither is possible.
+    /// No-op when <see cref="Organization.Seats"/> is null (unlimited). Call before
+    /// any transition that will move a row into a status counted by the occupied-seat
+    /// query (Invited / Accepted / Confirmed).
     /// </summary>
     private async Task EnsureSeatAvailableAsync(Organization organization)
     {
@@ -787,13 +801,13 @@ public class AccountController : Controller
             return;
         }
 
+        if (_globalSettings.SelfHosted)
+        {
+            throw new SsoAuthnNoSeatsAvailableException();
+        }
+
         try
         {
-            if (_globalSettings.SelfHosted)
-            {
-                throw new Exception("Cannot autoscale on self-hosted instance.");
-            }
-
             await _organizationService.AutoAddSeatsAsync(organization, 1);
         }
         catch (Exception e)
@@ -805,7 +819,7 @@ public class AccountController : Controller
             }
 
             _logger.LogInformation(e, "SSO auto provisioning failed");
-            throw new Exception(_i18nService.T("NoSeatsAvailable", organization.DisplayName()));
+            throw new SsoAuthnNoSeatsAvailableException();
         }
     }
 
