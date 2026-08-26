@@ -89,9 +89,11 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                                         "Dequeued a base64-encoded message: {MessageId}. Decoding it is legacy tolerance, not something a current sender needs.",
                                         message.MessageId);
                                 }
-                                catch (FormatException)
+                                catch
                                 {
                                     // Not base64, so it is the plain text a current sender writes.
+                                    // Catching everything is what CoreHelpers.DecodeMessageText does,
+                                    // and this is only meant to inline it, not to change it.
                                 }
                             }
 
