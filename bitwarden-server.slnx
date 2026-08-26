@@ -21,10 +21,13 @@
     <Project Path="src/Core/Core.csproj" />
     <Project Path="src/Libraries/Data/Data.csproj" />
     <Project Path="src/Libraries/ExceptionHandling/ExceptionHandling.csproj" />
+    <Project Path="src/Libraries/Invoicing/Invoicing.csproj" />
     <Project Path="src/Libraries/OrganizationAuthorization/OrganizationAuthorization.csproj" />
     <Project Path="src/Libraries/GlobalSettingsBridge/GlobalSettingsBridge.csproj" />
     <Project Path="src/Libraries/SerilogFileLogging/SerilogFileLogging.csproj" />
     <Project Path="src/Libraries/SsrfProtection/SsrfProtection.csproj" />
+    <Project Path="src/Libraries/Subscriptions.Organization/Subscriptions.Organization.csproj" />
+    <Project Path="src/Libraries/Subscriptions.User/Subscriptions.User.csproj" />
     <Project Path="src/Events/Events.csproj" />
     <Project Path="src/EventsProcessor/EventsProcessor.csproj" />
     <Project Path="src/HttpExtensions/HttpExtensions.csproj" />
@@ -69,10 +72,13 @@
     <Project Path="test/Core.Test/Core.Test.csproj" />
     <Project Path="test/Libraries/Data.Test/Data.Test.csproj" />
     <Project Path="test/Libraries/ExceptionHandling.Test/ExceptionHandling.Test.csproj" />
+    <Project Path="test/Libraries/Invoicing.Test/Invoicing.Test.csproj" />
     <Project Path="test/Libraries/OrganizationAuthorization.Test/OrganizationAuthorization.Test.csproj" />
     <Project Path="test/Libraries/GlobalSettingsBridge.Test/GlobalSettingsBridge.Test.csproj" />
     <Project Path="test/Libraries/SerilogFileLogging.Test/SerilogFileLogging.Test.csproj" />
     <Project Path="test/Libraries/SsrfProtection.Test/SsrfProtection.Test.csproj" />
+    <Project Path="test/Libraries/Subscriptions.Organization.Test/Subscriptions.Organization.Test.csproj" />
+    <Project Path="test/Libraries/Subscriptions.User.Test/Subscriptions.User.Test.csproj" />
     <Project Path="test/Events.IntegrationTest/Events.IntegrationTest.csproj" />
     <Project Path="test/Events.Test/Events.Test.csproj" />
     <Project Path="test/EventsProcessor.Test/EventsProcessor.Test.csproj" />
