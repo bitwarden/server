@@ -185,6 +185,9 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
                 .Where(r => r.Id == lease.AccessRequestId
                     && r.RequesterId == lease.RequesterId
                     && r.Status == AccessRequestStatus.Approved
+                    // An extension applied in place when it was approved and never mints a lease of its own; it stays
+                    // Approved with no produced lease, so every other precondition here would pass for it.
+                    && r.ExtensionOfLeaseId == null
                     && r.NotBefore <= now
                     && r.NotAfter > now
                     && !dbContext.AccessLeases.Any(l => l.AccessRequestId == r.Id))
