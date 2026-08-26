@@ -123,9 +123,13 @@ public class RedeemChurnMitigationOfferCommandTests
         SetupOfferEligible();
         SetupMigrationCohortAssignment(organization);
 
-        var subscription = CreateSubscription();
+        var subscription = CreateSubscription(customerDiscount: new Discount
+        {
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
+        });
         // The proactive discount is live on the subscription (phase 1 is the active phase), so it is
-        // carried forward by discount id -- not re-emitted from the phase's recorded coupon id.
+        // carried forward by discount id -- not re-emitted from the phase's recorded coupon id. The
+        // customer coupon must not be injected onto the active phase.
         subscription.Discounts =
             [new Discount { Id = "di_proactive", Source = new DiscountSource { Coupon = new Coupon { Id = "proactive-coupon" } } }];
         SetupGetSubscription(organization, subscription);
@@ -186,6 +190,7 @@ public class RedeemChurnMitigationOfferCommandTests
                 opts.Phases[0].Discounts.Count == 1 &&
                 opts.Phases[0].Discounts[0].Discount == "di_proactive" &&
                 opts.Phases[0].Discounts[0].Coupon == null &&
+                opts.Phases[0].Discounts.All(d => d.Coupon != "customer-level-coupon") &&
                 opts.Phases[0].Metadata == phase1Metadata));
     }
 
