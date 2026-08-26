@@ -750,7 +750,7 @@ public static class UserServiceSutProviderExtensions
                         {
                             ProviderInstance = fakeUserTwoFactorProvider,
                         },
-                        // Used by TokenOptions.DefaultProvider (e.g. the delete-account recovery token).
+                        // The delete-recover-token endpoint's DeleteAsync(User, string) looks up by "Default", not "Email".
                         [TokenOptions.DefaultProvider] = new TokenProviderDescriptor(typeof(IUserTwoFactorTokenProvider<User>))
                         {
                             ProviderInstance = fakeUserTwoFactorProvider,
