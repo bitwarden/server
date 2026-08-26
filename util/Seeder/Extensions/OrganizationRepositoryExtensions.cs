@@ -1,9 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Repositories;
 
-namespace Bit.Seeder.Scenes;
+namespace Bit.Seeder.Extensions;
 
-public static class OrganizationRepositoryExtensions
+internal static class OrganizationRepositoryExtensions
 {
     public static async Task<Organization> GetSecretsManagerOrganizationOrThrowAsync(
         this IOrganizationRepository organizationRepository, Guid organizationId)
