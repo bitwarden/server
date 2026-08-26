@@ -49,6 +49,7 @@ public class DatabaseContext : DbContext
     public DbSet<AccessRequest> AccessRequests { get; set; }
     public DbSet<AccessLease> AccessLeases { get; set; }
     public DbSet<AccessDecision> AccessDecisions { get; set; }
+    public DbSet<AccessAuditEvent> AccessAuditEvents { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -118,6 +119,7 @@ public class DatabaseContext : DbContext
         var eAccessRequest = builder.Entity<AccessRequest>();
         var eAccessLease = builder.Entity<AccessLease>();
         var eAccessDecision = builder.Entity<AccessDecision>();
+        var eAccessAuditEvent = builder.Entity<AccessAuditEvent>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
@@ -218,6 +220,15 @@ public class DatabaseContext : DbContext
             .HasForeignKey(d => d.AccessRequestId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // The audit store is append-only and self-contained. Only OrganizationId is a foreign key -- the subject ids
+        // (actor, requester, cipher, collection, request, lease, rule) deliberately are not, so an event outlives what
+        // it references. The one index serves the only read: org-scoped, filtered on OccurredAt, newest first, a page
+        // at a time. Id is the third key because OccurredAt is not unique -- an action's Attempt and Outcome share a
+        // timestamp, and a paged read needs a total order to not double-serve or skip a boundary row.
+        eAccessAuditEvent.Property(p => p.Id).ValueGeneratedNever();
+        eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.OccurredAt, p.Id })
+            .IsDescending(false, true, true);
+
         eOrganizationMemberBaseDetail.HasNoKey();
 
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
@@ -244,6 +255,7 @@ public class DatabaseContext : DbContext
         eAccessRequest.ToTable(nameof(AccessRequest));
         eAccessLease.ToTable(nameof(AccessLease));
         eAccessDecision.ToTable(nameof(AccessDecision));
+        eAccessAuditEvent.ToTable(nameof(AccessAuditEvent));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));
