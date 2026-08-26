@@ -16,7 +16,9 @@ using MessagePack;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RichardSzalay.MockHttp;
@@ -357,6 +359,8 @@ public sealed class PushNotificationWireFormatTests
                 services.AddSingleton(anonymousHubContext);
                 services.AddSingleton<HubHelpers>();
                 services.AddHostedService<AzureQueueHostedService>();
+                // So a test can assert on what dequeuing logged.
+                services.AddFakeLogging();
             })
             .UseConsoleLifetime()
             .Build();
@@ -375,6 +379,11 @@ public sealed class PushNotificationWireFormatTests
         PushScenarios.Select(scenario => new object[] { scenario.Name });
 
     // The index identifies the case; the scenario and ingress ride along so failures name themselves.
+    public static IEnumerable<object[]> QueueCaseArgs() =>
+        WireCases.Select((wireCase, index) => (wireCase, index))
+            .Where(pair => pair.wireCase.Ingress == Ingress.AzureQueue)
+            .Select(pair => new object[] { pair.wireCase.Scenario, pair.index });
+
     public static IEnumerable<object[]> WireCaseArgs() =>
         WireCases.Select((wireCase, index) => new object[] { wireCase.Scenario, wireCase.Ingress, index });
 
@@ -434,6 +443,91 @@ public sealed class PushNotificationWireFormatTests
 
         // And the bytes are the pinned ones, down to the MessagePack type of every value.
         Assert.Equal(expected.ExpectedFrameHex, Convert.ToHexString(frame));
+    }
+
+    /// <summary>
+    /// A queued message may be base64-encoded rather than plain text, and the service accepts either.
+    /// Pinned before anything reads the message as bytes, because <c>DecodeMessageText</c> is what
+    /// provides the tolerance today: deserializing the body directly would accept only plain text, and
+    /// this is the test that would notice.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(QueueCaseArgs))]
+    public async Task Base64EncodedQueueMessage_RoutesLikePlainText(string scenario, int index)
+    {
+        var wireCase = WireCases[index];
+        var expected = GetScenario(scenario);
+
+        await _queue.SendMessageAsync(
+            BinaryData.FromBytes(Encoding.UTF8.GetBytes(Convert.ToBase64String(
+                Encoding.UTF8.GetBytes(wireCase.Payload)))));
+
+        using var cts = new CancellationTokenSource(_timeout);
+        var invocation = await _queueRecorder.AwaitNextAsync(cts.Token);
+
+        Assert.Equal(expected.ExpectedHub, invocation.Hub);
+        Assert.Equal(expected.ExpectedDestination, invocation.Destination);
+        Assert.Equal(expected.ExpectedFrameHex, Convert.ToHexString(_factory.EncodeForClients(invocation)));
+    }
+
+    /// <summary>
+    /// Dequeuing says so when it had to base64-decode a message. Nothing writes base64 any more, so
+    /// this is how we find out whether the tolerance is still load-bearing before removing it -- which
+    /// only works if the log actually fires, hence this test and the one below it.
+    /// </summary>
+    [Fact]
+    public async Task Base64EncodedQueueMessage_IsLogged()
+    {
+        var wireCase = WireCases.First(c => c.Ingress == Ingress.AzureQueue);
+
+        await _queue.SendMessageAsync(BinaryData.FromString(
+            Convert.ToBase64String(Encoding.UTF8.GetBytes(wireCase.Payload))));
+
+        using var cts = new CancellationTokenSource(_timeout);
+        await _queueRecorder.AwaitNextAsync(cts.Token);
+
+        Assert.Contains(
+            _queueHost.Services.GetRequiredService<FakeLogCollector>().GetSnapshot(),
+            record => record.Level == LogLevel.Warning && record.Message.Contains("base64-encoded"));
+    }
+
+    /// <summary>
+    /// The counterpart: a plain message says nothing, so the warning means what it says rather than
+    /// firing on everything.
+    /// </summary>
+    [Fact]
+    public async Task PlainTextQueueMessage_IsNotLoggedAsBase64()
+    {
+        var wireCase = WireCases.First(c => c.Ingress == Ingress.AzureQueue);
+
+        await _queue.SendMessageAsync(wireCase.Payload);
+
+        using var cts = new CancellationTokenSource(_timeout);
+        await _queueRecorder.AwaitNextAsync(cts.Token);
+
+        Assert.DoesNotContain(
+            _queueHost.Services.GetRequiredService<FakeLogCollector>().GetSnapshot(),
+            record => record.Message.Contains("base64-encoded"));
+    }
+
+    /// <summary>
+    /// The queue carries bytes, and a test can now queue them directly. Nothing reads a message that
+    /// way yet; this proves the fake supports it, so the reader can change without the harness having
+    /// to change with it.
+    /// </summary>
+    [Fact]
+    public async Task QueueMessageQueuedAsBytes_RoutesLikeAString()
+    {
+        var wireCase = WireCases.First(c => c.Ingress == Ingress.AzureQueue);
+        var expected = GetScenario(wireCase.Scenario);
+
+        await _queue.SendMessageAsync(BinaryData.FromBytes(Encoding.UTF8.GetBytes(wireCase.Payload)));
+
+        using var cts = new CancellationTokenSource(_timeout);
+        var invocation = await _queueRecorder.AwaitNextAsync(cts.Token);
+
+        Assert.Equal(expected.ExpectedDestination, invocation.Destination);
+        Assert.Equal(expected.ExpectedFrameHex, Convert.ToHexString(_factory.EncodeForClients(invocation)));
     }
 
     private static PushScenario GetScenario(string name) => PushScenarios.Single(s => s.Name == name);
