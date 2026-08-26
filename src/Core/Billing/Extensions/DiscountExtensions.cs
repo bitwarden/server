@@ -150,9 +150,10 @@ public static class DiscountExtensions
 
     /// <summary>
     /// Throws when <paramref name="subscription"/> is missing an expansion the discount builders rely on:
-    /// <c>discounts</c> / <c>customer</c> (their absence would silently drop discounts), and <c>test_clock</c>
-    /// when the subscription is on one (its absence resolves the current phase against the wrong time, which
-    /// flips the current-vs-future decision that drives discount carry-over). Logs before throwing.
+    /// <c>discounts</c> present only as unexpanded id stubs, a missing <c>customer</c> (either would silently
+    /// drop discounts), or a <c>test_clock</c> left unexpanded when the subscription is on one (its absence
+    /// resolves the current phase against the wrong time, which flips the current-vs-future decision that
+    /// drives discount carry-over). Logs before throwing.
     /// </summary>
     /// <param name="subscription">The subscription to check for missing expansions.</param>
     /// <param name="logger">Logger used to record the failure before throwing.</param>

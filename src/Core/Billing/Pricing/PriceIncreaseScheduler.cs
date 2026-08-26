@@ -442,7 +442,7 @@ public class PriceIncreaseScheduler(
         }
 
         var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
-            subscription, [.. new[] { CouponIDs.Milestone2SubscriptionDiscount }.Where(c => !string.IsNullOrEmpty(c))]);
+            subscription, [CouponIDs.Milestone2SubscriptionDiscount]);
 
         return new SubscriptionSchedulePhaseOptions
         {
@@ -493,9 +493,7 @@ public class PriceIncreaseScheduler(
 
         var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
             subscription,
-            [.. new[] { oldPlan.Type == PlanType.FamiliesAnnually2019 ? CouponIDs.Milestone3SubscriptionDiscount : null }
-                .Where(c => !string.IsNullOrEmpty(c))
-                .Select(c => c!)]);
+            oldPlan.Type == PlanType.FamiliesAnnually2019 ? [CouponIDs.Milestone3SubscriptionDiscount] : []);
 
         var startDate = subscription.GetCurrentPeriodEnd();
         if (startDate == null)
@@ -606,7 +604,7 @@ public class PriceIncreaseScheduler(
         // BuildPhaseLevelDiscounts de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
         var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
             subscription,
-            [.. new[] { cohort.ProactiveDiscountCouponCode }.Where(c => !string.IsNullOrEmpty(c)).Select(c => c!)]);
+            cohort.ProactiveDiscountCouponCode is { } proactiveCode ? [proactiveCode] : []);
 
         if (subscription.GetCurrentPeriod() is not { Start: { } currentStart, End: { } currentEnd })
         {
