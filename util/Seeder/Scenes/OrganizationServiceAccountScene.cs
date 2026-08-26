@@ -1,8 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.RustSDK;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -35,11 +34,7 @@ public class OrganizationServiceAccountScene(
     {
         var organization = await organizationRepository.GetSecretsManagerOrganizationOrThrowAsync(request.OrganizationId);
 
-        var serviceAccount = new ServiceAccount
-        {
-            OrganizationId = organization.Id,
-            Name = RustSdkService.EncryptString(request.Name, request.OrganizationKeyB64)
-        };
+        var serviceAccount = ServiceAccountSeeder.Create(organization.Id, request.OrganizationKeyB64, request.Name);
 
         var created = await serviceAccountRepository.CreateAsync(serviceAccount);
 

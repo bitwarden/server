@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.Billing.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.RustSDK;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
@@ -81,18 +82,18 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
             [
                 new OrganizationAccessPolicyScene.Grant
                 {
-                    GranteeType = OrganizationAccessPolicyScene.GranteeType.OrganizationUser,
+                    GranteeType = AccessPolicySeeder.GranteeType.OrganizationUser,
                     GranteeId = orgUserId,
-                    GrantableType = OrganizationAccessPolicyScene.GrantableType.Project,
+                    GrantableType = AccessPolicySeeder.GrantableType.Project,
                     GrantableId = projectId,
                     Read = true,
                     Write = true
                 },
                 new OrganizationAccessPolicyScene.Grant
                 {
-                    GranteeType = OrganizationAccessPolicyScene.GranteeType.ServiceAccount,
+                    GranteeType = AccessPolicySeeder.GranteeType.ServiceAccount,
                     GranteeId = serviceAccountId,
-                    GrantableType = OrganizationAccessPolicyScene.GrantableType.Project,
+                    GrantableType = AccessPolicySeeder.GrantableType.Project,
                     GrantableId = projectId,
                     Read = true,
                     Write = false

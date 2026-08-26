@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -15,19 +15,6 @@ public class OrganizationAccessPolicyScene(
     IAccessPolicyRepository accessPolicyRepository,
     IManglerService manglerService) : IScene<OrganizationAccessPolicyScene.Request, OrganizationAccessPolicyScene.Result>
 {
-    public enum GranteeType
-    {
-        OrganizationUser,
-        Group,
-        ServiceAccount
-    }
-
-    public enum GrantableType
-    {
-        Project,
-        ServiceAccount
-    }
-
     public class Request
     {
         [Required]
@@ -40,11 +27,11 @@ public class OrganizationAccessPolicyScene(
     public class Grant
     {
         [Required]
-        public required GranteeType GranteeType { get; set; }
+        public required AccessPolicySeeder.GranteeType GranteeType { get; set; }
         [Required]
         public required Guid GranteeId { get; set; }
         [Required]
-        public required GrantableType GrantableType { get; set; }
+        public required AccessPolicySeeder.GrantableType GrantableType { get; set; }
         [Required]
         public required Guid GrantableId { get; set; }
         public bool Read { get; set; } = true;
@@ -61,7 +48,9 @@ public class OrganizationAccessPolicyScene(
     {
         await organizationRepository.GetSecretsManagerOrganizationOrThrowAsync(request.OrganizationId);
 
-        var policies = request.Grants.Select(BuildPolicy).ToList();
+        var policies = request.Grants
+            .Select(g => AccessPolicySeeder.Create(g.GranteeType, g.GranteeId, g.GrantableType, g.GrantableId, g.Read, g.Write))
+            .ToList();
 
         var created = await accessPolicyRepository.CreateManyAsync(policies);
 
@@ -73,46 +62,4 @@ public class OrganizationAccessPolicyScene(
             },
             mangleMap: manglerService.GetMangleMap());
     }
-
-    private static BaseAccessPolicy BuildPolicy(Grant grant) =>
-        (grant.GranteeType, grant.GrantableType) switch
-        {
-            (GranteeType.OrganizationUser, GrantableType.Project) => new UserProjectAccessPolicy
-            {
-                OrganizationUserId = grant.GranteeId,
-                GrantedProjectId = grant.GrantableId,
-                Read = grant.Read,
-                Write = grant.Write
-            },
-            (GranteeType.OrganizationUser, GrantableType.ServiceAccount) => new UserServiceAccountAccessPolicy
-            {
-                OrganizationUserId = grant.GranteeId,
-                GrantedServiceAccountId = grant.GrantableId,
-                Read = grant.Read,
-                Write = grant.Write
-            },
-            (GranteeType.Group, GrantableType.Project) => new GroupProjectAccessPolicy
-            {
-                GroupId = grant.GranteeId,
-                GrantedProjectId = grant.GrantableId,
-                Read = grant.Read,
-                Write = grant.Write
-            },
-            (GranteeType.Group, GrantableType.ServiceAccount) => new GroupServiceAccountAccessPolicy
-            {
-                GroupId = grant.GranteeId,
-                GrantedServiceAccountId = grant.GrantableId,
-                Read = grant.Read,
-                Write = grant.Write
-            },
-            (GranteeType.ServiceAccount, GrantableType.Project) => new ServiceAccountProjectAccessPolicy
-            {
-                ServiceAccountId = grant.GranteeId,
-                GrantedProjectId = grant.GrantableId,
-                Read = grant.Read,
-                Write = grant.Write
-            },
-            _ => throw new InvalidOperationException(
-                $"Unsupported access policy: {grant.GranteeType} granted to {grant.GrantableType}.")
-        };
 }

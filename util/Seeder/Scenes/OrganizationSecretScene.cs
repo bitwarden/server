@@ -1,8 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.RustSDK;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -38,16 +37,13 @@ public class OrganizationSecretScene(
     {
         var organization = await organizationRepository.GetSecretsManagerOrganizationOrThrowAsync(request.OrganizationId);
 
-        var secret = new Secret
-        {
-            OrganizationId = organization.Id,
-            Key = RustSdkService.EncryptString(request.Key, request.OrganizationKeyB64),
-            Value = RustSdkService.EncryptString(request.Value ?? string.Empty, request.OrganizationKeyB64),
-            Note = RustSdkService.EncryptString(request.Note ?? string.Empty, request.OrganizationKeyB64),
-            Projects = request.ProjectIds?
-                .Select(id => new Project { Id = id, OrganizationId = organization.Id })
-                .ToList()
-        };
+        var secret = SecretSeeder.Create(
+            organization.Id,
+            request.OrganizationKeyB64,
+            request.Key,
+            request.Value,
+            request.Note,
+            request.ProjectIds);
 
         var created = await secretRepository.CreateAsync(secret);
 
