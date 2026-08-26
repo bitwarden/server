@@ -18,6 +18,7 @@ public static class SsoRedirectUrlBuilder
     {
         public const string InviteAcceptanceRequired = "ssoOrgInviteAcceptanceRequired";
         public const string OrgMembershipRequired = "ssoOrgMembershipRequired";
+        public const string StagedOrgUserInviteAcceptanceRequired = "ssoStagedOrgUserInviteAcceptanceRequired";
         // Future: AccessRevoked = "ssoOrganizationAccessRevoked", etc.
     }
 

@@ -45,14 +45,14 @@ Need to create test data?
 - **SeederContext**: Shared mutable state bag (NOT thread-safe)
 - **RecipeExecutor**: Awaits steps sequentially, captures statistics, commits via BulkCommitter, then runs any post-commit steps
 - **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
-- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`, `ILicensingService`, `IAttachmentStorageService`) into a single record. Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`.
+- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`, `ILicensingService`, `IAttachmentStorageService`, `ISeederLicenseSigner`, `ILoggerFactory`) into a single record. Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`.
 
-**Why two step interfaces, not one async contract?** Deliberate — don't unify. Collapsing to one `Task ExecuteAsync(SeederContext)` costs: rewrite 22 step classes (18 in `Steps/`, 4 test doubles); force 20 `.Execute(context)` sites in `test/SeederApi.IntegrationTest/Steps/` to `await`, their test methods to `async`; and `TreatWarningsAsErrors` is on repo-wide (`Directory.Build.props`), so CS1998 makes `async` without `await` a build error — every sync step needs `return Task.CompletedTask`. Permanent trap. The split costs less: two-arm union in `OrderedStep`, `object`-typed `Inner`, one duplicated `RecipeBuilder` registration. Diverges from `IScene`/`IQuery` — single `Task`-returning, no sync twin.
+**Why two step interfaces, not one async contract?** Deliberate — don't unify. Collapsing to one `Task ExecuteAsync(SeederContext)` costs: rewrite every step class in `Steps/` plus the step test doubles in `test/SeederApi.IntegrationTest/`; force every `.Execute(context)` site in `test/SeederApi.IntegrationTest/Steps/` to `await`, their test methods to `async`; and `TreatWarningsAsErrors` is on repo-wide (`Directory.Build.props`), so CS1998 makes `async` without `await` a build error — every sync step needs `return Task.CompletedTask`. Permanent trap. The split costs less: two-arm union in `OrderedStep`, `object`-typed `Inner`, one duplicated `RecipeBuilder` registration. Diverges from `IScene`/`IQuery` — single `Task`-returning, no sync twin.
 
 **Fixture/preset separation**: Fixtures (organizations, rosters, ciphers) are independent and never reference each other. The preset is the only layer that composes fixtures and defines cross-cutting relationships (folder assignments, favorites). See `Seeds/docs/architecture.md`.
 
 **Phase order (org presets)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
-**Phase order (individual presets)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → CipherAttachments → FolderAssignments → FavoriteAssignments
+**Phase order (individual presets)**: IndividualUser → SelfHostUserLicense (conditional) → NamedFolders → Generator → Folders → Ciphers → CipherAttachments → FolderAssignments → FavoriteAssignments
 
 **Individual user presets** use the Pipeline with `CreateIndividualUserStep` (no org, no groups, no collections). These presets live in `Seeds/fixtures/presets/individual/` and are identified by having a `"user"` key instead of `"organization"`. They support `folderNames`, `folderAssignments`, and `favoriteAssignments` for fixture-driven personal vault organization. See `Seeds/docs/presets.md` for the catalog.
 
@@ -96,7 +96,7 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 **Preset JSON**: Add an optional `"density": { ... }` block. See `Seeds/schemas/preset.schema.json` for the full schema.
 
-**Presets**: Organized into `features/`, `qa/`, `scale/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
+**Presets**: Organized into `dev/`, `features/`, `qa/`, `scale/`, `individual/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
 
 **Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
 
@@ -175,6 +175,18 @@ Same domain = same seed = reproducible data:
 ```csharp
 var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
+
+## Fixture Contract Sync
+
+`Models/SeedModels.cs`, `Seeds/schemas/*.schema.json`, and `Seeds/docs/fixtures.md` describe one contract from three angles — the deserialization target, the editor validation, and the human documentation. A field present in only some of them is silently ignored or silently undocumented: `roster.schema.json` documented a per-user `email` for months while `SeedRosterUser` had no property to carry it.
+
+**Whenever you add, rename, or remove a fixture field:**
+
+- Add the property to the matching `SeedModels.cs` record _and_ the schema, then wire it through the step that consumes it — a schema-only field parses and is dropped on the floor
+- Update the field's bullet in `Seeds/docs/fixtures.md`, and soften any sibling line the new field makes conditional (an override makes "the Seeder builds emails as X" only true by default)
+- Give identifier-bearing strings `"minLength": 1` in the schema, and treat whitespace as absent in the step so it falls back to the derived value rather than committing an unusable row
+- Add a row to `Seeds/docs/regression.md` when the field changes what a real seed writes to the database — the unit suite proves the parse, not the seed
+- Fixture org domains MUST be `.example` (RFC 2606) — never `.test`, `.local`, or a real TLD. `Seeds/docs/fixtures.md` holds the full naming table
 
 ## Scenarios
 

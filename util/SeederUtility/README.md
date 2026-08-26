@@ -48,14 +48,15 @@ dotnet run -- individual --subscription premium --first-name Jane --last-name Sm
 # Random name — mangling auto-enabled
 dotnet run -- individual --subscription premium --vault
 
-# Self-hosted instance — writes a license file so premium status is recognized
+# Self-hosted instance — signs and writes a license file so premium status is recognized
+# (requires a trusted licensing certificate; see the note below)
 dotnet run -- individual --subscription premium --first-name Jane --last-name Smith --self-hosted
 
 # Aged account — CreationDate backdated 365 days
 dotnet run -- individual --subscription free --account-age-days 365
 ```
 
-Add `--self-hosted` when targeting a self-hosted instance — without it, premium status won't be recognized.
+Add `--self-hosted` when targeting a self-hosted instance; without it, premium status won't be recognized. A license is written only when `licenseCertificatePath` and `licenseCertificatePassword` point at a PFX holding the Bitwarden **development** licensing key; the production certificate is deliberately not trusted. With no matching certificate, the seeder logs a warning and skips license generation, so the account is still created, just without recognized premium.
 
 Use `--account-age-days N` to backdate the account's `CreationDate` by `N` days (default `0` = today) for scenarios that depend on account age. Only `CreationDate` is backdated; the revision dates stay at the seed time.
 
@@ -66,6 +67,9 @@ Loads a named configuration from the embedded catalog. Presets are curated JSON 
 ```bash
 # List available presets
 dotnet run -- preset --list
+
+# Day-to-day dev preset with memorable role logins
+dotnet run -- preset --name dev.playground
 
 # QA preset with known users and relationships
 dotnet run -- preset --name qa.enterprise-basic --mangle

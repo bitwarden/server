@@ -6,6 +6,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Tools.Services;
@@ -64,7 +65,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 
         await _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
         await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
-        await _organizationRepository.DeleteAsync(organization);
+        await _organizationRepository.DeleteAndCreateDeleteTasksAsync(organization, [OrganizationDeleteTaskType.EventsCleanup]);
         await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
 
