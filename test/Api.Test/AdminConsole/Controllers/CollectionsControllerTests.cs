@@ -221,6 +221,70 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetDetails_CollectionBelongsToDifferentOrg_ThrowsNotFound(Guid orgId,
+        CollectionAdminDetails collectionAdminDetails, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdWithPermissionsAsync(collectionAdminDetails.Id, Arg.Any<Guid?>(), true)
+            .Returns(collectionAdminDetails);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetDetails(orgId, collectionAdminDetails.Id));
+
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_CollectionBelongsToDifferentOrg_ThrowsNotFound(Guid orgId, Collection collection,
+        UpdateCollectionRequestModel collectionRequest, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(collection.Id)
+            .Returns(collection);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(orgId, collection.Id, collectionRequest));
+
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
+        await sutProvider.GetDependency<IUpdateCollectionCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteMany_CollectionsBelongToDifferentOrg_ThrowsNotFound(Organization organization,
+        Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
+    {
+        var orgId = organization.Id;
+        var model = new CollectionBulkDeleteRequestModel
+        {
+            Ids = [collection1.Id, collection2.Id]
+        };
+
+        // Second collection belongs to a different organization
+        var collections = new List<Collection>
+        {
+            new CollectionDetails { Id = collection1.Id, OrganizationId = orgId },
+            new CollectionDetails { Id = collection2.Id, OrganizationId = Guid.NewGuid() },
+        };
+
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(collections);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteMany(orgId, model));
+
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
+        await sutProvider.GetDependency<IDeleteCollectionCommand>().DidNotReceiveWithAnyArgs()
+            .DeleteManyAsync((IEnumerable<Collection>)default);
+    }
+
+    [Theory, BitAutoData]
     public async Task Put_WithNoCollectionPermission_ThrowsNotFound(Collection collection, UpdateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
