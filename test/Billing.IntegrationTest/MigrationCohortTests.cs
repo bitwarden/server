@@ -118,7 +118,7 @@ public class MigrationCohortTests(StripeTestsFixture fixture) : IClassFixture<St
     {
         // RedeemForChurnOnlyCohortAsync builds via DiscountExtensions.BuildSubscriptionLevelDiscounts,
         // which reads `subscription.Customer?.Discount?.Source?.CouponId`.
-        // Without `customer.discount.source.coupon` (and `discounts.source.coupon`) in the expand,
+        // Without `customer.discount.source.coupon` in the expand,
         // the customer coupon silently drops from the merged set — the redeem
         // succeeds (200) but the customer coupon is lost on the subscription's
         // Discounts list, so Stripe's sub-overrides-customer stacking behavior
