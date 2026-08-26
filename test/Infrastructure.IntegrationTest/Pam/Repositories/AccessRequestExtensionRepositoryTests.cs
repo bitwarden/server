@@ -163,6 +163,89 @@ public class AccessRequestExtensionRepositoryTests
         return lease;
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateFromApprovedRequestAsync_ExtensionRequest_PreconditionFailedAndMintsNothing(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+        var requesterId = Guid.NewGuid();
+
+        var lease = await CreateActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, requesterId, now);
+        var newNotAfter = lease.NotAfter.AddHours(1);
+        var extension = BuildExtension(lease, newNotAfter, now);
+        Assert.Equal(AccessLeaseExtendOutcome.Extended,
+            await accessRequestRepository.CreateApprovedExtensionAsync(extension, BuildAutoDecision(now), now));
+
+        // Inside the extension's own window, when every other precondition holds: it is Approved, owned by the
+        // requester, in-window, and has produced no lease. Only ExtensionOfLeaseId refuses the mint. This is the
+        // window the parent lease is extended over, so nothing else here would.
+        var duringExtension = lease.NotAfter.AddMinutes(1);
+
+        Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(
+                BuildLeaseFor(extension, duringExtension), duringExtension, false));
+
+        // No second lease for the credential, and the parent is untouched.
+        Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(extension.Id));
+        var parent = await accessLeaseRepository.GetByIdAsync(lease.Id);
+        Assert.NotNull(parent);
+        Assert.Equal(AccessLeaseStatus.Active, parent!.Status);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateFromApprovedRequestAsync_ExtensionRequest_ParentRevoked_StillMintsNothing(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+        var requesterId = Guid.NewGuid();
+
+        var lease = await CreateActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, requesterId, now);
+        var extension = BuildExtension(lease, lease.NotAfter.AddHours(1), now);
+        Assert.Equal(AccessLeaseExtendOutcome.Extended,
+            await accessRequestRepository.CreateApprovedExtensionAsync(extension, BuildAutoDecision(now), now));
+
+        // Revoking the parent is the case that matters: it clears the single-active-lease contention that was the
+        // only thing refusing this mint, so a revoked requester could otherwise re-grant themselves the rest of the
+        // window. Enforcement is on here to prove the refusal is the extension predicate, not the singleton guard.
+        var duringExtension = lease.NotAfter.AddMinutes(1);
+        await accessLeaseRepository.RevokeAsync(
+            lease, AccessLeaseStatus.Revoked, BuildHumanDecision(lease.AccessRequestId, duringExtension),
+            duringExtension);
+
+        Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(
+                BuildLeaseFor(extension, duringExtension), duringExtension, true));
+
+        Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(extension.Id));
+    }
+
+    private static AccessLease BuildLeaseFor(AccessRequest request, DateTime now)
+        => new()
+        {
+            Id = CombGuid.Generate(),
+            AccessRequestId = request.Id,
+            OrganizationId = request.OrganizationId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            RequesterId = request.RequesterId,
+            Status = AccessLeaseStatus.Active,
+            NotBefore = request.NotBefore,
+            NotAfter = request.NotAfter,
+            CreationDate = now,
+        };
+
     private static AccessRequest BuildExtension(AccessLease lease, DateTime newNotAfter, DateTime now)
     {
         var extension = new AccessRequest
