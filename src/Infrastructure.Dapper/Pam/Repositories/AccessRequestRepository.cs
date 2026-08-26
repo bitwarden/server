@@ -45,12 +45,12 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<AccessRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now)
+    public async Task<AccessRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId)
     {
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<AccessRequest>(
             $"[{Schema}].[AccessRequest_ReadActivePendingByRequesterIdCipherId]",
-            new { RequesterId = requesterId, CipherId = cipherId, Now = now },
+            new { RequesterId = requesterId, CipherId = cipherId },
             commandType: CommandType.StoredProcedure);
 
         return results.FirstOrDefault();
@@ -72,25 +72,24 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
             $"[{Schema}].[AccessRequest_ReadDetailsById]",
-            new { Id = id },
+            new { Id = id, Now = now },
             commandType: CommandType.StoredProcedure);
 
-        return (await ReadDetailsWithDecisionsAsync(results, now)).FirstOrDefault();
+        return (await ReadDetailsWithDecisionsAsync(results)).FirstOrDefault();
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime? since,
-        DateTime now)
+    public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
             $"[{Schema}].[AccessRequest_ReadManyByRequesterId]",
-            new { RequesterId = requesterId, Since = since, Now = now },
+            new { RequesterId = requesterId, Now = now },
             commandType: CommandType.StoredProcedure);
 
-        return await ReadDetailsWithDecisionsAsync(results, now);
+        return await ReadDetailsWithDecisionsAsync(results);
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now)
+    public async Task<ICollection<AccessRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
     {
         var ids = collectionIds.ToList();
         if (ids.Count == 0)
@@ -99,12 +98,12 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         }
 
         await using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.QueryAsync<DetailsRow>(
+        var results = await connection.QueryAsync<AccessRequestDetails>(
             $"[{Schema}].[AccessRequest_ReadInboxPendingByCollectionIds]",
-            new { CollectionIds = ids.ToGuidIdArrayTVP(), Now = now },
+            new { CollectionIds = ids.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure);
 
-        return results.Select(row => row.Derive(now)).ToList();
+        return results.ToList();
     }
 
     public async Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since, DateTime now)
@@ -121,10 +120,10 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since, Now = now },
             commandType: CommandType.StoredProcedure);
 
-        return await ReadDetailsWithDecisionsAsync(results, now);
+        return await ReadDetailsWithDecisionsAsync(results);
     }
 
-    public async Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestAction action, DateTime now)
+    public async Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestStatus status, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
@@ -132,7 +131,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             new
             {
                 AccessRequestId = request.Id,
-                Action = action,
+                Status = status,
                 AccessDecisionId = decision.Id,
                 ApproverId = decision.ApproverId,
                 Verdict = decision.Verdict,
@@ -178,7 +177,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     }
 
     public async Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(AccessRequest request,
-        AccessDecision decision, DateTime now, string? denialComment)
+        AccessDecision decision, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         var result = await connection.ExecuteScalarAsync<int>(
@@ -197,7 +196,6 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
                 request.Reason,
                 Now = now,
                 request.RuleId,
-                DenialComment = denialComment,
             },
             commandType: CommandType.StoredProcedure);
 
@@ -205,14 +203,13 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     }
 
     /// <summary>
-    /// Reads a two-result-set access-request projection: result 1 is the raw request rows (stored facts only), result
-    /// 2 is every decision row (human or automatic) keyed by AccessRequestId (ordered oldest-first by the procedure).
-    /// Derives each row's statuses against <paramref name="now"/> and groups the decisions onto each request's
-    /// <see cref="AccessRequestDetails.Decisions"/>; a pending request keeps its empty list.
+    /// Reads a two-result-set access-request projection: result 1 is the request rows, result 2 is every decision row
+    /// (human or automatic) keyed by AccessRequestId (ordered oldest-first by the procedure). Groups the decisions onto
+    /// each request's <see cref="AccessRequestDetails.Decisions"/>; a pending request keeps its empty list.
     /// </summary>
-    private static async Task<List<AccessRequestDetails>> ReadDetailsWithDecisionsAsync(SqlMapper.GridReader reader, DateTime now)
+    private static async Task<List<AccessRequestDetails>> ReadDetailsWithDecisionsAsync(SqlMapper.GridReader reader)
     {
-        var details = (await reader.ReadAsync<DetailsRow>()).Select(row => row.Derive(now)).ToList();
+        var details = (await reader.ReadAsync<AccessRequestDetails>()).ToList();
         var decisionsByRequest = (await reader.ReadAsync<DecisionRow>())
             .GroupBy(row => row.AccessRequestId)
             .ToDictionary(group => group.Key, group => group.Select(row => row.ToDecision()).ToList());
@@ -226,29 +223,6 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         }
 
         return details;
-    }
-
-    /// <summary>
-    /// A raw request-projection row: the <see cref="AccessRequestDetails"/> it becomes, plus the stored
-    /// action and the produced lease's action the procedures additionally project.
-    /// Dapper maps inherited columns by name, so a new model column can't silently drop; <see cref="Derive"/> stamps
-    /// derived statuses via the shared <see cref="AccessRequestDetails.StampDerivedStatuses"/>. Derived statuses
-    /// never cross the wire from SQL.
-    /// </summary>
-    private sealed class DetailsRow : AccessRequestDetails
-    {
-        public AccessRequestAction Action { get; set; }
-        public AccessLeaseAction? ProducedLeaseAction { get; set; }
-
-        public AccessRequestDetails Derive(DateTime now)
-        {
-            StampDerivedStatuses(Action,
-                ProducedLeaseId is { } leaseId
-                    ? (leaseId, ProducedLeaseAction!.Value, ProducedLeaseNotAfter!.Value)
-                    : null,
-                now);
-            return this;
-        }
     }
 
     /// <summary>A decision row from the decision result set, carrying its AccessRequestId for grouping.</summary>

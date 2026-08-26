@@ -26,7 +26,7 @@ public class ListLeaseHistoryQueryTests
 
         Assert.Empty(result);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyEndedByCollectionIdsAsync(default!, default);
+            .GetManyEndedByCollectionIdsAsync(default!, default, default);
     }
 
     [Theory, BitAutoData]
@@ -40,13 +40,15 @@ public class ListLeaseHistoryQueryTests
         // Shares the approver inbox's history window.
         var expectedSince = _now.AddDays(-ListInboxHistoryQuery.HistoryRetentionDays);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .GetManyEndedByCollectionIdsAsync(manageable, expectedSince).Returns([lease]);
+            .GetManyEndedByCollectionIdsAsync(manageable, expectedSince, _now).Returns([lease]);
 
         var result = await sutProvider.Sut.GetHistoryAsync(userId);
 
         Assert.Single(result);
+        // `now` is passed alongside `since`: it is what decides a lapsed lease has ended at all, since nothing
+        // writes Expired (PM-42355).
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
-            .GetManyEndedByCollectionIdsAsync(manageable, expectedSince);
+            .GetManyEndedByCollectionIdsAsync(manageable, expectedSince, _now);
     }
 
     private static SutProvider<ListLeaseHistoryQuery> Setup()

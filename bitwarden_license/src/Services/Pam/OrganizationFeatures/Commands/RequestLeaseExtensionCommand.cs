@@ -54,7 +54,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        if (lease.Status != AccessLeaseStatus.Active || lease.NotAfter <= now)
+        if (lease.StatusAsOf(now) != AccessLeaseStatus.Active)
         {
             throw new ConflictException("This lease is no longer active.");
         }

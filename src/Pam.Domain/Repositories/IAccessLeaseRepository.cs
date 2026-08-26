@@ -18,50 +18,49 @@ public interface IAccessLeaseRepository
     Task<AccessLease?> GetActiveByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now);
 
     /// <summary>
-    /// Returns the caller's active leases (no early end, window containing <paramref name="now"/>) across every
-    /// organization.
+    /// Returns the caller's currently-active leases (status Active, window containing <paramref name="now"/>, not
+    /// revoked) across every organization they belong to. Returns an empty collection when none are active.
     /// </summary>
     Task<ICollection<AccessLease>> GetManyActiveByRequesterIdAsync(Guid requesterId, DateTime now);
 
     /// <summary>
-    /// Returns the active lease on the cipher that ends <em>last</em>, across all members, or null when free.
-    /// </summary>
-    /// <remarks>
-    /// Cipher-scoped, mirroring the singleton guard's own filter: the holder may sit in a collection the caller
-    /// cannot reach.
-    /// </remarks>
-    Task<AccessLease?> GetActiveByCipherIdAsync(Guid cipherId, DateTime now);
-
-    /// <summary>
-    /// Returns every active lease on the given collections, across all members — the governance view over a set of
-    /// caller-manageable collections.
+    /// Returns every currently-active lease (status Active, window containing <paramref name="now"/>) on the given
+    /// collections, across all members — the governance view over a set of caller-manageable collections. Returns an
+    /// empty collection when none are active.
     /// </summary>
     Task<ICollection<AccessLease>> GetManyActiveByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now);
 
     /// <summary>
-    /// Returns the ended leases (Expired, Revoked, or Cancelled) on the given collections that ended on or after
-    /// <paramref name="since"/>.
+    /// Returns the ended leases (Expired, Revoked, or Cancelled as of <paramref name="now"/>) on the given
+    /// collections that ended on or after <paramref name="since"/> — the governance history view over a set of
+    /// caller-manageable collections. A revoked/cancelled lease's end is its revoked date; an expired lease's end is
+    /// its not-after. Returns an empty collection when none qualify.
     /// </summary>
     /// <remarks>
-    /// Expiry is never stored, so ended-ness is derived by composing the recorded action with a clock comparison
-    /// against <paramref name="now"/>.
+    /// Ended-ness is derived against <paramref name="now"/>, not read from the stored status: nothing writes
+    /// <see cref="AccessLeaseStatus.Expired"/>, so a lease whose window merely closed is still stored Active and
+    /// would otherwise appear in neither this view nor the active one (PM-42355). The returned leases carry the
+    /// projected status, so <see cref="AccessLease.Status"/> reads Expired on them.
     /// </remarks>
     Task<ICollection<AccessLease>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since,
         DateTime now);
 
     /// <summary>
-    /// Race-safely mints the lease for an approved request, copying its window. Returns
-    /// <see cref="AccessLeaseMintOutcome.PreconditionFailed"/> for a stale precondition, or
-    /// <see cref="AccessLeaseMintOutcome.SingleActiveLeaseConflict"/> when <paramref name="enforceSingleActiveLease"/>
-    /// finds another active lease on the cipher.
+    /// Race-safely mints the active lease for an approved request, copying the request's window. The insert
+    /// re-checks ownership, Approved status, an open window, and that the request has not already produced a lease;
+    /// returns <see cref="AccessLeaseMintOutcome.PreconditionFailed"/> when any precondition no longer holds (e.g. a
+    /// concurrent activation won). When <paramref name="enforceSingleActiveLease"/> is true and another active
+    /// in-window lease already exists for the cipher, returns <see cref="AccessLeaseMintOutcome.SingleActiveLeaseConflict"/>
+    /// without minting. The lease must already have its id assigned.
     /// </summary>
     Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(AccessLease lease, DateTime now,
         bool enforceSingleActiveLease);
 
     /// <summary>
-    /// Atomically ends a running lease with <paramref name="endAction"/> (Revoked or Cancelled) and records
-    /// <paramref name="auditDecision"/> against the lease's originating request. Guarded so a lease that has
-    /// already ended or whose window has lapsed is left untouched.
+    /// Atomically ends an active lease — setting its status to <paramref name="endStatus"/> (Revoked when an operator
+    /// ended it, Cancelled when the holder ended their own) along with its revoked date and revoker — and records the
+    /// reason as a human <paramref name="auditDecision"/> against the lease's originating request. The decision must
+    /// already have its id assigned.
     /// </summary>
-    Task RevokeAsync(AccessLease lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now);
+    Task RevokeAsync(AccessLease lease, AccessLeaseStatus endStatus, AccessDecision auditDecision, DateTime now);
 }
