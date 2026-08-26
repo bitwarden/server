@@ -247,6 +247,63 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
+    public async Task SchedulePersonalPriceIncrease_Premium_LiveDiscountAndCustomerCoupon_DoesNotStackCustomerCouponOnPhase1()
+    {
+        var oldPremium = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            Seat = new Purchasable { StripePriceId = "premium-old-seat", Price = 10, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-old-storage", Price = 4, Provided = 1 }
+        };
+
+        var newPremium = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new Purchasable { StripePriceId = "premium-new-seat", Price = 15, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-new-storage", Price = 4, Provided = 1 }
+        };
+
+        _pricingClient.ListPremiumPlans().Returns([oldPremium, newPremium]);
+
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            CreateSubscriptionItem("premium-old-seat", 1));
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
+        };
+        subscription.Discounts =
+        [
+            new Discount { Id = "di_live", Source = new DiscountSource { Coupon = new Coupon { Id = "cpn_live" } } }
+        ];
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+
+        await sut.SchedulePersonalPriceIncrease(subscription);
+
+        // Phase 1 is the active period: it carries only the live discount by id -- the customer coupon is
+        // NOT injected there (that would stack it on top of the live discount). Phase 2 re-lists the
+        // customer coupon so the milestone coupon doesn't suppress it.
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[0].Discounts.Count == 1 &&
+                o.Phases[0].Discounts[0].Discount == "di_live" &&
+                o.Phases[0].Discounts.All(d => d.Coupon != "retention") &&
+                o.Phases[1].Discounts.Any(d => d.Coupon == "retention") &&
+                o.Phases[1].Discounts.Any(d => d.Discount == "di_live") &&
+                o.Phases[1].Discounts.Any(d => d.Coupon == CouponIDs.Milestone2SubscriptionDiscount)));
+    }
+
+    [Fact]
     public async Task SchedulePersonalPriceIncrease_PremiumSubscriptionWithLiveDiscount_CarriesByDiscountId()
     {
         var oldPremium = new PremiumPlan

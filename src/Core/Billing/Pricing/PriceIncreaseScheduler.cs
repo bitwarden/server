@@ -314,7 +314,7 @@ public class PriceIncreaseScheduler(
                     Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
                         i.Discounts?.Select(d => d.CouponId) ?? [])
                 })],
-                Discounts = DiscountExtensions.BuildPhaseLevelDiscounts(subscription, []),
+                Discounts = DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
                 ProrationBehavior = ProrationBehavior.None
             };
 
