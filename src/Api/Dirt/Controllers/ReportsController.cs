@@ -130,28 +130,6 @@ public class ReportsController : Controller
     }
 
     /// <summary>
-    /// Adds a new record into PasswordHealthReportApplication
-    /// </summary>
-    /// <param name="request">A single instance of PasswordHealthReportApplication Model</param>
-    /// <returns>A single instance of PasswordHealthReportApplication</returns>
-    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
-    /// <exception cref="NotFoundException">If the user lacks access</exception>
-    [HttpPost("password-health-report-application")]
-    public async Task<PasswordHealthReportApplication> AddPasswordHealthReportApplication(
-        [FromBody] PasswordHealthReportApplicationModel request)
-    {
-        await AuthorizeAsync(request.OrganizationId);
-
-        var commandRequest = new AddPasswordHealthReportApplicationRequest
-        {
-            OrganizationId = request.OrganizationId,
-            Url = request.Url
-        };
-
-        return await _addPwdHealthReportAppCommand.AddPasswordHealthReportApplicationAsync(commandRequest);
-    }
-
-    /// <summary>
     /// Adds multiple records into PasswordHealthReportApplication
     /// </summary>
     /// <param name="request">A enumerable of PasswordHealthReportApplicationModel</param>

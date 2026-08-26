@@ -171,85 +171,8 @@ public class ReportsControllerTests
             .GetPasswordHealthReportApplicationAsync(Arg.Any<Guid>());
     }
 
-    // AddPasswordHealthReportApplication (single)
 
-    [Theory, BitAutoData]
-    public async Task AddPasswordHealthReportApplicationAsync_withAccess_success(SutProvider<ReportsController> sutProvider)
-    {
-        // Arrange
-        SetupAuthorization(sutProvider);
-
-        // Act
-        var request = new PasswordHealthReportApplicationModel
-        {
-            OrganizationId = Guid.NewGuid(),
-            Url = "https://example.com",
-        };
-        await sutProvider.Sut.AddPasswordHealthReportApplication(request);
-
-        // Assert
-        _ = sutProvider.GetDependency<IAddPasswordHealthReportApplicationCommand>()
-            .Received(1)
-            .AddPasswordHealthReportApplicationAsync(Arg.Is<AddPasswordHealthReportApplicationRequest>(_ =>
-                _.OrganizationId == request.OrganizationId && _.Url == request.Url));
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddPasswordHealthReportApplicationAsync_withoutAccess(SutProvider<ReportsController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(false);
-
-        // Act
-        var request = new PasswordHealthReportApplicationModel
-        {
-            OrganizationId = Guid.NewGuid(),
-            Url = "https://example.com",
-        };
-        await Assert.ThrowsAsync<NotFoundException>(async () =>
-                await sutProvider.Sut.AddPasswordHealthReportApplication(request));
-
-        // Assert
-        await sutProvider.GetDependency<IAddPasswordHealthReportApplicationCommand>()
-            .DidNotReceive()
-            .AddPasswordHealthReportApplicationAsync(Arg.Any<AddPasswordHealthReportApplicationRequest>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddPasswordHealthReportApplicationAsync_withoutUseRiskInsights_throwsBadRequest(
-        SutProvider<ReportsController> sutProvider,
-        PasswordHealthReportApplicationModel request)
-    {
-        // Arrange
-        SetupAuthorization(sutProvider, useRiskInsights: false);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AddPasswordHealthReportApplication(request));
-
-        await sutProvider.GetDependency<IAddPasswordHealthReportApplicationCommand>()
-            .DidNotReceive()
-            .AddPasswordHealthReportApplicationAsync(Arg.Any<AddPasswordHealthReportApplicationRequest>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddPasswordHealthReportApplicationAsync_withoutOrganizationAbility_throwsBadRequest(
-        SutProvider<ReportsController> sutProvider,
-        PasswordHealthReportApplicationModel request)
-    {
-        // Arrange
-        SetupMissingOrganizationAbility(sutProvider);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AddPasswordHealthReportApplication(request));
-
-        await sutProvider.GetDependency<IAddPasswordHealthReportApplicationCommand>()
-            .DidNotReceive()
-            .AddPasswordHealthReportApplicationAsync(Arg.Any<AddPasswordHealthReportApplicationRequest>());
-    }
-
-    // AddPasswordHealthReportApplications (multiple)
+    // AddPasswordHealthReportApplications 
 
     [Theory, BitAutoData]
     public async Task AddPasswordHealthReportApplicationAsync_multiple_withAccess_success(
