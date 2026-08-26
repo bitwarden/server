@@ -1,4 +1,4 @@
-using AutoFixture;
+﻿using AutoFixture;
 using Bit.Api.Dirt.Controllers;
 using Bit.Api.Dirt.Models;
 using Bit.Core.AdminConsole.AbilitiesCache;
