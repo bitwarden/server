@@ -58,6 +58,20 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             throw new NotFoundException();
         }
 
+        // An extension never activates. It applied itself when it was approved -- AccessRequest_CreateApprovedExtension
+        // pushed the parent lease's end out in place -- and the request row it leaves behind exists to carry the
+        // justification, anchor the automatic decision, and cap the lease at one extension. That row is written
+        // Approved and stays Approved (the status enum has no 'activated'; the produced lease is what records an
+        // activation), so without this guard every remaining check below passes for it and a second, independent lease
+        // mints for a credential the requester already holds one for. The window it would mint over is exactly the
+        // extension period, when the parent is still live -- and revoking that parent is what clears the
+        // single-active-lease guard, so a revoked requester could re-mint their own access. Refused here rather than
+        // deferred to the mint proc so the caller gets the reason, not an opaque precondition failure.
+        if (request.ExtensionOfLeaseId is not null)
+        {
+            throw new BadRequestException("This request extended an existing lease and cannot start a new one.");
+        }
+
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Activation is idempotent while the produced lease is live (double-click, a second tab racing the

@@ -44,6 +44,18 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
             throw new NotFoundException();
         }
 
+        // An extension is decided when it is created: RequestLeaseExtensionCommand writes it already Approved with its
+        // automatic verdict and pushes the parent lease's end out in place. No approver route reaches one today -- the
+        // Pending check below already refuses it -- so this guard is a backstop, and a deliberate one. The spec models
+        // human-approved extensions (ExtensionApprovedExtendsParentLease fires for both kinds, and
+        // ExtensionDeniedParentGone exists only for the human case), and the day one is routed here it must extend the
+        // parent in place rather than resolve into an activatable approval. Failing loudly now means that work cannot
+        // silently reopen the second-lease hole this ordering closes.
+        if (request.ExtensionOfLeaseId is not null)
+        {
+            throw new BadRequestException("An extension is approved when it is requested and cannot be decided.");
+        }
+
         if (request.Status != AccessRequestStatus.Pending)
         {
             throw new ConflictException("This request has already been resolved.");
