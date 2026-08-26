@@ -44,10 +44,16 @@ public class AccessRequestDetails
     public Guid? ProducedLeaseId { get; set; }
 
     /// <summary>
-    /// The produced lease's current status (Active/Expired/Revoked/Cancelled), or null when the request has not
-    /// produced a lease. Lets the inbox distinguish a still-live lease from one that has ended, so an ended lease is
-    /// not offered for revocation.
+    /// The produced lease's status as of the clock the read was given, or null when the request has not produced a
+    /// lease. Lets the inbox distinguish a still-live lease from one that has ended, so an ended lease is not offered
+    /// for revocation.
     /// </summary>
+    /// <remarks>
+    /// Projected, not stored: <see cref="Entities.AccessLease.Status"/> only records an early end, so Expired exists
+    /// only as a derivation against the read clock — see <see cref="Entities.AccessLease.StatusAsOf"/>. The reads
+    /// that populate this take a <c>now</c> for exactly that reason. Handing the stored column straight out is what
+    /// made this field report an ended lease as Active indefinitely (PM-42355).
+    /// </remarks>
     public AccessLeaseStatus? ProducedLeaseStatus { get; set; }
 
     /// <summary>
