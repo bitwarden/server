@@ -65,7 +65,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         var existing = await _accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
         if (existing is not null)
         {
-            if (existing.Status == AccessLeaseStatus.Active && existing.NotAfter > now)
+            if (existing.StatusAsOf(now) == AccessLeaseStatus.Active)
             {
                 return existing;
             }
@@ -167,7 +167,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             // or the request changed underneath us. If the winner's lease is live, activation still succeeded from
             // this caller's point of view.
             var winner = await _accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
-            if (winner is { Status: AccessLeaseStatus.Active } && winner.NotAfter > now)
+            if (winner?.StatusAsOf(now) == AccessLeaseStatus.Active)
             {
                 return winner;
             }

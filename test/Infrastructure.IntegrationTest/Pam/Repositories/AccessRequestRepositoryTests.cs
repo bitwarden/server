@@ -74,7 +74,7 @@ public class AccessRequestRepositoryTests
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestStatus.Denied, now.AddDays(-120)));
 
         var history = await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-90));
+            [collection.Id], now.AddDays(-90), now);
 
         var row = Assert.Single(history);
         Assert.Equal(resolved.Id, row.Id);
@@ -114,7 +114,7 @@ public class AccessRequestRepositoryTests
 
         // While the lease is active the inbox sees its Active status, so the client offers Revoke.
         var active = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-1)));
+            [collection.Id], now.AddDays(-1), now));
         Assert.Equal(lease.Id, active.ProducedLeaseId);
         Assert.Equal(AccessLeaseStatus.Active, active.ProducedLeaseStatus);
 
@@ -132,9 +132,99 @@ public class AccessRequestRepositoryTests
         await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Revoked, auditDecision, now);
 
         var revoked = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-1)));
+            [collection.Id], now.AddDays(-1), now));
         Assert.Equal(lease.Id, revoked.ProducedLeaseId);
         Assert.Equal(AccessLeaseStatus.Revoked, revoked.ProducedLeaseStatus);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ProducedLeaseStatus_LapsedLease_IsProjectedExpiredOnEveryRead(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        // Nothing writes AccessLeaseStatus.Expired, so a lease whose window closed stays stored Active and every
+        // read that handed the column out raw reported an ended lease as still active indefinitely (PM-42355).
+        // All three projections derive it against the read clock instead.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        // Activated three hours ago on a window that closed two hours ago.
+        var (request, lease) = await CreateActivatedRequestAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now.AddHours(-3));
+
+        // The premise: the stored row is untouched -- no sweeper ran, and no early end was recorded.
+        var stored = await accessLeaseRepository.GetByIdAsync(lease.Id);
+        Assert.Equal(AccessLeaseStatus.Active, stored!.Status);
+        Assert.Null(stored.RevokedDate);
+
+        var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
+        Assert.Equal(lease.Id, details!.ProducedLeaseId);
+        Assert.Equal(AccessLeaseStatus.Expired, details.ProducedLeaseStatus);
+
+        var mine = Assert.Single(await accessRequestRepository.GetManyByRequesterIdAsync(request.RequesterId, now));
+        Assert.Equal(AccessLeaseStatus.Expired, mine.ProducedLeaseStatus);
+
+        var history = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
+            [collection.Id], now.AddDays(-1), now));
+        Assert.Equal(AccessLeaseStatus.Expired, history.ProducedLeaseStatus);
+
+        // Read as of a moment inside the window the same row is Active: this is a projection, not a write.
+        var whileLive = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now.AddHours(-3));
+        Assert.Equal(AccessLeaseStatus.Active, whileLive!.ProducedLeaseStatus);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ProducedLeaseStatus_ExtendedLease_StaysActiveEvenThoughTheRequestsWindowHasLapsed(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        // An extension pushes the parent lease's NotAfter out in place and leaves the original request row behind,
+        // so the request's own window is no longer the lease's. The projection must read the lease's NotAfter: off
+        // the request's it would report a live, extended lease as expired.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        // Window [now-3h, now-1h], activated at now-2h.
+        var (request, lease) = await CreateActivatedRequestAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now.AddHours(-2));
+
+        // Extended while still live, by two hours -- the lease now ends an hour from now.
+        var extendedAt = now.AddMinutes(-90);
+        var extension = BuildRequest(
+            organization.Id, collection.Id, request.RequesterId, AccessRequestStatus.Approved, extendedAt);
+        extension.Id = CombGuid.Generate();
+        extension.ExtensionOfLeaseId = lease.Id;
+        extension.CipherId = request.CipherId;
+        extension.NotBefore = lease.NotAfter;
+        extension.NotAfter = lease.NotAfter.AddHours(2);
+        extension.ResolvedDate = extendedAt;
+        Assert.Equal(AccessLeaseExtendOutcome.Extended, await accessRequestRepository.CreateApprovedExtensionAsync(
+            extension,
+            new AccessDecision
+            {
+                Id = CombGuid.Generate(),
+                AccessRequestId = extension.Id,
+                DeciderKind = AccessDeciderKind.Automatic,
+                Verdict = AccessDecisionVerdict.Approve,
+                CreationDate = extendedAt,
+            },
+            extendedAt));
+
+        // The original request's window closed an hour ago...
+        Assert.True(request.NotAfter < now);
+        // ...but the lease it produced now runs an hour into the future.
+        Assert.True((await accessLeaseRepository.GetByIdAsync(lease.Id))!.NotAfter > now);
+
+        // So the original request must still report a live lease.
+        var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
+        Assert.Equal(lease.Id, details!.ProducedLeaseId);
+        Assert.Equal(AccessLeaseStatus.Active, details.ProducedLeaseStatus);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -182,7 +272,7 @@ public class AccessRequestRepositoryTests
 
         // The human decision surfaces as a single element of the inbox projection's decision log.
         var history = await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-1));
+            [collection.Id], now.AddDays(-1), now);
         var row = Assert.Single(history);
         var recorded = Assert.Single(row.Decisions);
         Assert.Equal(AccessDeciderKind.Human, recorded.DeciderKind);
@@ -348,7 +438,7 @@ public class AccessRequestRepositoryTests
         await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestStatus.Pending, now));
 
-        var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId);
+        var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, now);
 
         Assert.Equal(2, mine.Count);
         Assert.Contains(mine, r => r.Id == pending.Id);
@@ -388,7 +478,7 @@ public class AccessRequestRepositoryTests
         };
         await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestStatus.Denied, now);
 
-        var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId);
+        var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, now);
 
         var row = Assert.Single(mine);
         var resolver = Assert.Single(row.Decisions);
@@ -461,7 +551,7 @@ public class AccessRequestRepositoryTests
             now.AddMinutes(1));
 
         var history = await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-1));
+            [collection.Id], now.AddDays(-1), now);
         var row = Assert.Single(history);
         Assert.Equal(2, row.Decisions.Count);
         Assert.Equal(AccessDeciderKind.Human, row.Decisions[0].DeciderKind);
@@ -594,7 +684,7 @@ public class AccessRequestRepositoryTests
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.Equal(AccessRequestStatus.Approved, persisted!.Status);
 
-        var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
+        var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
         var recorded = Assert.Single(details!.Decisions);
         Assert.Equal(winnerId, recorded.ApproverId!.Value);
         Assert.Equal(AccessDecisionVerdict.Approve, recorded.Verdict);
@@ -623,7 +713,7 @@ public class AccessRequestRepositoryTests
         Assert.Equal(AccessRequestStatus.Denied, persisted!.Status);
         Assert.NotNull(persisted.ResolvedDate);
 
-        var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
+        var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
         var recorded = Assert.Single(details!.Decisions);
         Assert.Equal(AccessDeciderKind.Human, recorded.DeciderKind);
         Assert.Equal(approverId, recorded.ApproverId!.Value);
@@ -658,7 +748,7 @@ public class AccessRequestRepositoryTests
         Assert.Equal(AccessLeaseStatus.Active, (await accessLeaseRepository.GetByIdAsync(lease.Id))!.Status);
 
         // No decision was orphaned against the request the call refused to retract.
-        var details = await accessRequestRepository.GetDetailsByIdAsync(approved.Id);
+        var details = await accessRequestRepository.GetDetailsByIdAsync(approved.Id, now);
         Assert.Empty(details!.Decisions);
     }
 
@@ -701,7 +791,7 @@ public class AccessRequestRepositoryTests
         // table-valued parameter (Dapper) or an empty Contains (EF).
         Assert.Empty(await accessRequestRepository.GetManyInboxPendingByCollectionIdsAsync([]));
         Assert.Empty(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [], DateTime.UtcNow.AddDays(-90)));
+            [], DateTime.UtcNow.AddDays(-90), DateTime.UtcNow));
     }
 
     private static AccessDecision BuildHumanDecision(
@@ -781,7 +871,7 @@ public class AccessRequestRepositoryTests
             AccessRequestStatus.Approved,
             now);
 
-        var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
+        var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
 
         Assert.NotNull(details);
         Assert.Equal(request.Id, details!.Id);
@@ -801,7 +891,7 @@ public class AccessRequestRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task GetDetailsByIdAsync_UnknownId_ReturnsNull(IAccessRequestRepository accessRequestRepository)
     {
-        Assert.Null(await accessRequestRepository.GetDetailsByIdAsync(Guid.NewGuid()));
+        Assert.Null(await accessRequestRepository.GetDetailsByIdAsync(Guid.NewGuid(), DateTime.UtcNow));
     }
 
     private static AccessRequest BuildRequest(

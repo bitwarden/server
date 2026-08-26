@@ -26,7 +26,7 @@ public class ListInboxHistoryQueryTests
 
         Assert.Empty(result);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyInboxHistoryByCollectionIdsAsync(default!, default);
+            .GetManyInboxHistoryByCollectionIdsAsync(default!, default, default);
     }
 
     [Theory, BitAutoData]
@@ -38,13 +38,15 @@ public class ListInboxHistoryQueryTests
             .GetManageableCollectionIdsAsync(userId).Returns(manageable);
         var expectedSince = _now.AddDays(-ListInboxHistoryQuery.HistoryRetentionDays);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .GetManyInboxHistoryByCollectionIdsAsync(manageable, expectedSince).Returns([row]);
+            .GetManyInboxHistoryByCollectionIdsAsync(manageable, expectedSince, _now).Returns([row]);
 
         var result = await sutProvider.Sut.GetHistoryAsync(userId);
 
         Assert.Single(result);
+        // `now` is passed alongside `since`: it is the clock each row's produced-lease status is projected against
+        // (PM-42355), distinct from the window bound.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
-            .GetManyInboxHistoryByCollectionIdsAsync(manageable, expectedSince);
+            .GetManyInboxHistoryByCollectionIdsAsync(manageable, expectedSince, _now);
     }
 
     private static SutProvider<ListInboxHistoryQuery> Setup()
