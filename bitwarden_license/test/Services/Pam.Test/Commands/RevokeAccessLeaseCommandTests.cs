@@ -154,6 +154,39 @@ public class RevokeAccessLeaseCommandTests
         await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
     }
 
+    [Theory, BitAutoData]
+    public async Task RevokeAsync_WindowAlreadyClosed_ThrowsConflictWithoutEndingTheLease(
+        Guid userId, AccessLease lease)
+    {
+        // A lease whose window has closed is stored Active -- nothing writes Expired -- so ending it here would
+        // restate a lease that ran out on its own as an operator revocation, stamping RevokedDate/RevokedBy and
+        // appending a Deny decision for an end that already happened (PM-42355).
+        var sutProvider = Setup();
+        lease.Status = AccessLeaseStatus.Active;
+        lease.NotAfter = _now.AddMinutes(-1);
+        SetupManageableLease(sutProvider, userId, lease);
+
+        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
+
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .RevokeAsync(default!, default, default!, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RevokeAsync_WindowClosesExactlyNow_ThrowsConflict(Guid userId, AccessLease lease)
+    {
+        // NotAfter is exclusive everywhere else (the active reads use NotAfter > now), so the boundary instant is
+        // already outside the window.
+        var sutProvider = Setup();
+        lease.Status = AccessLeaseStatus.Active;
+        lease.NotAfter = _now;
+        SetupManageableLease(sutProvider, userId, lease);
+
+        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
+    }
+
     private static SutProvider<RevokeAccessLeaseCommand> Setup()
     {
         var sutProvider = new SutProvider<RevokeAccessLeaseCommand>().WithFakeTimeProvider().Create();
