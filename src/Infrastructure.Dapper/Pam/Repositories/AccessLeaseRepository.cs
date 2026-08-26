@@ -71,7 +71,8 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         return results.ToList();
     }
 
-    public async Task<ICollection<AccessLease>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since)
+    public async Task<ICollection<AccessLease>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds,
+        DateTime since, DateTime now)
     {
         var ids = collectionIds.ToList();
         if (ids.Count == 0)
@@ -82,7 +83,7 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<AccessLease>(
             $"[{Schema}].[AccessLease_ReadManyEndedByCollectionIds]",
-            new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since },
+            new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since, Now = now },
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();

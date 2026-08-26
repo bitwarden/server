@@ -119,11 +119,14 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         request.Status = AccessRequestStatus.Approved;
         lease.Status = AccessLeaseStatus.Active;
+        lease.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
 
-        await Assert.ThrowsAsync<ConflictException>(
+        var conflict = await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+        // A live lease is ended through revoke, so the caller is pointed there.
+        Assert.Contains("revoke the lease instead", conflict.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -144,6 +147,28 @@ public class CancelAccessRequestCommandTests
 
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CancelAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelAsync_ApprovedWithLapsedLease_ReportsAlreadyResolvedRatherThanPointingAtRevoke(
+        AccessRequest request, AccessLease lease)
+    {
+        // A lease whose window has closed is stored Active, so reading the status raw sent the caller to a Revoke
+        // that revoke itself now refuses. The lease has already ended: the request is terminal history (PM-42355).
+        var sutProvider = Setup();
+        request.Status = AccessRequestStatus.Approved;
+        lease.Status = AccessLeaseStatus.Active;
+        lease.NotAfter = _now.AddMinutes(-1);
+        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
+
+        var conflict = await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+
+        Assert.Contains("already been resolved", conflict.Message);
+        Assert.DoesNotContain("revoke the lease instead", conflict.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
     }

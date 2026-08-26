@@ -34,7 +34,10 @@ public class ListInboxHistoryQuery : IListInboxHistoryQuery
             return new List<AccessRequestDetails>();
         }
 
-        var since = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-HistoryRetentionDays);
-        return await _accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(manageableCollectionIds, since);
+        // One clock, two jobs: `now` bounds the history window through `since`, and separately projects each row's
+        // produced-lease status (see AccessRequestDetails.ProducedLeaseStatus).
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        return await _accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
+            manageableCollectionIds, now.AddDays(-HistoryRetentionDays), now);
     }
 }
