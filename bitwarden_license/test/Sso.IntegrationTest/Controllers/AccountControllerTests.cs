@@ -417,12 +417,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert — 302 directly to /sso-login-failed with the no-seats-available kind.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
-        var location = response.Headers.Location!.ToString();
-        Assert.Contains("/sso-login-failed?", location);
-        Assert.Contains("kind=no-seats-available", location);
+        AssertNoSeatsAvailableRedirect(response);
     }
 
     /*
@@ -451,12 +446,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert — 302 directly to /sso-login-failed with the no-seats-available kind.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
-        var location = response.Headers.Location!.ToString();
-        Assert.Contains("/sso-login-failed?", location);
-        Assert.Contains("kind=no-seats-available", location);
+        AssertNoSeatsAvailableRedirect(response);
     }
 
     /*
@@ -972,12 +962,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert — 302 directly to /sso-login-failed with the no-seats-available kind.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
-        var location = response.Headers.Location!.ToString();
-        Assert.Contains("/sso-login-failed?", location);
-        Assert.Contains("kind=no-seats-available", location);
+        AssertNoSeatsAvailableRedirect(response);
 
         // Assert — rollback ran with the exact delta before the redirect fired.
         var orgService = testData.Factory.Services.GetRequiredService<IOrganizationService>();
@@ -1014,13 +999,8 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert — 302 directly to /sso-login-failed. Promoting the Staged row would exceed
-        // the seat cap and self-hosted cannot autoscale.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
-        var location = response.Headers.Location!.ToString();
-        Assert.Contains("/sso-login-failed?", location);
-        Assert.Contains("kind=no-seats-available", location);
+        // Promoting the Staged row would exceed the seat cap and self-hosted cannot autoscale.
+        AssertNoSeatsAvailableRedirect(response);
     }
 
     /*
@@ -1053,13 +1033,9 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert — 302 directly to /sso-login-failed. Promoting the Staged row would exceed
-        // the seat cap and autoscale cannot grow past MaxAutoscaleSeats.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
-        var location = response.Headers.Location!.ToString();
-        Assert.Contains("/sso-login-failed?", location);
-        Assert.Contains("kind=no-seats-available", location);
+        // Promoting the Staged row would exceed the seat cap and autoscale cannot grow past
+        // MaxAutoscaleSeats.
+        AssertNoSeatsAvailableRedirect(response);
     }
 
     /*
@@ -1191,12 +1167,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Phase 1 act — first SSO attempt should be rejected.
         var response1 = await client.GetAsync("/Account/ExternalCallback");
 
-        // Phase 1 assert — 302 directly to /sso-login-failed with the no-seats-available kind.
-        Assert.Equal(HttpStatusCode.Redirect, response1.StatusCode);
-        Assert.NotNull(response1.Headers.Location);
-        var phase1Location = response1.Headers.Location!.ToString();
-        Assert.Contains("/sso-login-failed?", phase1Location);
-        Assert.Contains("kind=no-seats-available", phase1Location);
+        AssertNoSeatsAvailableRedirect(response1);
 
         // Phase 1 assert — no BW User row was persisted. This is the fix's contract:
         // the seat check runs before RegisterSSOAutoProvisionedUserAsync so a rejection
@@ -1331,12 +1302,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert — 302 directly to /sso-login-failed with the no-seats-available kind.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
-        var location = response.Headers.Location!.ToString();
-        Assert.Contains("/sso-login-failed?", location);
-        Assert.Contains("kind=no-seats-available", location);
+        AssertNoSeatsAvailableRedirect(response);
 
         // Assert — no invite was sent (seat check must run before the email step).
         var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
@@ -1379,12 +1345,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert — 302 directly to /sso-login-failed with the no-seats-available kind.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
-        var location = response.Headers.Location!.ToString();
-        Assert.Contains("/sso-login-failed?", location);
-        Assert.Contains("kind=no-seats-available", location);
+        AssertNoSeatsAvailableRedirect(response);
 
         // Assert — no invite was sent.
         var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
@@ -1547,5 +1508,21 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // and the response should contain the redirect view
         var content = await response.Content.ReadAsStringAsync();
         Assert.NotEmpty(content); // View content should be present
+    }
+
+    /// <summary>
+    /// Asserts the response is a 302 redirect to the web client's
+    /// <c>/sso-login-failed</c> terminal page carrying the
+    /// <c>no-seats-available</c> kind. Shared by every SSO no-seats test path
+    /// (self-hosted, cloud autoscale-fail, autoscale partial-failure rollback,
+    /// fresh-JIT, and Staged-promotion variants).
+    /// </summary>
+    private static void AssertNoSeatsAvailableRedirect(HttpResponseMessage response)
+    {
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+        var location = response.Headers.Location!.ToString();
+        Assert.Contains("/sso-login-failed?", location);
+        Assert.Contains("kind=no-seats-available", location);
     }
 }
