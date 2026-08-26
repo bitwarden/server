@@ -47,18 +47,15 @@ Each build produces two tags:
 
 Either tag works with any copy of the data protection key, because CI pins one key for every build.
 
-Local builds tag for `bitwardenprod.azurecr.io/shot/` and push there only when you pass `PUSH=true`. The GitHub Actions workflow sets `PUSH: "false"` and has no registry login, so nothing it builds reaches the registry. Take those images from the run's artifacts instead.
+Local builds tag for `devimagesaedgdev.azurecr.io` and push there only when you pass `PUSH=true`. The GitHub Actions workflow pushes every image it builds.
 
 ## Getting an image from a CI build
 
-Each matrix job uploads the image as an artifact named after the database and preset. Artifacts are deleted 7 days after the run.
+Each matrix job pushes both tags to `devimagesaedgdev`. The registry refuses anonymous pulls, so log in first.
 
 ```bash
-RUN=31203415095
-PRESET=qa.dunder-mifflin-enterprise-full
-
-gh run download "$RUN" --name "seeded-postgres-$PRESET"
-docker load -i seeded-postgres-*.tar
+az acr login -n devimagesaedgdev
+docker pull devimagesaedgdev.azurecr.io/seeded-postgres:qa-dunder-mifflin-enterprise-full-latest
 ```
 
 ### Getting the data protection key
@@ -76,6 +73,10 @@ az keyvault secret show --vault-name gh-org-bitwarden --name DP-KEY-XML --query 
 Attachment blobs go to a separate artifact, `seeded-attachments-{db}-{preset}`, holding `{cipherId}/{attachmentId}` at its root. Presets without attachments upload nothing, so the artifact is absent.
 
 ```bash
+RUN=$(gh run list --workflow build-seeded-databases.yml --status success \
+  -L 1 --json databaseId --jq '.[0].databaseId')
+PRESET=qa.dunder-mifflin-enterprise-full
+
 gh run download "$RUN" --name "seeded-attachments-postgres-$PRESET" \
   -D ~/bitwarden-seed/core/attachments
 ```
@@ -84,7 +85,7 @@ Start the database:
 
 ```bash
 docker run -d -p 5432:5432 \
-  bitwardenprod.azurecr.io/shot/seeded-postgres:qa-dunder-mifflin-enterprise-full-latest
+  devimagesaedgdev.azurecr.io/seeded-postgres:qa-dunder-mifflin-enterprise-full-latest
 ```
 
 The seed runs on first boot for postgres, mysql, and mariadb, so the server accepts connections before the data is loaded. Poll for a seeded table rather than trusting `pg_isready`:
@@ -170,7 +171,7 @@ Start the database on a named network:
 
 ```bash
 docker network create bwlite
-docker run -d --name bwlite-db --network bwlite -p 5433:5432 bitwardenprod.azurecr.io/shot/seeded-postgres:scale-lg-balanced-wayne-enterprises-latest
+docker run -d --name bwlite-db --network bwlite -p 5433:5432 devimagesaedgdev.azurecr.io/seeded-postgres:scale-lg-balanced-wayne-enterprises-latest
 ```
 
 Start lite against it:
@@ -209,19 +210,19 @@ Swap the database in `bwdata/docker/docker-compose.override.yml`, which `run.sh`
 ```yaml
 services:
   mssql:
-    image: bitwardenprod.azurecr.io/shot/seeded-mssql:qa-dunder-mifflin-enterprise-full-latest
+    image: devimagesaedgdev.azurecr.io/seeded-mssql:qa-dunder-mifflin-enterprise-full-latest
 ```
 
-To pull that image, run `az acr login -n bitwardenprod` first. The registry refuses anonymous pulls, and `run.sh` runs `docker compose pull` on every start.
+To pull that image, run `az acr login -n devimagesaedgdev` first. The registry refuses anonymous pulls, and `run.sh` runs `docker compose pull` on every start.
 
-An image loaded from a CI artifact also needs `pull_policy: never`, because the tag names a registry it was never pushed to and the pull fails without it.
+A locally built image needs `pull_policy: never`, because without `PUSH=true` the tag names a registry it was never pushed to and the pull fails.
 
 Gate `admin` on the database. It migrates at startup, and on a fresh volume it will create an empty `vault` before the seed finishes attaching, leaving a schema with no data. The image reports healthy only once the seed is attached:
 
 ```yaml
 services:
   mssql:
-    image: bitwardenprod.azurecr.io/shot/seeded-mssql:qa-dunder-mifflin-enterprise-full-abc1234
+    image: devimagesaedgdev.azurecr.io/seeded-mssql:qa-dunder-mifflin-enterprise-full-abc1234
     pull_policy: never
 
   admin:
@@ -255,7 +256,7 @@ Rule out the cheaper cause first. SQL Server has no arm64 build, so on Apple Sil
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PUSH` | `false` | Set to `true` to push images to ACR |
-| `REGISTRY` | `bitwardenprod.azurecr.io` | ACR registry |
+| `REGISTRY` | `devimagesaedgdev.azurecr.io` | ACR registry |
 | `GIT_SHA` | Current HEAD | Git SHA for versioned tag |
 | `DP_KEY_XML` | (empty) | Data protection key XML content. CI supplies this from Key Vault; locally it falls back to `docker/dp-keys/` |
 | `KEEP_BUILD_DIR` | (unset) | Set to `1` to preserve the per-preset build directory |
@@ -278,7 +279,7 @@ Point the chart's database image at a seeded tag in [bitwarden/charts](https://g
 self-host:
   database:
     image:
-      name: bitwardenprod.azurecr.io/shot/seeded-mssql
+      name: devimagesaedgdev.azurecr.io/seeded-mssql
       tag: qa-dunder-mifflin-enterprise-full-latest
 ```
 

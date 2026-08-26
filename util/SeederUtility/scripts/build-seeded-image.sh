@@ -10,7 +10,7 @@
 #
 # Environment variables:
 #   PUSH=true          Push images to ACR after build
-#   REGISTRY           ACR registry (default: bitwardenprod.azurecr.io)
+#   REGISTRY           ACR registry (default: devimagesaedgdev.azurecr.io)
 #   GIT_SHA            Override git SHA (default: current HEAD short SHA)
 #   DP_KEY_XML         Data protection key XML content
 #   KEEP_BUILD_DIR=1   Preserve the per-preset build directory after completion
@@ -40,7 +40,7 @@ set -euo pipefail
 
 PRESET_NAME="${1:?Usage: $0 <preset-name> [db-type]}"
 DB_TYPE="${2:-${DB_TYPE:-postgres}}"
-REGISTRY="${REGISTRY:-bitwardenprod.azurecr.io}"
+REGISTRY="${REGISTRY:-devimagesaedgdev.azurecr.io}"
 GIT_SHA="${GIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')}"
 BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 PUSH="${PUSH:-false}"
@@ -61,7 +61,7 @@ esac
 
 # Sanitize preset name for Docker tag + container name: replace dots with dashes
 TAG="${PRESET_NAME//./-}"
-IMAGE_REPO="${REGISTRY}/shot/seeded-${DB_TYPE}"
+IMAGE_REPO="${REGISTRY}/seeded-${DB_TYPE}"
 IMAGE_VERSIONED="${IMAGE_REPO}:${TAG}-${GIT_SHA}"
 IMAGE_LATEST="${IMAGE_REPO}:${TAG}-latest"
 

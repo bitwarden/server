@@ -22,7 +22,8 @@ on:
           - mssql
 
 env:
-  _AZ_REGISTRY: bitwardenprod.azurecr.io
+  _AZ_REGISTRY: devimagesaedgdev.azurecr.io
+  _AZ_REGISTRY_NAME: devimagesaedgdev
   _DEFAULT_PRESETS: >-
     ["qa.dunder-mifflin-enterprise-full",
     "scale.md-balanced-sterling-cooper",
@@ -136,12 +137,22 @@ jobs:
           keyvault: gh-org-bitwarden
           secrets: "DP-KEY-XML"
 
+      - name: Log in to Azure for ACR
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SEEDER_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_SEEDER_CLIENT_ID }}
+
+      - name: Log in to ACR
+        run: az acr login -n "${_AZ_REGISTRY_NAME}"
+
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Build seeded image
         env:
-          PUSH: "false"
+          PUSH: "true"
           REGISTRY: ${{ env._AZ_REGISTRY }}
           GIT_SHA: ${{ github.sha }}
           MATRIX_PRESET: ${{ matrix.preset }}
@@ -152,27 +163,6 @@ jobs:
           bash util/SeederUtility/scripts/build-seeded-image.sh \
             "${MATRIX_PRESET}" \
             "${MATRIX_DATABASE}"
-
-      - name: Save image as tarball
-        env:
-          MATRIX_PRESET: ${{ matrix.preset }}
-          MATRIX_DATABASE: ${{ matrix.database }}
-        run: |
-          TAG="${MATRIX_PRESET//./-}"
-          DB="${MATRIX_DATABASE}"
-          SHA_SHORT="${GITHUB_SHA:0:7}"
-          docker save \
-            "${_AZ_REGISTRY}/shot/seeded-${DB}:${TAG}-latest" \
-            "${_AZ_REGISTRY}/shot/seeded-${DB}:${TAG}-${SHA_SHORT}" \
-            -o "seeded-${DB}-${TAG}-${SHA_SHORT}.tar"
-
-      - name: Upload image artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: seeded-${{ matrix.database }}-${{ matrix.preset }}
-          path: seeded-*.tar
-          retention-days: 7
-          if-no-files-found: error
 
       - name: Stage attachment blobs
         run: |
@@ -222,9 +212,11 @@ jobs:
                 if [ "${conclusion}" != "success" ]; then
                   continue
                 fi
-                echo "| ${preset} | ${db} | \`${_AZ_REGISTRY}/shot/seeded-${db}:${tag}-${SHA_SHORT}\` |"
+                echo "| ${preset} | ${db} | \`${_AZ_REGISTRY}/seeded-${db}:${tag}-${SHA_SHORT}\` |"
               done < <(echo "${PRESETS}" | jq -r '.[]')
             done < <(echo "${DATABASES}" | jq -r '.[]')
             echo ""
-            echo "Images are built, not pushed. Download them from this run's artifacts."
+            echo "Log in with \`az acr login -n ${_AZ_REGISTRY_NAME}\`, then \`docker pull\` any image above."
+            echo "The \`-latest\` tag of each repository points at this build."
+            echo "Attachment blobs are in this run's artifacts."
           } >> "$GITHUB_STEP_SUMMARY"
