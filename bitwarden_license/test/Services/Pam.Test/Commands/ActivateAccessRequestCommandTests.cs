@@ -45,6 +45,40 @@ public class ActivateAccessRequestCommandTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ActivateAsync(userId, request.Id));
     }
 
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_ExtensionRequest_ThrowsBadRequestWithoutMinting(
+        AccessRequest request, Guid parentLeaseId)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        // An extension applied in place when it was created and is left Approved with no lease of its own, so every
+        // other guard below would pass for it. Only ExtensionOfLeaseId distinguishes it.
+        request.ExtensionOfLeaseId = parentLeaseId;
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .CreateFromApprovedRequestAsync(default!, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_ExtensionRequest_ParentRevoked_StillThrowsWithoutMinting(
+        AccessRequest request, Guid parentLeaseId)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        request.ExtensionOfLeaseId = parentLeaseId;
+        // Revoking the parent is what used to make this reachable even under a singleton rule: it clears the only
+        // thing that was refusing the mint, letting a revoked requester re-grant themselves the rest of the window.
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>()
+            .AppliesAsync(request.RequesterId, request.CipherId).Returns(true);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .CreateFromApprovedRequestAsync(default!, default, default);
+    }
+
     [Theory]
     [BitAutoData(AccessRequestStatus.Pending)]
     [BitAutoData(AccessRequestStatus.Denied)]
@@ -499,6 +533,10 @@ public class ActivateAccessRequestCommandTests
     private static void SetupApprovedRequest(SutProvider<ActivateAccessRequestCommand> sutProvider, AccessRequest request)
     {
         request.Status = AccessRequestStatus.Approved;
+        // BitAutoData fills every nullable, ExtensionOfLeaseId included. An extension is refused outright, so a
+        // fixture left as generated models the one request shape that never activates -- pin it null here so these
+        // tests exercise a plain approved request, and set it explicitly in the tests that are about extensions.
+        request.ExtensionOfLeaseId = null;
         request.NotBefore = _now.AddMinutes(-5);
         request.NotAfter = _now.AddHours(1);
         request.RuleId = Guid.NewGuid();

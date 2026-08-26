@@ -46,6 +46,25 @@ public class DecideAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task DecideAsync_ExtensionRequest_ThrowsBadRequestWithoutResolving(
+        Guid userId, AccessRequest request, Guid parentLeaseId)
+    {
+        var sutProvider = Setup();
+        // Pending is unreachable for an extension today, so this pins the guard against a future human-approved
+        // extension path rather than a shape the server can currently produce: were one routed here, resolving it
+        // would leave an activatable approval and reopen the second-lease hole.
+        request.Status = AccessRequestStatus.Pending;
+        SetupManageableRequest(sutProvider, userId, request);
+        request.ExtensionOfLeaseId = parentLeaseId;
+        SetOpenWindow(request);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .ResolveWithDecisionAsync(default!, default!, default, default);
+    }
+
+    [Theory, BitAutoData]
     public async Task DecideAsync_NotPending_ThrowsConflict(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
@@ -182,6 +201,10 @@ public class DecideAccessRequestCommandTests
 
     private static void SetupManageableRequest(SutProvider<DecideAccessRequestCommand> sutProvider, Guid userId, AccessRequest request)
     {
+        // BitAutoData fills every nullable, ExtensionOfLeaseId included. An extension is never decided, so a fixture
+        // left as generated models a request no approver can act on -- pin it null so these tests exercise an ordinary
+        // request, and set it explicitly in the test that is about extensions.
+        request.ExtensionOfLeaseId = null;
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(userId, request.CollectionId).Returns(true);

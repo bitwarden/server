@@ -1,4 +1,16 @@
-CREATE PROCEDURE [dbo].[AccessLease_CreateFromApprovedRequest]
+-- Stop an extension request from minting a lease of its own.
+--
+-- An extension is stored as an AccessRequest row carrying ExtensionOfLeaseId. It applies in place when it is created
+-- (AccessRequest_CreateApprovedExtension pushes the parent lease's NotAfter out) and never produces a lease; the row
+-- survives only to carry the justification, anchor the automatic decision, and cap the parent at one extension. It is
+-- written Approved and stays Approved, so every precondition in this INSERT held for it and an activation call would
+-- mint a second, independent lease over the extension window.
+--
+-- The read path already excludes extensions (AccessRequest_ReadActiveApprovedByRequesterIdCipherId), so no client ever
+-- offered the action; this closes the mint itself. The command layer refuses extensions before reaching here -- this
+-- predicate is the backstop that makes the invariant true of the data, not just of the caller.
+
+CREATE OR ALTER PROCEDURE [dbo].[AccessLease_CreateFromApprovedRequest]
     @AccessLeaseId UNIQUEIDENTIFIER,
     @AccessRequestId UNIQUEIDENTIFIER,
     @RequesterId UNIQUEIDENTIFIER,
@@ -64,3 +76,4 @@ BEGIN
     -- 1 = minted, 0 = precondition no longer held (caller re-reads the winner).
     SELECT CASE WHEN @Rows = 1 THEN 1 ELSE 0 END
 END
+GO
