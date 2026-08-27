@@ -182,44 +182,22 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  summary:
-    name: Image summary
-    needs: [setup, build]
-    if: always()
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      actions: read
-    steps:
-      - name: Render image table
+      - name: Summarize pushed image
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PRESETS: ${{ needs.setup.outputs.presets }}
-          DATABASES: ${{ needs.setup.outputs.databases }}
+          MATRIX_PRESET: ${{ matrix.preset }}
+          MATRIX_DATABASE: ${{ matrix.database }}
           GIT_SHA: ${{ github.sha }}
         run: |
-          SHA_SHORT="${GIT_SHA:0:7}"
-          results=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" \
-            --paginate --jq '.jobs[] | [.name, .conclusion] | @tsv')
-
+          TAG="${MATRIX_PRESET//./-}"
+          IMAGE_REPO="${_AZ_REGISTRY}/seeded-${MATRIX_DATABASE}"
           {
-            echo "### Seeded images for \`${SHA_SHORT}\`"
+            echo "### \`${MATRIX_PRESET}\` / \`${MATRIX_DATABASE}\`"
             echo ""
-            echo "| Preset | Database | Image |"
-            echo "| --- | --- | --- |"
-            while read -r db; do
-              while read -r preset; do
-                tag="${preset//./-}"
-                conclusion=$(printf '%s\n' "${results}" \
-                  | awk -F'\t' -v name="${db} / ${preset}" '$1 == name { print $2; exit }')
-                if [ "${conclusion}" != "success" ]; then
-                  continue
-                fi
-                echo "| ${preset} | ${db} | \`${_AZ_REGISTRY}/seeded-${db}:${tag}-${SHA_SHORT}\` |"
-              done < <(echo "${PRESETS}" | jq -r '.[]')
-            done < <(echo "${DATABASES}" | jq -r '.[]')
+            echo "| Tag | Image |"
+            echo "| --- | --- |"
+            echo "| Versioned | \`${IMAGE_REPO}:${TAG}-${GIT_SHA:0:7}\` |"
+            echo "| Latest | \`${IMAGE_REPO}:${TAG}-latest\` |"
             echo ""
-            echo "Log in with \`az acr login -n ${_AZ_REGISTRY_NAME}\`, then \`docker pull\` any image above."
-            echo "The \`-latest\` tag of each repository points at this build."
-            echo "Attachment blobs are in this run's artifacts."
+            echo "Log in with \`az acr login -n ${_AZ_REGISTRY_NAME}\`, then \`docker pull\` either tag."
+            echo "Attachment blobs, when the preset has any, are in this run's artifacts."
           } >> "$GITHUB_STEP_SUMMARY"

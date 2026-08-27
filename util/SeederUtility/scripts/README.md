@@ -26,11 +26,8 @@ dotnet run --project .. -- preset --list --output json
 | `mysql` | `mysql:8.0` | `mysqldump` → init SQL script |
 | `mariadb` | `mariadb:12` | `mysqldump` → init SQL script |
 | `mssql` | `mcr.microsoft.com/mssql/server:2025-CU5-ubuntu-24.04` | MDF/LDF file copy → `CREATE DATABASE ... FOR ATTACH` |
-| `sqlite` | `busybox:stable` | Direct `.db` file copy |
 
 `mysql` and `mariadb` share the same migrations project and seeded data; they differ only in the engine the dump is produced from and restored into.
-
-`sqlite` is local only for now. The workflow's database matrix covers the other four, so no CI run produces a sqlite image.
 
 ### MSSQL Notes
 
@@ -101,12 +98,11 @@ Traceability lives entirely in the Docker image labels (`docker inspect`):
 
 ```
 bitwarden.seeder.preset=qa.dunder-mifflin-enterprise-full
-bitwarden.seeder.category=qa
 org.opencontainers.image.revision=abc1234
 org.opencontainers.image.created=2026-04-16T00:00:00Z
 ```
 
-The category is derived from the preset name prefix, which matches the fixture folder under `Seeds/fixtures/presets/`.
+The preset name is `<category>.<name>`, where the category matches the fixture folder under `Seeds/fixtures/presets/`.
 
 ## Core Bundle
 

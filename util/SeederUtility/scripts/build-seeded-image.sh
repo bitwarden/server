@@ -6,7 +6,7 @@
 # Usage:
 #   ./build-seeded-image.sh <preset-name> [db-type]
 #
-#   db-type: postgres (default), mysql, mariadb, mssql, sqlite
+#   db-type: postgres (default), mysql, mariadb, mssql
 #
 # Environment variables:
 #   PUSH=true          Push images to ACR after build
@@ -52,9 +52,9 @@ DOCKER_DIR="${SEEDER_DIR}/docker/${DB_TYPE}"
 
 # --- Validate DB type ---
 case "${DB_TYPE}" in
-  postgres|mysql|mariadb|mssql|sqlite) ;;
+  postgres|mysql|mariadb|mssql) ;;
   *)
-    echo "ERROR: Unknown database type '${DB_TYPE}'. Supported: postgres, mysql, mariadb, mssql, sqlite"
+    echo "ERROR: Unknown database type '${DB_TYPE}'. Supported: postgres, mysql, mariadb, mssql"
     exit 1
     ;;
 esac
@@ -80,14 +80,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Preset names are <category>.<name>, matching their fixture folder under Seeds/fixtures/presets/
-PRESET_CATEGORY="${PRESET_NAME%%.*}"
-
 echo "==> Building seeded ${DB_TYPE} image for preset: ${PRESET_NAME}"
 echo "    Versioned: ${IMAGE_VERSIONED}"
 echo "    Latest:    ${IMAGE_LATEST}"
 echo "    Git SHA:   ${GIT_SHA}"
-echo "    Category:  ${PRESET_CATEGORY}"
 echo "    Container: ${CONTAINER_NAME}"
 echo "    Build dir: ${WORK_DIR}"
 
@@ -107,7 +103,6 @@ _docker_build_and_push() {
     docker buildx build \
         --platform linux/amd64 \
         --build-arg "PRESET_NAME=${PRESET_NAME}" \
-        --build-arg "PRESET_CATEGORY=${PRESET_CATEGORY}" \
         --build-arg "GIT_SHA=${GIT_SHA}" \
         --build-arg "BUILD_DATE=${BUILD_DATE}" \
         -t "${IMAGE_VERSIONED}" \
@@ -165,11 +160,6 @@ case "${DB_TYPE}" in
     DB_PASS="Password1!Strong"
     MIGRATIONS_DIR="${REPO_ROOT}/util/MsSqlMigratorUtility"
     ;;
-  sqlite)
-    DB_NAME="vault_dev"
-    SQLITE_FILE="${WORK_DIR}/seed.db"
-    MIGRATIONS_DIR="${REPO_ROOT}/util/SqliteMigrations"
-    ;;
 esac
 
 # --- Core bundle ---
@@ -213,32 +203,6 @@ _write_core_bundle() {
     echo "==> Core bundle: ${BUNDLE_FILE}"
     echo "    Unpack with: tar -xzf $(basename "${BUNDLE_FILE}") -C /etc/bitwarden"
 }
-
-# ============================================================
-# SQLite — no container needed, seeder writes directly to file
-# ============================================================
-if [[ "${DB_TYPE}" == "sqlite" ]]; then
-    echo "==> Running SQLite migrations"
-    cd "${MIGRATIONS_DIR}"
-    dotnet ef database update \
-        --connection "Data Source=${SQLITE_FILE}"
-
-    echo "==> Seeding SQLite database with preset: ${PRESET_NAME}"
-    cd "${SEEDER_DIR}"
-    env "${SEED_ENV[@]}" \
-        globalSettings__databaseProvider=sqlite \
-        globalSettings__sqlite__connectionString="Data Source=${SQLITE_FILE}" \
-        dotnet run --project . -- preset --name "${PRESET_NAME}"
-
-    _write_core_bundle
-    _docker_build_and_push
-    echo "==> Done: ${PRESET_NAME} (${DB_TYPE}) → ${TAG}"
-    exit 0
-fi
-
-# ============================================================
-# Container-based databases
-# ============================================================
 
 # --- Start container with a dynamic host port so multiple invocations don't clash ---
 echo "==> Starting ${DB_TYPE} container: ${CONTAINER_NAME}"

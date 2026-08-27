@@ -1,12 +1,10 @@
 FROM mysql:8.0
 
 ARG PRESET_NAME=unknown
-ARG PRESET_CATEGORY=unknown
 ARG GIT_SHA=unknown
 ARG BUILD_DATE=unknown
 
 LABEL bitwarden.seeder.preset="${PRESET_NAME}"
-LABEL bitwarden.seeder.category="${PRESET_CATEGORY}"
 LABEL org.opencontainers.image.revision="${GIT_SHA}"
 LABEL org.opencontainers.image.created="${BUILD_DATE}"
 
