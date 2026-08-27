@@ -21,8 +21,8 @@ the map.
 Vault Data stays encrypted end to end. The server stores and moves the credential's ciphertext and
 never decrypts it, including on the rotation path: the rotation daemon is handed the organization key
 as ciphertext it unwraps locally, reads the cipher's opaque `Data` blob, and writes back a blob the
-server also cannot read. Nothing in this library decrypts a cipher, and no PAM log line or audit
-event carries credential material.
+server also cannot read. No PAM code path — in this project or any of the projects listed below —
+decrypts a cipher, and no PAM log line or audit event carries credential material.
 
 ## Where the code lives
 

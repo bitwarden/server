@@ -48,7 +48,7 @@ triggers in `src/Api/Jobs/JobsHostedService.cs`.
 
 | Object                | Represents                                                                                             |
 | --------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Target system**     | Somewhere credentials can be rotated. Either automatic — a connector kind a daemon drives — or manual, which only tracks a schedule and records what a human did out of band. |
+| **Target system**     | Somewhere credentials can be rotated. Either automatic — rotated through a connector a daemon drives — or manual, which only tracks a schedule and records what a human did out of band. |
 | **Rotation config**   | The setup for one vault item: which target, which account on it, when it is next due, and whether a lease ending should trigger a rotation. A vault item has at most one. |
 | **Rotation job**      | One offer of work for a config. A config has at most one active job at a time, and every job is created by [`OfferRotationCommand`](Commands/OfferRotationCommand.cs). |
 | **Rotation attempt**  | One daemon's try at a job. A job has at most one in-flight attempt, inserted in the same transaction as the claim that creates it. |
@@ -88,8 +88,8 @@ unconfigured environment. The values worth knowing before reading anything else:
 | `ReleaseDelay`         | 15 minutes | The claim lease — how long a daemon holds a job before it can be reclaimed. |
 | `MaxAttempts`          | 5          | Failed attempts a job may accrue before it fails outright.            |
 | `RetryBaseDelay`       | 1 second   | The base of the exponential retry backoff.                            |
-| `DaemonOfflineAfter`   | 2 minutes  | How long since its last heartbeat a daemon still counts as connected. |
-| `HeartbeatMinInterval` | 15 seconds | The minimum gap between heartbeat writes.                             |
+| `DaemonOfflineAfter`   | 5 minutes  | How long since its last heartbeat a daemon still counts as connected. |
+| `HeartbeatMinInterval` | 1 minute   | The server-side throttle on heartbeat writes, and the floor a daemon should not poll faster than. |
 | `MinScheduleInterval`  | 15 minutes | The floor on how often a cron schedule may fire.                      |
 | `OnDemandCooldown`     | 1 minute   | The floor between two on-demand triggers of one config.               |
 | `FailureRetryDelay`    | 1 hour     | How far out a config's next rotation moves after its job fails.       |

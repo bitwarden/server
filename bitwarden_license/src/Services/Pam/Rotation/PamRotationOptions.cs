@@ -24,10 +24,10 @@ public class PamRotationOptions
     public TimeSpan FailureRetryDelay { get; set; } = TimeSpan.FromHours(1);
 
     /// <summary>How long since its last heartbeat a daemon is still considered connected (spec <c>DaemonConnection</c>).</summary>
-    public TimeSpan DaemonOfflineAfter { get; set; } = TimeSpan.FromMinutes(2);
+    public TimeSpan DaemonOfflineAfter { get; set; } = TimeSpan.FromMinutes(5);
 
     /// <summary>The minimum gap between conditional heartbeat writes, so a polling daemon does not hammer its row.</summary>
-    public TimeSpan HeartbeatMinInterval { get; set; } = TimeSpan.FromSeconds(15);
+    public TimeSpan HeartbeatMinInterval { get; set; } = TimeSpan.FromMinutes(1);
 
     /// <summary>The minimum gap the schedule calculator enforces between two consecutive occurrences of a config's cron.</summary>
     public TimeSpan MinScheduleInterval { get; set; } = TimeSpan.FromMinutes(15);
