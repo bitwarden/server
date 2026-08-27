@@ -42,6 +42,7 @@ internal sealed class ExceptionHandlerEndpointFilter : IEndpointFilter
         var message = "An error has occurred.";
         int statusCode;
         ErrorResponseModel? validationModel = null;
+        var unhandled = false;
 
         switch (exception)
         {
@@ -79,11 +80,17 @@ internal sealed class ExceptionHandlerEndpointFilter : IEndpointFilter
                 _logger.LogError(0, exception, "Unhandled exception");
                 message = "An unhandled server error has occurred.";
                 statusCode = StatusCodes.Status500InternalServerError;
+                unhandled = true;
                 break;
         }
 
         var errorModel = validationModel ?? new ErrorResponseModel(message);
-        if (_environment.IsDevelopment())
+
+        // Development diagnostics ride only on the unhandled branch. Every other branch above answers a modelled
+        // outcome the caller asked for, so its throw site is not the answer to anything — attaching one only puts
+        // the server's call stack and absolute source paths on the wire, where the client re-logs them verbatim
+        // (PM-42634). A 500 is the case where the throw site IS the answer, so it keeps them.
+        if (unhandled && _environment.IsDevelopment())
         {
             errorModel.ExceptionMessage = exception.Message;
             errorModel.ExceptionStackTrace = exception.StackTrace;
