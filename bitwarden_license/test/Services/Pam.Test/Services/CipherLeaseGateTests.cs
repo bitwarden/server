@@ -472,19 +472,173 @@ public class CipherLeaseGateTests
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>());
     }
 
-    // --- Unrestricted -----------------------------------------------------------------------------
+    // --- UnrestrictedForWholeVaultExport ----------------------------------------------------------
 
     [Fact]
-    public void Unrestricted_AuthorizesAnyCipher()
+    public void UnrestrictedForWholeVaultExport_AuthorizesAnyCipher()
     {
         var (sutProvider, _, _) = Setup();
 
-        var access = sutProvider.Sut.Unrestricted();
+        var access = sutProvider.Sut.UnrestrictedForWholeVaultExport();
 
         Assert.True(access.Authorizes(Guid.NewGuid()));
     }
 
+    // --- AuthorizeAdminReadAsync -------------------------------------------------------------------
+
+    [Fact]
+    public async Task AuthorizeAdminReadAsync_FlagOff_AuthorizesWithoutQuerying()
+    {
+        var (sutProvider, userId, cipherId) = Setup(enabled: false);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, Guid.NewGuid(), new Cipher { Id = cipherId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdAsync(default);
+    }
+
+    /// <remarks>
+    /// The decision an administrator's assignments must not reach. The caller is assigned to nothing, which
+    /// is what the member paths read as "not gated" — this must still withhold.
+    /// </remarks>
+    [Fact]
+    public async Task AuthorizeAdminReadAsync_GatedAndCallerAssignedToNothing_Withholds()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var organizationId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        OrganizationLeasingCollection(sutProvider, organizationId, collectionId);
+        CipherIsInCollections(sutProvider, cipherId, collectionId);
+        // The member paths would resolve nothing for this caller and let it through.
+        NotGated(sutProvider, userId, cipherId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, organizationId, new Cipher { Id = cipherId });
+
+        Assert.Null(access);
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminReadAsync_GatedWithActiveLease_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var organizationId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        OrganizationLeasingCollection(sutProvider, organizationId, collectionId);
+        CipherIsInCollections(sutProvider, cipherId, collectionId);
+        HasActiveLease(sutProvider, userId, cipherId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, organizationId, new Cipher { Id = cipherId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminReadAsync_DisabledRule_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var organizationId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        OrganizationLeasingCollection(sutProvider, organizationId, collectionId, ruleEnabled: false);
+        CipherIsInCollections(sutProvider, cipherId, collectionId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, organizationId, new Cipher { Id = cipherId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminReadAsync_AlsoInAPlainCollection_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var organizationId = Guid.NewGuid();
+        var leasingCollectionId = Guid.NewGuid();
+        OrganizationLeasingCollection(sutProvider, organizationId, leasingCollectionId);
+        CipherIsInCollections(sutProvider, cipherId, leasingCollectionId, Guid.NewGuid());
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, organizationId, new Cipher { Id = cipherId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    // --- AuthorizeAdminReadManyAsync ---------------------------------------------------------------
+
+    /// <remarks>
+    /// The bulk decision strips every gated cipher whatever the lease state, matching the member bulk rule:
+    /// secrets are released one cipher at a time.
+    /// </remarks>
+    [Fact]
+    public async Task AuthorizeAdminReadManyAsync_StripsGatedEvenWithAnActiveLease()
+    {
+        var (sutProvider, userId, _) = Setup();
+        var organizationId = Guid.NewGuid();
+        var leasingCollectionId = Guid.NewGuid();
+        var plainCollectionId = Guid.NewGuid();
+        var gatedCipherId = Guid.NewGuid();
+        var plainCipherId = Guid.NewGuid();
+
+        OrganizationLeasingCollection(sutProvider, organizationId, leasingCollectionId);
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<CollectionCipher>
+            {
+                new() { CipherId = gatedCipherId, CollectionId = leasingCollectionId },
+                new() { CipherId = plainCipherId, CollectionId = plainCollectionId },
+            });
+        HasActiveLease(sutProvider, userId, gatedCipherId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadManyAsync(userId, organizationId,
+            [new Cipher { Id = gatedCipherId }, new Cipher { Id = plainCipherId }]);
+
+        Assert.False(access.Authorizes(gatedCipherId));
+        Assert.True(access.Authorizes(plainCipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminReadManyAsync_NoEnabledRules_AuthorizesEverything()
+    {
+        var (sutProvider, userId, _) = Setup();
+        var organizationId = Guid.NewGuid();
+        var cipherId = Guid.NewGuid();
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<AccessRule>());
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadManyAsync(userId, organizationId,
+            [new Cipher { Id = cipherId }]);
+
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdAsync(default);
+    }
+
     // --- helpers ----------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Points the organization-scoped reads at a single collection governed by a rule, so the gate resolves
+    /// it as leasing-enabled (or not, when <paramref name="ruleEnabled" /> is false).
+    /// </summary>
+    private static void OrganizationLeasingCollection(SutProvider<CipherLeaseGate> sutProvider,
+        Guid organizationId, Guid collectionId, bool ruleEnabled = true)
+    {
+        var ruleId = Guid.NewGuid();
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<AccessRule> { new() { Id = ruleId, Enabled = ruleEnabled } });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Collection> { new() { Id = collectionId, AccessRuleId = ruleId } });
+    }
+
+    private static void CipherIsInCollections(SutProvider<CipherLeaseGate> sutProvider, Guid cipherId,
+        params Guid[] collectionIds) =>
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipherId)
+            .Returns(collectionIds.ToList());
 
     private static (SutProvider<CipherLeaseGate> SutProvider, Guid UserId, Guid CipherId) Setup(
         bool enabled = true)
