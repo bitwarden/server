@@ -159,10 +159,6 @@ public static class CoreHelpers
         {
             return null;
         }
-        catch (Exception)
-        {
-            return null;
-        }
     }
 
     private static X509Certificate2 LoadCertificateByContentType(byte[] data, string password) =>
