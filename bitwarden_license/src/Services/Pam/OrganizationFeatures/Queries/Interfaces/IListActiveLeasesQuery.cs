@@ -10,5 +10,8 @@ public interface IListActiveLeasesQuery
     /// inbox (<see cref="IListInboxRequestsQuery"/>): the caller's manageable collections across every organization.
     /// Returns an empty collection when the caller manages none.
     /// </summary>
-    Task<ICollection<AccessLease>> GetActiveAsync(Guid userId);
+    /// <param name="now">The caller's read clock. It filters the repository read, and it is the same instant the
+    /// caller must derive response statuses against — one clock, so a lease returned as active cannot render as
+    /// expired.</param>
+    Task<ICollection<AccessLease>> GetActiveAsync(Guid userId, DateTime now);
 }

@@ -6,8 +6,8 @@ namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
 /// An access request with its denormalized requester identity, serving the approver inbox, the caller's own request
-/// list, and the cipher access-state snapshot. <see cref="ExpiredAt"/> has no backing store in v1 and is always null;
-/// <see cref="RuleId"/> is the rule pinned at submit (null for requests created before pinning existed).
+/// list, and the cipher access-state snapshot. <see cref="RuleId"/> is the rule pinned at submit (null for requests
+/// created before pinning existed).
 /// </summary>
 public class AccessRequestDetailsResponseModel : ResponseModel
 {
@@ -75,7 +75,11 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// </summary>
     public Guid? RuleId { get; set; }
 
-    /// <summary>The request's lifecycle state.</summary>
+    /// <summary>
+    /// The request's lifecycle state as of the read clock. Expired has two origins behind this one value — nobody
+    /// answered, or an approval was never activated; consumers distinguish them via <see cref="Decisions"/> (empty =
+    /// unanswered, contains an approval = unactivated). An expired row's end time is <see cref="LeaseNotAfter"/>.
+    /// </summary>
     public AccessRequestStatus Status { get; set; }
 
     /// <summary>
@@ -95,11 +99,11 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// <summary>When the request was opened (UTC).</summary>
     public DateTime SubmittedAt { get; set; }
 
-    /// <summary>When the request was approved, denied, or cancelled (UTC); null while pending.</summary>
+    /// <summary>
+    /// When a party approved, denied, or cancelled the request (UTC); null while pending — and null for expired
+    /// rows, which no party resolved (their end time is <see cref="LeaseNotAfter"/>).
+    /// </summary>
     public DateTime? ResolvedAt { get; set; }
-
-    /// <summary>Distinct from <see cref="ResolvedAt"/>; set when an approved request lapses unactivated. Not tracked in v1.</summary>
-    public DateTime? ExpiredAt { get; set; }
 
     /// <summary>
     /// The request's decision log, oldest first — one element per decision (human or automatic). Each carries who

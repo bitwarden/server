@@ -11,7 +11,6 @@ using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -32,7 +31,7 @@ public class ActivateAccessRequestCommandTests
         var sutProvider = Setup();
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(requestId).Returns((AccessRequest?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ActivateAsync(userId, requestId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ActivateAsync(userId, requestId, _now));
     }
 
     [Theory, BitAutoData]
@@ -42,7 +41,7 @@ public class ActivateAccessRequestCommandTests
         SetupApprovedRequest(sutProvider, request);
 
         // Someone else's request is indistinguishable from a missing one, so ids can't be probed.
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ActivateAsync(userId, request.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ActivateAsync(userId, request.Id, _now));
     }
 
     [Theory, BitAutoData]
@@ -56,7 +55,7 @@ public class ActivateAccessRequestCommandTests
         request.ExtensionOfLeaseId = parentLeaseId;
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .CreateFromApprovedRequestAsync(default!, default, default);
     }
@@ -74,24 +73,23 @@ public class ActivateAccessRequestCommandTests
             .AppliesAsync(request.RequesterId, request.CipherId).Returns(true);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .CreateFromApprovedRequestAsync(default!, default, default);
     }
 
     [Theory]
-    [BitAutoData(AccessRequestStatus.Pending)]
-    [BitAutoData(AccessRequestStatus.Denied)]
-    [BitAutoData(AccessRequestStatus.Cancelled)]
-    [BitAutoData(AccessRequestStatus.Expired)]
-    public async Task ActivateAsync_NotApproved_ThrowsConflict(AccessRequestStatus status, AccessRequest request)
+    [BitAutoData(AccessRequestAction.None)]
+    [BitAutoData(AccessRequestAction.Denied)]
+    [BitAutoData(AccessRequestAction.Cancelled)]
+    public async Task ActivateAsync_NotApproved_ThrowsConflict(AccessRequestAction action, AccessRequest request)
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        request.Status = status;
+        request.Action = action;
 
         await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .CreateFromApprovedRequestAsync(default!, default, default);
     }
@@ -102,11 +100,11 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        existing.Status = AccessLeaseStatus.Active;
+        existing.Action = AccessLeaseAction.None;
         existing.NotAfter = _now.AddMinutes(30);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(existing);
 
-        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
 
         Assert.Same(existing, result);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
@@ -116,19 +114,19 @@ public class ActivateAccessRequestCommandTests
     }
 
     [Theory]
-    [BitAutoData(AccessLeaseStatus.Revoked)]
-    [BitAutoData(AccessLeaseStatus.Expired)]
+    [BitAutoData(AccessLeaseAction.Revoked)]
+    [BitAutoData(AccessLeaseAction.Cancelled)]
     public async Task ActivateAsync_AlreadyActivated_DeadLease_ThrowsConflict(
-        AccessLeaseStatus leaseStatus, AccessRequest request, AccessLease existing)
+        AccessLeaseAction leaseAction, AccessRequest request, AccessLease existing)
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        existing.Status = leaseStatus;
+        existing.Action = leaseAction;
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(existing);
 
         // A request authorizes access at most once; a revoked or lapsed lease is final.
         await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
     }
 
     [Theory, BitAutoData]
@@ -137,12 +135,12 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        existing.Status = AccessLeaseStatus.Active;
+        existing.Action = AccessLeaseAction.None;
         existing.NotAfter = _now.AddMinutes(-1);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(existing);
 
         await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
     }
 
     [Theory, BitAutoData]
@@ -154,7 +152,7 @@ public class ActivateAccessRequestCommandTests
         request.NotAfter = _now.AddHours(2);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
         Assert.Contains("not started", ex.Message);
     }
 
@@ -167,7 +165,7 @@ public class ActivateAccessRequestCommandTests
         request.NotAfter = _now.AddHours(-1);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
         Assert.Contains("already ended", ex.Message);
     }
 
@@ -180,14 +178,14 @@ public class ActivateAccessRequestCommandTests
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, Arg.Any<bool>())
             .Returns(AccessLeaseMintOutcome.Minted);
 
-        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
 
         Assert.Equal(request.Id, result.AccessRequestId);
         Assert.Equal(request.OrganizationId, result.OrganizationId);
         Assert.Equal(request.CollectionId, result.CollectionId);
         Assert.Equal(request.CipherId, result.CipherId);
         Assert.Equal(request.RequesterId, result.RequesterId);
-        Assert.Equal(AccessLeaseStatus.Active, result.Status);
+        Assert.Equal(AccessLeaseAction.None, result.Action);
         // Activation mints the window the approver approved, not a window anchored at activation time.
         Assert.Equal(request.NotBefore, result.NotBefore);
         Assert.Equal(request.NotAfter, result.NotAfter);
@@ -206,7 +204,7 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        winner.Status = AccessLeaseStatus.Active;
+        winner.Action = AccessLeaseAction.None;
         winner.NotAfter = _now.AddMinutes(30);
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, Arg.Any<bool>())
@@ -214,7 +212,7 @@ public class ActivateAccessRequestCommandTests
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id)
             .Returns((AccessLease?)null, winner);
 
-        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
 
         Assert.Same(winner, result);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
@@ -235,7 +233,7 @@ public class ActivateAccessRequestCommandTests
             .Returns((AccessLease?)null);
 
         await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
     }
 
     [Theory, BitAutoData]
@@ -250,9 +248,9 @@ public class ActivateAccessRequestCommandTests
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, true)
             .Returns(AccessLeaseMintOutcome.Minted);
 
-        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
 
-        Assert.Equal(AccessLeaseStatus.Active, result.Status);
+        Assert.Equal(AccessLeaseAction.None, result.Action);
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .CreateFromApprovedRequestAsync(result, _now, true);
     }
@@ -269,7 +267,7 @@ public class ActivateAccessRequestCommandTests
             .Returns(AccessLeaseMintOutcome.SingleActiveLeaseConflict);
 
         var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
         Assert.Contains("Another active lease exists", ex.Message);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
@@ -289,7 +287,7 @@ public class ActivateAccessRequestCommandTests
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, false)
             .Returns(AccessLeaseMintOutcome.Minted);
 
-        await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+        await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
 
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, false);
@@ -306,7 +304,7 @@ public class ActivateAccessRequestCommandTests
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, Arg.Any<bool>())
             .Returns(AccessLeaseMintOutcome.Minted);
 
-        await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+        await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
@@ -331,7 +329,7 @@ public class ActivateAccessRequestCommandTests
             .Returns(AccessLeaseMintOutcome.SingleActiveLeaseConflict);
 
         await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
@@ -352,9 +350,9 @@ public class ActivateAccessRequestCommandTests
         SetupPinnedRule(sutProvider, request, new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] });
         SetupMint(sutProvider, AccessLeaseMintOutcome.Minted);
 
-        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
 
-        Assert.Equal(AccessLeaseStatus.Active, result.Status);
+        Assert.Equal(AccessLeaseAction.None, result.Action);
     }
 
     [Theory, BitAutoData]
@@ -368,7 +366,7 @@ public class ActivateAccessRequestCommandTests
         SetupPinnedRule(sutProvider, request, new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
 
         Assert.Contains("current network", ex.Message);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
@@ -397,7 +395,7 @@ public class ActivateAccessRequestCommandTests
             new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
 
         Assert.Contains("current network", ex.Message);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
@@ -414,9 +412,9 @@ public class ActivateAccessRequestCommandTests
         SetupPinnedRule(sutProvider, request, new HumanApprovalCondition());
         SetupMint(sutProvider, AccessLeaseMintOutcome.Minted);
 
-        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
 
-        Assert.Equal(AccessLeaseStatus.Active, result.Status);
+        Assert.Equal(AccessLeaseAction.None, result.Action);
     }
 
     [Theory, BitAutoData]
@@ -435,7 +433,7 @@ public class ActivateAccessRequestCommandTests
             });
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .CreateFromApprovedRequestAsync(default!, default, default);
     }
@@ -452,9 +450,9 @@ public class ActivateAccessRequestCommandTests
             .Returns((GoverningRule?)null);
         SetupMint(sutProvider, AccessLeaseMintOutcome.Minted);
 
-        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
 
-        Assert.Equal(AccessLeaseStatus.Active, result.Status);
+        Assert.Equal(AccessLeaseAction.None, result.Action);
     }
 
     [Theory, BitAutoData]
@@ -472,7 +470,7 @@ public class ActivateAccessRequestCommandTests
                 [new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] }]));
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
 
         Assert.Contains("current network", ex.Message);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
@@ -485,14 +483,14 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        existing.Status = AccessLeaseStatus.Active;
+        existing.Action = AccessLeaseAction.None;
         existing.NotAfter = _now.AddMinutes(30);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(existing);
         SetupPinnedRule(sutProvider, request, new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
 
         // The re-check gates minting, not access: the lease already exists, and taking it back is revocation's job,
         // not something a repeat activation should do behind the caller's back.
-        Assert.Same(existing, await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+        Assert.Same(existing, await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
     }
 
     // A refused activation is recorded like the other refusals -- the Attempt, then a LeaseActivationRejected Outcome
@@ -505,7 +503,7 @@ public class ActivateAccessRequestCommandTests
         SetupPinnedRule(sutProvider, request, new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
@@ -517,14 +515,13 @@ public class ActivateAccessRequestCommandTests
 
     private static SutProvider<ActivateAccessRequestCommand> Setup()
     {
-        var sutProvider = new SutProvider<ActivateAccessRequestCommand>()
-            .WithFakeTimeProvider()
+        // No TimeProvider: the command takes the caller's clock as a parameter (every call here passes _now), so the
+        // response can be derived against the same instant that guarded and minted the lease.
+        return new SutProvider<ActivateAccessRequestCommand>()
             // The real engine, not a stub: these tests turn on how an IP allowlist actually evaluates against a
             // caller's address, and a stubbed verdict would only assert that the command forwards what it is told.
             .SetDependency<IAccessRuleEngine>(new AccessRuleEngine())
             .Create();
-        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
-        return sutProvider;
     }
 
     // An approved request owned by its BitAutoData requester, with an open window containing _now, a pinned rule, and
@@ -532,7 +529,7 @@ public class ActivateAccessRequestCommandTests
     // exercise; those that leave the resolver unstubbed resolve no rule, which is the ungated case.
     private static void SetupApprovedRequest(SutProvider<ActivateAccessRequestCommand> sutProvider, AccessRequest request)
     {
-        request.Status = AccessRequestStatus.Approved;
+        request.Action = AccessRequestAction.Approved;
         // BitAutoData fills every nullable, ExtensionOfLeaseId included. An extension is refused outright, so a
         // fixture left as generated models the one request shape that never activates -- pin it null here so these
         // tests exercise a plain approved request, and set it explicitly in the tests that are about extensions.

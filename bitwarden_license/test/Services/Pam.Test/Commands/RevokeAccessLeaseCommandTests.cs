@@ -30,7 +30,7 @@ public class RevokeAccessLeaseCommandTests
     public async Task RevokeAsync_NeitherHolderNorManageable_ThrowsNotFound(Guid userId, AccessLease lease)
     {
         var sutProvider = Setup();
-        lease.Status = AccessLeaseStatus.Active;
+        lease.Action = AccessLeaseAction.None;
         // userId is neither the lease holder (lease.RequesterId is a different AutoFixture Guid) nor a manager.
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
@@ -43,7 +43,7 @@ public class RevokeAccessLeaseCommandTests
     public async Task RevokeAsync_HolderEndsOwnLease_RevokesWithoutManageRights(AccessLease lease)
     {
         var sutProvider = Setup();
-        lease.Status = AccessLeaseStatus.Active;
+        lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddHours(1);
         // The caller IS the lease's own holder, but cannot Manage the collection — they may still end their own access.
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
@@ -55,7 +55,7 @@ public class RevokeAccessLeaseCommandTests
         // Settles to Cancelled (the holder ended their own access) with the holder recorded as the revoker.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
             lease,
-            AccessLeaseStatus.Cancelled,
+            AccessLeaseAction.Cancelled,
             Arg.Is<AccessDecision>(d =>
                 d.AccessRequestId == lease.AccessRequestId &&
                 d.DeciderKind == AccessDeciderKind.Human &&
@@ -73,7 +73,7 @@ public class RevokeAccessLeaseCommandTests
     public async Task RevokeAsync_NotActive_ThrowsConflict(Guid userId, AccessLease lease)
     {
         var sutProvider = Setup();
-        lease.Status = AccessLeaseStatus.Revoked;
+        lease.Action = AccessLeaseAction.Revoked;
         SetupManageableLease(sutProvider, userId, lease);
 
         await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
@@ -83,7 +83,7 @@ public class RevokeAccessLeaseCommandTests
     public async Task RevokeAsync_Active_RevokesAndWritesAuditDecision(Guid userId, AccessLease lease)
     {
         var sutProvider = Setup();
-        lease.Status = AccessLeaseStatus.Active;
+        lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddHours(1);
         SetupManageableLease(sutProvider, userId, lease);
 
@@ -92,7 +92,7 @@ public class RevokeAccessLeaseCommandTests
         // An operator (manager, not the holder) ended it → settles to Revoked.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
             lease,
-            AccessLeaseStatus.Revoked,
+            AccessLeaseAction.Revoked,
             Arg.Is<AccessDecision>(d =>
                 d.AccessRequestId == lease.AccessRequestId &&
                 d.DeciderKind == AccessDeciderKind.Human &&
@@ -110,11 +110,11 @@ public class RevokeAccessLeaseCommandTests
     public async Task RevokeAsync_WindowAlreadyClosed_ThrowsConflictWithoutEndingTheLease(
         Guid userId, AccessLease lease)
     {
-        // A lease whose window has closed is stored Active -- nothing writes Expired -- so ending it here would
+        // A lease whose window has closed carries no early end -- expiry is never stored -- so ending it here would
         // restate a lease that ran out on its own as an operator revocation, stamping RevokedDate/RevokedBy and
         // appending a Deny decision for an end that already happened (PM-42355).
         var sutProvider = Setup();
-        lease.Status = AccessLeaseStatus.Active;
+        lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddMinutes(-1);
         SetupManageableLease(sutProvider, userId, lease);
 
@@ -132,7 +132,7 @@ public class RevokeAccessLeaseCommandTests
         // NotAfter is exclusive everywhere else (the active reads use NotAfter > now), so the boundary instant is
         // already outside the window.
         var sutProvider = Setup();
-        lease.Status = AccessLeaseStatus.Active;
+        lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now;
         SetupManageableLease(sutProvider, userId, lease);
 

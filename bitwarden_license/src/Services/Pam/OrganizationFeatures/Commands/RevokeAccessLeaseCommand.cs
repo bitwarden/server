@@ -38,7 +38,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         var lease = await _accessLeaseRepository.GetByIdAsync(leaseId);
 
         // Who may end a lease early: the lease's own holder (ending their own access), or anyone who can Manage its
-        // collection (a managing approver or org admin). The outcome status records the manner — the holder ending
+        // collection (a managing approver or org admin). The recorded action is the manner — the holder ending
         // their own access settles to Cancelled, an operator ending it settles to Revoked — while RevokedBy records the
         // actor either way. 404 covers both missing and not-authorized, so a caller can't probe for leases they can't touch.
         var isHolder = lease is not null && lease.RequesterId == userId;
@@ -50,15 +50,16 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // Projected against the clock rather than read raw: a lease whose window has closed is still stored Active
-        // (nothing writes Expired), so ending one here would restate a lease that ran out on its own as an operator
-        // action -- stamping RevokedDate/RevokedBy and appending a Deny decision for an end that already happened.
-        if (lease.StatusAsOf(now) != AccessLeaseStatus.Active)
+        // Judged against the clock, not just the recorded action: a lease whose window has closed carries no early
+        // end (nothing ever writes expiry), so ending one here would restate a lease that ran out on its own as an
+        // operator action -- stamping RevokedDate/RevokedBy and appending a Deny decision for an end that already
+        // happened.
+        if (!lease.IsLive(now))
         {
             throw new ConflictException("This lease is not active.");
         }
 
-        var endStatus = isHolder ? AccessLeaseStatus.Cancelled : AccessLeaseStatus.Revoked;
+        var endAction = isHolder ? AccessLeaseAction.Cancelled : AccessLeaseAction.Revoked;
 
         // The reason has no dedicated column, so it is preserved as a human decision against the originating request.
         var auditDecision = new AccessDecision
@@ -91,7 +92,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        await _accessLeaseRepository.RevokeAsync(lease, endStatus, auditDecision, now);
+        await _accessLeaseRepository.RevokeAsync(lease, endAction, auditDecision, now);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 

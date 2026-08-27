@@ -5,10 +5,10 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// A request to lease access to a cipher in a leasing-governed collection. Auto-approved requests are created
-/// already <see cref="AccessRequestStatus.Approved"/>; requests that require human approval are created
-/// <see cref="AccessRequestStatus.Pending"/> and resolved later by an approver. Neither approval mints the lease —
-/// the requester activates the approved request within its window, and that activation produces the
+/// A request to lease access to a cipher in a leasing-governed collection. Auto-approved requests are created with
+/// <see cref="Action"/> already <see cref="AccessRequestAction.Approved"/>; requests that require human approval are
+/// created with no action recorded and resolved later by an approver. Neither approval mints the lease — the
+/// requester activates the approved request within its window, and that activation produces the
 /// <see cref="AccessLease"/>.
 /// </summary>
 public class AccessRequest : ITableObject<Guid>
@@ -43,10 +43,13 @@ public class AccessRequest : ITableObject<Guid>
     public string? Reason { get; set; }
 
     /// <summary>
-    /// The request's position in its lifecycle. Created <see cref="AccessRequestStatus.Pending"/> for human approval or
-    /// already <see cref="AccessRequestStatus.Approved"/> for automatic approval, then settling in one terminal state.
+    /// The action a party has taken on the request, if any. Facts about what was recorded, not about current
+    /// standing: what this means right now (the wire's <see cref="AccessRequestStatus"/>) is derived against the
+    /// clock at read time via <see cref="AccessStatusDerivation.ComputeStatus"/>, which is where Pending and Expired
+    /// come from. This column doubles as the concurrency token for the transition procedures, whose guarded UPDATEs
+    /// decide who gets to write the decision log.
     /// </summary>
-    public AccessRequestStatus Status { get; set; }
+    public AccessRequestAction Action { get; set; }
 
     /// <summary>
     /// When the request was submitted, stamped in UTC at construction.
@@ -54,9 +57,12 @@ public class AccessRequest : ITableObject<Guid>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// Set when the request leaves <see cref="AccessRequestStatus.Pending"/>.
+    /// When the current <see cref="Action"/> was recorded; null iff <see cref="Action"/> is
+    /// <see cref="AccessRequestAction.None"/>. Every transition stamps it in the same UPDATE, so a cancellation's
+    /// timestamp is simply this field when the action is Cancelled. On cancel-after-approval it is overwritten —
+    /// the approval time survives in the decision row, and the cancellation is also journaled by the audit trail.
     /// </summary>
-    public DateTime? ResolvedDate { get; set; }
+    public DateTime? ActionDate { get; set; }
 
     /// <summary>
     /// The access rule that governed this request, resolved once at submit (oldest wins) and pinned here so every
@@ -64,6 +70,13 @@ public class AccessRequest : ITableObject<Guid>
     /// existed, or when the cipher was not leasing-gated through a stored rule.
     /// </summary>
     public Guid? RuleId { get; set; }
+
+    /// <summary>
+    /// Whether the request's window can still produce anything as of <paramref name="asOf"/> — an answer while open
+    /// (<see cref="Action"/> None), an activation while approved. Write guards compose this with a check on
+    /// <see cref="Action"/> rather than consulting the derived status enum, which never appears on the write path.
+    /// </summary>
+    public bool IsWindowOpen(DateTime asOf) => asOf < NotAfter;
 
     public void SetNewId()
     {

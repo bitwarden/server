@@ -12,18 +12,20 @@ BEGIN
     -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
     SET XACT_ABORT ON
 
-    -- A managing approver retracts a not-yet-activated request (Pending, or an Approved request the requester has not
-    -- activated): transition it to Denied and record the approver's human decision, mirroring
-    -- [AccessRequest_ResolveWithDecision] but over the broader cancellable set. The WHERE guard is race-safe and
-    -- refuses a request that has produced a lease (governed by the lease — revoke instead). The decision is inserted
-    -- only when the transition actually happened (@@ROWCOUNT > 0), so a no-op never orphans an AccessDecision.
+    -- A managing approver retracts a not-yet-activated request (open, or an approval the requester has not
+    -- activated): record Denied and the approver's human decision, mirroring [AccessRequest_ResolveWithDecision] but
+    -- over the broader retractable set. The WHERE guard is race-safe, refuses a request that has produced a lease
+    -- (governed by the lease -- revoke instead), and refuses a lapsed window -- a row users saw as derived-Expired
+    -- must not later restamp to Denied. The decision is inserted only when the transition actually happened
+    -- (@@ROWCOUNT > 0), so a no-op never orphans an AccessDecision.
     BEGIN TRANSACTION AccessRequest_CancelWithDecision
 
     UPDATE [dbo].[AccessRequest]
-    SET [Status] = 2, -- Denied
-        [ResolvedDate] = @Now
+    SET [Action] = 2, -- Denied
+        [ActionDate] = @Now
     WHERE [Id] = @AccessRequestId
-        AND [Status] IN (0, 1) -- Pending or Approved
+        AND [Action] IN (0, 1) -- None (open) or Approved
+        AND [NotAfter] > @Now
         AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] L WHERE L.[AccessRequestId] = @AccessRequestId)
 
     IF @@ROWCOUNT > 0

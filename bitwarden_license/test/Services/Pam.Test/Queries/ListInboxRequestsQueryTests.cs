@@ -12,6 +12,8 @@ namespace Bit.Services.Pam.Test.Queries;
 [SutProviderCustomize]
 public class ListInboxRequestsQueryTests
 {
+    private static readonly DateTime _now = new(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+
     [Theory, BitAutoData]
     public async Task GetPendingAsync_NoManageableCollections_ReturnsEmptyWithoutQuerying(
         SutProvider<ListInboxRequestsQuery> sutProvider, Guid userId)
@@ -19,11 +21,11 @@ public class ListInboxRequestsQueryTests
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .GetManageableCollectionIdsAsync(userId).Returns([]);
 
-        var result = await sutProvider.Sut.GetPendingAsync(userId);
+        var result = await sutProvider.Sut.GetPendingAsync(userId, _now);
 
         Assert.Empty(result);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyInboxPendingByCollectionIdsAsync(default!);
+            .GetManyInboxPendingByCollectionIdsAsync(default!, default);
     }
 
     [Theory, BitAutoData]
@@ -34,12 +36,13 @@ public class ListInboxRequestsQueryTests
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .GetManageableCollectionIdsAsync(userId).Returns(manageable);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .GetManyInboxPendingByCollectionIdsAsync(manageable).Returns([row]);
+            .GetManyInboxPendingByCollectionIdsAsync(manageable, _now).Returns([row]);
 
-        var result = await sutProvider.Sut.GetPendingAsync(userId);
+        var result = await sutProvider.Sut.GetPendingAsync(userId, _now);
 
         Assert.Single(result);
+        // The caller's clock is forwarded unchanged: the same instant filters the read and stamps the statuses.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
-            .GetManyInboxPendingByCollectionIdsAsync(manageable);
+            .GetManyInboxPendingByCollectionIdsAsync(manageable, _now);
     }
 }

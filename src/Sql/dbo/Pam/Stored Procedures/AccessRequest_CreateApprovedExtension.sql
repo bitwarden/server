@@ -23,13 +23,13 @@ BEGIN
 
     -- Lock the parent lease row for the life of the transaction. A second concurrent extension of the same lease
     -- blocks here until this transaction commits, then re-counts below and sees this extension. The lease must
-    -- still be active and in-window to be extendable; outcome 0 is distinct from the cap conflict (-1).
+    -- have no early end recorded and be in-window to be extendable; outcome 0 is distinct from the cap conflict (-1).
     IF NOT EXISTS (
         SELECT 1
         FROM [dbo].[AccessLease] WITH (UPDLOCK, HOLDLOCK)
         WHERE [Id] = @ExtensionOfLeaseId
             AND [RequesterId] = @RequesterId
-            AND [Status] = 0 /* Active */
+            AND [Action] = 0 /* None (no early end) */
             AND [NotAfter] > @Now
     )
     BEGIN
@@ -44,7 +44,7 @@ BEGIN
         INSERT INTO [dbo].[AccessRequest]
         (
             [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-            [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate], [RuleId]
+            [NotBefore], [NotAfter], [Reason], [Action], [CreationDate], [ActionDate], [RuleId]
         )
         VALUES
         (
@@ -84,7 +84,7 @@ BEGIN
     INSERT INTO [dbo].[AccessRequest]
     (
         [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-        [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate], [RuleId]
+        [NotBefore], [NotAfter], [Reason], [Action], [CreationDate], [ActionDate], [RuleId]
     )
     VALUES
     (

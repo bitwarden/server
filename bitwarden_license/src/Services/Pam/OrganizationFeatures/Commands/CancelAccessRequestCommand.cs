@@ -55,10 +55,10 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
             throw new NotFoundException();
         }
 
-        // Only a request that has not produced a lease can be cancelled: still Pending, or Approved that the requester
-        // has not yet activated. Anything else (denied/cancelled/expired) is terminal; surfaced as a conflict so the
-        // client refreshes. The stored procs additionally guard the transition to stay race-safe.
-        if (request.Status is not (AccessRequestStatus.Pending or AccessRequestStatus.Approved))
+        // Only a request that has not produced a lease can be cancelled: still open, or approved but not yet
+        // activated. A recorded denial or cancellation is terminal; surfaced as a conflict so the client refreshes.
+        // The stored procs additionally guard the transition to stay race-safe.
+        if (request.Action is not (AccessRequestAction.None or AccessRequestAction.Approved))
         {
             throw new ConflictException("This request has already been resolved.");
         }
@@ -67,14 +67,24 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
 
         // An approved request that has minted a lease is governed by that lease, not the request: end it via lease
         // revoke while active, and once the lease has ended the request is terminal history. Which of those two it is
-        // has to be judged against the clock -- a lapsed lease is stored Active, so reading the status raw pointed the
-        // caller at a Revoke that would itself be refused.
+        // has to be judged against the clock -- a lapsed lease carries no early end (nothing ever writes expiry), so
+        // reading the stored action raw would point the caller at a Revoke that would itself be refused. Checked
+        // before the window guard below, deliberately: an extension pushes the lease's end out in place while the
+        // request row keeps its original window, so an activated request can have a lapsed window and a live lease --
+        // that caller must be sent to Revoke, not told the window ended.
         var lease = await _accessLeaseRepository.GetByAccessRequestIdAsync(requestId);
         if (lease is not null)
         {
-            throw lease.StatusAsOf(now) == AccessLeaseStatus.Active
+            throw lease.IsLive(now)
                 ? new ConflictException("This request has an active lease; revoke the lease instead.")
                 : new ConflictException("This request has already been resolved.");
+        }
+
+        // No lease exists, so once the window has lapsed the request is derived Expired everywhere it is read; a
+        // cancellation must not restamp it (the repository write is guarded the same way).
+        if (!request.IsWindowOpen(now))
+        {
+            throw new ConflictException("This request's window has already ended.");
         }
 
         // audit (before/after): record the cancel attempt, then the outcome around the point of no return. Both the

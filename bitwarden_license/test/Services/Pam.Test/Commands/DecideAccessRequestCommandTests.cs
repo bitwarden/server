@@ -32,7 +32,7 @@ public class DecideAccessRequestCommandTests
     public async Task DecideAsync_NotManageable_ThrowsNotFound(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Pending;
+        request.Action = AccessRequestAction.None;
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(userId, request.CollectionId).Returns(false);
@@ -50,10 +50,10 @@ public class DecideAccessRequestCommandTests
         Guid userId, AccessRequest request, Guid parentLeaseId)
     {
         var sutProvider = Setup();
-        // Pending is unreachable for an extension today, so this pins the guard against a future human-approved
+        // An open extension is unreachable today, so this pins the guard against a future human-approved
         // extension path rather than a shape the server can currently produce: were one routed here, resolving it
         // would leave an activatable approval and reopen the second-lease hole.
-        request.Status = AccessRequestStatus.Pending;
+        request.Action = AccessRequestAction.None;
         SetupManageableRequest(sutProvider, userId, request);
         request.ExtensionOfLeaseId = parentLeaseId;
         SetOpenWindow(request);
@@ -68,7 +68,7 @@ public class DecideAccessRequestCommandTests
     public async Task DecideAsync_NotPending_ThrowsConflict(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Approved;
+        request.Action = AccessRequestAction.Approved;
         SetupManageableRequest(sutProvider, userId, request);
 
         await Assert.ThrowsAsync<ConflictException>(
@@ -83,7 +83,8 @@ public class DecideAccessRequestCommandTests
     public async Task DecideAsync_SelfApproval_ThrowsBadRequest(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Pending;
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
         request.RequesterId = userId;
         SetupManageableRequest(sutProvider, userId, request);
 
@@ -97,15 +98,15 @@ public class DecideAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task DecideAsync_Approve_WindowAlreadyEnded_ThrowsBadRequest(Guid userId, AccessRequest request)
+    public async Task DecideAsync_Approve_WindowAlreadyEnded_ThrowsConflict(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Pending;
+        request.Action = AccessRequestAction.None;
         request.NotBefore = _now.AddHours(-2);
         request.NotAfter = _now.AddHours(-1);
         SetupManageableRequest(sutProvider, userId, request);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
+        var ex = await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
         Assert.Contains("already ended", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -117,25 +118,28 @@ public class DecideAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task DecideAsync_Deny_WindowAlreadyEnded_Succeeds(Guid userId, AccessRequest request)
+    public async Task DecideAsync_Deny_WindowAlreadyEnded_ThrowsConflict(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Pending;
+        request.Action = AccessRequestAction.None;
         request.NotBefore = _now.AddHours(-2);
         request.NotAfter = _now.AddHours(-1);
         SetupManageableRequest(sutProvider, userId, request);
 
-        // A lapsed window only blocks approval (it could never be activated); denial still closes the request out.
-        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Deny());
-
-        Assert.Equal(AccessRequestStatus.Denied, result.Status);
+        // The clock closed the request: it reads as Expired everywhere, and neither verdict may restamp it -- a
+        // denial would rewrite a row users already saw as Expired. (This retires the old "denial still closes the
+        // audit trail out" behavior.)
+        await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny()));
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .ResolveWithDecisionAsync(default!, default!, default, default);
     }
 
     [Theory, BitAutoData]
     public async Task DecideAsync_Approve_ResolvesAndWritesHumanDecision(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Pending;
+        request.Action = AccessRequestAction.None;
         SetOpenWindow(request);
         SetupManageableRequest(sutProvider, userId, request);
 
@@ -157,7 +161,7 @@ public class DecideAccessRequestCommandTests
                 d.ApproverId == userId &&
                 d.Verdict == AccessDecisionVerdict.Approve &&
                 d.Comment == "looks good"),
-            AccessRequestStatus.Approved,
+            AccessRequestAction.Approved,
             _now);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(request.CollectionId);
@@ -169,7 +173,7 @@ public class DecideAccessRequestCommandTests
     public async Task DecideAsync_Deny_ResolvesAsDenied(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Pending;
+        request.Action = AccessRequestAction.None;
         SetOpenWindow(request);
         SetupManageableRequest(sutProvider, userId, request);
 
@@ -179,7 +183,7 @@ public class DecideAccessRequestCommandTests
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).ResolveWithDecisionAsync(
             request,
             Arg.Is<AccessDecision>(d => d.Verdict == AccessDecisionVerdict.Deny),
-            AccessRequestStatus.Denied,
+            AccessRequestAction.Denied,
             _now);
         // A denial reaches the requester too (their "My requests" view flips to denied).
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
@@ -210,7 +214,7 @@ public class DecideAccessRequestCommandTests
             .CanManageCollectionAsync(userId, request.CollectionId).Returns(true);
     }
 
-    // BitAutoData generates arbitrary dates; pin a window containing _now so the lapsed-window approve guard
+    // BitAutoData generates arbitrary dates; pin a window containing _now so the lapsed-window guard
     // doesn't trip in tests that aren't about it.
     private static void SetOpenWindow(AccessRequest request)
     {

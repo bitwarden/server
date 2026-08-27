@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[AccessRequest_ResolveWithDecision]
     @AccessRequestId UNIQUEIDENTIFIER,
-    @Status TINYINT,
+    @Action TINYINT,
     @AccessDecisionId UNIQUEIDENTIFIER,
     @ApproverId UNIQUEIDENTIFIER,
     @Verdict TINYINT,
@@ -13,11 +13,11 @@ BEGIN
     -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
     SET XACT_ABORT ON
 
-    -- Atomically resolve a pending request and record the human approver's decision. The caller has already verified
-    -- (and the application enforces) that the request is still Pending; the WHERE guard keeps the write idempotent
-    -- under a race so a second approver can't move an already-resolved request. The decision is recorded only when the
-    -- transition actually happened (@@ROWCOUNT > 0), so a losing approver's verdict is never appended to a request
-    -- they did not resolve -- which would leave the decision log contradicting the request's status.
+    -- Atomically record the human approver's action on an open request, together with their decision. The caller has
+    -- already verified (and the application enforces) that no action is recorded yet; the WHERE guard keeps the write
+    -- idempotent under a race so a second approver can't move an already-resolved request -- the column CAS decides
+    -- who gets to write history, and the losing approver's verdict is never appended (@@ROWCOUNT > 0), which would
+    -- leave the decision log contradicting the recorded action.
     --
     -- Approval does not mint the lease: the requester activates the approved request later via
     -- [AccessLease_CreateFromApprovedRequest]. The automatic path ([AccessRequest_CreateAutoApproved]) records the
@@ -25,9 +25,9 @@ BEGIN
     BEGIN TRANSACTION AccessRequest_Resolve
 
     UPDATE [dbo].[AccessRequest]
-    SET [Status] = @Status,
-        [ResolvedDate] = @Now
-    WHERE [Id] = @AccessRequestId AND [Status] = 0 -- Pending
+    SET [Action] = @Action,
+        [ActionDate] = @Now
+    WHERE [Id] = @AccessRequestId AND [Action] = 0 -- None (open)
 
     IF @@ROWCOUNT > 0
     BEGIN

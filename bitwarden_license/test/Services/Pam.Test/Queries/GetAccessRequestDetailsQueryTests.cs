@@ -5,7 +5,6 @@ using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -23,7 +22,7 @@ public class GetAccessRequestDetailsQueryTests
         sutProvider.GetDependency<IAccessRequestRepository>().GetDetailsByIdAsync(requestId, _now)
             .Returns((AccessRequestDetails?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetDetailsAsync(userId, requestId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetDetailsAsync(userId, requestId, _now));
     }
 
     [Theory, BitAutoData]
@@ -34,7 +33,7 @@ public class GetAccessRequestDetailsQueryTests
         details.RequesterId = userId;
         sutProvider.GetDependency<IAccessRequestRepository>().GetDetailsByIdAsync(details.Id, _now).Returns(details);
 
-        var result = await sutProvider.Sut.GetDetailsAsync(userId, details.Id);
+        var result = await sutProvider.Sut.GetDetailsAsync(userId, details.Id, _now);
 
         Assert.Same(details, result);
         // The requester always sees their own request — no collection-manage check, and (unlike decide) no
@@ -51,7 +50,7 @@ public class GetAccessRequestDetailsQueryTests
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(managerId, details.CollectionId).Returns(true);
 
-        var result = await sutProvider.Sut.GetDetailsAsync(managerId, details.Id);
+        var result = await sutProvider.Sut.GetDetailsAsync(managerId, details.Id, _now);
 
         Assert.Same(details, result);
     }
@@ -65,7 +64,7 @@ public class GetAccessRequestDetailsQueryTests
         // userId is neither the requester nor a manager (CanManageCollectionAsync defaults to false).
 
         // A request the caller can't see is indistinguishable from a missing one, so ids can't be probed.
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetDetailsAsync(userId, details.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetDetailsAsync(userId, details.Id, _now));
     }
 
     /// <summary>
@@ -80,7 +79,7 @@ public class GetAccessRequestDetailsQueryTests
         sutProvider.GetDependency<IAccessRequestRepository>()
             .GetDetailsByIdAsync(details.Id, Arg.Any<DateTime>()).Returns(details);
 
-        await sutProvider.Sut.GetDetailsAsync(details.RequesterId, details.Id);
+        await sutProvider.Sut.GetDetailsAsync(details.RequesterId, details.Id, _now);
 
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
             .GetDetailsByIdAsync(details.Id, _now);
@@ -88,8 +87,7 @@ public class GetAccessRequestDetailsQueryTests
 
     private static SutProvider<GetAccessRequestDetailsQuery> Setup()
     {
-        var sutProvider = new SutProvider<GetAccessRequestDetailsQuery>().WithFakeTimeProvider().Create();
-        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        var sutProvider = new SutProvider<GetAccessRequestDetailsQuery>().Create();
         return sutProvider;
     }
 }
