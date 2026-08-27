@@ -2,6 +2,7 @@
 using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
@@ -22,6 +23,9 @@ public class RequestLeaseExtensionCommandTests
     private static readonly DateTime _now = new(2026, 6, 12, 12, 0, 0, DateTimeKind.Utc);
     private const int _maxExtensionDurationSeconds = 4 * 60 * 60;
     private const string _requesterIp = "10.1.2.3";
+
+    /// <summary>Pinned rather than shared with the command: the wording is part of what the denial promises.</summary>
+    private const string _leaseEndedComment = "The lease being extended has ended";
 
     /// <summary>Pinned rather than shared with the command: the wording is part of what the denial promises.</summary>
     private const string _leaseEndedComment = "The lease being extended has ended";
@@ -335,6 +339,11 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal(expectedNotAfter, result.NotAfter);
         Assert.Equal("incident", result.Reason);
         Assert.Equal(_now, result.ActionDate);
+
+        var decision = Assert.Single(result.Decisions);
+        Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
+        Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
+        Assert.Null(decision.Comment);
 
         var decision = Assert.Single(result.Decisions);
         Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
