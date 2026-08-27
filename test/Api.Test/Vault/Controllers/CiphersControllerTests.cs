@@ -2494,6 +2494,17 @@ public class CiphersControllerTests
         Assert.NotNull(result.Data.Single(c => c.Id == visible.Id).Data);
     }
 
+    /// <summary>
+    /// Authorizes the caller for <c>GetAdmin</c>, which still guards on the deprecated
+    /// <c>ICurrentContext.ViewAllCollections</c>.
+    /// </summary>
+    private static void CanViewAllCollections(SutProvider<CiphersController> sutProvider, Guid organizationId)
+    {
+#pragma warning disable CS0618 // GetAdmin authorizes through this deprecated check, so the test must stub it.
+        sutProvider.GetDependency<ICurrentContext>().ViewAllCollections(organizationId).Returns(true);
+#pragma warning restore CS0618
+    }
+
     private static CipherOrganizationDetailsWithCollections OrganizationCipher(Guid organizationId, string data) =>
         new(
             new CipherOrganizationDetails
@@ -2518,7 +2529,7 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICurrentContext>().ViewAllCollections(organization.Id).Returns(true);
+        CanViewAllCollections(sutProvider, organization.Id);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
         sutProvider.GetDependency<ICollectionCipherRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
@@ -2549,7 +2560,7 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICurrentContext>().ViewAllCollections(organization.Id).Returns(true);
+        CanViewAllCollections(sutProvider, organization.Id);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
         sutProvider.GetDependency<ICollectionCipherRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
