@@ -1,8 +1,10 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.HttpExtensions;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
@@ -12,11 +14,20 @@ namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 /// can view the organization's event logs sees the full PAM audit trail, regardless of collection management.
 /// </summary>
 public class AuditEndpointsHandler(
+    IFeatureService featureService,
     ICurrentContext currentContext,
     IListAccessAuditTrailQuery listAccessAuditTrailQuery)
 {
     public async Task<ListResponseModel<AccessAuditEventResponseModel>> GetTrail(Guid orgId)
     {
+        // The kill switch stops the writes (see AccessAuditEventEmitter), so serving the trail while it is on would
+        // hand an auditor a record that silently omits everything that happened since the flip. Withdrawing the
+        // resource is the honest answer; the same 404 the permission check gives, so a caller learns nothing extra.
+        if (featureService.IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging))
+        {
+            throw new NotFoundException();
+        }
+
         if (!await currentContext.AccessEventLogs(orgId))
         {
             throw new NotFoundException();
