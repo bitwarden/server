@@ -38,6 +38,7 @@ public class CipherLeaseGate : ICipherLeaseGate
     private readonly IFeatureService _featureService;
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
+    private readonly IAccessRuleRepository _accessRuleRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICurrentContext _currentContext;
@@ -47,6 +48,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         IFeatureService featureService,
         IGoverningRuleResolver resolver,
         IAccessLeaseRepository accessLeaseRepository,
+        IAccessRuleRepository accessRuleRepository,
         ICollectionRepository collectionRepository,
         ICollectionCipherRepository collectionCipherRepository,
         ICurrentContext currentContext,
@@ -55,6 +57,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         _featureService = featureService;
         _resolver = resolver;
         _accessLeaseRepository = accessLeaseRepository;
+        _accessRuleRepository = accessRuleRepository;
         _collectionRepository = collectionRepository;
         _collectionCipherRepository = collectionCipherRepository;
         _currentContext = currentContext;
@@ -161,10 +164,104 @@ public class CipherLeaseGate : ICipherLeaseGate
         return FullCipherAccess.ForCiphers(cipherIds);
     }
 
-    public FullCipherAccess Unrestricted() =>
+    public async Task<FullCipherAccess?> AuthorizeAdminReadAsync(Guid userId, Guid organizationId, Cipher cipher)
+    {
+        if (!Enabled)
+        {
+            return FullCipherAccess.Unrestricted();
+        }
+
+        var collectionIds = await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
+        var leasingCollectionIds = await GetLeasingCollectionIdsAsync(organizationId);
+        if (!IsGated(collectionIds, leasingCollectionIds))
+        {
+            return FullCipherAccess.ForCipher(cipher.Id);
+        }
+
+        // Gated, so this releases secrets only to a lease the caller actually holds — the same test the
+        // member single read applies, and the reason an administrator assigned to nothing sees nothing:
+        // a lease is issued against a collection they can reach.
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var activeLease = await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipher.Id, now);
+        return activeLease is null ? null : FullCipherAccess.ForCipher(cipher.Id);
+    }
+
+    public async Task<FullCipherAccess> AuthorizeAdminReadManyAsync(
+        Guid userId,
+        Guid organizationId,
+        IEnumerable<Cipher> ciphers)
+    {
+        if (!Enabled)
+        {
+            return FullCipherAccess.Unrestricted();
+        }
+
+        var leasingCollectionIds = await GetLeasingCollectionIdsAsync(organizationId);
+        if (leasingCollectionIds.Count == 0)
+        {
+            return FullCipherAccess.ForCiphers(ciphers.Select(c => c.Id));
+        }
+
+        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
+        var gated = collectionCiphers
+            .GroupBy(cc => cc.CipherId)
+            .Where(g => g.All(cc => leasingCollectionIds.Contains(cc.CollectionId)))
+            .Select(g => g.Key)
+            .ToHashSet();
+
+        var authorized = ciphers.Select(c => c.Id).Where(id => !gated.Contains(id));
+        return FullCipherAccess.ForCiphers(authorized);
+    }
+
+    public FullCipherAccess UnrestrictedForWholeVaultExport() =>
         // Gating only ever narrows access, never widens it, so an already-authorized context is unrestricted
         // here for the same reason it is on the flag-off path.
         FullCipherAccess.Unrestricted();
+
+    /// <summary>
+    /// The organization's collection ids that gate: those governed by an access rule that is currently
+    /// switched on.
+    /// </summary>
+    /// <remarks>
+    /// Resolved from the organization's rules and collections rather than the caller's, which is the whole
+    /// difference between the administrative decisions and the member ones. Both member paths start from
+    /// the caller — <c>GetGatedCipherIds</c> from collections they are assigned to, and
+    /// <c>GoverningRuleResolver.ResolveAsync</c> from
+    /// <c>GetManyByUserIdCipherIdAsync</c> — so an administrator assigned to none of them resolves nothing
+    /// and reads as ungated. Reusing either here would fail open for precisely the ciphers an
+    /// administrator reaches without an assignment.
+    ///
+    /// Enabled-ness is derived from the rules directly rather than read off
+    /// <see cref="CollectionDetails.HasEnabledAccessRule" />, because the organization-scoped collection
+    /// read returns <see cref="Collection" />, which carries the <c>AccessRuleId</c> association but not
+    /// that computed projection. Loading the rules and filtering on <c>Enabled</c> asks the same question
+    /// the projection answers, and matches how <c>GoverningRuleResolver</c> drops a disabled rule.
+    /// </remarks>
+    private async Task<ISet<Guid>> GetLeasingCollectionIdsAsync(Guid organizationId)
+    {
+        var enabledRuleIds = (await _accessRuleRepository.GetManyByOrganizationIdAsync(organizationId))
+            .Where(r => r.Enabled)
+            .Select(r => r.Id)
+            .ToHashSet();
+        if (enabledRuleIds.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        var collections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
+        return collections
+            .Where(c => c.AccessRuleId.HasValue && enabledRuleIds.Contains(c.AccessRuleId.Value))
+            .Select(c => c.Id)
+            .ToHashSet();
+    }
+
+    /// <summary>
+    /// Whether a cipher reachable through <paramref name="collectionIds" /> is gated: it is, only when
+    /// every collection it can be reached through gates. A cipher also sitting in a plain collection is
+    /// readable in full by that path anyway, and one in no collection at all is user-owned.
+    /// </summary>
+    private static bool IsGated(ICollection<Guid> collectionIds, ISet<Guid> leasingCollectionIds) =>
+        collectionIds.Count > 0 && collectionIds.All(leasingCollectionIds.Contains);
 
     /// <summary>
     /// Authorizes the non-gated subset of <paramref name="ciphers" />, computed in-memory with no queries.
