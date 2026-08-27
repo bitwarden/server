@@ -68,6 +68,31 @@ public interface ICipherLeaseGate
     Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers);
 
     /// <summary>
+    /// Read decision for a <em>write-return</em>: the response echoing back a cipher the caller has just
+    /// mutated. Returns a witness authorizing full data only when <paramref name="cipher"/> is not gated; a
+    /// gated cipher yields <c>null</c> whatever lease the caller holds.
+    /// </summary>
+    /// <remarks>
+    /// Stricter than <see cref="AuthorizeReadAsync"/>, for the same reason the bulk read is strict: a client
+    /// persists a write-return into its local store, so the copy outlives the lease that justified it. The
+    /// caller submitted the mutation and therefore already holds what it sent, which makes the echo a
+    /// round-trip saving rather than something correctness rests on. Full secrets for a gated cipher are
+    /// released only by an explicit single-cipher read.
+    ///
+    /// Like the read decisions this only ever decides, and never throws. What a caller does with a null
+    /// witness is its own call: a client that cannot render the reduced shape has the cipher withheld
+    /// entirely rather than reduced, which for a write-return means reporting not-found for a mutation that
+    /// was applied (see <see cref="Vault.Authorization.PartialCipherSupport"/>).
+    /// </remarks>
+    Task<FullCipherAccess?> AuthorizeWriteReturnAsync(Guid userId, Cipher cipher);
+
+    /// <summary>
+    /// Administrative counterpart of <see cref="AuthorizeWriteReturnAsync"/>, resolving leasing status from
+    /// the organization's collections rather than the caller's, as the other "/admin" decisions do.
+    /// </summary>
+    Task<FullCipherAccess?> AuthorizeAdminWriteReturnAsync(Guid userId, Guid organizationId, Cipher cipher);
+
+    /// <summary>
     /// Per-cipher read for a caller reaching the cipher through organization-wide permission rather than
     /// a collection assignment — the "/admin" endpoints.
     /// </summary>

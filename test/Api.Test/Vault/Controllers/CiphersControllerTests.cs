@@ -2637,7 +2637,8 @@ public class CiphersControllerTests
 
     /// <remarks>
     /// A cipher that did not exist a moment ago can hold no lease, so creating a credential in a
-    /// leasing-enabled collection does not confer standing access to it.
+    /// leasing-enabled collection does not confer standing access to it. The create is a write-return, so
+    /// the echo would be reduced even if it did.
     /// </remarks>
     [Theory, BitAutoData]
     public async Task PostAdmin_CreatedIntoLeasingEnabledCollection_ReturnsPartialShape(
@@ -2660,8 +2661,9 @@ public class CiphersControllerTests
                 AllowAdminAccessToAllCollectionItems = true
             });
         sutProvider.GetDependency<ICipherLeaseGate>()
-            .AuthorizeAdminReadAsync(userId, organization.Id, Arg.Any<Cipher>())
+            .AuthorizeAdminWriteReturnAsync(userId, organization.Id, Arg.Any<Cipher>())
             .Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
 
         var result = await sutProvider.Sut.PostAdmin(model);
 
@@ -3223,5 +3225,200 @@ public class CiphersControllerTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAdmin(cipherId, model));
         Assert.Contains("encrypted for the current user", exception.Message);
+    }
+
+    /// <remarks>
+    /// The write-return the read decision used to answer. Favouriting is not the act of using a credential,
+    /// but the client persists whatever comes back, so a held lease must not widen this echo.
+    /// </remarks>
+    [Theory, BitAutoData]
+    public async Task PutPartial_LeasingGatedCipherUnderActiveLease_ReturnsPartialShape(
+        User user, Guid folderId, Guid cipherId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = user.Id,
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+        };
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(Task.FromResult(cipherDetails));
+        // A held lease authorizes the mutation, and would authorize a read of the same cipher.
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadAsync(user.Id, Arg.Any<Cipher>())
+            .Returns(FullCipherAccess.ForCipher(cipherId));
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeWriteReturnAsync(user.Id, Arg.Any<Cipher>())
+            .Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        var result = await sutProvider.Sut.PutPartial(
+            cipherId, new CipherPartialRequestModel { Favorite = true, FolderId = folderId.ToString() });
+
+        Assert.Null(result.Data);
+        Assert.NotNull(result.PartialData);
+        Assert.DoesNotContain("2.password|encrypted", result.PartialData);
+    }
+
+    /// <remarks>
+    /// Such a client has gated ciphers withheld rather than reduced, so the echo is withheld too — the
+    /// mutation stands, unacknowledged, and the item stays invisible to it.
+    /// </remarks>
+    [Theory, BitAutoData]
+    public async Task PutPartial_LeasingGatedCipher_ClientWithoutPartialSupport_WithholdsTheCipher(
+        User user, Guid folderId, Guid cipherId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = user.Id,
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+        };
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(Task.FromResult(cipherDetails));
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeWriteReturnAsync(user.Id, Arg.Any<Cipher>())
+            .Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.Android);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutPartial(
+            cipherId, new CipherPartialRequestModel { Favorite = true, FolderId = folderId.ToString() }));
+
+        // The mutation was authorized and applied; only the echo is withheld.
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1).UpdatePartialAsync(cipherId, user.Id, folderId, true);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_LeasingGatedCipherUnderActiveLease_ReturnsPartialShape(
+        User user, Guid cipherId, Guid organizationId, SutProvider<CiphersController> sutProvider)
+    {
+        user.UserKeyId = KeyIdBuilder.HexEncodedKeyId;
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(new CipherDetails
+            {
+                Id = cipherId,
+                OrganizationId = organizationId,
+                Type = CipherType.SecureNote,
+                Data = "{}"
+            });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId });
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadAsync(user.Id, Arg.Any<Cipher>())
+            .Returns(FullCipherAccess.ForCipher(cipherId));
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeWriteReturnAsync(user.Id, Arg.Any<Cipher>())
+            .Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        var model = SecureNoteRequestModel(MismatchedKeyId);
+        model.OrganizationId = organizationId.ToString();
+
+        var result = await sutProvider.Sut.Put(cipherId, model);
+
+        Assert.Null(result.Data);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutRestore_LeasingGatedCipherUnderActiveLease_ReturnsPartialShape(
+        User user, Guid cipherId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(new CipherDetails
+            {
+                Id = cipherId,
+                UserId = user.Id,
+                Type = CipherType.Login,
+                Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+            });
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadAsync(user.Id, Arg.Any<Cipher>())
+            .Returns(FullCipherAccess.ForCipher(cipherId));
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeWriteReturnAsync(user.Id, Arg.Any<Cipher>())
+            .Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        var result = await sutProvider.Sut.PutRestore(cipherId);
+
+        Assert.Null(result.Data);
+        Assert.DoesNotContain("2.password|encrypted", result.PartialData);
+    }
+
+    /// <remarks>
+    /// Sharing into a leasing-enabled collection gates the cipher the moment it lands, so the echo of the
+    /// share is reduced even though the sharer supplied the secret a moment earlier.
+    /// </remarks>
+    [Theory, BitAutoData]
+    public async Task PutShare_TargetCollectionGatesCipher_ReturnsPartialShape(
+        Guid cipherId, Guid userId, Guid organizationId, SutProvider<CiphersController> sutProvider)
+    {
+        var user = new User { Id = userId };
+        var data = JsonSerializer.Serialize(new { Username = "test", Password = "test" });
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId)
+            .Returns(new Cipher { Id = cipherId, UserId = userId, Type = CipherType.Login, Data = data });
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, userId)
+            .Returns(new CipherDetails
+            {
+                Id = cipherId,
+                OrganizationId = organizationId,
+                Type = CipherType.Login,
+                Data = data
+            });
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId });
+        // Gated the instant it lands in the collection, and the sharer holds no lease.
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadAsync(userId, Arg.Any<Cipher>())
+            .Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeWriteReturnAsync(userId, Arg.Any<Cipher>())
+            .Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        var model = new CipherShareRequestModel
+        {
+            Cipher = new CipherRequestModel
+            {
+                Type = CipherType.Login,
+                OrganizationId = organizationId.ToString(),
+                Name = "SharedCipher",
+                Data = data
+            },
+            CollectionIds = [Guid.NewGuid().ToString()]
+        };
+
+        var result = await sutProvider.Sut.PutShare(cipherId, model);
+
+        Assert.Equal(cipherId, result.Id);
+        Assert.Null(result.Data);
+        Assert.NotNull(result.PartialData);
     }
 }
