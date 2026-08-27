@@ -143,7 +143,7 @@ jobs:
       - name: Log in to Azure for ACR
         uses: bitwarden/gh-actions/azure-login@main
         with:
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID_SEEDER }}
           tenant_id: ${{ secrets.AZURE_TENANT_ID }}
           client_id: ${{ secrets.AZURE_CLIENT_ID_SEEDER }}
 
