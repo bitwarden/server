@@ -274,6 +274,51 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
         Assert.False(await db.UserProjectAccessPolicy.AnyAsync(ap => ap.GrantedProjectId == projectId));
     }
 
+    [Fact]
+    public async Task OrganizationAccessPolicyScene_GroupGranteeNotInOrganization_ReturnsBadRequest()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, _, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+
+        var projectResult = await PostSceneAsync(playId, nameof(OrganizationProjectScene), new OrganizationProjectScene.Request
+        {
+            OrganizationId = organizationId,
+            OrganizationKeyB64 = organizationKeyB64,
+            Name = "Production"
+        });
+        var projectId = projectResult.GetProperty("projectId").GetGuid();
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(OrganizationAccessPolicyScene),
+            Arguments = JsonSerializer.SerializeToElement(new OrganizationAccessPolicyScene.Request
+            {
+                OrganizationId = organizationId,
+                Grants =
+                [
+                    new OrganizationAccessPolicyScene.Grant
+                    {
+                        GranteeType = AccessPolicySeeder.GranteeType.Group,
+                        GranteeId = Guid.NewGuid(),
+                        GrantableType = AccessPolicySeeder.GrantableType.Project,
+                        GrantableId = projectId
+                    }
+                ]
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("not in organization", body);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        Assert.False(await db.GroupProjectAccessPolicy.AnyAsync(ap => ap.GrantedProjectId == projectId));
+    }
+
     private async Task<Guid> SeedUserAsync(string playId)
     {
         var result = await PostSceneAsync(playId, "SingleUserScene", new SingleUserScene.Request
