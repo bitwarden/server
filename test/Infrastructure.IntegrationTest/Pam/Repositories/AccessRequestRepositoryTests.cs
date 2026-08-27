@@ -215,7 +215,8 @@ public class AccessRequestRepositoryTests
                 Verdict = AccessDecisionVerdict.Approve,
                 CreationDate = extendedAt,
             },
-            extendedAt));
+            extendedAt,
+            denialComment: null));
 
         // The original request's window closed an hour ago...
         Assert.True(request.NotAfter < now);
