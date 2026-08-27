@@ -164,7 +164,8 @@ public class AccessRequestRepositoryTests
         Assert.Equal(lease.Id, details!.ProducedLeaseId);
         Assert.Equal(AccessLeaseStatus.Expired, details.ProducedLeaseStatus);
 
-        var mine = Assert.Single(await accessRequestRepository.GetManyByRequesterIdAsync(request.RequesterId, now));
+        var mine = Assert.Single(await accessRequestRepository.GetManyByRequesterIdAsync(
+            request.RequesterId, now.AddDays(-1), now));
         Assert.Equal(AccessLeaseStatus.Expired, mine.ProducedLeaseStatus);
 
         var history = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
@@ -438,13 +439,64 @@ public class AccessRequestRepositoryTests
         await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestStatus.Pending, now));
 
-        var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, now);
+        var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, now.AddDays(-1), now);
 
         Assert.Equal(2, mine.Count);
         Assert.Contains(mine, r => r.Id == pending.Id);
         Assert.Contains(mine, r => r.Id == denied.Id);
         // Caller-scoped self-read omits the display-name joins.
         Assert.All(mine, r => Assert.Null(r.RequesterName));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByRequesterIdAsync_WindowsResolvedHistoryButKeepsEveryLiveRow(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        // The requester's own list had no retention window while the approver-side history had a 90-day one, so the
+        // same resolved request outlived itself for the member who raised it and vanished for the approvers who
+        // decided it (PM-42614). It now takes the same window -- but only over rows that are actually history.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+        var since = now.AddDays(-90);
+        var requesterId = Guid.NewGuid();
+
+        var recentlyDenied = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestStatus.Denied, now.AddDays(-2)));
+        var longAgoDenied = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestStatus.Denied, now.AddDays(-120)));
+
+        // Nothing writes status Expired for an unanswered request (there is no sweeper), so a Pending row really can
+        // sit past the window. Windowing it away would drop a live request out of the caller's own list, not age out
+        // its history -- which is why the exemption exists rather than merely being tidy.
+        var longUnanswered = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestStatus.Pending, now.AddDays(-120)));
+
+        // An approved request whose window is still open is still activatable, whatever its age.
+        var stillActivatable = BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestStatus.Approved, now.AddDays(-120));
+        stillActivatable.NotBefore = now.AddHours(-1);
+        stillActivatable.NotAfter = now.AddHours(1);
+        stillActivatable = await accessRequestRepository.CreateAsync(stillActivatable);
+
+        // An approved request that was never activated and whose window has since closed is history like any other.
+        var lapsedApproved = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestStatus.Approved, now.AddDays(-120)));
+
+        var windowed = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, since, now);
+
+        Assert.Contains(windowed, r => r.Id == recentlyDenied.Id);
+        Assert.Contains(windowed, r => r.Id == longUnanswered.Id);
+        Assert.Contains(windowed, r => r.Id == stillActivatable.Id);
+        Assert.DoesNotContain(windowed, r => r.Id == longAgoDenied.Id);
+        Assert.DoesNotContain(windowed, r => r.Id == lapsedApproved.Id);
+
+        // A null window is "no window", which is what a server predating the parameter sends -- every row comes back.
+        var unwindowed = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, null, now);
+
+        Assert.Equal(5, unwindowed.Count);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -478,7 +530,7 @@ public class AccessRequestRepositoryTests
         };
         await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestStatus.Denied, now);
 
-        var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, now);
+        var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, now.AddDays(-1), now);
 
         var row = Assert.Single(mine);
         var resolver = Assert.Single(row.Decisions);

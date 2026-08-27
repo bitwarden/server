@@ -41,12 +41,15 @@ public interface IAccessRequestRepository
     Task<AccessRequest?> GetActiveApprovedByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now);
 
     /// <summary>
-    /// Returns the caller's own lease requests across every organization they belong to, regardless of status, most
-    /// recent first and capped server-side. Display-name fields are not populated for this caller-scoped surface.
-    /// <paramref name="now"/> projects each produced lease's status — see
-    /// <see cref="AccessRequestDetails.ProducedLeaseStatus"/>.
+    /// Returns the caller's own lease requests across every organization they belong to, most recent first and capped
+    /// server-side. Display-name fields are not populated for this caller-scoped surface.
+    /// <paramref name="since"/> bounds the history window, matching the approver-side reads (PM-42614); rows that are
+    /// still live — pending, or approved with a window that has not lapsed as of <paramref name="now"/> — are returned
+    /// regardless of age, because a request the caller can still act on is not history. A null
+    /// <paramref name="since"/> means no window at all. <paramref name="now"/> both decides that unlapsed-ness and
+    /// projects each produced lease's status — see <see cref="AccessRequestDetails.ProducedLeaseStatus"/>.
     /// </summary>
-    Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime now);
+    Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime? since, DateTime now);
 
     /// <summary>
     /// Returns the pending approver-inbox rows for the given collections, joined with their denormalized display

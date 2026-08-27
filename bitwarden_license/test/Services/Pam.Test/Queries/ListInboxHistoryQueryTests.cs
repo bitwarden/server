@@ -36,7 +36,7 @@ public class ListInboxHistoryQueryTests
         var manageable = new HashSet<Guid> { collectionId };
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .GetManageableCollectionIdsAsync(userId).Returns(manageable);
-        var expectedSince = _now.AddDays(-ListInboxHistoryQuery.HistoryRetentionDays);
+        var expectedSince = _now.AddDays(-AccessHistoryWindow.RetentionDays);
         sutProvider.GetDependency<IAccessRequestRepository>()
             .GetManyInboxHistoryByCollectionIdsAsync(manageable, expectedSince, _now).Returns([row]);
 

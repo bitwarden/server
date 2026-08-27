@@ -37,8 +37,8 @@ public class ListLeaseHistoryQueryTests
         var manageable = new HashSet<Guid> { collectionId };
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .GetManageableCollectionIdsAsync(userId).Returns(manageable);
-        // Shares the approver inbox's history window.
-        var expectedSince = _now.AddDays(-ListInboxHistoryQuery.HistoryRetentionDays);
+        // Shares the one history window with the approver inbox.
+        var expectedSince = _now.AddDays(-AccessHistoryWindow.RetentionDays);
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetManyEndedByCollectionIdsAsync(manageable, expectedSince, _now).Returns([lease]);
 

@@ -29,11 +29,12 @@ public class ListLeaseHistoryQuery : IListLeaseHistoryQuery
             return new List<AccessLease>();
         }
 
-        // Shares the approver inbox's history window so request history and lease history reach equally far back.
+        // Shares the one history window (AccessHistoryWindow) so request history and lease history reach equally
+        // far back.
         // `now` additionally decides which leases count as ended at all -- a lapsed lease is only Expired relative to
         // a clock (see IAccessLeaseRepository.GetManyEndedByCollectionIdsAsync).
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         return await _accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
-            manageableCollectionIds, now.AddDays(-ListInboxHistoryQuery.HistoryRetentionDays), now);
+            manageableCollectionIds, now.AddDays(-AccessHistoryWindow.RetentionDays), now);
     }
 }

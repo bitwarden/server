@@ -120,15 +120,25 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         return details;
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime now)
+    public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime? since,
+        DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
         // Caller-scoped self-read: the cipher/collection/requester display-name joins are intentionally omitted
         // (those names come from the caller's local vault, and the requester is the caller).
+        //
+        // Bounded the same way as AccessRequest_ReadManyByRequesterId: resolved rows are held to the shared history
+        // window, but anything the caller can still act on stays visible at any age. Nothing writes Expired for an
+        // unanswered request (there is no sweeper), so a Pending row can outlive the window and dropping it would
+        // remove a live request from the caller's own list rather than merely ageing out its history.
         var requests = await dbContext.AccessRequests
-            .Where(r => r.RequesterId == requesterId)
+            .Where(r => r.RequesterId == requesterId
+                && (since == null
+                    || r.CreationDate >= since
+                    || r.Status == AccessRequestStatus.Pending
+                    || (r.Status == AccessRequestStatus.Approved && r.NotAfter > now)))
             .OrderByDescending(r => r.CreationDate)
             .Take(250)
             .AsNoTracking()
