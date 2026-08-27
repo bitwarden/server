@@ -35,6 +35,9 @@ public class OrganizationBillingService(
     ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService) : IOrganizationBillingService
 {
+    // Must match `InitiationPath.SalesAssistedTrialFromAdminPortal` in the clients repo.
+    private const string _salesAssistedTrialInitiationPath = "Sales assisted trial from admin portal";
+
     public async Task Finalize(OrganizationSale sale)
     {
         var (organization, customerSetup, subscriptionSetup, owner) = sale;
@@ -452,11 +455,15 @@ public class OrganizationBillingService(
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
-                ["organizationId"] = organization.Id.ToString(),
-                ["trialInitiationPath"] = !string.IsNullOrEmpty(subscriptionSetup.InitiationPath) &&
-                                          subscriptionSetup.InitiationPath.Contains("trial from marketing website")
-                    ? "marketing-initiated"
-                    : "product-initiated"
+                [StripeConstants.MetadataKeys.OrganizationId] = organization.Id.ToString(),
+                [StripeConstants.MetadataKeys.TrialInitiationPath] = subscriptionSetup.InitiationPath switch
+                {
+                    var path when !string.IsNullOrEmpty(path) && path.Contains("trial from marketing website")
+                        => StripeConstants.MetadataKeys.TrialInitiationPathMarketingInitiated,
+                    _salesAssistedTrialInitiationPath
+                        => StripeConstants.MetadataKeys.TrialInitiationPathSalesAssisted,
+                    _ => StripeConstants.MetadataKeys.TrialInitiationPathProductInitiated
+                }
             },
             OffSession = true,
             TrialPeriodDays = subscriptionSetup.SkipTrial
@@ -498,7 +505,6 @@ public class OrganizationBillingService(
 
         return subscription;
     }
-
 
     #endregion
 }
