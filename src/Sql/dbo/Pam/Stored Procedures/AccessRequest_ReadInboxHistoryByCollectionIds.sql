@@ -7,18 +7,31 @@ BEGIN
     SET NOCOUNT ON
 
     -- @Now defaults so a rolling deployment stays safe: an older server that predates this parameter calls the
-    -- procedure without it and gets the database clock, which projects the same result.
+    -- procedure without it and gets the database clock, which filters the same way.
     SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- The approver history, returned as two result sets so the caller can attach each request's full decision list
     -- without an N+1:
-    --   1) the resolved requests (anything no longer Pending) created on or after @Since, for the supplied
-    --      (caller-manageable) collections, with the denormalized requester identity. Rows that produced a lease carry
-    --      ProducedLeaseId/ProducedLeaseStatus so the client can target (and gate) the Revoke action; a request
-    --      produces at most one lease ([IX_AccessLease_AccessRequestId] is unique), so that join adds at most one row.
-    --      ProducedLeaseStatus is projected against @Now, as in AccessRequest_ReadDetailsById.
+    --   1) the non-actionable requests -- an action recorded, or a window lapsed with none (derived Expired); the
+    --      exact complement of the pending inbox read -- created on or after @Since, for the supplied
+    --      (caller-manageable) collections, with the denormalized requester identity. Rows that produced a lease
+    --      carry the lease's id and raw columns so the client can target (and gate) the Revoke action; a request
+    --      produces at most one lease ([IX_AccessLease_AccessRequestId] is unique), so that join adds at most one
+    --      row. Derived statuses are computed at the repository boundary -- see AccessRequest_ReadDetailsById.
     --   2) every decision (human or automatic) for those requests, keyed by AccessRequestId and ordered oldest-first;
     --      DeciderKind says which, and a human decision's identity is denormalized from [User].
+    --
+    -- The qualifying ids are materialized once so the history predicate is written once and both result sets are
+    -- bounded by exactly the same rows -- the request list and its decision list cannot drift.
+    DECLARE @RequestIds TABLE ([Id] UNIQUEIDENTIFIER PRIMARY KEY)
+
+    INSERT INTO @RequestIds ([Id])
+    SELECT LR.[Id]
+    FROM [dbo].[AccessRequest] LR
+    INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
+    WHERE (LR.[Action] <> 0 OR LR.[NotAfter] <= @Now) -- action recorded, or expired unanswered
+        AND LR.[CreationDate] >= @Since
+
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -29,22 +42,19 @@ BEGIN
         LR.[NotBefore],
         LR.[NotAfter],
         LR.[Reason],
-        LR.[Status],
+        LR.[Action],
         LR.[CreationDate],
-        LR.[ResolvedDate],
+        LR.[ActionDate],
         LR.[RuleId],
         PL.[Id] AS [ProducedLeaseId],
-        -- Expired is never stored; derive it against @Now off the lease's own NotAfter. See
-        -- AccessRequest_ReadDetailsById for why the request's NotAfter will not do.
-        CASE WHEN PL.[Status] = 0 AND PL.[NotAfter] <= @Now THEN 1 ELSE PL.[Status] END AS [ProducedLeaseStatus],
+        PL.[Action] AS [ProducedLeaseAction],
+        PL.[NotAfter] AS [ProducedLeaseNotAfter],
         U.[Name] AS [RequesterName],
         U.[Email] AS [RequesterEmail]
     FROM [dbo].[AccessRequest] LR
-    INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
+    INNER JOIN @RequestIds RI ON RI.[Id] = LR.[Id]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
     LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = LR.[Id]
-    WHERE LR.[Status] <> 0 -- not Pending
-        AND LR.[CreationDate] >= @Since
 
     SELECT
         AD.[AccessRequestId],
@@ -56,10 +66,7 @@ BEGIN
         AD.[Verdict] AS [Verdict],
         AD.[CreationDate] AS [DecidedAt]
     FROM [dbo].[AccessDecision] AD
-    INNER JOIN [dbo].[AccessRequest] LR ON LR.[Id] = AD.[AccessRequestId]
-    INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
+    INNER JOIN @RequestIds RI ON RI.[Id] = AD.[AccessRequestId]
     LEFT JOIN [dbo].[User] AU ON AU.[Id] = AD.[ApproverId]
-    WHERE LR.[Status] <> 0 -- not Pending
-        AND LR.[CreationDate] >= @Since
     ORDER BY AD.[AccessRequestId], AD.[CreationDate] ASC
 END
