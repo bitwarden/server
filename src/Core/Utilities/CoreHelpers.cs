@@ -159,6 +159,10 @@ public static class CoreHelpers
         {
             return null;
         }
+        catch (RequestFailedException ex)
+        {
+            throw new InvalidOperationException($"Unable to download certificate from Azure Blob Storage: {container}/{file}", ex);
+        }
     }
 
     private static X509Certificate2 LoadCertificateByContentType(byte[] data, string password) =>
