@@ -41,6 +41,12 @@ public static class ExceptionHandlingEndpointExtensions
     ///     there is no public-API mode.
     ///   </description></item>
     ///   <item><description>
+    ///     In <c>Development</c> the exception message, stack trace and inner-exception message are attached only
+    ///     to the unhandled 500 response, never to a modelled 400/401/402/404/409. The MVC filter attaches them to
+    ///     every response it shapes, which put the server's call stack and absolute source paths into the client's
+    ///     console on an ordinary rejection (PM-42634).
+    ///   </description></item>
+    ///   <item><description>
     ///     <see cref="AggregateException"/> is not handled and falls through to the default 500 branch.
     ///     The known throw sites in the codebase (organization invite, license validation) accumulate
     ///     inner exceptions via bare <c>catch (Exception)</c> blocks, so the inner exceptions are
