@@ -305,7 +305,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             null!,
             attachmentStorageService ?? null!,
             null!,
-            null!)
+            NullLoggerFactory.Instance)
         {
             BillingInitializer = billingInitializer is null ? null : () => billingInitializer,
         };
