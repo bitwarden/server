@@ -2,10 +2,12 @@
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Core;
 using Bit.Core.Repositories;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Services.Pam.IntegrationTest;
@@ -163,6 +165,34 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         var response = await Client.GetAsync($"organizations/{Guid.NewGuid()}/audit");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    // PM-42480: the kill switch, end to end. A rule round-trip that normally leaves three events behind leaves none,
+    // and the trail itself is withdrawn rather than served as a record with a hole in it. Both halves matter — shedding
+    // only the writes would keep serving a trail that quietly stopped being complete.
+    [Fact]
+    public async Task Audit_WithSqlAuditLoggingDisabled_WritesNothingAndWithdrawsTheTrail()
+    {
+        FeatureService.IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging).Returns(true);
+
+        var created = await Client.PostAsJsonAsync(
+            $"organizations/{Organization.Id}/access-rules",
+            new
+            {
+                name = "Production database",
+                enabled = true,
+                conditions = JsonNode.Parse("""[{"kind":"human_approval","approverCount":1}]"""),
+                collections = Array.Empty<Guid>(),
+            });
+        // The rule write itself is untouched by the switch; only its audit side channel is.
+        created.EnsureSuccessStatusCode();
+
+        var stored = await Factory.GetService<IAccessAuditEventRepository>()
+            .GetManyByOrganizationIdAsync(Organization.Id, DateTime.UtcNow.AddDays(-1));
+        Assert.Empty(stored);
+
+        var trail = await Client.GetAsync(AuditUrl);
+        Assert.Equal(HttpStatusCode.NotFound, trail.StatusCode);
     }
 
     private async Task<JsonObject> GetJsonAsync(string url)

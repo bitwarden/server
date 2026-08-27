@@ -1,4 +1,5 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -6,6 +7,7 @@ using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Xunit;
 
@@ -21,6 +23,24 @@ public class AuditEndpointsHandlerTests
         Guid organizationId, SutProvider<AuditEndpointsHandler> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessEventLogs(organizationId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetTrail(organizationId));
+        await sutProvider.GetDependency<IListAccessAuditTrailQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetTrailAsync(default);
+    }
+
+    // PM-42480: with the writes shed, the store stops being a record of the period it claims to cover, so the
+    // resource is withdrawn rather than served incomplete. Checked ahead of the permission so the two answers are
+    // indistinguishable and a probe cannot use the trail to tell an unaudited organization from an unauthorized one.
+    [Theory, BitAutoData]
+    public async Task GetTrail_WithSqlAuditLoggingDisabled_ThrowsNotFound(
+        Guid organizationId, SutProvider<AuditEndpointsHandler> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging)
+            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().AccessEventLogs(organizationId).Returns(true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetTrail(organizationId));
         await sutProvider.GetDependency<IListAccessAuditTrailQuery>()
