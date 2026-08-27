@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
@@ -143,6 +144,39 @@ public class GetSubscriptionPreviewQueryTests
         Assert.NotNull(result);
         Assert.Equal(created.AddHours(23), result!.Suspension);
         Assert.Equal(1, result.GracePeriod);
+    }
+
+    [Fact]
+    public async Task Run_UnsupportedSubscriberType_ThrowsConflictException()
+    {
+        var provider = new Provider { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_provider" };
+        _stripeAdapter.GetSubscriptionAsync("sub_provider", Arg.Any<SubscriptionGetOptions>())
+            .Returns(Subscription("sub_provider", "active", new DateTime(2027, 3, 1, 0, 0, 0, DateTimeKind.Utc)));
+
+        var exception = await Assert.ThrowsAsync<Core.Exceptions.ConflictException>(() => _sut.Run(provider));
+
+        var expected = $"Cannot build a subscription preview for a {provider.SubscriberType()} subscriber.";
+        Assert.Equal(expected, exception.Message);
+    }
+
+    [Fact]
+    public async Task Run_UnsupportedPlanTier_ThrowsConflictException()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_free",
+            PlanType = PlanType.Free
+        };
+        _stripeAdapter.GetSubscriptionAsync("sub_free", Arg.Any<SubscriptionGetOptions>())
+            .Returns(Subscription("sub_free", "active", new DateTime(2027, 3, 1, 0, 0, 0, DateTimeKind.Utc)));
+        var testPlan = new TestPlan(ProductTierType.Free, isAnnual: false);
+        _pricingClient.GetPlanOrThrow(PlanType.Free).Returns(testPlan);
+
+        var exception = await Assert.ThrowsAsync<Core.Exceptions.ConflictException>(() => _sut.Run(organization));
+
+        var expected = $"Organization ({organization.Id}) plan tier ({testPlan.ProductTier}) has no cart to preview.";
+        Assert.Equal(expected, exception.Message);
     }
 
     [Fact]

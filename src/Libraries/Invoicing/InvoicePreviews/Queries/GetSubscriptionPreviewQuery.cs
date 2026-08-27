@@ -128,13 +128,13 @@ public class GetSubscriptionPreviewQuery(
                     // TeamsStarter collapses into Teams: the client renders one Teams cart for both.
                     ProductTierType.Teams or ProductTierType.TeamsStarter => PlanTierType.Teams,
                     ProductTierType.Enterprise => PlanTierType.Enterprise,
-                    _ => throw new BillingException(
+                    _ => throw new ConflictException(
                         message: $"Organization ({organization.Id}) plan tier ({plan.ProductTier}) has no cart to preview.")
                 };
                 return (planTier, plan.IsAnnual ? PlanCadenceType.Annually : PlanCadenceType.Monthly);
 
             default:
-                throw new BillingException(
+                throw new ConflictException(
                     message: $"Cannot build a subscription preview for a {subscriber.SubscriberType()} subscriber.");
         }
     }
