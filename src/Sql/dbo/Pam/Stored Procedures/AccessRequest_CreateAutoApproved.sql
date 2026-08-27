@@ -24,12 +24,12 @@ BEGIN
     -- after approval. The per-cipher single-active-lease guard therefore lives entirely on that activation path.
     BEGIN TRANSACTION AccessRequest_CreateAutoApproved
 
-    -- The request is created already resolved (Approved). ExtensionOfLeaseId stays NULL: it is reserved for extension
+    -- The request is created with its approval already recorded. ExtensionOfLeaseId stays NULL: it is reserved for extension
     -- requests; provenance for an original lease flows the other way, via AccessLease.AccessRequestId.
     INSERT INTO [dbo].[AccessRequest]
     (
         [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-        [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate], [RuleId]
+        [NotBefore], [NotAfter], [Reason], [Action], [CreationDate], [ActionDate], [RuleId]
     )
     VALUES
     (

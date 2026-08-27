@@ -45,12 +45,12 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<AccessRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId)
+    public async Task<AccessRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<AccessRequest>(
             $"[{Schema}].[AccessRequest_ReadActivePendingByRequesterIdCipherId]",
-            new { RequesterId = requesterId, CipherId = cipherId },
+            new { RequesterId = requesterId, CipherId = cipherId, Now = now },
             commandType: CommandType.StoredProcedure);
 
         return results.FirstOrDefault();
@@ -75,7 +75,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             new { Id = id, Now = now },
             commandType: CommandType.StoredProcedure);
 
-        return (await ReadDetailsWithDecisionsAsync(results)).FirstOrDefault();
+        return (await ReadDetailsWithDecisionsAsync(results, now)).FirstOrDefault();
     }
 
     public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime? since,
@@ -87,10 +87,10 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             new { RequesterId = requesterId, Since = since, Now = now },
             commandType: CommandType.StoredProcedure);
 
-        return await ReadDetailsWithDecisionsAsync(results);
+        return await ReadDetailsWithDecisionsAsync(results, now);
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
+    public async Task<ICollection<AccessRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now)
     {
         var ids = collectionIds.ToList();
         if (ids.Count == 0)
@@ -99,12 +99,12 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         }
 
         await using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.QueryAsync<AccessRequestDetails>(
+        var results = await connection.QueryAsync<DetailsRow>(
             $"[{Schema}].[AccessRequest_ReadInboxPendingByCollectionIds]",
-            new { CollectionIds = ids.ToGuidIdArrayTVP() },
+            new { CollectionIds = ids.ToGuidIdArrayTVP(), Now = now },
             commandType: CommandType.StoredProcedure);
 
-        return results.ToList();
+        return results.Select(row => row.Derive(now)).ToList();
     }
 
     public async Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since, DateTime now)
@@ -121,10 +121,10 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since, Now = now },
             commandType: CommandType.StoredProcedure);
 
-        return await ReadDetailsWithDecisionsAsync(results);
+        return await ReadDetailsWithDecisionsAsync(results, now);
     }
 
-    public async Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestStatus status, DateTime now)
+    public async Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestAction action, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
@@ -132,7 +132,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             new
             {
                 AccessRequestId = request.Id,
-                Status = status,
+                Action = action,
                 AccessDecisionId = decision.Id,
                 ApproverId = decision.ApproverId,
                 Verdict = decision.Verdict,
@@ -205,13 +205,14 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     }
 
     /// <summary>
-    /// Reads a two-result-set access-request projection: result 1 is the request rows, result 2 is every decision row
-    /// (human or automatic) keyed by AccessRequestId (ordered oldest-first by the procedure). Groups the decisions onto
-    /// each request's <see cref="AccessRequestDetails.Decisions"/>; a pending request keeps its empty list.
+    /// Reads a two-result-set access-request projection: result 1 is the raw request rows (stored facts only), result
+    /// 2 is every decision row (human or automatic) keyed by AccessRequestId (ordered oldest-first by the procedure).
+    /// Derives each row's statuses against <paramref name="now"/> and groups the decisions onto each request's
+    /// <see cref="AccessRequestDetails.Decisions"/>; a pending request keeps its empty list.
     /// </summary>
-    private static async Task<List<AccessRequestDetails>> ReadDetailsWithDecisionsAsync(SqlMapper.GridReader reader)
+    private static async Task<List<AccessRequestDetails>> ReadDetailsWithDecisionsAsync(SqlMapper.GridReader reader, DateTime now)
     {
-        var details = (await reader.ReadAsync<AccessRequestDetails>()).ToList();
+        var details = (await reader.ReadAsync<DetailsRow>()).Select(row => row.Derive(now)).ToList();
         var decisionsByRequest = (await reader.ReadAsync<DecisionRow>())
             .GroupBy(row => row.AccessRequestId)
             .ToDictionary(group => group.Key, group => group.Select(row => row.ToDecision()).ToList());
@@ -225,6 +226,33 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         }
 
         return details;
+    }
+
+    /// <summary>
+    /// A raw request-projection row as the read procedures return it: the <see cref="AccessRequestDetails"/> it
+    /// becomes, plus the stored facts the procedures additionally project (the request's action and its date, and the
+    /// produced lease's own action and NotAfter). Dapper maps the inherited columns by name, so adding a column to
+    /// the model cannot silently drop out of this row; <see cref="Derive"/> stamps the derived statuses against the
+    /// read clock via the shared <see cref="AccessRequestDetails.StampDerivedStatuses"/>. The derived statuses never
+    /// cross the wire from SQL.
+    /// </summary>
+    private sealed class DetailsRow : AccessRequestDetails
+    {
+        public AccessRequestAction Action { get; set; }
+        public DateTime? ActionDate { get; set; }
+        public AccessLeaseAction? ProducedLeaseAction { get; set; }
+        public DateTime? ProducedLeaseNotAfter { get; set; }
+
+        public AccessRequestDetails Derive(DateTime now)
+        {
+            ResolvedDate = ActionDate;
+            StampDerivedStatuses(Action,
+                ProducedLeaseId is { } leaseId
+                    ? (leaseId, ProducedLeaseAction!.Value, ProducedLeaseNotAfter!.Value)
+                    : null,
+                now);
+            return this;
+        }
     }
 
     /// <summary>A decision row from the decision result set, carrying its AccessRequestId for grouping.</summary>

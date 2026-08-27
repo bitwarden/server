@@ -184,9 +184,15 @@ public class DatabaseContext : DbContext
         // already cascades directly to both tables, and a second cascading path through the other table would create
         // multiple cascade paths, which SQL Server rejects.
         eAccessRequest.Property(p => p.Id).ValueGeneratedNever();
-        eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Status });
-        eAccessRequest.HasIndex(p => new { p.OrganizationId, p.Status });
-        eAccessRequest.HasIndex(p => new { p.CollectionId, p.Status });
+        eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action });
+        eAccessRequest.HasIndex(p => new { p.OrganizationId, p.Action });
+        // (CollectionId, Action, NotAfter) mirrors the pending-inbox read's full filter: under derived status nothing
+        // writes Expired, so lapsed unanswered rows pile up at Action = 0 and NotAfter has to be a key column to keep
+        // them out of the seek. The two CreationDate indexes carry the history reads, whose action/clock OR cannot
+        // seek -- the retention bound is the only predicate left that can bound them. See PM-42655.
+        eAccessRequest.HasIndex(p => new { p.CollectionId, p.Action, p.NotAfter });
+        eAccessRequest.HasIndex(p => new { p.CollectionId, p.CreationDate });
+        eAccessRequest.HasIndex(p => new { p.RequesterId, p.CreationDate });
         eAccessRequest.HasIndex(p => p.ExtensionOfLeaseId);
         eAccessRequest.HasIndex(p => p.RuleId);
         eAccessRequest
@@ -201,10 +207,10 @@ public class DatabaseContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         eAccessLease.Property(p => p.Id).ValueGeneratedNever();
-        eAccessLease.HasIndex(p => new { p.RequesterId, p.CipherId, p.Status });
-        eAccessLease.HasIndex(p => new { p.NotAfter, p.Status });
-        eAccessLease.HasIndex(p => new { p.CollectionId, p.Status });
-        eAccessLease.HasIndex(p => new { p.CipherId, p.Status });
+        eAccessLease.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action });
+        eAccessLease.HasIndex(p => new { p.NotAfter, p.Action });
+        eAccessLease.HasIndex(p => new { p.CollectionId, p.Action });
+        eAccessLease.HasIndex(p => new { p.CipherId, p.Action });
         eAccessLease.HasIndex(p => p.AccessRequestId).IsUnique();
         eAccessLease
             .HasOne<AccessRequest>()

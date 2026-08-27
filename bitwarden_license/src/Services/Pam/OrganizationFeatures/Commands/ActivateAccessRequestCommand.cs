@@ -22,7 +22,6 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
     private readonly IAccessRuleEngine _ruleEngine;
     private readonly ICurrentContext _currentContext;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
-    private readonly TimeProvider _timeProvider;
 
     public ActivateAccessRequestCommand(
         IAccessRequestRepository accessRequestRepository,
@@ -33,8 +32,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         IGoverningRuleResolver resolver,
         IAccessRuleEngine ruleEngine,
         ICurrentContext currentContext,
-        IAccessAuditEventEmitter accessAuditEventEmitter,
-        TimeProvider timeProvider)
+        IAccessAuditEventEmitter accessAuditEventEmitter)
     {
         _accessRequestRepository = accessRequestRepository;
         _accessLeaseRepository = accessLeaseRepository;
@@ -45,10 +43,9 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         _ruleEngine = ruleEngine;
         _currentContext = currentContext;
         _accessAuditEventEmitter = accessAuditEventEmitter;
-        _timeProvider = timeProvider;
     }
 
-    public async Task<AccessLease> ActivateAsync(Guid userId, Guid requestId)
+    public async Task<AccessLease> ActivateAsync(Guid userId, Guid requestId, DateTime now)
     {
         var request = await _accessRequestRepository.GetByIdAsync(requestId);
 
@@ -72,23 +69,21 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             throw new BadRequestException("This request extended an existing lease and cannot start a new one.");
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-
         // Activation is idempotent while the produced lease is live (double-click, a second tab racing the
         // auto-activating open flow); a revoked or lapsed lease is final — a request authorizes access at most once.
         var existing = await _accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
         if (existing is not null)
         {
-            if (existing.StatusAsOf(now) == AccessLeaseStatus.Active)
+            if (existing.IsLive(now))
             {
                 return existing;
             }
             throw new ConflictException("This request's access has already been used and is no longer active.");
         }
 
-        if (request.Status != AccessRequestStatus.Approved)
+        if (request.Action != AccessRequestAction.Approved)
         {
-            throw new ConflictException(request.Status == AccessRequestStatus.Pending
+            throw new ConflictException(request.Action == AccessRequestAction.None
                 ? "This request has not been approved yet."
                 : "This request can no longer be activated.");
         }
@@ -98,7 +93,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             throw new BadRequestException("The approved access window has not started yet.");
         }
 
-        if (request.NotAfter <= now)
+        if (!request.IsWindowOpen(now))
         {
             throw new BadRequestException("The approved access window has already ended.");
         }
@@ -110,7 +105,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             CollectionId = request.CollectionId,
             CipherId = request.CipherId,
             RequesterId = request.RequesterId,
-            Status = AccessLeaseStatus.Active,
+            // No Action is set: the lease is born running, and only an early end ever records one.
             // Activation mints the window the approver approved, exactly as the old approval-time path did; the
             // creation date is the activation audit timestamp (no decision row is written — approval was the
             // decision).
@@ -181,7 +176,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             // or the request changed underneath us. If the winner's lease is live, activation still succeeded from
             // this caller's point of view.
             var winner = await _accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
-            if (winner?.StatusAsOf(now) == AccessLeaseStatus.Active)
+            if (winner?.IsLive(now) == true)
             {
                 return winner;
             }

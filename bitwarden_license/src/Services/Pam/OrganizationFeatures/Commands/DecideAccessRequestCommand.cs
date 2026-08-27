@@ -56,9 +56,20 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
             throw new BadRequestException("An extension is approved when it is requested and cannot be decided.");
         }
 
-        if (request.Status != AccessRequestStatus.Pending)
+        if (request.Action != AccessRequestAction.None)
         {
             throw new ConflictException("This request has already been resolved.");
+        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        // Once the window has lapsed the clock has closed the request: it is derived Expired everywhere it is read,
+        // and neither verdict may restamp it -- an approval would mint a dead "approved" state, and a denial would
+        // rewrite a row users already saw as Expired. 409 like already-resolved, because the clock resolved it.
+        // (This deliberately retires the earlier "denial is still allowed to close out the audit trail" behavior.)
+        if (!request.IsWindowOpen(now))
+        {
+            throw new ConflictException("This request's window has already ended.");
         }
 
         // Self-approval is blocked server-side even though the client disables the buttons. Surfaced as 400 rather
@@ -68,16 +79,8 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
             throw new BadRequestException("You cannot decide your own request.");
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var approved = submission.Verdict == AccessDecisionVerdict.Approve;
-        var status = approved ? AccessRequestStatus.Approved : AccessRequestStatus.Denied;
-
-        // An approval the requester can never activate (the requested window already ended) would only mint a dead
-        // "approved" state, so reject it. Denial is still allowed so the audit trail can close the request out.
-        if (approved && request.NotAfter <= now)
-        {
-            throw new BadRequestException("The requested access window has already ended.");
-        }
+        var action = approved ? AccessRequestAction.Approved : AccessRequestAction.Denied;
 
         var decision = new AccessDecision
         {
@@ -110,7 +113,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         // Approval records the verdict only. The lease that actually authorizes access is minted when the requester
         // activates the approved request (ActivateAccessRequestCommand) — until then they hold a startable approval,
         // not access. The automatic path still mints instantly at submit, where the requester is present and asking.
-        await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, status, now);
+        await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, action, now);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
@@ -122,33 +125,25 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
 
         // The client repaints the row from Status, ResolvedAt, and the single Decisions element (verdict + comment),
-        // so those must be accurate; the approver's denormalized name/email is resolved on the next read. Project from
-        // what we just wrote rather than re-reading.
-        return new AccessRequestDetails
-        {
-            Id = request.Id,
-            ExtensionOfLeaseId = request.ExtensionOfLeaseId,
-            OrganizationId = request.OrganizationId,
-            CollectionId = request.CollectionId,
-            CipherId = request.CipherId,
-            RequesterId = request.RequesterId,
-            NotBefore = request.NotBefore,
-            NotAfter = request.NotAfter,
-            Reason = request.Reason,
-            Status = status,
-            CreationDate = request.CreationDate,
-            ResolvedDate = now,
-            Decisions =
-            [
-                new AccessRequestDecision
-                {
-                    DeciderKind = AccessDeciderKind.Human,
-                    ApproverId = userId,
-                    Comment = decision.Comment,
-                    Verdict = decision.Verdict,
-                    DecidedAt = now,
-                },
-            ],
-        };
+        // so those must be accurate; the approver's denormalized name/email is resolved on the next read. Project
+        // from what we just wrote rather than re-reading: the repository stamped Action/ActionDate in the guarded
+        // UPDATE, so the entity is brought to match before projecting. No lease exists yet, the extension guard
+        // above excluded extensions, and the window guard proved it open, so the derived status lands on Approved
+        // or Denied.
+        request.Action = action;
+        request.ActionDate = now;
+        var details = AccessRequestDetails.From(request, now);
+        details.Decisions =
+        [
+            new AccessRequestDecision
+            {
+                DeciderKind = AccessDeciderKind.Human,
+                ApproverId = userId,
+                Comment = decision.Comment,
+                Verdict = decision.Verdict,
+                DecidedAt = now,
+            },
+        ];
+        return details;
     }
 }

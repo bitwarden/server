@@ -19,6 +19,15 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         : base(serviceScopeFactory, mapper, context => context.AccessLeases)
     { }
 
+    /// <summary>
+    /// The live-lease predicate as a shared, EF-translatable expression: no early end recorded and the window open
+    /// at <paramref name="now"/> (authorization checks both window ends -- stricter than display, where NotBefore is
+    /// vacuous by the mint invariant). Every EF read that means "currently authorizes access" composes this rather
+    /// than respelling the three clauses; the stored procedures carry the same predicate in SQL and must not drift.
+    /// </summary>
+    private static System.Linq.Expressions.Expression<Func<EfModel, bool>> LiveAt(DateTime now)
+        => l => l.Action == AccessLeaseAction.None && l.NotBefore <= now && l.NotAfter > now;
+
     public async Task<CoreEntity?> GetByAccessRequestIdAsync(Guid accessRequestId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -39,11 +48,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var lease = await dbContext.AccessLeases
-            .Where(l => l.RequesterId == requesterId
-                && l.CipherId == cipherId
-                && l.Status == AccessLeaseStatus.Active
-                && l.NotBefore <= now
-                && l.NotAfter > now)
+            .Where(l => l.RequesterId == requesterId && l.CipherId == cipherId)
+            .Where(LiveAt(now))
             .OrderByDescending(l => l.NotAfter)
             .AsNoTracking()
             .FirstOrDefaultAsync();
@@ -55,10 +61,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var leases = await dbContext.AccessLeases
-            .Where(l => l.RequesterId == requesterId
-                && l.Status == AccessLeaseStatus.Active
-                && l.NotBefore <= now
-                && l.NotAfter > now)
+            .Where(l => l.RequesterId == requesterId)
+            .Where(LiveAt(now))
             .OrderBy(l => l.NotAfter)
             .AsNoTracking()
             .ToListAsync();
@@ -79,10 +83,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         // Governance view: every currently-active lease on the supplied (caller-manageable) collections, across all
         // members -- not just the caller's own.
         var leases = await dbContext.AccessLeases
-            .Where(l => ids.Contains(l.CollectionId)
-                && l.Status == AccessLeaseStatus.Active
-                && l.NotBefore <= now
-                && l.NotAfter > now)
+            .Where(l => ids.Contains(l.CollectionId))
+            .Where(LiveAt(now))
             .OrderBy(l => l.NotAfter)
             .AsNoTracking()
             .ToListAsync();
@@ -102,35 +104,29 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         var dbContext = GetDatabaseContext(scope);
 
         // A revoked/cancelled lease's end is its RevokedDate; an expired lease's end is its NotAfter.
-        // `RevokedDate ?? NotAfter` is exactly that: RevokedDate is set only for Revoked/Cancelled leases.
+        // `RevokedDate ?? NotAfter` is exactly that: RevokedDate is set only for ended-early leases.
         //
-        // Ended-ness is derived here rather than read off Status, because nothing writes Expired: a lease whose
-        // window merely closed is still stored Active, so matching on Status alone hid every naturally expired lease
-        // from this view (PM-42355). Expressed inline rather than through AccessLease.StatusAsOf so EF can translate
-        // it to the WHERE clause instead of over-fetching every active lease to filter in memory. Mirrors
-        // AccessLease_ReadManyEndedByCollectionIds.
+        // Ended-ness has to be derived: the recorded action only ever says how a lease was ended early, so a lease
+        // whose window merely closed carries None forever and only the clock can call it Expired. The filter
+        // composes the action with a plain clock comparison, exactly like AccessLease_ReadManyEndedByCollectionIds;
+        // the returned entities expose the stored facts only, and callers derive the status via
+        // AccessStatusDerivation.ComputeLeaseStatus.
         var leases = await dbContext.AccessLeases
             .Where(l => ids.Contains(l.CollectionId)
                 && (
                     // Ended early (Revoked, Cancelled): its end is RevokedDate, whatever its window says.
-                    ((l.Status == AccessLeaseStatus.Revoked || l.Status == AccessLeaseStatus.Cancelled) && l.RevokedDate >= since)
-                    // Window closed: its end is NotAfter. Active is the case that was missing; a stored Expired
-                    // stays matched so such a row is still read.
-                    || ((l.Status == AccessLeaseStatus.Active || l.Status == AccessLeaseStatus.Expired)
-                        && l.NotAfter <= now && l.NotAfter >= since)
+                    ((l.Action == AccessLeaseAction.Revoked || l.Action == AccessLeaseAction.Cancelled) && l.RevokedDate >= since)
+                    // Window closed on its own: its end is NotAfter. Byte 1 (the retired stored Expired) is
+                    // deliberately NOT matched: nothing ever wrote it, and ComputeLeaseStatus has no arm for it, so
+                    // reading such a stray row would fail the whole endpoint. Not read means not derived -- it
+                    // simply stays invisible. Mirrors AccessLease_ReadManyEndedByCollectionIds.
+                    || (l.Action == AccessLeaseAction.None && l.NotAfter <= now && l.NotAfter >= since)
                 ))
             .OrderByDescending(l => l.RevokedDate ?? l.NotAfter)
             .AsNoTracking()
             .ToListAsync();
 
-        // The procedure projects [Status] in its SELECT; do the same after materializing so a caller reading
-        // Status on a returned lease sees Expired rather than the stored Active.
-        var ended = Mapper.Map<List<CoreEntity>>(leases);
-        foreach (var lease in ended)
-        {
-            lease.Status = lease.StatusAsOf(now);
-        }
-        return ended;
+        return Mapper.Map<List<CoreEntity>>(leases);
     }
 
     public async Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(CoreEntity lease, DateTime now,
@@ -167,10 +163,9 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
                 if (cipherId is not null)
                 {
                     var conflict = await dbContext.AccessLeases
-                        .AnyAsync(l => l.CipherId == cipherId.Value
-                            && l.Status == AccessLeaseStatus.Active
-                            && l.NotBefore <= now
-                            && l.NotAfter > now);
+                        .Where(l => l.CipherId == cipherId.Value)
+                        .Where(LiveAt(now))
+                        .AnyAsync();
                     if (conflict)
                     {
                         await transaction.RollbackAsync();
@@ -184,7 +179,7 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
             var request = await dbContext.AccessRequests
                 .Where(r => r.Id == lease.AccessRequestId
                     && r.RequesterId == lease.RequesterId
-                    && r.Status == AccessRequestStatus.Approved
+                    && r.Action == AccessRequestAction.Approved
                     // An extension applied in place when it was approved and never mints a lease of its own; it stays
                     // Approved with no produced lease, so every other precondition here would pass for it.
                     && r.ExtensionOfLeaseId == null
@@ -204,7 +199,7 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
             leaseEntity.CollectionId = request.CollectionId;
             leaseEntity.CipherId = request.CipherId;
             leaseEntity.RequesterId = request.RequesterId;
-            leaseEntity.Status = AccessLeaseStatus.Active;
+            leaseEntity.Action = AccessLeaseAction.None;
             leaseEntity.NotBefore = request.NotBefore;
             leaseEntity.NotAfter = request.NotAfter;
             leaseEntity.RevokedDate = null;
@@ -228,7 +223,7 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         }
     }
 
-    public async Task RevokeAsync(CoreEntity lease, AccessLeaseStatus endStatus, AccessDecision auditDecision, DateTime now)
+    public async Task RevokeAsync(CoreEntity lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -246,9 +241,9 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         // The decision is recorded only when the transition actually happened, so a repeat or losing revoke never
         // appends a Deny verdict for a lease it did not end.
         var rowsAffected = await dbContext.AccessLeases
-            .Where(l => l.Id == lease.Id && l.Status == AccessLeaseStatus.Active)
+            .Where(l => l.Id == lease.Id && l.Action == AccessLeaseAction.None)
             .ExecuteUpdateAsync(s => s
-                .SetProperty(l => l.Status, endStatus)
+                .SetProperty(l => l.Action, endAction)
                 .SetProperty(l => l.RevokedDate, now)
                 .SetProperty(l => l.RevokedBy, auditDecision.ApproverId));
 

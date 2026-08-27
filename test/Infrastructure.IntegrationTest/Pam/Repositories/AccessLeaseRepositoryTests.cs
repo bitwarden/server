@@ -31,8 +31,8 @@ public class LeaseRepositoryTests
         // The request is persisted already resolved as Approved...
         var persistedRequest = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.NotNull(persistedRequest);
-        Assert.Equal(AccessRequestStatus.Approved, persistedRequest!.Status);
-        Assert.NotNull(persistedRequest.ResolvedDate);
+        Assert.Equal(AccessRequestAction.Approved, persistedRequest!.Action);
+        Assert.NotNull(persistedRequest.ActionDate);
 
         // ...but no lease is minted at submit: the requester activates the approved request to start one.
         Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id));
@@ -101,11 +101,10 @@ public class LeaseRepositoryTests
             NotBefore = now.AddHours(1),
             NotAfter = now.AddHours(2),
             Reason = "audit",
-            Status = AccessRequestStatus.Pending,
             CreationDate = now,
         });
 
-        var pending = await accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(requesterId, cipherId);
+        var pending = await accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(requesterId, cipherId, now);
 
         Assert.NotNull(pending);
         Assert.Equal(request.Id, pending!.Id);
@@ -171,11 +170,11 @@ public class LeaseRepositoryTests
             CreationDate = now,
         };
 
-        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Revoked, auditDecision, now);
+        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseAction.Revoked, auditDecision, now);
 
         var persisted = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.NotNull(persisted);
-        Assert.Equal(AccessLeaseStatus.Revoked, persisted!.Status);
+        Assert.Equal(AccessLeaseAction.Revoked, persisted!.Action);
         Assert.Equal(revokerId, persisted.RevokedBy);
         Assert.NotNull(persisted.RevokedDate);
     }
@@ -201,7 +200,7 @@ public class LeaseRepositoryTests
         var produced = await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
         Assert.NotNull(produced);
         Assert.Equal(lease.Id, produced!.Id);
-        Assert.Equal(AccessLeaseStatus.Active, produced.Status);
+        Assert.Equal(AccessLeaseAction.None, produced.Action);
         // The minted lease spans the request's approved window exactly — compare against the persisted request,
         // since the in-memory entity keeps tick precision the driver's datetime parameters do not.
         var persistedRequest = await accessRequestRepository.GetByIdAsync(request.Id);
@@ -251,7 +250,7 @@ public class LeaseRepositoryTests
 
         // Still pending: not an approval.
         var pending = await CreateApprovedRequestAsync(
-            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1), AccessRequestStatus.Pending);
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1), AccessRequestAction.None);
         Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed,
             await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(pending, now), now, false));
 
@@ -364,21 +363,21 @@ public class LeaseRepositoryTests
         var (revReq, revDec, revLease) = BuildAutoApproved(
             organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
         await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, revReq, revDec, revLease, now);
-        await accessLeaseRepository.RevokeAsync(revLease, AccessLeaseStatus.Revoked, BuildAuditDecision(revLease, now), now);
+        await accessLeaseRepository.RevokeAsync(revLease, AccessLeaseAction.Revoked, BuildAuditDecision(revLease, now), now);
 
         // Revoked long before the window — excluded by @Since.
         var (oldReq, oldDec, oldLease) = BuildAutoApproved(
             organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddDays(-200), now.AddDays(-100));
         await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, oldReq, oldDec, oldLease, now.AddDays(-200));
-        await accessLeaseRepository.RevokeAsync(oldLease, AccessLeaseStatus.Revoked, BuildAuditDecision(oldLease, now.AddDays(-150)), now.AddDays(-150));
+        await accessLeaseRepository.RevokeAsync(oldLease, AccessLeaseAction.Revoked, BuildAuditDecision(oldLease, now.AddDays(-150)), now.AddDays(-150));
 
         var result = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
             new[] { activeLease.CollectionId, revLease.CollectionId, oldLease.CollectionId }, since, now);
 
         Assert.Single(result);
         Assert.Equal(revLease.Id, result.First().Id);
-        Assert.Equal(AccessLeaseStatus.Revoked, result.First().Status);
+        Assert.Equal(AccessLeaseAction.Revoked, result.First().Action);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -387,9 +386,10 @@ public class LeaseRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // A lease whose window simply closed is never written back to Expired -- nothing writes that status -- so
-        // matching this view on the stored status alone hid every naturally expired lease: out of the active read
-        // (its window has closed) and never into this one (PM-42355). Ended-ness is derived against `now` instead.
+        // A lease whose window simply closed records no early end -- expiry is unrepresentable in storage -- so
+        // matching this view on the recorded action alone would hide every naturally expired lease: out of the
+        // active read (its window has closed) and never into this one (PM-42355). Ended-ness is derived against
+        // `now` instead.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
 
@@ -410,10 +410,10 @@ public class LeaseRepositoryTests
             organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
         await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, liveReq, liveDec, liveLease, now);
 
-        // The premise: all three rows are still stored Active. Nothing swept the lapsed ones.
+        // The premise: all three rows still record no early end. Nothing swept the lapsed ones.
         foreach (var id in new[] { lapsedLease.Id, staleLease.Id, liveLease.Id })
         {
-            Assert.Equal(AccessLeaseStatus.Active, (await accessLeaseRepository.GetByIdAsync(id))!.Status);
+            Assert.Equal(AccessLeaseAction.None, (await accessLeaseRepository.GetByIdAsync(id))!.Action);
         }
 
         var collectionIds = new[] { lapsedLease.CollectionId, staleLease.CollectionId, liveLease.CollectionId };
@@ -422,8 +422,9 @@ public class LeaseRepositoryTests
 
         var row = Assert.Single(ended);
         Assert.Equal(lapsedLease.Id, row.Id);
-        // Projected, not stored -- the row read back through GetByIdAsync above still says Active.
-        Assert.Equal(AccessLeaseStatus.Expired, row.Status);
+        // The entity exposes the stored fact only; Expired exists purely as the derivation against the read clock.
+        Assert.Equal(AccessLeaseAction.None, row.Action);
+        Assert.Equal(AccessLeaseStatus.Expired, AccessStatusDerivation.ComputeLeaseStatus(row.Action, row.NotAfter, now));
         Assert.Null(row.RevokedDate);
 
         // The same lease read before its window closed is neither ended nor expired: the status follows the clock.
@@ -440,7 +441,7 @@ public class LeaseRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // The end is guarded on Active, so a repeat (or losing) revoke must leave both halves alone: the first
+        // The end is guarded on no-early-end-yet, so a repeat (or losing) revoke must leave both halves alone: the first
         // revoker's identity survives, and no second Deny is appended to a lease this call did not end. Without the
         // guard the decision log would accumulate a verdict for every attempt.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
@@ -458,7 +459,7 @@ public class LeaseRepositoryTests
 
         var first = BuildAuditDecision(lease, now);
         first.ApproverId = firstRevokerId;
-        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Revoked, first, now);
+        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseAction.Revoked, first, now);
 
         var afterFirst = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
         Assert.Equal(2, afterFirst!.Decisions.Count);
@@ -466,10 +467,10 @@ public class LeaseRepositoryTests
         // A second revoke finds the lease already ended.
         var second = BuildAuditDecision(lease, now.AddMinutes(1));
         second.ApproverId = secondRevokerId;
-        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Cancelled, second, now.AddMinutes(1));
+        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseAction.Cancelled, second, now.AddMinutes(1));
 
         var persisted = await accessLeaseRepository.GetByIdAsync(lease.Id);
-        Assert.Equal(AccessLeaseStatus.Revoked, persisted!.Status);
+        Assert.Equal(AccessLeaseAction.Revoked, persisted!.Action);
         Assert.Equal(firstRevokerId, persisted.RevokedBy);
 
         // No verdict was appended for the lease the second call did not end.
@@ -509,7 +510,7 @@ public class LeaseRepositoryTests
         auditDecision.AccessRequestId = otherRequest.Id;
         auditDecision.ApproverId = revokerId;
 
-        await accessLeaseRepository.RevokeAsync(staleLease, AccessLeaseStatus.Revoked, auditDecision, now);
+        await accessLeaseRepository.RevokeAsync(staleLease, AccessLeaseAction.Revoked, auditDecision, now);
 
         // The verdict landed on the lease's real originating request...
         var owning = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
@@ -528,8 +529,9 @@ public class LeaseRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // Cancelled is the end state when the holder ended their own lease, as opposed to Revoked when an operator
-        // did. Both travel the same write path, so the end status must round-trip rather than being forced to Revoked.
+        // Cancelled is the recorded action when the holder ended their own lease, as opposed to Revoked when an
+        // operator did. Both travel the same write path, so the action must round-trip rather than being forced to
+        // Revoked.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
         var requesterId = Guid.NewGuid();
@@ -541,10 +543,10 @@ public class LeaseRepositoryTests
 
         var auditDecision = BuildAuditDecision(lease, now);
         auditDecision.ApproverId = requesterId;
-        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Cancelled, auditDecision, now);
+        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseAction.Cancelled, auditDecision, now);
 
         var persisted = await accessLeaseRepository.GetByIdAsync(lease.Id);
-        Assert.Equal(AccessLeaseStatus.Cancelled, persisted!.Status);
+        Assert.Equal(AccessLeaseAction.Cancelled, persisted!.Action);
         Assert.Equal(requesterId, persisted.RevokedBy);
         Assert.NotNull(persisted.RevokedDate);
 
@@ -555,7 +557,7 @@ public class LeaseRepositoryTests
         // ...and it counts as ended for the governance history view.
         var ended = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
             new[] { lease.CollectionId }, now.AddDays(-1), now);
-        Assert.Equal(AccessLeaseStatus.Cancelled, Assert.Single(ended).Status);
+        Assert.Equal(AccessLeaseAction.Cancelled, Assert.Single(ended).Action);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -587,9 +589,9 @@ public class LeaseRepositoryTests
 
         // The lease created second ends first, so it must sort last.
         await accessLeaseRepository.RevokeAsync(
-            secondLease, AccessLeaseStatus.Cancelled, BuildAuditDecision(secondLease, now.AddHours(-1)), now.AddHours(-1));
+            secondLease, AccessLeaseAction.Cancelled, BuildAuditDecision(secondLease, now.AddHours(-1)), now.AddHours(-1));
         await accessLeaseRepository.RevokeAsync(
-            firstLease, AccessLeaseStatus.Revoked, BuildAuditDecision(firstLease, now), now);
+            firstLease, AccessLeaseAction.Revoked, BuildAuditDecision(firstLease, now), now);
 
         var ended = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
             new[] { collectionId }, now.AddDays(-1), now);
@@ -632,7 +634,7 @@ public class LeaseRepositoryTests
 
     private static async Task<AccessRequest> CreateApprovedRequestAsync(
         IAccessRequestRepository accessRequestRepository, Guid organizationId, DateTime notBefore, DateTime notAfter,
-        AccessRequestStatus status = AccessRequestStatus.Approved, Guid? cipherId = null)
+        AccessRequestAction action = AccessRequestAction.Approved, Guid? cipherId = null)
         => await accessRequestRepository.CreateAsync(new AccessRequest
         {
             OrganizationId = organizationId,
@@ -642,9 +644,9 @@ public class LeaseRepositoryTests
             NotBefore = notBefore,
             NotAfter = notAfter,
             Reason = "audit",
-            Status = status,
+            Action = action,
             CreationDate = DateTime.UtcNow,
-            ResolvedDate = status == AccessRequestStatus.Pending ? null : DateTime.UtcNow,
+            ActionDate = action == AccessRequestAction.None ? null : DateTime.UtcNow,
         });
 
     // Seeds an active lease the way production now does: record the approved request, then mint the lease by
@@ -672,7 +674,7 @@ public class LeaseRepositoryTests
             CollectionId = request.CollectionId,
             CipherId = request.CipherId,
             RequesterId = request.RequesterId,
-            Status = AccessLeaseStatus.Active,
+            Action = AccessLeaseAction.None,
             NotBefore = request.NotBefore,
             NotAfter = request.NotAfter,
             CreationDate = now,
@@ -691,7 +693,7 @@ public class LeaseRepositoryTests
             RequesterId = requesterId,
             NotBefore = notBefore,
             NotAfter = notAfter,
-            Status = AccessRequestStatus.Approved,
+            Action = AccessRequestAction.Approved,
         };
         var decision = new AccessDecision
         {
@@ -708,7 +710,7 @@ public class LeaseRepositoryTests
             CollectionId = collectionId,
             CipherId = cipherId,
             RequesterId = requesterId,
-            Status = AccessLeaseStatus.Active,
+            Action = AccessLeaseAction.None,
             NotBefore = notBefore,
             NotAfter = notAfter,
         };

@@ -61,14 +61,14 @@ public class SubmitAccessRequestCommandTests
         // The automatic path no longer mints a lease at submit; it produces a startable, already-approved request the
         // requester activates explicitly. The window spans the requested duration from now.
         Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
-        Assert.Equal(AccessRequestStatus.Approved, result.Request.Status);
+        Assert.Equal(AccessRequestAction.Approved, result.Request.Action);
         Assert.Equal(_now, result.Request.NotBefore);
         Assert.Equal(_now.AddSeconds(3600), result.Request.NotAfter);
         Assert.Equal("deploy", result.Request.Reason);
 
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
             .CreateAutoApprovedAsync(
-                Arg.Is<AccessRequest>(r => r.Status == AccessRequestStatus.Approved && r.NotBefore == _now
+                Arg.Is<AccessRequest>(r => r.Action == AccessRequestAction.Approved && r.NotBefore == _now
                     && r.NotAfter == _now.AddSeconds(3600) && r.RuleId == ruleId),
                 Arg.Is<AccessDecision>(d => d.DeciderKind == AccessDeciderKind.Automatic
                     && d.Verdict == AccessDecisionVerdict.Approve));
@@ -200,7 +200,7 @@ public class SubmitAccessRequestCommandTests
 
         Assert.Equal(AccessApprovalMode.Human, result.ApprovalMode);
         Assert.NotNull(result.Request);
-        Assert.Equal(AccessRequestStatus.Pending, result.Request!.Status);
+        Assert.Equal(AccessRequestAction.None, result.Request!.Action);
         Assert.Equal(start, result.Request.NotBefore);
         Assert.Equal(end, result.Request.NotAfter);
         Assert.Equal("audit", result.Request.Reason);
@@ -256,7 +256,7 @@ public class SubmitAccessRequestCommandTests
             Reason = "audit",
         });
 
-        Assert.Equal(AccessRequestStatus.Pending, result.Request!.Status);
+        Assert.Equal(AccessRequestAction.None, result.Request!.Action);
     }
 
     [Theory, BitAutoData]
@@ -318,6 +318,24 @@ public class SubmitAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task SubmitAsync_HumanWindowAlreadyEnded_ThrowsBadRequestAndCreatesNoRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
+
+        // A well-formed window (start < end) that has already closed would persist a born-Expired row: invisible to
+        // the approver inbox's clock filter and refused by both Decide and Cancel. Refused at submit instead.
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { Start = _now.AddHours(-2), End = _now.AddHours(-1), Reason = "x" }));
+        Assert.Contains("end date must be in the future", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
     public async Task SubmitAsync_ExistingActiveLease_ThrowsBadRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId, AccessLease lease)
     {
         var sutProvider = Setup();
@@ -339,7 +357,7 @@ public class SubmitAccessRequestCommandTests
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId)
+            .GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(pending);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
