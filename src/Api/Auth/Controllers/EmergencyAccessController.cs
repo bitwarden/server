@@ -202,13 +202,18 @@ public class EmergencyAccessController : Controller
         await _emergencyAccessService.PasswordAsync(id, user, model.NewMasterPasswordHash, model.Key);
     }
 
+    /// <remarks>
+    /// Emergency access exposes the grantor's personal vault only, and a user-owned cipher is never
+    /// leasing-gated, so the gate authorizes all of them.
+    /// </remarks>
     [HttpPost("{id}/view")]
     public async Task<EmergencyAccessViewResponseModel> ViewCiphers(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var viewResult = await _emergencyAccessService.ViewAsync(id, user);
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, viewResult.Ciphers);
         return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers, user,
-            _cipherLeaseGate.Unrestricted());
+            fullAccess);
     }
 
     [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]

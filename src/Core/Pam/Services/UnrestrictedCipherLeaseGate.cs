@@ -26,5 +26,14 @@ public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
     public Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers)
         => Task.FromResult(FullCipherAccess.Unrestricted());
 
-    public FullCipherAccess Unrestricted() => FullCipherAccess.Unrestricted();
+    public Task<FullCipherAccess?> AuthorizeAdminReadAsync(Guid userId, Guid organizationId, Cipher cipher)
+        => Task.FromResult<FullCipherAccess?>(FullCipherAccess.Unrestricted());
+
+    public Task<FullCipherAccess> AuthorizeAdminReadManyAsync(
+        Guid userId,
+        Guid organizationId,
+        IEnumerable<Cipher> ciphers)
+        => Task.FromResult(FullCipherAccess.Unrestricted());
+
+    public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
 }

@@ -27,8 +27,10 @@ public sealed class FullCipherAccess
     }
 
     /// <summary>
-    /// Authorizes full data for any cipher. Minted by the gate for contexts that have already been
-    /// authorized out-of-band (org admins, personal vaults, the flag-off no-op path).
+    /// Authorizes full data for any cipher. Minted by the gate for whole-vault organization export — the
+    /// only context in which leasing is waived — and for the flag-off no-op path. An organization-wide
+    /// permission is not on its own such a context: an administrative reader is leasing-gated like any
+    /// member, and goes through the gate's administrative decision instead.
     /// </summary>
     internal static FullCipherAccess Unrestricted() => new(unrestricted: true, authorizedCipherIds: null);
 

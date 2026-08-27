@@ -22,12 +22,15 @@ public class CipherLeaseGateBypassCustomization : ICustomization
         var gate = Substitute.For<ICipherLeaseGate>();
         var unrestricted = FullCipherAccess.Unrestricted();
 
-        gate.Unrestricted().Returns(unrestricted);
+        gate.UnrestrictedForWholeVaultExport().Returns(unrestricted);
         gate.AuthorizeReadAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
         gate.AuthorizeReadManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>()).Returns(unrestricted);
         gate.AuthorizeReadManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>(),
                 Arg.Any<IEnumerable<CollectionDetails>>(),
                 Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
+            .Returns(unrestricted);
+        gate.AuthorizeAdminReadAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
+        gate.AuthorizeAdminReadManyAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>())
             .Returns(unrestricted);
 
         fixture.Inject(gate);

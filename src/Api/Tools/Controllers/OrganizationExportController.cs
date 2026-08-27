@@ -53,9 +53,10 @@ public class OrganizationExportController : Controller
                 .GetManySharedCollectionsByOrganizationIdAsync(organizationId);
             await Task.WhenAll(ciphersTask, collectionsTask);
 
-            // Whole-vault export is authorized through org-wide permissions, so nothing is leasing-gated.
+            // Whole-vault export is the one context in which credential leasing is waived, so the export
+            // carries every item in full, leasing-gated ones included.
             return Ok(new OrganizationExportResponseModel(ciphersTask.Result, collectionsTask.Result,
-                _globalSettings, _cipherLeaseGate.Unrestricted()));
+                _globalSettings, _cipherLeaseGate.UnrestrictedForWholeVaultExport()));
         }
 
         var canExportManaged = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),

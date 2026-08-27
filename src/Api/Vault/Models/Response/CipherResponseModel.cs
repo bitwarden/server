@@ -454,14 +454,52 @@ public abstract class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         CollectionIds = cipher.CollectionIds ?? [];
     }
 
+    /// <inheritdoc cref="CipherMiniResponseModel.From(FullCipherAccess, Cipher, IGlobalSettings, bool, string)"/>
+    public static CipherMiniDetailsResponseModel From(FullCipherAccess access, Cipher cipher,
+        GlobalSettings globalSettings,
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, bool orgUseTotp,
+        string obj = "cipherMiniDetails") =>
+        access?.Authorizes(cipher.Id) == true
+            ? new FullCipherMiniDetailsResponseModel(access, cipher, globalSettings, collectionCiphers, orgUseTotp, obj)
+            : new PartialCipherMiniDetailsResponseModel(cipher, collectionCiphers, orgUseTotp, obj);
+
+    /// <inheritdoc cref="CipherMiniResponseModel.From(FullCipherAccess, Cipher, IGlobalSettings, bool, string)"/>
+    public static CipherMiniDetailsResponseModel From(FullCipherAccess access,
+        CipherOrganizationDetailsWithCollections cipher, GlobalSettings globalSettings, bool orgUseTotp,
+        string obj = "cipherMiniDetails") =>
+        access?.Authorizes(cipher.Id) == true
+            ? new FullCipherMiniDetailsResponseModel(access, cipher, globalSettings, orgUseTotp, obj)
+            : new PartialCipherMiniDetailsResponseModel(cipher, orgUseTotp, obj);
+
+    /// <inheritdoc cref="CipherMiniResponseModel.From(FullCipherAccess, Cipher, IGlobalSettings, bool, string)"/>
+    public static CipherMiniDetailsResponseModel From(FullCipherAccess access,
+        CipherOrganizationDetailsWithCollections cipher, GlobalSettings globalSettings,
+        string obj = "cipherMiniDetails") =>
+        From(access, cipher, globalSettings, cipher.OrganizationUseTotp, obj);
+
     public IEnumerable<Guid> CollectionIds { get; set; }
 }
 
-/// <summary>
-/// The full-data counterpart of <see cref="CipherMiniDetailsResponseModel"/>. There is no reduced
-/// counterpart: every path that builds the mini-details shape is authorized through organization-wide
-/// permissions rather than collection membership, so nothing reaching it is leasing-gated.
-/// </summary>
+/// <summary>The reduced-data counterpart of <see cref="CipherMiniDetailsResponseModel"/>.</summary>
+public sealed class PartialCipherMiniDetailsResponseModel : CipherMiniDetailsResponseModel
+{
+    public PartialCipherMiniDetailsResponseModel(Cipher cipher,
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, bool orgUseTotp,
+        string obj = "cipherMiniDetails")
+        : base(cipher, collectionCiphers, orgUseTotp, obj)
+    {
+        PopulatePartialData(cipher);
+    }
+
+    public PartialCipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
+        bool orgUseTotp, string obj = "cipherMiniDetails")
+        : base(cipher, orgUseTotp, obj)
+    {
+        PopulatePartialData(cipher);
+    }
+}
+
+/// <summary>The full-data counterpart of <see cref="CipherMiniDetailsResponseModel"/>.</summary>
 public sealed class FullCipherMiniDetailsResponseModel : CipherMiniDetailsResponseModel
 {
     public FullCipherMiniDetailsResponseModel(FullCipherAccess access, Cipher cipher,
