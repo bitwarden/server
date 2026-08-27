@@ -57,17 +57,13 @@ public class CollectionsControllerTests
             c.Name == collectionRequest.Name && c.ExternalId == collectionRequest.ExternalId &&
             c.OrganizationId == collection.OrganizationId);
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(collection.Id)
-            .Returns(collection);
-
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 collection,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
             .Returns(AuthorizationResult.Success());
 
-        _ = await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest);
+        _ = await sutProvider.Sut.Put(collection.OrganizationId, collection, collectionRequest);
 
         await sutProvider.GetDependency<IUpdateCollectionCommand>()
             .Received(1)
@@ -157,8 +153,6 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(new CurrentContextOrganization());
 
-        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collection.Id).Returns(collection);
-
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), collection,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
@@ -173,7 +167,7 @@ public class CollectionsControllerTests
             .GetByIdWithPermissionsAsync(collection.Id, userId, true)
             .Returns(serverDetails);
 
-        var result = await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest);
+        var result = await sutProvider.Sut.Put(collection.OrganizationId, collection, collectionRequest);
 
         var response = Assert.IsType<CollectionAccessDetailsResponseModel>(result);
         Assert.Empty(response.Groups);
@@ -193,8 +187,6 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(new CurrentContextOrganization());
 
-        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collection.Id).Returns(collection);
-
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), collection,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
@@ -209,7 +201,7 @@ public class CollectionsControllerTests
             .GetByIdWithPermissionsAsync(collection.Id, userId, true)
             .Returns(serverDetails);
 
-        var result = await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest);
+        var result = await sutProvider.Sut.Put(collection.OrganizationId, collection, collectionRequest);
 
         // Without ReadWithAccess the response falls back to the basic Collection constructor — Groups/Users are not populated.
         var response = Assert.IsType<CollectionAccessDetailsResponseModel>(result);
@@ -234,25 +226,6 @@ public class CollectionsControllerTests
         await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task Put_CollectionBelongsToDifferentOrg_ThrowsNotFound(Guid orgId, Collection collection,
-        UpdateCollectionRequestModel collectionRequest, SutProvider<CollectionsController> sutProvider)
-    {
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(collection.Id)
-            .Returns(collection);
-
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.Put(orgId, collection.Id, collectionRequest));
-
-        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(),
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
-        await sutProvider.GetDependency<IUpdateCollectionCommand>().DidNotReceiveWithAnyArgs()
-            .UpdateAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
     [Theory, BitAutoData]
@@ -294,11 +267,7 @@ public class CollectionsControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
             .Returns(AuthorizationResult.Failed());
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(collection.Id)
-            .Returns(collection);
-
-        _ = await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest));
+        _ = await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.Put(collection.OrganizationId, collection, collectionRequest));
     }
 
     [Theory, BitAutoData]
@@ -711,10 +680,6 @@ public class CollectionsControllerTests
 
         collectionRequest.Name = newName;
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(existingCollection.Id)
-            .Returns(existingCollection);
-
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 existingCollection,
@@ -722,7 +687,7 @@ public class CollectionsControllerTests
             .Returns(AuthorizationResult.Success());
 
         // Act
-        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection.Id, collectionRequest);
+        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection, collectionRequest);
 
         // Assert
         await sutProvider.GetDependency<IUpdateCollectionCommand>()
@@ -745,10 +710,6 @@ public class CollectionsControllerTests
 
         collectionRequest.Name = null;
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(existingCollection.Id)
-            .Returns(existingCollection);
-
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 existingCollection,
@@ -756,7 +717,7 @@ public class CollectionsControllerTests
             .Returns(AuthorizationResult.Success());
 
         // Act
-        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection.Id, collectionRequest);
+        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection, collectionRequest);
 
         // Assert
         await sutProvider.GetDependency<IUpdateCollectionCommand>()
@@ -780,10 +741,6 @@ public class CollectionsControllerTests
 
         collectionRequest.Name = "new name";
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(existingCollection.Id)
-            .Returns(existingCollection);
-
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 existingCollection,
@@ -791,7 +748,7 @@ public class CollectionsControllerTests
             .Returns(AuthorizationResult.Success());
 
         // Act
-        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection.Id, collectionRequest);
+        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection, collectionRequest);
 
         // Assert
         await sutProvider.GetDependency<IUpdateCollectionCommand>()
@@ -814,10 +771,6 @@ public class CollectionsControllerTests
 
         collectionRequest.Name = ""; // Empty string
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(existingCollection.Id)
-            .Returns(existingCollection);
-
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 existingCollection,
@@ -825,7 +778,7 @@ public class CollectionsControllerTests
             .Returns(AuthorizationResult.Success());
 
         // Act
-        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection.Id, collectionRequest);
+        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection, collectionRequest);
 
         // Assert
         await sutProvider.GetDependency<IUpdateCollectionCommand>()
@@ -848,10 +801,6 @@ public class CollectionsControllerTests
 
         collectionRequest.Name = "   "; // Whitespace only
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(existingCollection.Id)
-            .Returns(existingCollection);
-
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 existingCollection,
@@ -859,7 +808,7 @@ public class CollectionsControllerTests
             .Returns(AuthorizationResult.Success());
 
         // Act
-        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection.Id, collectionRequest);
+        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection, collectionRequest);
 
         // Assert
         await sutProvider.GetDependency<IUpdateCollectionCommand>()

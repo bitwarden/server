@@ -192,14 +192,8 @@ public class CollectionsController : Controller
     }
 
     [HttpPut("{id}")]
-    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
+    public async Task<CollectionResponseModel> Put(Guid orgId, [InjectCollection] Collection collection, [FromBody] UpdateCollectionRequestModel model)
     {
-        var collection = await _collectionRepository.GetByIdAsync(id);
-        if (collection is null || collection.OrganizationId != orgId)
-        {
-            throw new NotFoundException();
-        }
-
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
         if (!authorized)
         {
@@ -229,9 +223,9 @@ public class CollectionsController : Controller
 
     [HttpPost("{id}")]
     [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
-    public async Task<CollectionResponseModel> PostPut(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
+    public async Task<CollectionResponseModel> PostPut(Guid orgId, [InjectCollection] Collection collection, [FromBody] UpdateCollectionRequestModel model)
     {
-        return await Put(orgId, id, model);
+        return await Put(orgId, collection, model);
     }
 
     [HttpPost("bulk-access")]

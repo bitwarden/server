@@ -106,20 +106,6 @@ public class CollectionModelBinderTests
     }
 
     [Fact]
-    public async Task BindModelAsync_OrganizationIdRouteParam_ResolvesOrgId()
-    {
-        var binder = new CollectionModelBinder();
-        _collectionRepository.GetByIdAsync(_collectionId).Returns(_collection);
-
-        var context = CreateBindingContext(useOrganizationIdRoute: true);
-
-        await binder.BindModelAsync(context);
-
-        Assert.True(context.Result.IsModelSet);
-        Assert.Equal(_collection, context.Result.Model);
-    }
-
-    [Fact]
     public async Task BindModelAsync_CustomRouteParamName_ReadsCorrectRouteValue()
     {
         var binder = new CollectionModelBinder();
@@ -143,8 +129,7 @@ public class CollectionModelBinderTests
     /// Dummy method used to produce a <see cref="ParameterInfo"/> carrying a custom
     /// <see cref="InjectCollectionAttribute"/> for the custom route param test.
     /// </summary>
-    private static void DummyMethodWithCustomRouteParam(
-        [InjectCollection("collectionId")] Collection collection)
+    private static void DummyMethodWithCustomRouteParam([InjectCollection("collectionId")] Collection collection)
     { }
 
     private DefaultModelBindingContext CreateBindingContext(
@@ -153,7 +138,6 @@ public class CollectionModelBinderTests
         string collectionIdRouteKey = "id",
         bool includeOrgId = true,
         bool includeCollectionId = true,
-        bool useOrganizationIdRoute = false,
         ParameterInfo parameterInfo = null)
     {
         var httpContext = new DefaultHttpContext();
@@ -164,8 +148,7 @@ public class CollectionModelBinderTests
         var routeData = new RouteData();
         if (includeOrgId)
         {
-            var key = useOrganizationIdRoute ? "organizationId" : "orgId";
-            routeData.Values[key] = orgIdRouteValue ?? _orgId.ToString();
+            routeData.Values["orgId"] = orgIdRouteValue ?? _orgId.ToString();
         }
         if (includeCollectionId)
         {
@@ -183,14 +166,7 @@ public class CollectionModelBinderTests
         var metadataProvider = new EmptyModelMetadataProvider();
         ModelMetadata metadata;
 
-        if (parameterInfo != null)
-        {
-            metadata = metadataProvider.GetMetadataForParameter(parameterInfo);
-        }
-        else
-        {
-            metadata = metadataProvider.GetMetadataForType(typeof(Collection));
-        }
+        metadata = parameterInfo != null ? metadataProvider.GetMetadataForParameter(parameterInfo) : metadataProvider.GetMetadataForType(typeof(Collection));
 
         return new DefaultModelBindingContext
         {
