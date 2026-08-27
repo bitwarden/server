@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Services;
 using Bit.HttpExtensions;
-using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -15,11 +14,10 @@ namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 /// </summary>
 public class AccessRequestEndpointsHandler(
     IUserService userService,
-    TimeProvider timeProvider,
     IListInboxRequestsQuery listInboxRequestsQuery,
     IListInboxHistoryQuery listInboxHistoryQuery,
+    IListMyAccessRequestsQuery listMyAccessRequestsQuery,
     IDecideAccessRequestCommand decideAccessRequestCommand,
-    IAccessRequestRepository accessRequestRepository,
     IActivateAccessRequestCommand activateAccessRequestCommand,
     ICancelAccessRequestCommand cancelAccessRequestCommand,
     IGetAccessRequestDetailsQuery getAccessRequestDetailsQuery)
@@ -43,10 +41,7 @@ public class AccessRequestEndpointsHandler(
     public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetMine(ClaimsPrincipal user)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        // The clock each row's produced-lease status is projected against; see
-        // AccessRequestDetails.ProducedLeaseStatus.
-        var requests = await accessRequestRepository.GetManyByRequesterIdAsync(
-            userId, timeProvider.GetUtcNow().UtcDateTime);
+        var requests = await listMyAccessRequestsQuery.GetMineAsync(userId);
         return new ListResponseModel<AccessRequestDetailsResponseModel>(
             requests.Select(r => new AccessRequestDetailsResponseModel(r)));
     }

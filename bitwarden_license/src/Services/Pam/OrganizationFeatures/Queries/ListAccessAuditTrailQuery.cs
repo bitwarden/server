@@ -20,10 +20,11 @@ public class ListAccessAuditTrailQuery : IListAccessAuditTrailQuery
 
     public async Task<ICollection<AccessAuditEvent>> GetTrailAsync(Guid organizationId)
     {
-        // Shares the approver inbox's history window so the audit view reaches as far back as request/lease history.
+        // Shares the one history window (AccessHistoryWindow) so the audit view reaches as far back as the
+        // request and lease history views.
         // Authorization is the AccessEventLogs permission, enforced at the endpoint, so the trail is org-wide.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var since = now.AddDays(-ListInboxHistoryQuery.HistoryRetentionDays);
+        var since = now.AddDays(-AccessHistoryWindow.RetentionDays);
         var events = await _accessAuditEventRepository.GetManyByOrganizationIdAsync(organizationId, since);
 
         // Collapse each action's before/after pair (shared CorrelationId) into one row: the Outcome when it landed,

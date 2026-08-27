@@ -78,12 +78,13 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         return (await ReadDetailsWithDecisionsAsync(results)).FirstOrDefault();
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime now)
+    public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime? since,
+        DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
             $"[{Schema}].[AccessRequest_ReadManyByRequesterId]",
-            new { RequesterId = requesterId, Now = now },
+            new { RequesterId = requesterId, Since = since, Now = now },
             commandType: CommandType.StoredProcedure);
 
         return await ReadDetailsWithDecisionsAsync(results);
