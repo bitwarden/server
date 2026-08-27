@@ -117,7 +117,7 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         }
     }
 
-    public async Task RevokeAsync(AccessLease lease, AccessLeaseStatus endStatus, AccessDecision auditDecision, DateTime now)
+    public async Task RevokeAsync(AccessLease lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
@@ -125,7 +125,7 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
             new
             {
                 AccessLeaseId = lease.Id,
-                Status = (byte)endStatus,
+                Action = (byte)endAction,
                 RevokedBy = auditDecision.ApproverId,
                 AccessDecisionId = auditDecision.Id,
                 Reason = auditDecision.Comment,

@@ -2549,6 +2549,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("AccessRequestId")
                         .HasColumnType("char(36)");
 
+                    b.Property<byte>("Action")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<Guid>("CipherId")
                         .HasColumnType("char(36)");
 
@@ -2576,9 +2579,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("RevokedDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AccessRequestId")
@@ -2586,13 +2586,13 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("CipherId", "Status");
+                    b.HasIndex("CipherId", "Action");
 
-                    b.HasIndex("CollectionId", "Status");
+                    b.HasIndex("CollectionId", "Action");
 
-                    b.HasIndex("NotAfter", "Status");
+                    b.HasIndex("NotAfter", "Action");
 
-                    b.HasIndex("RequesterId", "CipherId", "Status");
+                    b.HasIndex("RequesterId", "CipherId", "Action");
 
                     b.ToTable("AccessLease", (string)null);
                 });
@@ -2601,6 +2601,12 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
+
+                    b.Property<byte>("Action")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<DateTime?>("ActionDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("CipherId")
                         .HasColumnType("char(36)");
@@ -2629,14 +2635,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("RequesterId")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("ResolvedDate")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<Guid?>("RuleId")
                         .HasColumnType("char(36)");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
 
                     b.HasKey("Id");
 
@@ -2644,11 +2644,15 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("RuleId");
 
-                    b.HasIndex("CollectionId", "Status");
+                    b.HasIndex("CollectionId", "CreationDate");
 
-                    b.HasIndex("OrganizationId", "Status");
+                    b.HasIndex("OrganizationId", "Action");
 
-                    b.HasIndex("RequesterId", "CipherId", "Status");
+                    b.HasIndex("RequesterId", "CreationDate");
+
+                    b.HasIndex("CollectionId", "Action", "NotAfter");
+
+                    b.HasIndex("RequesterId", "CipherId", "Action");
 
                     b.ToTable("AccessRequest", (string)null);
                 });

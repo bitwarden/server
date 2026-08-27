@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[AccessLease_Revoke]
     @AccessLeaseId UNIQUEIDENTIFIER,
-    @Status TINYINT,
+    @Action TINYINT,
     @RevokedBy UNIQUEIDENTIFIER,
     @AccessDecisionId UNIQUEIDENTIFIER,
     @Reason NVARCHAR(MAX) = NULL,
@@ -12,11 +12,11 @@ BEGIN
     -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
     SET XACT_ABORT ON
 
-    -- Atomically end an active lease and capture who/why. @Status is the end state: 2 (Revoked) when an operator ended
-    -- it, 3 (Cancelled) when the holder ended their own; RevokedDate/RevokedBy record when/who either way. The reason
-    -- has no dedicated column, so it is preserved as a human AccessDecision (Deny) against the lease's originating
-    -- request, keeping the audit trail without a schema change. The WHERE guard keeps the end idempotent if two
-    -- callers race.
+    -- Atomically end a running lease and capture who/why. @Action is the early end being recorded: 2 (Revoked) when
+    -- an operator ended it, 3 (Cancelled) when the holder ended their own; RevokedDate/RevokedBy record when/who
+    -- either way. The reason has no dedicated column, so it is preserved as a human AccessDecision (Deny) against the
+    -- lease's originating request, keeping the audit trail without a schema change. The WHERE guard keeps the end
+    -- idempotent if two callers race.
     --
     -- OUTPUT captures the ended lease's own AccessRequestId, which does double duty: the decision is written only when
     -- the transition actually happened (a repeat revoke ends nothing and appends nothing), and it is written against
@@ -26,11 +26,11 @@ BEGIN
     BEGIN TRANSACTION AccessLease_Revoke
 
     UPDATE [dbo].[AccessLease]
-    SET [Status] = @Status,
+    SET [Action] = @Action,
         [RevokedDate] = @Now,
         [RevokedBy] = @RevokedBy
     OUTPUT INSERTED.[AccessRequestId] INTO @Ended
-    WHERE [Id] = @AccessLeaseId AND [Status] = 0 -- Active
+    WHERE [Id] = @AccessLeaseId AND [Action] = 0 -- None (no early end)
 
     INSERT INTO [dbo].[AccessDecision]
     (

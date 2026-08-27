@@ -25,26 +25,28 @@ public class LeaseEndpointsHandler(
     public async Task<ListResponseModel<AccessLeaseResponseModel>> GetActive(ClaimsPrincipal user)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var leases = await listActiveLeasesQuery.GetActiveAsync(userId);
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var leases = await listActiveLeasesQuery.GetActiveAsync(userId, now);
         return new ListResponseModel<AccessLeaseResponseModel>(
-            leases.Select(l => new AccessLeaseResponseModel(l)));
+            leases.Select(l => new AccessLeaseResponseModel(l, now)));
     }
 
     public async Task<ListResponseModel<AccessLeaseResponseModel>> GetHistory(ClaimsPrincipal user)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var leases = await listLeaseHistoryQuery.GetHistoryAsync(userId);
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var leases = await listLeaseHistoryQuery.GetHistoryAsync(userId, now);
         return new ListResponseModel<AccessLeaseResponseModel>(
-            leases.Select(l => new AccessLeaseResponseModel(l)));
+            leases.Select(l => new AccessLeaseResponseModel(l, now)));
     }
 
     public async Task<ListResponseModel<AccessLeaseResponseModel>> GetMine(ClaimsPrincipal user)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var leases = await accessLeaseRepository.GetManyActiveByRequesterIdAsync(
-            userId, timeProvider.GetUtcNow().UtcDateTime);
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var leases = await accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now);
         return new ListResponseModel<AccessLeaseResponseModel>(
-            leases.Select(l => new AccessLeaseResponseModel(l)));
+            leases.Select(l => new AccessLeaseResponseModel(l, now)));
     }
 
     public async Task Revoke(ClaimsPrincipal user, Guid id, AccessLeaseRevokeRequestModel model)

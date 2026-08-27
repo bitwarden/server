@@ -14,6 +14,7 @@ namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 /// </summary>
 public class AccessRequestEndpointsHandler(
     IUserService userService,
+    TimeProvider timeProvider,
     IListInboxRequestsQuery listInboxRequestsQuery,
     IListInboxHistoryQuery listInboxHistoryQuery,
     IListMyAccessRequestsQuery listMyAccessRequestsQuery,
@@ -25,7 +26,7 @@ public class AccessRequestEndpointsHandler(
     public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetInbox(ClaimsPrincipal user)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var requests = await listInboxRequestsQuery.GetPendingAsync(userId);
+        var requests = await listInboxRequestsQuery.GetPendingAsync(userId, timeProvider.GetUtcNow().UtcDateTime);
         return new ListResponseModel<AccessRequestDetailsResponseModel>(
             requests.Select(r => new AccessRequestDetailsResponseModel(r)));
     }
@@ -33,7 +34,7 @@ public class AccessRequestEndpointsHandler(
     public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetHistory(ClaimsPrincipal user)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var history = await listInboxHistoryQuery.GetHistoryAsync(userId);
+        var history = await listInboxHistoryQuery.GetHistoryAsync(userId, timeProvider.GetUtcNow().UtcDateTime);
         return new ListResponseModel<AccessRequestDetailsResponseModel>(
             history.Select(r => new AccessRequestDetailsResponseModel(r)));
     }
@@ -41,7 +42,7 @@ public class AccessRequestEndpointsHandler(
     public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetMine(ClaimsPrincipal user)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var requests = await listMyAccessRequestsQuery.GetMineAsync(userId);
+        var requests = await listMyAccessRequestsQuery.GetMineAsync(userId, timeProvider.GetUtcNow().UtcDateTime);
         return new ListResponseModel<AccessRequestDetailsResponseModel>(
             requests.Select(r => new AccessRequestDetailsResponseModel(r)));
     }
@@ -49,7 +50,7 @@ public class AccessRequestEndpointsHandler(
     public async Task<AccessRequestDetailsResponseModel> GetDetails(ClaimsPrincipal user, Guid id)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var details = await getAccessRequestDetailsQuery.GetDetailsAsync(userId, id);
+        var details = await getAccessRequestDetailsQuery.GetDetailsAsync(userId, id, timeProvider.GetUtcNow().UtcDateTime);
         return new AccessRequestDetailsResponseModel(details);
     }
 
@@ -63,8 +64,11 @@ public class AccessRequestEndpointsHandler(
     public async Task<AccessLeaseResponseModel> Activate(ClaimsPrincipal user, Guid id)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var lease = await activateAccessRequestCommand.ActivateAsync(userId, id);
-        return new AccessLeaseResponseModel(lease);
+        // One clock: the same instant guards and mints the lease and derives the response status, so a successful
+        // activation can never serialize as already expired.
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var lease = await activateAccessRequestCommand.ActivateAsync(userId, id, now);
+        return new AccessLeaseResponseModel(lease, now);
     }
 
     public async Task Revoke(ClaimsPrincipal user, Guid id)

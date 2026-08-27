@@ -16,13 +16,13 @@ public class AccessRequestResultResponseModel : ResponseModel
     {
     }
 
-    public AccessRequestResultResponseModel(AccessRequestResult result)
+    public AccessRequestResultResponseModel(AccessRequestResult result, DateTime now)
         : base("accessRequestResult")
     {
         ArgumentNullException.ThrowIfNull(result);
 
         ApprovalMode = result.ApprovalMode;
-        Request = new AccessRequestDetailsResponseModel(ToDetails(result.Request, result.Decision));
+        Request = new AccessRequestDetailsResponseModel(ToDetails(result.Request, result.Decision, now));
     }
 
     /// <summary>
@@ -49,22 +49,12 @@ public class AccessRequestResultResponseModel : ResponseModel
     /// verdict is the one decision that can exist at submit, and it is written in the same operation, so it is mapped
     /// straight from the command's own decision.
     /// </summary>
-    private static AccessRequestDetails ToDetails(AccessRequest request, AccessDecision? decision) => new()
+    private static AccessRequestDetails ToDetails(AccessRequest request, AccessDecision? decision, DateTime now)
     {
-        Id = request.Id,
-        ExtensionOfLeaseId = request.ExtensionOfLeaseId,
-        OrganizationId = request.OrganizationId,
-        CollectionId = request.CollectionId,
-        CipherId = request.CipherId,
-        RequesterId = request.RequesterId,
-        RuleId = request.RuleId,
-        NotBefore = request.NotBefore,
-        NotAfter = request.NotAfter,
-        Reason = request.Reason,
-        Status = request.Status,
-        CreationDate = request.CreationDate,
-        ResolvedDate = request.ResolvedDate,
-        Decisions = decision is null
+        // The window is open by construction (submit refuses end <= now), so this lands on Pending or Approved to
+        // match every later read of the row.
+        var details = AccessRequestDetails.From(request, now);
+        details.Decisions = decision is null
             ? []
             : [
                 new AccessRequestDecision
@@ -75,6 +65,7 @@ public class AccessRequestResultResponseModel : ResponseModel
                     Verdict = decision.Verdict,
                     DecidedAt = decision.CreationDate,
                 },
-            ],
-    };
+            ];
+        return details;
+    }
 }

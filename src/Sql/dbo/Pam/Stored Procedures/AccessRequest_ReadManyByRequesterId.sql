@@ -20,12 +20,11 @@ BEGIN
     --      DeciderKind says which, and a human decision's identity is denormalized from [User] -- the requester has no
     --      other way to name who decided their request.
     --
-    -- @Since holds the resolved rows to the same retention window the approver-side history reads use, so the same
+    -- @Since holds history rows to the same retention window the approver-side history reads use, so the same
     -- resolved request does not outlive itself on one surface and vanish from the other (PM-42614). Live rows are
-    -- exempt: a Pending request has not been answered yet and an Approved one whose window is still open can still be
-    -- activated, so neither is history and neither ages out. That exemption is load-bearing rather than defensive --
-    -- nothing writes status Expired for an unanswered request (there is no sweeper), so a Pending row really can sit
-    -- past the window, and windowing it away would drop a live request out of the caller's own list.
+    -- exempt: an open request ([Action] 0) with an unlapsed window is still answerable, and an approved one with an
+    -- unlapsed window can still be activated, so neither is history and neither ages out. A lapsed unanswered row
+    -- needs no exemption -- it is derived Expired, which is history, and it ages out with the rest.
     --
     -- The page of ids is materialized first so both result sets are bounded by the same 250 rows. Selecting decisions
     -- straight from [RequesterId] would return the caller's entire decision history for the caller to then discard
@@ -39,13 +38,13 @@ BEGIN
         AND (
             @Since IS NULL
             OR [CreationDate] >= @Since
-            OR [Status] = 0 -- Pending: awaiting a decision
-            OR ([Status] = 1 AND [NotAfter] > @Now) -- Approved with an unlapsed window
+            OR ([Action] IN (0, 1) AND [NotAfter] > @Now) -- live: open and answerable, or approved and activatable
         )
     ORDER BY [CreationDate] DESC
 
-    -- A request produces at most one lease ([IX_AccessLease_AccessRequestId] is unique), so this joins at most one row.
-    -- ProducedLeaseStatus is projected against @Now, as in AccessRequest_ReadDetailsById.
+    -- A request produces at most one lease ([IX_AccessLease_AccessRequestId] is unique), so this joins at most one
+    -- row. Only stored facts leave this read: derived statuses are computed at the repository boundary -- see
+    -- AccessRequest_ReadDetailsById for why the lease's own [Action]/[NotAfter] are returned for that.
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -56,14 +55,13 @@ BEGIN
         LR.[NotBefore],
         LR.[NotAfter],
         LR.[Reason],
-        LR.[Status],
+        LR.[Action],
         LR.[CreationDate],
-        LR.[ResolvedDate],
+        LR.[ActionDate],
         LR.[RuleId],
         PL.[Id] AS [ProducedLeaseId],
-        -- Expired is never stored; derive it against @Now off the lease's own NotAfter. See
-        -- AccessRequest_ReadDetailsById for why the request's NotAfter will not do.
-        CASE WHEN PL.[Status] = 0 AND PL.[NotAfter] <= @Now THEN 1 ELSE PL.[Status] END AS [ProducedLeaseStatus]
+        PL.[Action] AS [ProducedLeaseAction],
+        PL.[NotAfter] AS [ProducedLeaseNotAfter]
     FROM [dbo].[AccessRequest] LR
     INNER JOIN @RequestIds RI ON RI.[Id] = LR.[Id]
     LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = LR.[Id]
