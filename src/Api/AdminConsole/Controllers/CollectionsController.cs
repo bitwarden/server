@@ -243,10 +243,12 @@ public class CollectionsController : Controller
             throw new NotFoundException("One or more collections not found.");
         }
 
-        var result = await _authorizationService.AuthorizeAsync(User, collections,
-            new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess });
+        var authorized = _featureService.IsEnabled(FeatureFlagKeys.AuthorizationServices)
+            ? await AuthorizeBulkCollectionAccessAsync(orgId, collections)
+            : (await _authorizationService.AuthorizeAsync(User, collections,
+                new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess })).Succeeded;
 
-        if (!result.Succeeded)
+        if (!authorized)
         {
             throw new NotFoundException();
         }
@@ -255,6 +257,24 @@ public class CollectionsController : Controller
             collections,
             model.Users?.Select(u => u.ToSelectionReadOnly()).ToList(),
             model.Groups?.Select(g => g.ToSelectionReadOnly()).ToList());
+    }
+
+    /// <summary>
+    /// Determines if the caller can modify both the user access and the group access of every collection.
+    /// </summary>
+    private async Task<bool> AuthorizeBulkCollectionAccessAsync(Guid orgId, ICollection<Collection> collections)
+    {
+        // An empty result from the authorization service does not mean authorized.
+        if (collections.Count == 0)
+        {
+            return false;
+        }
+
+        var collectionIds = collections.Select(collection => collection.Id).ToList();
+        var authorizedForUserAccess = await _collectionAuthorizationService.AuthorizeModifyUserAccessManyAsync(orgId, collectionIds);
+        var authorizedForGroupAccess = await _collectionAuthorizationService.AuthorizeModifyGroupAccessManyAsync(orgId, collectionIds);
+
+        return collectionIds.All(id => authorizedForUserAccess.Contains(id) && authorizedForGroupAccess.Contains(id));
     }
 
     [HttpDelete("{id}")]
