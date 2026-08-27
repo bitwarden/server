@@ -13,6 +13,13 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
 public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 {
+    /// <summary>
+    /// Recorded on the automatic Deny decision when the parent lease ended before the extension could apply. Stored,
+    /// not translated: it is the reason the denial happened, and it has to mean one thing to whoever reads the
+    /// request later. The client renders its own copy from the request's status.
+    /// </summary>
+    private const string LeaseEndedDenialComment = "The lease being extended has ended";
+
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessRequestRepository _accessRequestRepository;
@@ -54,10 +61,11 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        if (lease.StatusAsOf(now) != AccessLeaseStatus.Active)
-        {
-            throw new ConflictException("This lease is no longer active.");
-        }
+        // No pre-check that the lease is still live. That question is settled once, under the per-lease lock in
+        // CreateApprovedExtensionAsync, which answers it by recording a denied request rather than by refusing the
+        // call — so the requester whose lease ran out while the Extend dialog was open gets something to inspect
+        // (PM-42632). A pre-check here would only reproduce that verdict as a 409 in the common case and leave the
+        // raced case behaving differently.
 
         // Extensions reuse the cipher's governing rule, but never its approval gate: they are always auto-approved,
         // gated only by the rule opting in and the per-lease maximum.
@@ -125,8 +133,9 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         decision.SetNewId();
 
         // audit (before/after): record the extension attempt, then the outcome around the point of no return. A
-        // failed extension (lease no longer active, or already extended) throws, leaving the attempt as an in-doubt
-        // entry with no outcome. AccessLeaseId is the parent lease; LeaseNotAfter is its new end.
+        // refused extension still records an outcome when the refusal itself was written (the denial below); only
+        // AlreadyExtended throws with nothing persisted, leaving the attempt as an in-doubt entry with no outcome.
+        // AccessLeaseId is the parent lease; LeaseNotAfter is its new end.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseExtended,
@@ -143,14 +152,35 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        var outcome = await _accessRequestRepository.CreateApprovedExtensionAsync(request, decision, now);
+        var outcome = await _accessRequestRepository.CreateApprovedExtensionAsync(
+            request, decision, now, LeaseEndedDenialComment);
 
-        switch (outcome)
+        if (outcome == AccessLeaseExtendOutcome.AlreadyExtended)
         {
-            case AccessLeaseExtendOutcome.LeaseNotActive:
-                throw new ConflictException("This lease is no longer active.");
-            case AccessLeaseExtendOutcome.AlreadyExtended:
-                throw new BadRequestException("This lease has already been extended.");
+            throw new BadRequestException("This lease has already been extended.");
+        }
+
+        if (outcome == AccessLeaseExtendOutcome.LeaseNotActive)
+        {
+            // The lease ran out or was ended under the request — typically while the Extend dialog sat open. The
+            // repository recorded that as a denied request rather than refusing the write, so this is a resolved
+            // outcome to report, not an error to throw (PM-42632). The pair's kind flips to RequestDenied, mirroring
+            // how a refused activation reports LeaseActivationRejected against a LeaseActivated attempt.
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with
+                {
+                    Kind = AccessAuditEventKind.RequestDenied,
+                    Phase = AccessAuditEventPhase.Outcome,
+                    LeaseNotAfter = lease.NotAfter,
+                    Detail = LeaseEndedDenialComment,
+                });
+
+            // Only the requester's own devices need this: nothing about the collection's leases changed, so the
+            // approver inbox has nothing to re-fetch.
+            await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
+
+            return Project(request, AccessRequestStatus.Denied, AccessDecisionVerdict.Deny,
+                LeaseEndedDenialComment, now);
         }
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
@@ -161,10 +191,20 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
         await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
 
-        // Project the approved-extension state the client renders (Status approved + ExtensionOfLeaseId set) from
-        // what we just wrote. The parent lease's end has already been pushed out, so the next access-state snapshot
-        // re-emits the longer countdown.
-        return new AccessRequestDetails
+        // The parent lease's end has already been pushed out, so the next access-state snapshot re-emits the longer
+        // countdown.
+        return Project(request, AccessRequestStatus.Approved, AccessDecisionVerdict.Approve, comment: null, now);
+    }
+
+    /// <summary>
+    /// Projects the extension state the client renders from what was just written: <c>ExtensionOfLeaseId</c> set, plus
+    /// the automatic decision that resolved it. <paramref name="status"/> and <paramref name="verdict"/> come from the
+    /// repository's outcome rather than from <paramref name="request"/>, which carries the approved shape the caller
+    /// asked for; a lease that ended under the request is written Denied, and only the comment says why.
+    /// </summary>
+    private static AccessRequestDetails Project(AccessRequest request, AccessRequestStatus status,
+        AccessDecisionVerdict verdict, string? comment, DateTime now) =>
+        new()
         {
             Id = request.Id,
             ExtensionOfLeaseId = request.ExtensionOfLeaseId,
@@ -176,9 +216,18 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             NotBefore = request.NotBefore,
             NotAfter = request.NotAfter,
             Reason = request.Reason,
-            Status = AccessRequestStatus.Approved,
+            Status = status,
             CreationDate = request.CreationDate,
             ResolvedDate = request.ResolvedDate,
+            Decisions =
+            [
+                new AccessRequestDecision
+                {
+                    DeciderKind = AccessDeciderKind.Automatic,
+                    Verdict = verdict,
+                    Comment = comment,
+                    DecidedAt = now,
+                }
+            ],
         };
-    }
 }

@@ -177,7 +177,8 @@ public class AccessRuleRepositoryTests
             CreationDate = now,
         };
         Assert.Equal(AccessLeaseExtendOutcome.Extended,
-            await accessRequestRepository.CreateApprovedExtensionAsync(extension, extensionDecision, now));
+            await accessRequestRepository.CreateApprovedExtensionAsync(
+                extension, extensionDecision, now, denialComment: null));
 
         // Act
         await organizationRepository.DeleteAsync(organization);
