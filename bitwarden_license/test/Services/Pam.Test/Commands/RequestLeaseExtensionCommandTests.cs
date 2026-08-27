@@ -27,6 +27,9 @@ public class RequestLeaseExtensionCommandTests
     /// <summary>Pinned rather than shared with the command: the wording is part of what the denial promises.</summary>
     private const string _leaseEndedComment = "The lease being extended has ended";
 
+    /// <summary>Pinned rather than shared with the command: the wording is part of what the denial promises.</summary>
+    private const string _leaseEndedComment = "The lease being extended has ended";
+
     [Theory, BitAutoData]
     public async Task ExtendAsync_LeaseMissing_ThrowsNotFound(Guid userId, Guid leaseId)
     {
@@ -336,6 +339,11 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal(expectedNotAfter, result.NotAfter);
         Assert.Equal("incident", result.Reason);
         Assert.Equal(_now, result.ActionDate);
+
+        var decision = Assert.Single(result.Decisions);
+        Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
+        Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
+        Assert.Null(decision.Comment);
 
         var decision = Assert.Single(result.Decisions);
         Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
