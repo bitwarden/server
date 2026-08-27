@@ -1268,6 +1268,15 @@
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
         }
       },
+      "invoicing": {
+        "type": "Project",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
+          "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
+          "Core": "[2026.8.1, )",
+          "Stripe.net": "[52.1.0, 52.1.0]"
+        }
+      },
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
@@ -1309,6 +1318,22 @@
       },
       "ssrfprotection": {
         "type": "Project"
+      },
+      "subscriptions.organization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.8.1, )",
+          "ExceptionHandling": "[0.0.1, )",
+          "Invoicing": "[0.0.1, )"
+        }
+      },
+      "subscriptions.user": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.8.1, )",
+          "ExceptionHandling": "[0.0.1, )",
+          "Invoicing": "[0.0.1, )"
+        }
       }
     }
   }

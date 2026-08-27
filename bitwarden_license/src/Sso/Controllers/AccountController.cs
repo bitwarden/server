@@ -2,6 +2,8 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -55,6 +57,8 @@ public class AccountController : Controller
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
+    private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -75,7 +79,9 @@ public class AccountController : Controller
         Core.Services.IEventService eventService,
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
-        IRegisterUserCommand registerUserCommand)
+        IRegisterUserCommand registerUserCommand,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -96,6 +102,8 @@ public class AccountController : Controller
         _dataProtector = dataProtector;
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
+        _featureService = featureService;
+        _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
     }
 
     [HttpGet]
@@ -340,6 +348,36 @@ public class AccountController : Controller
 
                 return Redirect(redirectUrl);
             }
+            catch (SsoAuthnStagedOrgUserRequiresInviteAcceptanceException ex)
+            {
+                // Sign out the external auth cookie and redirect to /login with
+                // StagedOrgUserInviteAcceptanceRequired so the client can prompt the user to
+                // check their email for the invite that was just sent by the Staged-user promotion.
+                await HttpContext.SignOutAsync(
+                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+
+                var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+                    _globalSettings.BaseServiceUri.VaultWithHash,
+                    ex.UserEmail,
+                    ex.OrganizationId,
+                    ex.OrganizationDisplayName,
+                    SsoRedirectUrlBuilder.ErrorCodes.StagedOrgUserInviteAcceptanceRequired);
+
+                return Redirect(redirectUrl);
+            }
+            catch (SsoAuthnNoSeatsAvailableException)
+            {
+                // Sign out the external auth cookie and redirect directly to the client's
+                // terminal error page.
+                await HttpContext.SignOutAsync(
+                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+
+                var redirectUrl = SsoRedirectUrlBuilder.BuildSsoLoginFailedRedirectUrl(
+                    _globalSettings.BaseServiceUri.VaultWithHash,
+                    SsoRedirectUrlBuilder.SsoLoginFailedErrorKind.NoSeatsAvailable);
+
+                return Redirect(redirectUrl);
+            }
 #nullable restore
         }
 
@@ -563,7 +601,9 @@ public class AccountController : Controller
             User guaranteedExistingUser = possibleExistingUser;
 
             if (guaranteedExistingUser.UsesKeyConnector &&
-                (possibleOrgUser == null || possibleOrgUser.Status == OrganizationUserStatusType.Invited))
+                (possibleOrgUser == null
+                 || possibleOrgUser.Status == OrganizationUserStatusType.Invited
+                 || possibleOrgUser.Status == OrganizationUserStatusType.Staged))
             {
                 throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
             }
@@ -575,14 +615,14 @@ public class AccountController : Controller
 
             /*
              * ----------------------------------------------------
-             *              Critical Code Check Here
+             *              Critical Code Checks Here
              *
-             * We want to ensure a user is not in the invited state
+             * We want to ensure a user is not in the invited or staged state
              * explicitly. Users in the invited state cannot complete
              * SSO authentication. Instead of failing with a server
              * error page, we throw a typed exception so the SSO
              * callback can redirect the user back to the web client's
-             * /login with a toast prompting them to sign in with their
+             * /login with a error prompting them to sign in with their
              * master password and accept the invite first.
              *
              * The security-critical property is unchanged: no SsoUser
@@ -601,6 +641,17 @@ public class AccountController : Controller
                 // same person in this scenario, and the existing user's email is what
                 // the redirected login form will pre-fill.
                 throw new SsoAuthnRequiresInviteAcceptanceException(
+                    organization.Id,
+                    organization.DisplayName(),
+                    guaranteedExistingUser.Email);
+            }
+
+            if (guaranteedOrgUser.Status == OrganizationUserStatusType.Staged
+                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+            {
+                await PromoteStagedOrgUserAndSendInviteAsync(guaranteedOrgUser, organization);
+
+                throw new SsoAuthnStagedOrgUserRequiresInviteAcceptanceException(
                     organization.Id,
                     organization.DisplayName(),
                     guaranteedExistingUser.Email);
@@ -625,36 +676,16 @@ public class AccountController : Controller
             return (guaranteedExistingUser, organization, guaranteedOrgUser);
         }
 
-        // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
-        if (possibleOrgUser == null && organization.Seats.HasValue)
+        // Run before user creation so a NoSeatsAvailable throw doesn't persist a
+        // new BW User row + fire its welcome email for an SSO login that
+        // won't complete. Staged rows aren't seat-counted; a Staged→Invited promotion
+        // consumes a seat and must gate here alongside the fresh-JIT case.
+        var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged
+                                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus);
+
+        if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
-            var occupiedSeats =
-                await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            var initialSeatCount = organization.Seats.Value;
-            var availableSeats = initialSeatCount - occupiedSeats.Total;
-            if (availableSeats < 1)
-            {
-                try
-                {
-                    if (_globalSettings.SelfHosted)
-                    {
-                        throw new Exception("Cannot autoscale on self-hosted instance.");
-                    }
-
-                    await _organizationService.AutoAddSeatsAsync(organization, 1);
-                }
-                catch (Exception e)
-                {
-                    if (organization.Seats.Value != initialSeatCount)
-                    {
-                        await _organizationService.AdjustSeatsAsync(organization.Id,
-                            initialSeatCount - organization.Seats.Value);
-                    }
-
-                    _logger.LogInformation(e, "SSO auto provisioning failed");
-                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.DisplayName()));
-                }
-            }
+            await EnsureSeatAvailableAsync(organization);
         }
 
         // If the email domain is verified, we can mark the email as verified
@@ -722,12 +753,21 @@ public class AccountController : Controller
 
         //-----------------------------------------------------------------
         // Scenario 3: There is already an existing OrganizationUser
-        // That was established through an invitation. We just need to
+        // That was established through an invitation OR was staged by admin. We just need to
         // update the UserId now that we have created a User record.
         //-----------------------------------------------------------------
         else
         {
+
+            if (possibleOrgUser.Status == OrganizationUserStatusType.Staged
+                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+            {
+                // Seat availability was verified up-front before user creation so safe to consume this seat.
+                possibleOrgUser.Status = OrganizationUserStatusType.Invited;
+            }
+
             possibleOrgUser.UserId = newUser.Id;
+            possibleOrgUser.RevisionDate = DateTime.UtcNow;
             await _organizationUserRepository.ReplaceAsync(possibleOrgUser);
         }
 
@@ -735,6 +775,98 @@ public class AccountController : Controller
         await CreateSsoUserRecordAsync(providerUserId, newUser.Id, organization.Id, possibleOrgUser);
 
         return (newUser, organization, possibleOrgUser);
+    }
+
+    /// <summary>
+    /// Verifies the org has room to consume one additional seat and, on cloud with
+    /// autoscale enabled, attempts to grow the seat cap by one. Throws
+    /// <see cref="SsoAuthnNoSeatsAvailableException"/> when neither is possible.
+    /// No-op when <see cref="Organization.Seats"/> is null (unlimited). Call before
+    /// any transition that will move a row into a status counted by the occupied-seat
+    /// query (Invited / Accepted / Confirmed).
+    /// </summary>
+    private async Task EnsureSeatAvailableAsync(Organization organization)
+    {
+        if (!organization.Seats.HasValue)
+        {
+            return;
+        }
+
+        var occupiedSeats =
+            await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        var initialSeatCount = organization.Seats.Value;
+        var availableSeats = initialSeatCount - occupiedSeats.Total;
+        if (availableSeats >= 1)
+        {
+            return;
+        }
+
+        if (_globalSettings.SelfHosted)
+        {
+            _logger.LogInformation(
+                "SSO auto provisioning failed: self-hosted instance at seat cap for organization {OrganizationId}.",
+                organization.Id);
+            throw new SsoAuthnNoSeatsAvailableException();
+        }
+
+        try
+        {
+            await _organizationService.AutoAddSeatsAsync(organization, 1);
+        }
+        catch (Exception e)
+        {
+            if (organization.Seats.Value != initialSeatCount)
+            {
+                await _organizationService.AdjustSeatsAsync(organization.Id,
+                    initialSeatCount - organization.Seats.Value);
+            }
+
+            _logger.LogInformation(e, "SSO auto provisioning failed");
+            throw new SsoAuthnNoSeatsAvailableException();
+        }
+    }
+
+    /// <summary>
+    /// Promotes a Staged <see cref="OrganizationUser"/> row to
+    /// <see cref="OrganizationUserStatusType.Invited"/> and sends the org invite email.
+    /// Mutates only <see cref="OrganizationUser.Status"/> and
+    /// <see cref="OrganizationUser.RevisionDate"/>; <see cref="OrganizationUser.UserId"/>
+    /// is left null.
+    /// </summary>
+    private async Task PromoteStagedOrgUserAndSendInviteAsync(
+        OrganizationUser orgUser,
+        Organization organization)
+    {
+        await EnsureSeatAvailableAsync(organization);
+
+        var previousStatus = orgUser.Status;
+        var previousRevisionDate = orgUser.RevisionDate;
+
+        orgUser.Status = OrganizationUserStatusType.Invited;
+        orgUser.RevisionDate = DateTime.UtcNow;
+        await _organizationUserRepository.ReplaceAsync(orgUser);
+
+        try
+        {
+            await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(
+                users: [orgUser],
+                organization: organization,
+                initOrganization: false,
+                invitingUserId: null));
+        }
+        catch (Exception e)
+        {
+            // Revert the promotion so the seat isn't consumed and the next SSO attempt
+            // re-runs the full promote-and-invite instead of dead-ending on the
+            // "accept your invite" redirect for an invite that was never delivered.
+            _logger.LogError(e, "Failed to send org invite for SSO Staged org user promotion");
+
+            orgUser.Status = previousStatus;
+            orgUser.RevisionDate = previousRevisionDate;
+            await _organizationUserRepository.ReplaceAsync(orgUser);
+
+            throw;
+        }
     }
 
     /// <summary>
@@ -765,6 +897,7 @@ public class AccountController : Controller
         if (orgUser != null)
         {
             // Invited is allowed at this point because we know the user is trying to accept an org invite.
+            // Staged users are handled earlier and converted to invited. 
             EnforceAllowedOrgUserStatus(
                 orgUser.Status,
                 allowedStatuses: [
