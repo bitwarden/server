@@ -1,4 +1,21 @@
-CREATE PROCEDURE [dbo].[AccessRequest_ReadManyByRequesterId]
+-- PM-42614: hold the requester's own request history to the same retention window as the approver's.
+--
+-- [AccessRequest_ReadInboxHistoryByCollectionIds] bounds the approver-side history at 90 days; this read had no
+-- window at all, only a TOP 250 cap. The same resolved request was therefore visible to the member who raised it
+-- indefinitely and invisible to the approvers who decided it after day 90 -- the shorter memory sitting on the
+-- governance side, which is backwards. Both reads now share one window.
+--
+-- Live rows are exempt from it. A Pending request has not been answered and an Approved one whose window is still
+-- open can still be activated, so neither is history. This matters in practice, not just in principle: nothing
+-- writes status Expired for an unanswered request (there is no sweeper yet), so a Pending row can sit past 90 days,
+-- and windowing it away would delete a live request from the requester's own page rather than age out its history.
+--
+-- @Since is optional so a rolling deployment stays safe: an older server that predates the parameter omits it and
+-- gets NULL, which means no window -- the behaviour it was written against. Read-only change: no schema, no data
+-- migration, and the TOP 250 cap is unchanged.
+
+
+CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ReadManyByRequesterId]
     @RequesterId UNIQUEIDENTIFIER,
     @Now DATETIME2(7) = NULL,
     @Since DATETIME2(7) = NULL

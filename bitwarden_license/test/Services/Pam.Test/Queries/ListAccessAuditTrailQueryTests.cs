@@ -69,7 +69,7 @@ public class ListAccessAuditTrailQueryTests
 
         await sutProvider.Sut.GetTrailAsync(organizationId);
 
-        var expectedSince = _now.AddDays(-ListInboxHistoryQuery.HistoryRetentionDays);
+        var expectedSince = _now.AddDays(-AccessHistoryWindow.RetentionDays);
         await sutProvider.GetDependency<IAccessAuditEventRepository>()
             .Received(1)
             .GetManyByOrganizationIdAsync(organizationId, expectedSince);

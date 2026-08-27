@@ -7,11 +7,6 @@ namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 
 public class ListInboxHistoryQuery : IListInboxHistoryQuery
 {
-    /// <summary>
-    /// How far back the resolved history reaches. Older activity may be omitted. v1 has no pagination.
-    /// </summary>
-    public const int HistoryRetentionDays = 90;
-
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly TimeProvider _timeProvider;
@@ -38,6 +33,6 @@ public class ListInboxHistoryQuery : IListInboxHistoryQuery
         // produced-lease status (see AccessRequestDetails.ProducedLeaseStatus).
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         return await _accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            manageableCollectionIds, now.AddDays(-HistoryRetentionDays), now);
+            manageableCollectionIds, now.AddDays(-AccessHistoryWindow.RetentionDays), now);
     }
 }
