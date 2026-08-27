@@ -223,6 +223,195 @@ public class AcceptOrganizationInviteLinkCommandTests
             .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
     }
 
+    // An Invited row already occupies a seat, so accepting it must not consume or expand capacity even when
+    // the organization is full. Guards the Staged handling below from over-reaching.
+    [Theory, BitAutoData]
+    public async Task AcceptAsync_WithExistingEmailInvite_AndOrganizationAtCapacity_DoesNotReserveSeat(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser invitedOrganizationUser,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        invitedOrganizationUser.Status = OrganizationUserStatusType.Invited;
+        invitedOrganizationUser.Email = user.Email;
+        invitedOrganizationUser.UserId = null;
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 2;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(organization.Id, user.Email)
+            .Returns(invitedOrganizationUser);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Status == OrganizationUserStatusType.Accepted));
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
+    }
+
+    // A Staged row is excluded from the occupied seat count, so promoting it to Accepted consumes a seat.
+    [Theory, BitAutoData]
+    public async Task AcceptAsync_WithStagedMembership_AndSeatsAvailable_AcceptsWithoutAutoscaling(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser stagedOrganizationUser,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        SetupStagedMembership(organization, user, stagedOrganizationUser, sutProvider);
+        stagedOrganizationUser.ExternalId = "ext-123";
+
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == stagedOrganizationUser.Id &&
+                ou.Status == OrganizationUserStatusType.Accepted &&
+                ou.UserId == user.Id &&
+                ou.Email == null &&
+                ou.ExternalId == "ext-123"));
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptAsync_WithStagedMembership_AndOrganizationAtCapacity_AutoAddsSeat(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser stagedOrganizationUser,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        SetupStagedMembership(organization, user, stagedOrganizationUser, sutProvider);
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 5;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .AutoAddSeatsAsync(organization, 1);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == stagedOrganizationUser.Id &&
+                ou.Status == OrganizationUserStatusType.Accepted));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptAsync_WithStagedMembership_AndNoSeatsAvailable_ReturnsError(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser stagedOrganizationUser,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        SetupStagedMembership(organization, user, stagedOrganizationUser, sutProvider);
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 2;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationHasNoAvailableSeats>(result.AsError);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
+    }
+
+    [Theory]
+    [BitAutoData(typeof(BadRequestException))]
+    [BitAutoData(typeof(GatewayException))]
+    public async Task AcceptAsync_WithStagedMembership_AndAutoAddSeatsBusinessFailure_ReturnsSeatAddFailed(
+        Type exceptionType,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser stagedOrganizationUser,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        SetupStagedMembership(organization, user, stagedOrganizationUser, sutProvider);
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 5;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
+        Exception businessFailure = exceptionType == typeof(BadRequestException)
+            ? new BadRequestException("seat failure")
+            : new GatewayException("seat failure");
+        sutProvider.GetDependency<IOrganizationService>()
+            .AutoAddSeatsAsync(organization, 1)
+            .Throws(businessFailure);
+
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<SeatAddFailed>(result.AsError);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<OrganizationUser>());
+    }
+
     [Theory, BitAutoData]
     public async Task AcceptAsync_WithNoSeatsAvailable_ReturnsError(
         Organization organization,
@@ -570,6 +759,24 @@ public class AcceptOrganizationInviteLinkCommandTests
                 Enabled = true,
                 Data = "{\"autoEnrollEnabled\": true}"
             });
+
+    // A Staged membership: SCIM/Directory-Connector provisioned, email set, not yet linked to a User.
+    // Call after SetupHappyPath, which stubs the email lookup as returning no membership.
+    private static void SetupStagedMembership(
+        Organization organization,
+        User user,
+        OrganizationUser stagedOrganizationUser,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        stagedOrganizationUser.OrganizationId = organization.Id;
+        stagedOrganizationUser.Status = OrganizationUserStatusType.Staged;
+        stagedOrganizationUser.Email = user.Email;
+        stagedOrganizationUser.UserId = null;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(organization.Id, user.Email)
+            .Returns(stagedOrganizationUser);
+    }
 
     private static void SetupHappyPath(
         Organization org,
