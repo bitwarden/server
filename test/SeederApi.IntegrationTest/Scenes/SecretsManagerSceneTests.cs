@@ -192,6 +192,88 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
         Assert.False(await db.Secret.AnyAsync(s => s.OrganizationId == organizationId));
     }
 
+    [Fact]
+    public async Task OrganizationAccessPolicyScene_GrantableNotInOrganization_ReturnsBadRequest()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, orgUserId, _) = await SeedSmOrganizationAsync(playId, ownerUserId);
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(OrganizationAccessPolicyScene),
+            Arguments = JsonSerializer.SerializeToElement(new OrganizationAccessPolicyScene.Request
+            {
+                OrganizationId = organizationId,
+                Grants =
+                [
+                    new OrganizationAccessPolicyScene.Grant
+                    {
+                        GranteeType = AccessPolicySeeder.GranteeType.OrganizationUser,
+                        GranteeId = orgUserId,
+                        GrantableType = AccessPolicySeeder.GrantableType.Project,
+                        GrantableId = Guid.NewGuid()
+                    }
+                ]
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("not in organization", body);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        Assert.False(await db.UserProjectAccessPolicy.AnyAsync(ap => ap.OrganizationUserId == orgUserId));
+    }
+
+    [Fact]
+    public async Task OrganizationAccessPolicyScene_GranteeNotInOrganization_ReturnsBadRequest()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, _, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+
+        var projectResult = await PostSceneAsync(playId, nameof(OrganizationProjectScene), new OrganizationProjectScene.Request
+        {
+            OrganizationId = organizationId,
+            OrganizationKeyB64 = organizationKeyB64,
+            Name = "Production"
+        });
+        var projectId = projectResult.GetProperty("projectId").GetGuid();
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(OrganizationAccessPolicyScene),
+            Arguments = JsonSerializer.SerializeToElement(new OrganizationAccessPolicyScene.Request
+            {
+                OrganizationId = organizationId,
+                Grants =
+                [
+                    new OrganizationAccessPolicyScene.Grant
+                    {
+                        GranteeType = AccessPolicySeeder.GranteeType.OrganizationUser,
+                        GranteeId = Guid.NewGuid(),
+                        GrantableType = AccessPolicySeeder.GrantableType.Project,
+                        GrantableId = projectId
+                    }
+                ]
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("not in organization", body);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        Assert.False(await db.UserProjectAccessPolicy.AnyAsync(ap => ap.GrantedProjectId == projectId));
+    }
+
     private async Task<Guid> SeedUserAsync(string playId)
     {
         var result = await PostSceneAsync(playId, "SingleUserScene", new SingleUserScene.Request

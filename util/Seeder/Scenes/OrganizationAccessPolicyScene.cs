@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Seeder.Extensions;
@@ -14,6 +15,10 @@ namespace Bit.Seeder.Scenes;
 public class OrganizationAccessPolicyScene(
     IOrganizationRepository organizationRepository,
     IAccessPolicyRepository accessPolicyRepository,
+    IProjectRepository projectRepository,
+    IServiceAccountRepository serviceAccountRepository,
+    IGroupRepository groupRepository,
+    IOrganizationUserRepository organizationUserRepository,
     IManglerService manglerService) : IScene<OrganizationAccessPolicyScene.Request, OrganizationAccessPolicyScene.Result>
 {
     public class Request
@@ -49,7 +54,21 @@ public class OrganizationAccessPolicyScene(
     {
         await organizationRepository.GetSecretsManagerOrganizationOrThrowAsync(request.OrganizationId);
 
-        var policies = request.Grants
+        var grants = request.Grants.ToList();
+
+        var projectIds = GrantableIds(grants, AccessPolicySeeder.GrantableType.Project);
+        var serviceAccountIds = GrantableIds(grants, AccessPolicySeeder.GrantableType.ServiceAccount)
+            .Concat(GranteeIds(grants, AccessPolicySeeder.GranteeType.ServiceAccount))
+            .Distinct();
+        var groupIds = GranteeIds(grants, AccessPolicySeeder.GranteeType.Group);
+        var organizationUserIds = GranteeIds(grants, AccessPolicySeeder.GranteeType.OrganizationUser);
+
+        await projectRepository.ThrowIfProjectsNotInOrganizationAsync(projectIds, request.OrganizationId);
+        await serviceAccountRepository.ThrowIfServiceAccountsNotInOrganizationAsync(serviceAccountIds, request.OrganizationId);
+        await groupRepository.ThrowIfGroupsNotInOrganizationAsync(groupIds, request.OrganizationId);
+        await organizationUserRepository.ThrowIfOrganizationUsersNotInOrganizationAsync(organizationUserIds, request.OrganizationId);
+
+        var policies = grants
             .Select(g => AccessPolicySeeder.Create(g.GranteeType, g.GranteeId, g.GrantableType, g.GrantableId, g.Read, g.Write))
             .ToList();
 
@@ -63,4 +82,10 @@ public class OrganizationAccessPolicyScene(
             },
             mangleMap: manglerService.GetMangleMap());
     }
+
+    private static IEnumerable<Guid> GrantableIds(IEnumerable<Grant> grants, AccessPolicySeeder.GrantableType type) =>
+        grants.Where(g => g.GrantableType == type).Select(g => g.GrantableId).Distinct();
+
+    private static IEnumerable<Guid> GranteeIds(IEnumerable<Grant> grants, AccessPolicySeeder.GranteeType type) =>
+        grants.Where(g => g.GranteeType == type).Select(g => g.GranteeId).Distinct();
 }
