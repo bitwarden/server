@@ -120,8 +120,10 @@ public interface ICipherLeaseGate
     /// A held lease widens this decision, which is the opposite of
     /// <see cref="AuthorizeReadManyAsync(Guid, IEnumerable{Cipher})"/> — and for a reason. A bulk read
     /// stays strict because a sync copies secrets into every client's local store for as long as that
-    /// store lives; a bulk write copies no secret anywhere, so refusing a lease-holder's own edit would
-    /// withhold nothing and only break the feature for the person the lease was issued to.
+    /// store lives; a bulk write's <em>request</em> copies no secret anywhere, so refusing a lease-holder's
+    /// own edit would withhold nothing and only break the feature for the person the lease was issued to.
+    /// What a write <em>returns</em> is a separate decision, and a strict one — see
+    /// <see cref="AuthorizeWriteReturnAsync"/>.
     /// </remarks>
     Task<FullCipherAccess> EnsureCanMutateManyAsync(Guid userId, IEnumerable<Cipher> ciphers);
 
