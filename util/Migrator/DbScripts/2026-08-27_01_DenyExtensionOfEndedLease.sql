@@ -1,4 +1,23 @@
-CREATE PROCEDURE [dbo].[AccessRequest_CreateApprovedExtension]
+-- PM-42632: record an extension of an already-ended lease as a denied request instead of writing nothing.
+--
+-- [AccessRequest_CreateApprovedExtension] refused a lease that was no longer active by rolling back and returning
+-- outcome 0, which the command turned into a 409. Nothing was persisted, so the requester -- who typically had the
+-- Extend dialog open while the lease ran out underneath them -- got a failed call and an empty "Extension requests"
+-- list, with no record of what they asked for or why it was refused. The spec has always modelled this as a denied
+-- request the requester can inspect (ExtensionDeniedParentGone), not as a synchronous rejection.
+--
+-- The not-active branch now writes the AccessRequest as Denied together with an automatic Deny decision carrying
+-- @DenialComment, and commits. It still returns 0: the outcome is unchanged, only its footprint. The parent lease is
+-- not touched -- nothing was extended.
+--
+-- @DenialComment is optional so a rolling deployment stays safe: an older server that predates the parameter omits
+-- it, and the denial is recorded with no comment rather than failing.
+--
+-- The denied row carries ExtensionOfLeaseId, so it counts toward the one-extension cap this procedure re-checks
+-- under the lease lock. That is deliberate and inert: a lease reaches this branch only once it is permanently
+-- un-extendable, so there is no later extension for the row to consume.
+
+CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_CreateApprovedExtension]
     @AccessRequestId UNIQUEIDENTIFIER,
     @AccessDecisionId UNIQUEIDENTIFIER,
     @ExtensionOfLeaseId UNIQUEIDENTIFIER,
@@ -37,10 +56,6 @@ BEGIN
         -- an automatic verdict naming why, so the requester can find it instead of getting only a failed call
         -- (PM-42632). The window stored is the one that was asked for -- it was never applied to the lease, which
         -- is left untouched.
-        --
-        -- This row carries ExtensionOfLeaseId, so it counts toward the cap re-checked below and by
-        -- [AccessRequest_CountExtensionsByLeaseId]. That costs nothing: a lease only reaches this branch once it is
-        -- permanently un-extendable, so there is no later extension for it to consume.
         INSERT INTO [dbo].[AccessRequest]
         (
             [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
@@ -111,3 +126,4 @@ BEGIN
 
     SELECT 1 -- Extended
 END
+GO

@@ -349,7 +349,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         return await dbContext.AccessRequests.CountAsync(r => r.ExtensionOfLeaseId == leaseId);
     }
 
-    public async Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(CoreEntity request, AccessDecision decision, DateTime now)
+    public async Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(CoreEntity request, AccessDecision decision, DateTime now, string? denialComment)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -373,7 +373,15 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         if (lease is null)
         {
-            await transaction.RollbackAsync();
+            // Nothing left to extend, but the attempt is still an answerable request: record it denied, with an
+            // automatic verdict naming why, so the requester can inspect it (PM-42632). The window stored is the one
+            // that was asked for; no lease is touched.
+            await WriteExtensionAsync(dbContext, request, decision, now,
+                AccessRequestStatus.Denied, AccessDecisionVerdict.Deny, denialComment);
+
+            await dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+
             return AccessLeaseExtendOutcome.LeaseNotActive;
         }
 
@@ -389,8 +397,27 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         // The request's window spans the extension ([old lease end] .. [new lease end]); its NotAfter is the
         // lease's new end. No new lease is minted -- extending reuses the existing lease, preserving the
         // single-active-lease invariant.
+        await WriteExtensionAsync(dbContext, request, decision, now,
+            AccessRequestStatus.Approved, AccessDecisionVerdict.Approve, comment: null);
+
+        lease.NotAfter = request.NotAfter;
+
+        await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return AccessLeaseExtendOutcome.Extended;
+    }
+
+    /// <summary>
+    /// Stages the extension request and its automatic decision for insert. The caller supplies one set of entities for
+    /// both outcomes, so the verdict -- approved and applied, or denied because the parent lease is gone -- is decided
+    /// here rather than trusted from the caller's copy.
+    /// </summary>
+    private async Task WriteExtensionAsync(DatabaseContext dbContext, CoreEntity request, AccessDecision decision,
+        DateTime now, AccessRequestStatus status, AccessDecisionVerdict verdict, string? comment)
+    {
         var requestEntity = Mapper.Map<EfModel>(request);
-        requestEntity.Status = AccessRequestStatus.Approved;
+        requestEntity.Status = status;
         requestEntity.CreationDate = now;
         requestEntity.ResolvedDate = now;
 
@@ -402,20 +429,13 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         decisionEntity.DeciderKind = AccessDeciderKind.Automatic;
         decisionEntity.ApproverId = null;
         decisionEntity.ConditionKind = null;
-        decisionEntity.Verdict = AccessDecisionVerdict.Approve;
-        decisionEntity.Comment = null;
+        decisionEntity.Verdict = verdict;
+        decisionEntity.Comment = comment;
         decisionEntity.EvaluationContext = null;
         decisionEntity.CreationDate = now;
 
         await dbContext.AccessRequests.AddAsync(requestEntity);
         await dbContext.AccessDecisions.AddAsync(decisionEntity);
-
-        lease.NotAfter = request.NotAfter;
-
-        await dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return AccessLeaseExtendOutcome.Extended;
     }
 
     /// <summary>

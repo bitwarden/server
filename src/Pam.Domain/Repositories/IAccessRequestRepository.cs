@@ -108,6 +108,12 @@ public interface IAccessRequestRepository
     /// must already have their ids assigned, and the request's <c>ExtensionOfLeaseId</c> identifies the lease being
     /// extended.
     /// </summary>
+    /// <param name="denialComment">
+    /// The comment recorded on the automatic Deny decision when the lease is no longer extendable. The
+    /// <see cref="AccessLeaseExtendOutcome.LeaseNotActive"/> path is not a silent refusal: it still writes the request
+    /// — Denied rather than Approved, with this comment naming why — so the requester can inspect what they asked for
+    /// (PM-42632). Only the outcome distinguishes the two writes; the caller supplies one set of entities for both.
+    /// </param>
     Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(AccessRequest request, AccessDecision decision,
-        DateTime now);
+        DateTime now, string? denialComment);
 }

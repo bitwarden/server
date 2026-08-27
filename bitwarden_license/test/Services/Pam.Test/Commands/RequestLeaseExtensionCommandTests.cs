@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
@@ -21,6 +22,9 @@ public class RequestLeaseExtensionCommandTests
     private static readonly DateTime _now = new(2026, 6, 12, 12, 0, 0, DateTimeKind.Utc);
     private const int _maxExtensionDurationSeconds = 4 * 60 * 60;
 
+    /// <summary>Pinned rather than shared with the command: the wording is part of what the denial promises.</summary>
+    private const string _leaseEndedComment = "The lease being extended has ended";
+
     [Theory, BitAutoData]
     public async Task ExtendAsync_LeaseMissing_ThrowsNotFound(Guid userId, Guid leaseId)
     {
@@ -39,33 +43,37 @@ public class RequestLeaseExtensionCommandTests
         // Someone else's lease is indistinguishable from a missing one, so ids can't be probed.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ExtendAsync(userId, Submission(lease.Id)));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateApprovedExtensionAsync(default!, default!, default);
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
     [Theory]
     [BitAutoData(AccessLeaseStatus.Revoked)]
     [BitAutoData(AccessLeaseStatus.Expired)]
-    public async Task ExtendAsync_LeaseNotActive_ThrowsConflict(AccessLeaseStatus status, AccessLease lease)
+    public async Task ExtendAsync_LeaseNotActive_StillReachesTheGuardedWrite(AccessLeaseStatus status, AccessLease lease)
     {
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
         lease.Status = status;
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
-        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateApprovedExtensionAsync(default!, default!, default);
+        // No pre-check on the lease's liveness: whether there is anything left to extend is settled once, under the
+        // lease lock, by the write itself — which answers it with a denied request rather than a refusal (PM-42632).
+        await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
+
+        await sutProvider.GetDependency<IAccessRequestRepository>().ReceivedWithAnyArgs(1)
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task ExtendAsync_LeaseWindowEnded_ThrowsConflict(AccessLease lease)
+    public async Task ExtendAsync_LeaseWindowEnded_StillReachesTheGuardedWrite(AccessLease lease)
     {
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
         lease.NotAfter = _now.AddMinutes(-1);
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
+        await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
+
+        await sutProvider.GetDependency<IAccessRequestRepository>().ReceivedWithAnyArgs(1)
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
     [Theory, BitAutoData]
@@ -91,7 +99,7 @@ public class RequestLeaseExtensionCommandTests
             () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
         Assert.Contains("does not allow extending", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateApprovedExtensionAsync(default!, default!, default);
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
     [Theory]
@@ -117,7 +125,7 @@ public class RequestLeaseExtensionCommandTests
                 Submission(lease.Id, _maxExtensionDurationSeconds + 1)));
         Assert.Contains("maximum extension length", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateApprovedExtensionAsync(default!, default!, default);
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
     [Theory]
@@ -146,7 +154,7 @@ public class RequestLeaseExtensionCommandTests
             () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
         Assert.Contains("already been extended", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateApprovedExtensionAsync(default!, default!, default);
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
     [Theory, BitAutoData]
@@ -172,6 +180,11 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal("incident", result.Reason);
         Assert.Equal(_now, result.ResolvedDate);
 
+        var decision = Assert.Single(result.Decisions);
+        Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
+        Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
+        Assert.Null(decision.Comment);
+
         // The repo applies the request + decision + lease bump atomically.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
             Arg.Is<AccessRequest>(r =>
@@ -182,7 +195,8 @@ public class RequestLeaseExtensionCommandTests
                 && r.NotAfter == expectedNotAfter),
             Arg.Is<AccessDecision>(d =>
                 d.DeciderKind == AccessDeciderKind.Automatic && d.Verdict == AccessDecisionVerdict.Approve),
-            _now);
+            _now,
+            Arg.Any<string?>());
 
         // The widened lease window must reach both the approvers (active-leases / history views) and the requester's
         // other devices (banner / badge countdown).
@@ -193,16 +207,72 @@ public class RequestLeaseExtensionCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExtendAsync_RepoReportsLeaseNotActive_ThrowsConflict(AccessLease lease)
+    public async Task ExtendAsync_RepoReportsLeaseNotActive_ReturnsDeniedExtension(AccessLease lease, Guid ruleId)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease, ruleId: ruleId);
+        SetupOutcome(sutProvider, AccessLeaseExtendOutcome.LeaseNotActive);
+        const int duration = 2 * 60 * 60;
+
+        var result = await sutProvider.Sut.ExtendAsync(
+            lease.RequesterId, Submission(lease.Id, duration, "incident"));
+
+        // The lease ended under the request, so the extension resolves denied rather than failing the call: the
+        // requester gets a request they can find, carrying the window they asked for (PM-42632).
+        Assert.Equal(AccessRequestStatus.Denied, result.Status);
+        Assert.Equal(lease.Id, result.ExtensionOfLeaseId);
+        Assert.Equal(lease.NotAfter, result.NotBefore);
+        Assert.Equal(lease.NotAfter.AddSeconds(duration), result.NotAfter);
+        Assert.Equal("incident", result.Reason);
+        Assert.Equal(_now, result.ResolvedDate);
+
+        // The automatic verdict names why, so the requester's history can show it without guessing from the status.
+        var decision = Assert.Single(result.Decisions);
+        Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
+        Assert.Equal(AccessDecisionVerdict.Deny, decision.Verdict);
+        Assert.Equal(_leaseEndedComment, decision.Comment);
+        Assert.Null(decision.ApproverId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_RepoReportsLeaseNotActive_PassesTheDenialCommentToTheWrite(AccessLease lease)
     {
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
-        sutProvider.GetDependency<IAccessRequestRepository>()
-            .CreateApprovedExtensionAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now)
-            .Returns(AccessLeaseExtendOutcome.LeaseNotActive);
+        SetupOutcome(sutProvider, AccessLeaseExtendOutcome.LeaseNotActive);
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
+        await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
+
+        // The comment is the command's to supply — the repository records it on the Deny it writes, so the projection
+        // above and the stored decision cannot drift.
+        await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
+            Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now, _leaseEndedComment);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_RepoReportsLeaseNotActive_AuditsTheDenialAndNotifiesOnlyTheRequester(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        SetupOutcome(sutProvider, AccessLeaseExtendOutcome.LeaseNotActive);
+
+        await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
+
+        // The attempt is closed out rather than left in doubt: the outcome carries the denial, against the lease's
+        // own (unchanged) end.
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
+            Arg.Is<AccessAuditEventData>(e =>
+                e.Kind == AccessAuditEventKind.RequestDenied
+                && e.Phase == AccessAuditEventPhase.Outcome
+                && e.AccessLeaseId == lease.Id
+                && e.LeaseNotAfter == lease.NotAfter
+                && e.Detail == _leaseEndedComment));
+
+        // No collection-wide lease state changed, so the approver inbox has nothing to re-fetch; only the
+        // requester's own devices need to see the new row.
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1).NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -211,9 +281,7 @@ public class RequestLeaseExtensionCommandTests
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
         // Lost a race: another extension landed between the pre-check and the guarded write.
-        sutProvider.GetDependency<IAccessRequestRepository>()
-            .CreateApprovedExtensionAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now)
-            .Returns(AccessLeaseExtendOutcome.AlreadyExtended);
+        SetupOutcome(sutProvider, AccessLeaseExtendOutcome.AlreadyExtended);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
@@ -253,8 +321,13 @@ public class RequestLeaseExtensionCommandTests
             });
 
         sutProvider.GetDependency<IAccessRequestRepository>().CountExtensionsByLeaseIdAsync(lease.Id).Returns(0);
-        sutProvider.GetDependency<IAccessRequestRepository>()
-            .CreateApprovedExtensionAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now)
-            .Returns(AccessLeaseExtendOutcome.Extended);
+        SetupOutcome(sutProvider, AccessLeaseExtendOutcome.Extended);
     }
+
+    /// <summary>What the guarded write reports back — the authority on whether there was anything left to extend.</summary>
+    private static void SetupOutcome(
+        SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLeaseExtendOutcome outcome) =>
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CreateApprovedExtensionAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now, Arg.Any<string?>())
+            .Returns(outcome);
 }
