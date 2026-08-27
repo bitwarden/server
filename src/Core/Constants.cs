@@ -313,6 +313,13 @@ public static partial class FeatureFlagKeys
     public const string Pam = "pm-37044-pam-v-0";
     public const string PamAccessConnector = "pm-42354-rotation-daemon";
 
+    /// <summary>
+    /// Kill switch for the PAM SQL audit trail. Off — the absent-flag default, and the only state self-host ever
+    /// sees — leaves the audit store recording as normal; turning it on stops the writes and takes the read endpoint
+    /// down with them, so the trail is never served as a complete record of a period it only partly covers.
+    /// </summary>
+    public const string PamDisableSqlAuditLogging = "pm-42480-disable-pam-sql-audit-logging";
+
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
 
