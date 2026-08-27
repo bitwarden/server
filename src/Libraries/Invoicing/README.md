@@ -53,7 +53,6 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `ISubscriber`, `Organization`, `User` | The subscriber the preview query runs for |
 | `PlanType`, `ProductTierType`, `SubscriptionStatus` | Plan lookup, the `TeamsStarter → Teams` tier collapse, and the status → envelope mapping |
 | `Utilities.GetSubscriptionSuspensionAsync`, `GetCurrentPeriodEnd` | Suspension timing and the next-charge date on the preview |
-| `BillingException` | Signalling a subscriber or plan tier that has no cart to preview |
 
 Depending on `Core` for these is fine for now; this table exists so they're known, not because
 they're queued up for extraction.
