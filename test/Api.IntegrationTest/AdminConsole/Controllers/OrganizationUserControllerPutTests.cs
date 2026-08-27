@@ -4,7 +4,6 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Repositories;
@@ -15,7 +14,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bitwarden.Server.Sdk.Features;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -25,7 +23,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
-    private readonly IFeatureService _featureService;
 
     private Organization _organization = null!;
     private OrganizationUser _owner = null!;
@@ -37,7 +34,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         _factory.SubstituteService<IFeatureService>(_ => { });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
-        _featureService = _factory.GetService<IFeatureService>();
     }
 
     public async Task InitializeAsync()
@@ -54,12 +50,9 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         return Task.CompletedTask;
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_UpdatesUser_PersistsChangesAndPreservesDefaultCollection(bool flagOn)
+    [Fact]
+    public async Task Put_UpdatesUser_PersistsChangesAndPreservesDefaultCollection()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetAllowAdminAccessToAllCollectionItemsAsync(true);
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -71,18 +64,15 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
             CreateUpdateRequest(sharedCollection, group));
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await VerifyUserWasUpdatedCorrectlyAsync(member, OrganizationUserType.Custom, expectedManageGroups: true);
         await VerifyGroupAccessWasAddedAsync(member, [group]);
         await VerifyCollectionAccessWasUpdatedCorrectlyAsync(member, sharedCollection.Id, defaultCollection.Id);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_SelfEditWithoutAllCollectionAccess_CannotAddSelfToCollection(bool flagOn)
+    [Fact]
+    public async Task Put_SelfEditWithoutAllCollectionAccess_CannotAddSelfToCollection()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetAllowAdminAccessToAllCollectionItemsAsync(false);
 
         var (adminEmail, admin) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -107,12 +97,9 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         await AssertDoesNotHaveCollectionAsync(admin, collection.Id);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_SelfEditWithoutAllCollectionAccess_DoesNotUpdateGroups(bool flagOn)
+    [Fact]
+    public async Task Put_SelfEditWithoutAllCollectionAccess_DoesNotUpdateGroups()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetAllowAdminAccessToAllCollectionItemsAsync(false);
 
         var (adminEmail, admin) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -129,17 +116,14 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         };
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{admin.Id}", request);
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         var userGroups = await _factory.GetService<IGroupRepository>().GetManyIdsByUserIdAsync(admin.Id);
         Assert.DoesNotContain(group.Id, userGroups);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_SelfEditWithAllCollectionAccess_UpdatesGroups(bool flagOn)
+    [Fact]
+    public async Task Put_SelfEditWithAllCollectionAccess_UpdatesGroups()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetAllowAdminAccessToAllCollectionItemsAsync(true);
 
         var (adminEmail, admin) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -156,16 +140,13 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         };
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{admin.Id}", request);
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await VerifyGroupAccessWasAddedAsync(admin, [group]);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_PreservesCollectionsTheSavingUserCannotManage(bool flagOn)
+    [Fact]
+    public async Task Put_PreservesCollectionsTheSavingUserCannotManage()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetAllowAdminAccessToAllCollectionItemsAsync(false);
 
         var editable = await CreateCollectionAsync();
@@ -195,19 +176,16 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         };
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}", request);
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         var access = await GetCollectionAccessAsync(member);
         Assert.Contains(access, c => c.Id == editable.Id && c.Manage);
         Assert.Contains(readonly1.Id, access.Select(c => c.Id));
         Assert.Contains(readonly2.Id, access.Select(c => c.Id));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_SavingUserCannotManagePostedCollections_ReturnsNotFound(bool flagOn)
+    [Fact]
+    public async Task Put_SavingUserCannotManagePostedCollections_ReturnsNotFound()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetAllowAdminAccessToAllCollectionItemsAsync(false);
 
         var (adminEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
@@ -233,12 +211,9 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_AsAdminWithoutAllCollectionItemAccess_PreservesMembersDefaultCollection(bool flagOn)
+    [Fact]
+    public async Task Put_AsAdminWithoutAllCollectionItemAccess_PreservesMembersDefaultCollection()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         // The admin has no manage access to the member's "My Items" collection - the condition where the update
         // flow would otherwise drop it from the collections to save.
         await SetAllowAdminAccessToAllCollectionItemsAsync(false);
@@ -261,19 +236,16 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         };
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}", request);
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertHasCollectionAsync(member, defaultCollection.Id);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_RemovingLastConfirmedOwner_ReturnsBadRequest(bool flagOn)
+    [Fact]
+    public async Task Put_RemovingLastConfirmedOwner_ReturnsBadRequest()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await _loginHelper.LoginAsync(_ownerEmail);
 
-        // Demoting the organization's only confirmed owner is rejected in both paths.
+        // Demoting the organization's only confirmed owner is rejected.
         var request = new OrganizationUserUpdateRequestModel
         {
             Type = OrganizationUserType.Admin,
@@ -286,12 +258,9 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_PostingDefaultCollection_IsIgnored(bool flagOn)
+    [Fact]
+    public async Task Put_PostingDefaultCollection_IsIgnored()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetAllowAdminAccessToAllCollectionItemsAsync(true);
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -308,16 +277,13 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         };
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}", request);
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertDoesNotHaveCollectionAsync(member, defaultCollection.Id);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_GrantingPam_PersistsAccessPam(bool flagOn)
+    [Fact]
+    public async Task Put_GrantingPam_PersistsAccessPam()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetUsePamAsync(true);
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -327,16 +293,13 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
             UpdateRequest(accessPam: true));
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(member, true);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_GrantingPamWithoutOrganizationPam_ReturnsBadRequest(bool flagOn)
+    [Fact]
+    public async Task Put_GrantingPamWithoutOrganizationPam_ReturnsBadRequest()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetUsePamAsync(false);
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -351,12 +314,9 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         await AssertAccessPamAsync(member, false);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_RevokingPamWithoutOrganizationPam_PersistsRevocation(bool flagOn)
+    [Fact]
+    public async Task Put_RevokingPamWithoutOrganizationPam_PersistsRevocation()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         // Revoking access must stay possible on an organization whose PAM entitlement has lapsed.
         await SetUsePamAsync(false);
         await _loginHelper.LoginAsync(_ownerEmail);
@@ -368,16 +328,13 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
             UpdateRequest(accessPam: false));
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(member, false);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_EditingMemberWhoAlreadyHasPamWithoutOrganizationPam_PreservesAccess(bool flagOn)
+    [Fact]
+    public async Task Put_EditingMemberWhoAlreadyHasPamWithoutOrganizationPam_PreservesAccess()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         // Not a grant, so an unrelated edit to a member who already has access is not blocked.
         await SetUsePamAsync(false);
         await _loginHelper.LoginAsync(_ownerEmail);
@@ -389,16 +346,13 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
             UpdateRequest(accessPam: true));
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(member, true);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_OmittingAccessPam_RevokesExistingAccess(bool flagOn)
+    [Fact]
+    public async Task Put_OmittingAccessPam_RevokesExistingAccess()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetUsePamAsync(true);
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -411,16 +365,13 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
             new { type = OrganizationUserType.User, permissions = new Permissions(), collections = Array.Empty<object>(), groups = Array.Empty<Guid>() });
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(member, false);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Put_AdminGrantingPamToSelf_Succeeds(bool flagOn)
+    [Fact]
+    public async Task Put_AdminGrantingPamToSelf_Succeeds()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(flagOn);
         await SetUsePamAsync(true);
 
         // ManageUsers is the only gate on the endpoint, so an admin can grant themselves the access.
@@ -431,14 +382,13 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{admin.Id}",
             UpdateRequest(accessPam: true, type: OrganizationUserType.Admin));
 
-        Assert.Equal(ExpectedSuccess(flagOn), response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(admin, true);
     }
 
     [Fact]
     public async Task Put_WhenChangingRoleAndNameForClaimedMember_ReturnsNoContentAndPersistsBoth()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
         await _loginHelper.LoginAsync(_ownerEmail);
         var (member, _) = await CreateClaimedMemberWithoutMasterPasswordAsync();
 
@@ -468,7 +418,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     [Fact]
     public async Task Put_WhenChangingEmailForClaimedMember_ReturnsNoContentAndPersistsEmail()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
         await _loginHelper.LoginAsync(_ownerEmail);
         var (member, domain) = await CreateClaimedMemberWithoutMasterPasswordAsync();
 
@@ -487,7 +436,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     [Fact]
     public async Task Put_WhenChangingEmailAndNameForClaimedMember_PersistsBoth()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
         await _loginHelper.LoginAsync(_ownerEmail);
         var (member, domain) = await CreateClaimedMemberWithoutMasterPasswordAsync();
 
@@ -506,7 +454,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     [Fact]
     public async Task Put_WhenChangingEmailForUnclaimedMember_ReturnsNotClaimedProblemDetails()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
         await _loginHelper.LoginAsync(_ownerEmail);
 
         // No verified domain is created, so the member is not claimed by the organization.
@@ -524,7 +471,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     [Fact]
     public async Task Put_WhenChangingNameForUnclaimedMember_ReturnsNotClaimedProblemDetails()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
         await _loginHelper.LoginAsync(_ownerEmail);
 
         // No verified domain is created, so the member is not claimed by the organization.
@@ -541,7 +487,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     [Fact]
     public async Task Put_WhenChangingEmailForMemberWithMasterPassword_ReturnsHasMasterPasswordProblemDetails()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
         await _loginHelper.LoginAsync(_ownerEmail);
 
         // CreateNewUserWithAccountAsync registers a real account, which has a master password.
@@ -558,7 +503,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     [Fact]
     public async Task Put_WhenChangingEmailToUnverifiedDomain_ReturnsDomainNotClaimedProblemDetails()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
         await _loginHelper.LoginAsync(_ownerEmail);
         var (member, _) = await CreateClaimedMemberWithoutMasterPasswordAsync();
 
@@ -573,7 +517,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     [Fact]
     public async Task Put_WhenChangingEmailToAddressAlreadyInUse_ReturnsAlreadyInUseProblemDetails()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
         await _loginHelper.LoginAsync(_ownerEmail);
         var (member, domain) = await CreateClaimedMemberWithoutMasterPasswordAsync();
 
@@ -590,7 +533,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     [Fact]
     public async Task Put_WhenChangingEmailToAddressTakenOutsideOrganization_ReturnsTakenOutsideOrganizationProblemDetails()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp).Returns(true);
         await _loginHelper.LoginAsync(_ownerEmail);
         var (member, domain) = await CreateClaimedMemberWithoutMasterPasswordAsync();
 
@@ -604,9 +546,6 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
 
         await AssertValidationProblemAsync(response, new EmailTakenOutsideOrganizationError());
     }
-
-    private static HttpStatusCode ExpectedSuccess(bool flagOn) =>
-        flagOn ? HttpStatusCode.NoContent : HttpStatusCode.OK;
 
     private async Task SetAllowAdminAccessToAllCollectionItemsAsync(bool value)
     {
