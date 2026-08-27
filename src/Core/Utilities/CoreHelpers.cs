@@ -36,6 +36,7 @@ public static class CoreHelpers
     private static readonly Random _random = new Random();
     private static readonly string RealConnectingIp = "X-Connecting-IP";
     private static readonly Regex _whiteSpaceRegex = new Regex(@"\s+");
+    private static readonly WorkloadIdentityCredential _workloadIdentityCredential = new WorkloadIdentityCredential();
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -139,7 +140,7 @@ public static class CoreHelpers
 
     public static BlobServiceClient BuildBlobServiceClient(string connectionString, string serviceUri = "")
     {
-        return SettingHasValue(serviceUri) ? new BlobServiceClient(new Uri(serviceUri), new WorkloadIdentityCredential()) : new BlobServiceClient(connectionString);
+        return SettingHasValue(serviceUri) ? new BlobServiceClient(new Uri(serviceUri), _workloadIdentityCredential) : new BlobServiceClient(connectionString);
     }
 
     public async static Task<X509Certificate2?> GetBlobCertificateAsync(string connectionString, string container, string file, string password, string serviceUri = "")

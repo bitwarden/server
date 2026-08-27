@@ -451,6 +451,9 @@ public class GlobalSettings : IGlobalSettings
 
         private string _serviceUri;
 
+        /// <summary>
+        /// Requires an AKS workload identity; without it, certificate loading fails at startup.
+        /// </summary>
         public string ServiceUri
         {
             get => _serviceUri;
