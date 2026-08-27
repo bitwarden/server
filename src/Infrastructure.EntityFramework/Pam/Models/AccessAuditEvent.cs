@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Pam.Enums;
 
