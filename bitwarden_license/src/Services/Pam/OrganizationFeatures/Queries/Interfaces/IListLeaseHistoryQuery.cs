@@ -10,5 +10,8 @@ public interface IListLeaseHistoryQuery
     /// the same way as the approver inbox (<see cref="IListInboxRequestsQuery"/>): the caller's manageable collections
     /// across every organization. Returns an empty collection when the caller manages none.
     /// </summary>
-    Task<ICollection<AccessLease>> GetHistoryAsync(Guid userId);
+    /// <param name="now">The caller's read clock. It anchors the retention window, decides which leases count as
+    /// ended at all (nothing writes Expired), and is the same instant the caller must derive response statuses
+    /// against — one clock, so the read and the rendering cannot disagree.</param>
+    Task<ICollection<AccessLease>> GetHistoryAsync(Guid userId, DateTime now);
 }

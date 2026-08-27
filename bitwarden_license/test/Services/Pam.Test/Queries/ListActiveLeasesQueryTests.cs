@@ -4,7 +4,6 @@ using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -18,11 +17,11 @@ public class ListActiveLeasesQueryTests
     [Theory, BitAutoData]
     public async Task GetActiveAsync_NoManageableCollections_ReturnsEmptyWithoutQuerying(Guid userId)
     {
-        var sutProvider = Setup();
+        var sutProvider = new SutProvider<ListActiveLeasesQuery>().Create();
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .GetManageableCollectionIdsAsync(userId).Returns([]);
 
-        var result = await sutProvider.Sut.GetActiveAsync(userId);
+        var result = await sutProvider.Sut.GetActiveAsync(userId, _now);
 
         Assert.Empty(result);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
@@ -33,24 +32,18 @@ public class ListActiveLeasesQueryTests
     public async Task GetActiveAsync_ManageableCollections_FiltersByThatSetAtNow(
         Guid userId, Guid collectionId, AccessLease lease)
     {
-        var sutProvider = Setup();
+        var sutProvider = new SutProvider<ListActiveLeasesQuery>().Create();
         var manageable = new HashSet<Guid> { collectionId };
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .GetManageableCollectionIdsAsync(userId).Returns(manageable);
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetManyActiveByCollectionIdsAsync(manageable, _now).Returns([lease]);
 
-        var result = await sutProvider.Sut.GetActiveAsync(userId);
+        var result = await sutProvider.Sut.GetActiveAsync(userId, _now);
 
         Assert.Single(result);
+        // The caller's clock is forwarded unchanged: the same instant filters the read and derives the response.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .GetManyActiveByCollectionIdsAsync(manageable, _now);
-    }
-
-    private static SutProvider<ListActiveLeasesQuery> Setup()
-    {
-        var sutProvider = new SutProvider<ListActiveLeasesQuery>().WithFakeTimeProvider().Create();
-        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
-        return sutProvider;
     }
 }

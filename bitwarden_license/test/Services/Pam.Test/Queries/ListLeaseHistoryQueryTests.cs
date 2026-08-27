@@ -4,7 +4,6 @@ using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -18,11 +17,11 @@ public class ListLeaseHistoryQueryTests
     [Theory, BitAutoData]
     public async Task GetHistoryAsync_NoManageableCollections_ReturnsEmptyWithoutQuerying(Guid userId)
     {
-        var sutProvider = Setup();
+        var sutProvider = new SutProvider<ListLeaseHistoryQuery>().Create();
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .GetManageableCollectionIdsAsync(userId).Returns([]);
 
-        var result = await sutProvider.Sut.GetHistoryAsync(userId);
+        var result = await sutProvider.Sut.GetHistoryAsync(userId, _now);
 
         Assert.Empty(result);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
@@ -33,7 +32,7 @@ public class ListLeaseHistoryQueryTests
     public async Task GetHistoryAsync_QueriesWithSharedRetentionWindow(
         Guid userId, Guid collectionId, AccessLease lease)
     {
-        var sutProvider = Setup();
+        var sutProvider = new SutProvider<ListLeaseHistoryQuery>().Create();
         var manageable = new HashSet<Guid> { collectionId };
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .GetManageableCollectionIdsAsync(userId).Returns(manageable);
@@ -42,19 +41,12 @@ public class ListLeaseHistoryQueryTests
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetManyEndedByCollectionIdsAsync(manageable, expectedSince, _now).Returns([lease]);
 
-        var result = await sutProvider.Sut.GetHistoryAsync(userId);
+        var result = await sutProvider.Sut.GetHistoryAsync(userId, _now);
 
         Assert.Single(result);
-        // `now` is passed alongside `since`: it is what decides a lapsed lease has ended at all, since nothing
-        // writes Expired (PM-42355).
+        // The caller's clock is passed alongside `since`: it is what decides a lapsed lease has ended at all, since
+        // nothing writes Expired (PM-42355), and the caller derives response statuses against the same instant.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .GetManyEndedByCollectionIdsAsync(manageable, expectedSince, _now);
-    }
-
-    private static SutProvider<ListLeaseHistoryQuery> Setup()
-    {
-        var sutProvider = new SutProvider<ListLeaseHistoryQuery>().WithFakeTimeProvider().Create();
-        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
-        return sutProvider;
     }
 }

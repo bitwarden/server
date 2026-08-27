@@ -18,7 +18,7 @@ public class ListInboxRequestsQuery : IListInboxRequestsQuery
         _accessRequestRepository = accessRequestRepository;
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetPendingAsync(Guid userId)
+    public async Task<ICollection<AccessRequestDetails>> GetPendingAsync(Guid userId, DateTime now)
     {
         var manageableCollectionIds = await _approverCollectionAccessQuery.GetManageableCollectionIdsAsync(userId);
         if (manageableCollectionIds.Count == 0)
@@ -26,6 +26,9 @@ public class ListInboxRequestsQuery : IListInboxRequestsQuery
             return new List<AccessRequestDetails>();
         }
 
-        return await _accessRequestRepository.GetManyInboxPendingByCollectionIdsAsync(manageableCollectionIds);
+        // `now` is the caller's read clock: it decides which rows are still actionable at all (a lapsed unanswered
+        // request is derived Expired, leaves this inbox, and surfaces in the history read instead), and the statuses
+        // stamped on the returned details derive against the same instant.
+        return await _accessRequestRepository.GetManyInboxPendingByCollectionIdsAsync(manageableCollectionIds, now);
     }
 }

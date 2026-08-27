@@ -41,7 +41,7 @@ public class AccessRequestExtensionRepositoryTests
         // Timestamps round-trip within a couple of milliseconds rather than exactly: Dapper binds DateTime as
         // DbType.DateTime (3.33 ms) on the MSSQL path, and the EF providers store microseconds.
         Assert.Equal(newNotAfter, updatedLease!.NotAfter, LaxDateTimeComparer.Default);
-        Assert.Equal(AccessLeaseStatus.Active, updatedLease.Status);
+        Assert.Equal(AccessLeaseAction.None, updatedLease.Action);
 
         // The extension is recorded as an approved request pointing at the parent lease.
         Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
@@ -95,7 +95,7 @@ public class AccessRequestExtensionRepositoryTests
         var lease = await CreateActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, requesterId, now);
         // Revoke the lease so it is no longer active.
-        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Revoked, BuildHumanDecision(lease.AccessRequestId, now), now);
+        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseAction.Revoked, BuildHumanDecision(lease.AccessRequestId, now), now);
 
         var newNotAfter = lease.NotAfter.AddHours(1);
         var extension = BuildExtension(lease, newNotAfter, now);
@@ -161,9 +161,9 @@ public class AccessRequestExtensionRepositoryTests
             NotBefore = now.AddMinutes(-5),
             NotAfter = now.AddHours(1),
             Reason = "audit",
-            Status = AccessRequestStatus.Approved,
+            Action = AccessRequestAction.Approved,
             CreationDate = now,
-            ResolvedDate = now,
+            ActionDate = now,
         });
 
         var lease = new AccessLease
@@ -174,7 +174,7 @@ public class AccessRequestExtensionRepositoryTests
             CollectionId = approved.CollectionId,
             CipherId = approved.CipherId,
             RequesterId = approved.RequesterId,
-            Status = AccessLeaseStatus.Active,
+            Action = AccessLeaseAction.None,
             NotBefore = approved.NotBefore,
             NotAfter = approved.NotAfter,
             CreationDate = now,
@@ -216,7 +216,7 @@ public class AccessRequestExtensionRepositoryTests
         Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(extension.Id));
         var parent = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.NotNull(parent);
-        Assert.Equal(AccessLeaseStatus.Active, parent!.Status);
+        Assert.Equal(AccessLeaseAction.None, parent!.Action);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -242,7 +242,7 @@ public class AccessRequestExtensionRepositoryTests
         // window. Enforcement is on here to prove the refusal is the extension predicate, not the singleton guard.
         var duringExtension = lease.NotAfter.AddMinutes(1);
         await accessLeaseRepository.RevokeAsync(
-            lease, AccessLeaseStatus.Revoked, BuildHumanDecision(lease.AccessRequestId, duringExtension),
+            lease, AccessLeaseAction.Revoked, BuildHumanDecision(lease.AccessRequestId, duringExtension),
             duringExtension);
 
         Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed,
@@ -261,7 +261,7 @@ public class AccessRequestExtensionRepositoryTests
             CollectionId = request.CollectionId,
             CipherId = request.CipherId,
             RequesterId = request.RequesterId,
-            Status = AccessLeaseStatus.Active,
+            Action = AccessLeaseAction.None,
             NotBefore = request.NotBefore,
             NotAfter = request.NotAfter,
             CreationDate = now,
@@ -279,9 +279,9 @@ public class AccessRequestExtensionRepositoryTests
             NotBefore = lease.NotAfter,
             NotAfter = newNotAfter,
             Reason = "need more time",
-            Status = AccessRequestStatus.Approved,
+            Action = AccessRequestAction.Approved,
             CreationDate = now,
-            ResolvedDate = now,
+            ActionDate = now,
         };
         extension.SetNewId();
         return extension;
