@@ -11,6 +11,9 @@ namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 public class AccessRequestExtensionRepositoryTests
 {
+    /// <summary>The comment the command records on the automatic Deny when the parent lease has already ended.</summary>
+    private const string _leaseEndedComment = "The lease being extended has ended";
+
     [DatabaseTheory, DatabaseData]
     public async Task CreateApprovedExtensionAsync_ExtendsLeaseInPlaceAndRecordsRequest(
         IOrganizationRepository organizationRepository,
@@ -28,7 +31,7 @@ public class AccessRequestExtensionRepositoryTests
         var newNotAfter = lease.NotAfter.AddHours(1);
 
         var outcome = await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(lease, newNotAfter, now), BuildAutoDecision(now), now);
+            BuildExtension(lease, newNotAfter, now), BuildAutoDecision(now), now, _leaseEndedComment);
 
         Assert.Equal(AccessLeaseExtendOutcome.Extended, outcome);
 
@@ -65,11 +68,11 @@ public class AccessRequestExtensionRepositoryTests
 
         var firstNotAfter = lease.NotAfter.AddHours(1);
         Assert.Equal(AccessLeaseExtendOutcome.Extended, await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(lease, firstNotAfter, now), BuildAutoDecision(now), now));
+            BuildExtension(lease, firstNotAfter, now), BuildAutoDecision(now), now, _leaseEndedComment));
 
         // A lease may be extended exactly once, so a second extension is rejected and nothing is written.
         var rejected = await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(lease, firstNotAfter.AddHours(1), now), BuildAutoDecision(now), now);
+            BuildExtension(lease, firstNotAfter.AddHours(1), now), BuildAutoDecision(now), now, _leaseEndedComment);
 
         Assert.Equal(AccessLeaseExtendOutcome.AlreadyExtended, rejected);
         Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
@@ -78,7 +81,7 @@ public class AccessRequestExtensionRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task CreateApprovedExtensionAsync_LeaseNotActive_ReturnsLeaseNotActiveAndWritesNothing(
+    public async Task CreateApprovedExtensionAsync_LeaseNotActive_RecordsDeniedExtensionAndLeavesLeaseAlone(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository,
@@ -94,13 +97,31 @@ public class AccessRequestExtensionRepositoryTests
         // Revoke the lease so it is no longer active.
         await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Revoked, BuildHumanDecision(lease.AccessRequestId, now), now);
 
-        var extension = BuildExtension(lease, lease.NotAfter.AddHours(1), now);
+        var newNotAfter = lease.NotAfter.AddHours(1);
+        var extension = BuildExtension(lease, newNotAfter, now);
         var outcome = await accessRequestRepository.CreateApprovedExtensionAsync(
-            extension, BuildAutoDecision(now), now);
+            extension, BuildAutoDecision(now), now, _leaseEndedComment);
 
         Assert.Equal(AccessLeaseExtendOutcome.LeaseNotActive, outcome);
-        Assert.Equal(0, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
-        Assert.Null(await accessRequestRepository.GetByIdAsync(extension.Id));
+
+        // The refusal is recorded rather than dropped: the request exists, denied, carrying the window that was asked
+        // for and an automatic verdict naming why (PM-42632).
+        var denied = await accessRequestRepository.GetDetailsByIdAsync(extension.Id, now);
+        Assert.NotNull(denied);
+        Assert.Equal(AccessRequestStatus.Denied, denied!.Status);
+        Assert.Equal(lease.Id, denied.ExtensionOfLeaseId);
+        Assert.Equal(newNotAfter, denied.NotAfter, LaxDateTimeComparer.Default);
+        Assert.NotNull(denied.ResolvedDate);
+        var decision = Assert.Single(denied.Decisions);
+        Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
+        Assert.Equal(AccessDecisionVerdict.Deny, decision.Verdict);
+        Assert.Equal(_leaseEndedComment, decision.Comment);
+        Assert.Null(decision.ApproverId);
+
+        // Nothing was extended: the parent lease's window is untouched.
+        var untouched = await accessLeaseRepository.GetByIdAsync(lease.Id);
+        Assert.NotNull(untouched);
+        Assert.Equal(lease.NotAfter, untouched!.NotAfter, LaxDateTimeComparer.Default);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -121,7 +142,7 @@ public class AccessRequestExtensionRepositoryTests
 
         // Extend only leaseA (a lease may be extended once); the count is scoped to its own lease.
         await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(leaseA, leaseA.NotAfter.AddHours(1), now), BuildAutoDecision(now), now);
+            BuildExtension(leaseA, leaseA.NotAfter.AddHours(1), now), BuildAutoDecision(now), now, _leaseEndedComment);
 
         Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(leaseA.Id));
         Assert.Equal(0, await accessRequestRepository.CountExtensionsByLeaseIdAsync(leaseB.Id));
@@ -180,7 +201,7 @@ public class AccessRequestExtensionRepositoryTests
         var newNotAfter = lease.NotAfter.AddHours(1);
         var extension = BuildExtension(lease, newNotAfter, now);
         Assert.Equal(AccessLeaseExtendOutcome.Extended,
-            await accessRequestRepository.CreateApprovedExtensionAsync(extension, BuildAutoDecision(now), now));
+            await accessRequestRepository.CreateApprovedExtensionAsync(extension, BuildAutoDecision(now), now, _leaseEndedComment));
 
         // Inside the extension's own window, when every other precondition holds: it is Approved, owned by the
         // requester, in-window, and has produced no lease. Only ExtensionOfLeaseId refuses the mint. This is the
@@ -214,7 +235,7 @@ public class AccessRequestExtensionRepositoryTests
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, requesterId, now);
         var extension = BuildExtension(lease, lease.NotAfter.AddHours(1), now);
         Assert.Equal(AccessLeaseExtendOutcome.Extended,
-            await accessRequestRepository.CreateApprovedExtensionAsync(extension, BuildAutoDecision(now), now));
+            await accessRequestRepository.CreateApprovedExtensionAsync(extension, BuildAutoDecision(now), now, _leaseEndedComment));
 
         // Revoking the parent is the case that matters: it clears the single-active-lease contention that was the
         // only thing refusing this mint, so a revoked requester could otherwise re-grant themselves the rest of the
