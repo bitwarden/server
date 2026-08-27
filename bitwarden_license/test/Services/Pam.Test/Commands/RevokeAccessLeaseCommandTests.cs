@@ -158,11 +158,11 @@ public class RevokeAccessLeaseCommandTests
     public async Task RevokeAsync_WindowAlreadyClosed_ThrowsConflictWithoutEndingTheLease(
         Guid userId, AccessLease lease)
     {
-        // A lease whose window has closed is stored Active -- nothing writes Expired -- so ending it here would
+        // A lease whose window has closed carries no early end -- expiry is never stored -- so ending it here would
         // restate a lease that ran out on its own as an operator revocation, stamping RevokedDate/RevokedBy and
         // appending a Deny decision for an end that already happened (PM-42355).
         var sutProvider = Setup();
-        lease.Status = AccessLeaseStatus.Active;
+        lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddMinutes(-1);
         SetupManageableLease(sutProvider, userId, lease);
 
@@ -180,7 +180,7 @@ public class RevokeAccessLeaseCommandTests
         // NotAfter is exclusive everywhere else (the active reads use NotAfter > now), so the boundary instant is
         // already outside the window.
         var sutProvider = Setup();
-        lease.Status = AccessLeaseStatus.Active;
+        lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now;
         SetupManageableLease(sutProvider, userId, lease);
 
