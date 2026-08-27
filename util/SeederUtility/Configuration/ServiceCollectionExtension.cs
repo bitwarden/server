@@ -58,6 +58,7 @@ public static class ServiceCollectionExtension
         services.TryAddSingleton<IMailService, NoopMailService>();
         services.AddPush(globalSettings);
         services.TryAddSingleton<ILicensingService, LicensingService>();
+        services.TryAddSingleton<ISeederLicenseSigner, SeederLicenseSigner>();
 
         AddStripeBilling(services, globalSettings);
     }

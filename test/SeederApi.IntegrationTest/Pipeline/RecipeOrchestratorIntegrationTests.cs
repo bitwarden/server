@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
@@ -51,6 +52,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             // disposed. Disable it so every test builds its model against its own live provider.
             opts.ReplaceService<IModelCacheKeyFactory, NonCachingModelCacheKeyFactory>();
         });
+        services.AddAutoMapper(typeof(UserRepository));
 
         _provider = services.BuildServiceProvider();
         _db = _provider.GetRequiredService<DatabaseContext>();
@@ -115,6 +117,52 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
 
         Assert.Contains("not found", ex.Message);
         Assert.DoesNotContain("already exists", ex.Message);
+    }
+
+    [Fact]
+    public async Task Execute_Options_SelfHostedPremium_ResolvesLoggingAndRunsLicenseStepAsync()
+    {
+        // Regression guard for the DI wiring: the self-hosted individual path builds its own
+        // ServiceCollection, and GenerateSelfHostUserLicenseStep resolves ILogger<T> from it. Without
+        // AddLogging() in ExecuteAsync(IndividualUserOptions) this throws during step resolution before
+        // the license step ever runs, so signerCalled stays false. Stubs stand in for the license
+        // services so no certificate is required.
+        var mapper = _provider.GetRequiredService<IMapper>();
+        var signerCalled = false;
+        var signer = new LicenseTestHelpers.StubSeederLicenseSigner(_ =>
+        {
+            signerCalled = true;
+            return Task.FromResult(LicenseSigningResult.Skipped("no signing certificate configured"));
+        });
+        var licensing = new LicenseTestHelpers.StubLicensingService((_, _) => Task.CompletedTask);
+
+        var deps = new SeederDependencies(
+            _db, mapper, new PasswordHasher<User>(), new NoOpManglerService(), licensing,
+            new NoopAttachmentStorageService(), signer, NullLoggerFactory.Instance);
+        var orchestrator = new RecipeOrchestrator(deps);
+
+        var options = new IndividualUserOptions
+        {
+            Email = $"selfhost-{Guid.NewGuid():N}@individual.example",
+            SelfHosted = true,
+            Premium = true,
+        };
+
+        // The pre-commit license step runs before BulkCommitter, whose LinqToDB bulk copy is not
+        // reliable in this lightweight harness. Only the DI/logging wiring is under test here, so a
+        // later commit-stage failure is out of scope; signerCalled proves the step materialized and ran.
+        try
+        {
+            await orchestrator.ExecuteAsync(options);
+        }
+        catch
+        {
+            // A commit-stage failure is out of scope; signerCalled below proves the wiring under test.
+            // If logging were unregistered, the step would never run and signerCalled would stay false.
+        }
+
+        Assert.True(signerCalled,
+            "GenerateSelfHostUserLicenseStep did not run — the self-hosted individual path is missing logging registration.");
     }
 
     [Fact]
@@ -255,7 +303,9 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             new PasswordHasher<User>(),
             mangler,
             null!,
-            attachmentStorageService ?? null!)
+            attachmentStorageService ?? null!,
+            null!,
+            null!)
         {
             BillingInitializer = billingInitializer is null ? null : () => billingInitializer,
         };

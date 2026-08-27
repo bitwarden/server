@@ -21,6 +21,7 @@ using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -237,7 +238,10 @@ public class UserService : UserManager<User>, IUserService
                     if (orgCount <= 1)
                     {
                         await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
-                        await _organizationRepository.DeleteAsync(org);
+                        // This is a right-to-erasure flow, so the organization's event logs have to
+                        // be purged from storage too, not just its database rows.
+                        await _organizationRepository.DeleteAndCreateDeleteTasksAsync(
+                            org, [OrganizationDeleteTaskType.EventsCleanup]);
                         deletedOrg = true;
                     }
                 }

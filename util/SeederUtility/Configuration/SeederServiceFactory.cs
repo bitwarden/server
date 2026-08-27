@@ -7,6 +7,7 @@ using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.SeederUtility.Configuration;
 
@@ -43,8 +44,12 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal Func<IStripeBillingInitializer> BillingInitializer { get; }
 
+    internal ISeederLicenseSigner LicenseSigner { get; }
+
+    internal ILoggerFactory LoggerFactory { get; }
+
     internal SeederDependencies ToDependencies()
-        => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService)
+        => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService, LicenseSigner, LoggerFactory)
         {
             BillingInitializer = BillingInitializer,
         };
@@ -70,6 +75,8 @@ internal sealed class SeederServiceScope : IDisposable
         // provider: the billing graph is scoped and transient throughout, and capturing it on the root
         // provider would outlive the DbContext it depends on.
         BillingInitializer = () => sp.GetRequiredService<IStripeBillingInitializer>();
+        LicenseSigner = sp.GetRequiredService<ISeederLicenseSigner>();
+        LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
     }
 
     public void Dispose()

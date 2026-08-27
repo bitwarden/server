@@ -1,8 +1,11 @@
 ﻿using System.Runtime.InteropServices;
 using Bit.Admin.Auth.Jobs;
 using Bit.Admin.Tools.Jobs;
+using Bit.Core.Dirt.Services;
+using Bit.Core.Dirt.Services.Implementations;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Quartz;
 
 namespace Bit.Admin.Jobs;
@@ -71,6 +74,15 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 0 2 ? * * *")
             .Build();
+        // Quartz keys triggers by identity, so a trigger instance cannot be shared between jobs:
+        // scheduling the second one throws because the key already exists. Every job below has its
+        // own instance, hence a dedicated five-minute trigger here rather than reusing the one
+        // DeleteSendsJob holds.
+        var organizationDeleteTasksTrigger = TriggerBuilder.Create()
+            .WithIdentity("OrganizationDeleteTasksTrigger")
+            .StartNow()
+            .WithCronSchedule("0 */5 * * * ?")
+            .Build();
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
@@ -80,6 +92,7 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteUnverifiedOrganizationDomainsJob), everyDayAtTwoAmUtcTrigger),
+            new Tuple<Type, ITrigger>(typeof(OrganizationDeleteTasksJob), organizationDeleteTasksTrigger),
         };
 
         if (!(_globalSettings.SqlServer?.DisableDatabaseMaintenanceJobs ?? false))
@@ -103,6 +116,9 @@ public class JobsHostedService : BaseJobsHostedService
         {
             services.AddTransient<AliveJob>();
         }
+        services.AddTransient<OrganizationDeleteTasksJob>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Transient<IOrganizationDeleteTaskHandler, EventsCleanupOrganizationDeleteTaskHandler>());
         services.AddTransient<DatabaseUpdateStatisticsJob>();
         services.AddTransient<DatabaseRebuildlIndexesJob>();
         services.AddTransient<DatabaseExpiredGrantsJob>();

@@ -96,11 +96,8 @@ public class GlobalSettings : IGlobalSettings
     public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
-    /// <summary>
-    /// This Hash Key is used to prevent enumeration attacks against the Send Access feature.
-    /// </summary>
-    public virtual string SendDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
+    public virtual string PricingApiKey { get; set; }
     public virtual Fido2Settings Fido2 { get; set; } = new Fido2Settings();
     public virtual ICommunicationSettings Communication { get; set; } = new CommunicationSettings();
 
