@@ -75,6 +75,8 @@ public sealed class StripeBillingInitializer(
 
     public async Task InitializeOrganizationAsync(Organization organization, StripeBillingOptions options)
     {
+        ValidateConfiguration(organization.PlanType);
+
         try
         {
             var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);

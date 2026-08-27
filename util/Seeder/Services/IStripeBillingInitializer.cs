@@ -30,7 +30,9 @@ public interface IStripeBillingInitializer
     /// </summary>
     /// <remarks>
     /// Must run after the organization row is committed: the underlying billing service persists its
-    /// changes with <c>IOrganizationRepository.ReplaceAsync</c>.
+    /// changes with <c>IOrganizationRepository.ReplaceAsync</c>. Calls <see cref="ValidateConfiguration"/>
+    /// itself before doing anything else, so a caller that skips the pre-flight check still fails fast
+    /// rather than reaching Stripe with bad configuration.
     /// </remarks>
     Task InitializeOrganizationAsync(Organization organization, StripeBillingOptions options);
 }

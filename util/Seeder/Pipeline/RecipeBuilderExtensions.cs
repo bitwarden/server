@@ -558,8 +558,10 @@ public static class RecipeBuilderExtensions
     /// <param name="options">Trial configuration for the subscription</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <remarks>
-    /// Opt-in only. Callers must have validated the host's Stripe configuration before any entity was created
-    /// — see <c>RecipeOrchestrator.ValidateBillingOptIn</c>. This step makes live network calls.
+    /// Opt-in only. This step makes live network calls. <c>RecipeOrchestrator.ValidateBillingOptIn</c> still
+    /// validates the host's Stripe configuration before any entity is created, for fast feedback — but
+    /// <see cref="IStripeBillingInitializer.InitializeOrganizationAsync"/> also self-validates, so a caller that
+    /// skips the pre-flight check fails before touching Stripe rather than after.
     /// </remarks>
     public static RecipeBuilder WithStripeBilling(this RecipeBuilder builder, StripeBillingOptions options)
     {
