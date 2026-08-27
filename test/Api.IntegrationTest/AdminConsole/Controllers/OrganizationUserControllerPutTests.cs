@@ -71,6 +71,36 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     }
 
     [Fact]
+    public async Task Put_ConvertingMemberFromCustom_ClearsPermissions()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+
+        // Give the member the Custom role with a persisted permission set.
+        member.Type = OrganizationUserType.Custom;
+        member.SetPermissions(new Permissions { ManageGroups = true });
+        await _factory.GetService<IOrganizationUserRepository>().ReplaceAsync(member);
+
+        // Converting to a non-Custom role must drop the stored permissions.
+        var request = new OrganizationUserUpdateRequestModel
+        {
+            Type = OrganizationUserType.User,
+            Permissions = new Permissions { ManageGroups = true },
+            Collections = [],
+            Groups = []
+        };
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}", request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var updatedOrgUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(member.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserType.User, updatedOrgUser.Type);
+        Assert.Null(updatedOrgUser.Permissions);
+    }
+
+    [Fact]
     public async Task Put_SelfEditWithoutAllCollectionAccess_CannotAddSelfToCollection()
     {
         await SetAllowAdminAccessToAllCollectionItemsAsync(false);
