@@ -550,6 +550,26 @@ public class CipherLeaseGateTests
         Assert.True(access.Authorizes(cipherId));
     }
 
+    /// <remarks>
+    /// An unassigned organization cipher sits in no collection, so there is no leasing-enabled collection
+    /// to reach it through and nothing to gate. The "/admin" endpoints reach these — <c>Admin</c> and
+    /// <c>Owner</c> pass <c>CanAccessUnassignedCiphersAsync</c> — so the administrative decision has to
+    /// answer for them.
+    /// </remarks>
+    [Fact]
+    public async Task AuthorizeAdminReadAsync_UnassignedCipher_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var organizationId = Guid.NewGuid();
+        OrganizationLeasingCollection(sutProvider, organizationId, Guid.NewGuid());
+        CipherIsInCollections(sutProvider, cipherId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, organizationId, new Cipher { Id = cipherId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
     [Fact]
     public async Task AuthorizeAdminReadAsync_AlsoInAPlainCollection_Authorizes()
     {
