@@ -54,49 +54,65 @@ jobs:
             base_path: ./src
             dotnet: true
             node: true
+            description: Admin portal
           - project_name: Api
             base_path: ./src
             dotnet: true
+            description: Core backend API
           - project_name: Attachments
             base_path: ./util
+            description: Attachment file storage container
           - project_name: Billing
             base_path: ./src
             dotnet: true
+            description: Billing and subscription service
           - project_name: Events
             base_path: ./src
             dotnet: true
+            description: Audit event collection API
           - project_name: EventsProcessor
             base_path: ./src
             dotnet: true
+            description: Background processor for queued audit events
           - project_name: Icons
             base_path: ./src
             dotnet: true
+            description: Website icon fetching and caching service
           - project_name: Identity
             base_path: ./src
             dotnet: true
+            description: Identity and authentication server
           - project_name: MsSql
             base_path: ./util
+            description: Microsoft SQL Server with backup tooling
           - project_name: MsSqlMigratorUtility
             base_path: ./util
             dotnet: true
+            description: Command-line utility for performing MSSQL database migrations
           - project_name: Nginx
             base_path: ./util
+            description: Nginx reverse proxy with TLS and security-header configuration
           - project_name: Notifications
             base_path: ./src
             dotnet: true
+            description: Real-time notification hub for client applications
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
+            description: SCIM directory provisioning service
           - project_name: SeederApi
             base_path: ./util
             platforms: linux/amd64,linux/arm64
             dotnet: true
+            description: Web API for seeding and querying test data during development and testing
           - project_name: Setup
             base_path: ./util
             dotnet: true
+            description: Self-hosted installation and configuration generator
           - project_name: Sso
             base_path: ./bitwarden_license/src
             dotnet: true
+            description: SAML and OIDC single sign-on service
     steps:
       - name: Check secrets
         id: check-secrets
@@ -266,6 +282,36 @@ jobs:
           username: bitwarden
           password: ${{ steps.get-kv-secrets.outputs.DOCKERHUB-OAT }}
 
+      - name: Build custom image metadata
+        id: custom-meta
+        env:
+          PROJECT_TITLE: ${{ matrix.project_name }}
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+          DESCRIPTION: ${{ matrix.description || 'Bitwarden service' }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          {
+            echo "items<<METADATA_EOF"
+            echo "org.opencontainers.image.title=Bitwarden ${PROJECT_TITLE}"
+            echo "org.opencontainers.image.description=${DESCRIPTION}"
+            echo "org.opencontainers.image.vendor=Bitwarden Inc."
+            echo "org.opencontainers.image.url=https://bitwarden.com"
+            echo "org.opencontainers.image.version=${IMAGE_TAG}"
+            echo "org.opencontainers.image.revision=${REVISION}"
+            echo "com.bitwarden.project=${PROJECT_NAME}"
+            echo "METADATA_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest
+        with:
+          labels: ${{ steps.custom-meta.outputs.items }}
+          annotations: ${{ steps.custom-meta.outputs.items }}
+
       - name: Build Docker image
         id: build-artifacts
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
@@ -275,6 +321,8 @@ jobs:
           platforms: ${{ steps.platforms.outputs.platforms }}
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
 
       - name: Generate image manifest fragment
         env:

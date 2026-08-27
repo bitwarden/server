@@ -124,6 +124,87 @@ public class CreateRosterStepTests
         Assert.Equal(2, emails.Count);
     }
 
+    [Fact]
+    public void RosterEmailOverride_StoresOverride_AndResolvesReferencesByPrefix()
+    {
+        // Group "Everyone" references both users by FirstName.LastName prefix; the override only
+        // changes the stored email, so membership must remain intact.
+        var roster = new SeedRoster
+        {
+            Users =
+            [
+                new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = "owner@bw.example" },
+                new SeedRosterUser { FirstName = "Uma", LastName = "User", Role = "user", Email = "user@bw.example" }
+            ],
+            Groups =
+            [
+                new SeedRosterGroup { Name = "Everyone", Members = ["owen.owner", "uma.user"] }
+            ]
+        };
+        var reader = new StubSeedReader().Add("rosters.test", roster);
+        var context = NewContext(new SeederSettings(), reader);
+        PreloadOrganization(context);
+
+        new CreateRosterStep("test").Execute(context);
+
+        var emails = context.Users.Select(u => u.Email).OrderBy(e => e).ToList();
+        Assert.Equal(["owner@bw.example", "user@bw.example"], emails);
+        Assert.Equal(2, context.GroupUsers.Count);
+    }
+
+    [Fact]
+    public void RosterEmailOverride_CliOwnerEmailOverrideStillWins()
+    {
+        var roster = new SeedRoster
+        {
+            Users = [new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = "owner@bw.example" }]
+        };
+        var reader = new StubSeedReader().Add("rosters.test", roster);
+        var context = NewContext(new SeederSettings(OwnerEmailOverride: "cli-owner@bw.example"), reader);
+        PreloadOrganization(context);
+
+        new CreateRosterStep("test").Execute(context);
+
+        Assert.Equal("cli-owner@bw.example", context.Owner!.Email);
+    }
+
+    [Fact]
+    public void RosterEmailOverride_DuplicateEmails_Throw()
+    {
+        var roster = new SeedRoster
+        {
+            Users =
+            [
+                new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = "same@bw.example" },
+                new SeedRosterUser { FirstName = "Uma", LastName = "User", Role = "user", Email = "same@bw.example" }
+            ]
+        };
+        var reader = new StubSeedReader().Add("rosters.test", roster);
+        var context = NewContext(new SeederSettings(), reader);
+        PreloadOrganization(context);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => new CreateRosterStep("test").Execute(context));
+        Assert.Contains("Duplicate email 'same@bw.example'", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void RosterEmailOverride_BlankOverride_FallsBackToDerivedEmail(string blankOverride)
+    {
+        var roster = new SeedRoster
+        {
+            Users = [new SeedRosterUser { FirstName = "Owen", LastName = "Owner", Role = "owner", Email = blankOverride }]
+        };
+        var reader = new StubSeedReader().Add("rosters.test", roster);
+        var context = NewContext(new SeederSettings(), reader);
+        PreloadOrganization(context);
+
+        new CreateRosterStep("test").Execute(context);
+
+        Assert.Equal($"owen.owner@{TestDomain}", context.Owner!.Email);
+    }
+
     private static SeedRoster TwoUserRoster() => new()
     {
         Users =

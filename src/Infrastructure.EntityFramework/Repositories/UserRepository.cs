@@ -4,7 +4,6 @@ using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -195,12 +194,15 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     /// <inheritdoc />
     public async Task UpdateUserKeyAndEncryptedDataAsync(Core.Entities.User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
 
         try
         {
@@ -225,8 +227,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             //  Update re-encrypted data
             foreach (var action in updateDataActions)
             {
-                // connection and transaction aren't used in EF
-                await action();
+                await action(connection, transaction);
             }
 
             await transaction.CommitAsync();
@@ -241,12 +242,15 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
 
     public async Task UpdateUserKeyAndEncryptedDataV2Async(Core.Entities.User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
 
         // Update user
         var userEntity = await dbContext.Users.FindAsync(user.Id);
@@ -287,8 +291,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         //  Update re-encrypted data
         foreach (var action in updateDataActions)
         {
-            // connection and transaction aren't used in EF
-            await action();
+            await action(connection, transaction);
         }
 
         await transaction.CommitAsync();

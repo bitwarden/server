@@ -11,6 +11,7 @@ using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -962,7 +963,7 @@ public class CipherServiceTests
         }
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventsAsync(Arg.Is<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>(events => events.All(e => cipherIds.Contains(e.Item1.Id))));
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCiphersAsync(restoringUserId);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == restoringUserId));
     }
 
     [Theory]
@@ -1017,7 +1018,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(restoringUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == restoringUserId));
     }
 
 
@@ -1085,7 +1086,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(restoringUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == restoringUserId));
     }
 
     [Theory]
@@ -1135,7 +1136,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(restoringUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == restoringUserId));
     }
 
     [Theory, BitAutoData]
@@ -1450,7 +1451,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1494,7 +1495,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1525,7 +1526,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
 
@@ -1577,7 +1578,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1626,7 +1627,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1887,7 +1888,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1926,7 +1927,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1957,7 +1958,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -2005,7 +2006,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -2055,7 +2056,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -2303,7 +2304,7 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventsAsync(default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCiphersAsync(default);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive().PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
