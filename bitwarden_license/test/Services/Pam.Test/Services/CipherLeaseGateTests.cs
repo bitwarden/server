@@ -19,7 +19,7 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Services;
 
 /// <summary>
-/// The read and mutation decisions, asserted through the interface only. The structural "which ciphers are
+/// The read, write-return and mutation decisions, asserted through the interface only. The structural "which ciphers are
 /// gated" rule is exercised via <see cref="CipherLeaseGate.AuthorizeReadManyAsync(Guid, IEnumerable{Cipher}, IEnumerable{CollectionDetails}, IDictionary{Guid, IGrouping{Guid, CollectionCipher}})" />
 /// rather than a public helper, so these tests stay pinned to what callers can actually reach.
 /// </summary>
@@ -285,6 +285,139 @@ public class CipherLeaseGateTests
 
         var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId, [new Cipher { Id = cipherId }]);
 
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    // --- AuthorizeWriteReturnAsync -----------------------------------------------------------------
+
+    [Fact]
+    public async Task AuthorizeWriteReturnAsync_FlagOff_AuthorizesWithoutQuerying()
+    {
+        var (sutProvider, userId, cipherId) = Setup(enabled: false);
+
+        var access = await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<IGoverningRuleResolver>()
+            .DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default!);
+    }
+
+    [Fact]
+    public async Task AuthorizeWriteReturnAsync_NotGated_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        NotGated(sutProvider, userId, cipherId);
+
+        var access = await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    /// <remarks>
+    /// The decision this method exists for. A lease widens the single <em>read</em>, and widened the echo of a
+    /// mutation with it until the write-return was split out — landing the full secret in durable client
+    /// state, where it outlived the lease.
+    /// </remarks>
+    [Fact]
+    public async Task AuthorizeWriteReturnAsync_GatedWithActiveLease_Withholds()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        Gated(sutProvider, userId, cipherId);
+        HasActiveLease(sutProvider, userId, cipherId);
+
+        var access = await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId });
+
+        Assert.Null(access);
+    }
+
+    [Fact]
+    public async Task AuthorizeWriteReturnAsync_GatedNoLease_Withholds()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        Gated(sutProvider, userId, cipherId);
+
+        var access = await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId });
+
+        Assert.Null(access);
+    }
+
+    [Fact]
+    public async Task AuthorizeWriteReturnAsync_Gated_DoesNotReadLeases()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        Gated(sutProvider, userId, cipherId);
+
+        await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId });
+
+        // Lease state cannot change the answer, so paying for the query would be waste.
+        await sutProvider.GetDependency<IAccessLeaseRepository>()
+            .DidNotReceiveWithAnyArgs().GetActiveByRequesterIdCipherIdAsync(default, default, default);
+    }
+
+    // --- AuthorizeAdminWriteReturnAsync ------------------------------------------------------------
+
+    [Fact]
+    public async Task AuthorizeAdminWriteReturnAsync_FlagOff_AuthorizesWithoutQuerying()
+    {
+        var (sutProvider, userId, cipherId) = Setup(enabled: false);
+
+        var access = await sutProvider.Sut.AuthorizeAdminWriteReturnAsync(
+            userId, Guid.NewGuid(), new Cipher { Id = cipherId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdAsync(default);
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminWriteReturnAsync_NotGated_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var organizationId = Guid.NewGuid();
+        OrganizationLeasingCollection(sutProvider, organizationId, Guid.NewGuid());
+        CipherIsInCollections(sutProvider, cipherId, Guid.NewGuid());
+
+        var access = await sutProvider.Sut.AuthorizeAdminWriteReturnAsync(
+            userId, organizationId, new Cipher { Id = cipherId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminWriteReturnAsync_GatedWithActiveLease_Withholds()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var organizationId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        OrganizationLeasingCollection(sutProvider, organizationId, collectionId);
+        CipherIsInCollections(sutProvider, cipherId, collectionId);
+        HasActiveLease(sutProvider, userId, cipherId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminWriteReturnAsync(
+            userId, organizationId, new Cipher { Id = cipherId });
+
+        Assert.Null(access);
+        await sutProvider.GetDependency<IAccessLeaseRepository>()
+            .DidNotReceiveWithAnyArgs().GetActiveByRequesterIdCipherIdAsync(default, default, default);
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminWriteReturnAsync_DisabledRule_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var organizationId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        OrganizationLeasingCollection(sutProvider, organizationId, collectionId, ruleEnabled: false);
+        CipherIsInCollections(sutProvider, cipherId, collectionId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminWriteReturnAsync(
+            userId, organizationId, new Cipher { Id = cipherId });
+
+        Assert.NotNull(access);
         Assert.True(access.Authorizes(cipherId));
     }
 

@@ -30,8 +30,12 @@ namespace Bit.Services.Pam.Services;
 ///
 /// The mutation decisions sit with the single read rather than the bulk one, in both their single and bulk
 /// forms: a lease-holder may edit, delete, restore, or re-file the credential they hold. That asymmetry is
-/// not an inconsistency — a write emits no secret, so there is nothing for strictness to protect there,
-/// while refusing the holder would break the very access the lease was issued to grant.
+/// not an inconsistency — a mutation's request emits no secret, so there is nothing for strictness to
+/// protect there, while refusing the holder would break the very access the lease was issued to grant.
+///
+/// What a mutation <em>returns</em> is strict again, and sits with the bulk read rather than the single one:
+/// a client persists a write-return exactly as it persists a sync, so the copy would outlive the lease that
+/// justified it. The caller already holds what it submitted, which makes the echo free to reduce.
 /// </remarks>
 public class CipherLeaseGate : ICipherLeaseGate
 {
@@ -105,6 +109,40 @@ public class CipherLeaseGate : ICipherLeaseGate
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
         var collectionCiphersByCipher = collectionCiphers.GroupBy(cc => cc.CipherId).ToDictionary(g => g.Key);
         return BuildBulkWitness(ciphers, collections, collectionCiphersByCipher);
+    }
+
+    /// <remarks>
+    /// Gated-ness is the whole test. Unlike <see cref="AuthorizeReadAsync" /> this does not go on to look for
+    /// a lease, so it is also the cheaper of the two: a lease does not unlock the echo of a mutation.
+    /// </remarks>
+    public async Task<FullCipherAccess?> AuthorizeWriteReturnAsync(Guid userId, Cipher cipher)
+    {
+        if (!Enabled)
+        {
+            return FullCipherAccess.Unrestricted();
+        }
+
+        return await IsGatedForCallerAsync(userId, cipher.Id, _timeProvider.GetUtcNow().UtcDateTime)
+            ? null
+            : FullCipherAccess.ForCipher(cipher.Id);
+    }
+
+    /// <remarks>
+    /// Resolves gated-ness from the organization's collections for the reason
+    /// <see cref="AuthorizeAdminReadAsync" /> does, and stops there: no lease read, because a lease does not
+    /// unlock a write-return for an administrator any more than it does for a member.
+    /// </remarks>
+    public async Task<FullCipherAccess?> AuthorizeAdminWriteReturnAsync(
+        Guid userId, Guid organizationId, Cipher cipher)
+    {
+        if (!Enabled)
+        {
+            return FullCipherAccess.Unrestricted();
+        }
+
+        var collectionIds = await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
+        var leasingCollectionIds = await GetLeasingCollectionIdsAsync(organizationId);
+        return IsGated(collectionIds, leasingCollectionIds) ? null : FullCipherAccess.ForCipher(cipher.Id);
     }
 
     public async Task<FullCipherAccess> EnsureCanMutateAsync(Guid userId, Cipher cipher)
@@ -349,14 +387,22 @@ public class CipherLeaseGate : ICipherLeaseGate
     private async Task<bool> IsBlockedAsync(Guid userId, Guid cipherId)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
-
-        if (await _resolver.ResolveAsync(userId, cipherId, signals) is null)
+        if (!await IsGatedForCallerAsync(userId, cipherId, now))
         {
             return false;
         }
 
         var activeLease = await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now);
         return activeLease is null;
+    }
+
+    /// <summary>
+    /// Whether an enabled access rule governs the cipher for this caller — the structural half of
+    /// <see cref="IsBlockedAsync" />, and on its own the whole write-return decision.
+    /// </summary>
+    private async Task<bool> IsGatedForCallerAsync(Guid userId, Guid cipherId, DateTime now)
+    {
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
+        return await _resolver.ResolveAsync(userId, cipherId, signals) is not null;
     }
 }
