@@ -9,6 +9,9 @@ public class AccessStatusDerivationTests
     private static readonly DateTime _open = new(2026, 8, 27, 13, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _lapsed = new(2026, 8, 27, 11, 0, 0, DateTimeKind.Utc);
 
+    // The full derivation table for requests: the recorded action interpreted against the clock, with the two sticky
+    // Approved carve-outs (activated, applied extension) and the two origins of Expired.
+
     [Fact]
     public void ComputeStatus_NoneOpenWindow_IsPending() =>
         Assert.Equal(AccessRequestStatus.Pending,
@@ -31,13 +34,14 @@ public class AccessStatusDerivationTests
 
     [Fact]
     public void ComputeStatus_ApprovedWithLease_CannotLapseOutOfApproved() =>
-        // An activated request continues on its lease, whose end the lease read reports.
+        // An activated request's story continues on its lease; the lease's own end is the lease read's business.
         Assert.Equal(AccessRequestStatus.Approved,
             AccessStatusDerivation.ComputeStatus(AccessRequestAction.Approved, true, false, _lapsed, _now));
 
     [Fact]
     public void ComputeStatus_ApprovedExtension_CannotLapseOutOfApproved() =>
-        // The client's extensionsByLeaseId folding filters on approved, so an extension has to stay Approved.
+        // An applied extension finished its work at creation (the parent lease's end moved in place). The client's
+        // extensionsByLeaseId folding filters on approved, so this carve-out is load-bearing.
         Assert.Equal(AccessRequestStatus.Approved,
             AccessStatusDerivation.ComputeStatus(AccessRequestAction.Approved, false, true, _lapsed, _now));
 
@@ -59,7 +63,7 @@ public class AccessStatusDerivationTests
 
     [Fact]
     public void ComputeStatus_WindowEndIsExclusive_BoundaryInstantIsExpired() =>
-        // Matches the active reads, which use NotAfter > now.
+        // NotAfter is exclusive everywhere (active reads use NotAfter > now), so the boundary instant is outside.
         Assert.Equal(AccessRequestStatus.Expired,
             AccessStatusDerivation.ComputeStatus(AccessRequestAction.None, false, false, _now, _now));
 
@@ -67,6 +71,8 @@ public class AccessStatusDerivationTests
     public void ComputeStatus_UnknownAction_Throws() =>
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             AccessStatusDerivation.ComputeStatus((AccessRequestAction)99, false, false, _open, _now));
+
+    // The lease table: an early end beats the clock; only an untouched lease is the clock's to judge.
 
     [Fact]
     public void ComputeLeaseStatus_NoneOpenWindow_IsActive() =>
@@ -86,14 +92,14 @@ public class AccessStatusDerivationTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void ComputeLeaseStatus_Revoked_RecordedFactBeatsTheClock(bool windowOpen) =>
+    public void ComputeLeaseStatus_Revoked_EndedEarlyEndedEarly(bool windowOpen) =>
         Assert.Equal(AccessLeaseStatus.Revoked,
             AccessStatusDerivation.ComputeLeaseStatus(AccessLeaseAction.Revoked, windowOpen ? _open : _lapsed, _now));
 
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void ComputeLeaseStatus_Cancelled_RecordedFactBeatsTheClock(bool windowOpen) =>
+    public void ComputeLeaseStatus_Cancelled_EndedEarlyEndedEarly(bool windowOpen) =>
         Assert.Equal(AccessLeaseStatus.Cancelled,
             AccessStatusDerivation.ComputeLeaseStatus(AccessLeaseAction.Cancelled, windowOpen ? _open : _lapsed, _now));
 

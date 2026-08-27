@@ -5,47 +5,44 @@ CREATE TABLE [dbo].[AccessLease] (
     [CollectionId]      UNIQUEIDENTIFIER    NOT NULL,
     [CipherId]          UNIQUEIDENTIFIER    NOT NULL,
     [RequesterId]       UNIQUEIDENTIFIER    NOT NULL,
+    -- How the lease was ended early, if it was (AccessLeaseAction: 0 None, 2 Revoked, 3 Cancelled; byte 1, the old
+    -- stored Expired, is retired). A recorded fact, never a claim about the present: Active and Expired are derived
+    -- against the read clock and are unrepresentable here. The happy-path lease carries 0 forever.
     [Action]            TINYINT             NOT NULL,
     [NotBefore]         DATETIME2 (7)       NOT NULL,
     [NotAfter]          DATETIME2 (7)       NOT NULL,
     [RevokedDate]       DATETIME2 (7)       NULL,
     [RevokedBy]         UNIQUEIDENTIFIER    NULL,
     [CreationDate]      DATETIME2 (7)       NOT NULL,
-    [SweptDate]         DATETIME2 (7)       NULL,
     CONSTRAINT [PK_AccessLease] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AccessLease_AccessRequest] FOREIGN KEY ([AccessRequestId]) REFERENCES [dbo].[AccessRequest] ([Id]),
     CONSTRAINT [FK_AccessLease_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
 );
 GO
 
--- Supports the requester's live-lease reads; [NotAfter] lets the clock check seek past expired history.
--- The INCLUDE covers the row so no clustered lookup follows.
-CREATE NONCLUSTERED INDEX [IX_AccessLease_RequesterId_Action_NotAfter]
-    ON [dbo].[AccessLease] ([RequesterId] ASC, [Action] ASC, [NotAfter] ASC)
-    INCLUDE ([AccessRequestId], [OrganizationId], [CollectionId], [CipherId], [NotBefore], [RevokedDate], [RevokedBy], [CreationDate], [SweptDate]);
+CREATE NONCLUSTERED INDEX [IX_AccessLease_RequesterId_CipherId_Action]
+    ON [dbo].[AccessLease] ([RequesterId] ASC, [CipherId] ASC, [Action] ASC);
 GO
 
--- Supports the expiry sweep; leading on [SweptDate] seeks straight to the unswept rows, so the read doesn't
--- grow with the lease history already swept.
-CREATE NONCLUSTERED INDEX [IX_AccessLease_SweptDate_Action_NotAfter]
-    ON [dbo].[AccessLease] ([SweptDate] ASC, [Action] ASC, [NotAfter] ASC);
+CREATE NONCLUSTERED INDEX [IX_AccessLease_NotAfter_Action]
+    ON [dbo].[AccessLease] ([NotAfter] ASC, [Action] ASC);
 GO
 
--- Supports the governance lease lists filtered by the caller's manageable collection ids.
--- AccessLease_ReadManyActiveByCollectionIds seeks on all three keys. The INCLUDE names every other column so
--- neither list needs a clustered lookup: add any new AccessLease column here too, or SELECT L.* stops being covered.
-CREATE NONCLUSTERED INDEX [IX_AccessLease_CollectionId_Action_NotAfter]
-    ON [dbo].[AccessLease] ([CollectionId] ASC, [Action] ASC, [NotAfter] ASC)
-    INCLUDE ([AccessRequestId], [OrganizationId], [CipherId], [RequesterId], [NotBefore], [RevokedDate], [RevokedBy], [CreationDate], [SweptDate]);
+-- Supports the governance lease lists (AccessLease_ReadManyActiveByCollectionIds /
+-- AccessLease_ReadManyEndedByCollectionIds), which filter by the caller's manageable collection ids.
+CREATE NONCLUSTERED INDEX [IX_AccessLease_CollectionId_Action]
+    ON [dbo].[AccessLease] ([CollectionId] ASC, [Action] ASC);
 GO
 
--- Supports the per-cipher singleton guard, which locks by CipherId alone.
--- NotAfter DESC lets AccessLease_ReadActiveByCipherId seek in-window rows without a sort.
-CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action_NotAfter]
-    ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC, [NotAfter] DESC);
+-- Supports the per-cipher singleton guard in AccessLease_CreateFromApprovedRequest. That guard filters on CipherId
+-- alone under UPDLOCK/HOLDLOCK, so without a CipherId-leading index the range lock it takes covers either the whole
+-- table or every currently-running and future lease, serializing unrelated organizations' activations against it.
+CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action]
+    ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC);
 GO
 
--- A request produces at most one lease, ever; unique index backstops racing activations.
+-- A request produces at most one lease, ever: activating an approved request and the automatic path each insert
+-- exactly one. Unique to backstop racing activations that pass the application-level checks simultaneously.
 CREATE UNIQUE NONCLUSTERED INDEX [IX_AccessLease_AccessRequestId]
     ON [dbo].[AccessLease] ([AccessRequestId] ASC);
 GO
