@@ -77,9 +77,11 @@ Use the `X-Play-Id` header value to later destroy the seeded data.
 
 Beyond `planType` and `seats`, the request accepts:
 
-- `overrides` — optional capability/collection-management flags applied **on top of** the plan defaults. Any flag left
-  unset keeps the plan default. Set Secrets Manager via `enableSecretsManager` (with optional `smSeats` /
-  `smServiceAccounts`), not via `overrides`.
+- `overrides`: optional capability/collection-management flags applied **on top of** the plan defaults. Any flag left
+  unset keeps the plan default. This includes `useSecretsManager`: to seed an SM-off Enterprise org, send
+  `overrides.useSecretsManager: false` together with `enableSecretsManager: false`. If both
+  `enableSecretsManager: true` and `overrides.useSecretsManager: false` are sent, Secrets Manager stays on. Seat
+  provisioning (`smSeats` / `smServiceAccounts`) applies only when `enableSecretsManager: true`.
 - `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded org resembles a
   real billed org.
 

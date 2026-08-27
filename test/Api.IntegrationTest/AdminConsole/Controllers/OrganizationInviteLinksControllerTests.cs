@@ -464,6 +464,44 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
     }
 
     [Fact]
+    public async Task GetStatus_WithHtmlEncodedOrgName_ReturnsDecodedName()
+    {
+        // Organization.Name is stored HTML-encoded at write time (legacy XSS defense — see
+        // Admin OrganizationsController), so read paths must call Organization.DisplayName() to
+        // return a human-readable value. This test locks in that contract for the invite-link
+        // status endpoint so a raw Organization.Name regression can't ship literal entities
+        // (&amp;, &#39;, &quot;) to the client.
+        const string encodedName = "Acme &amp; &#39; &quot; Co.";
+        const string decodedName = "Acme & ' \" Co.";
+
+        var organizationRepository = _factory.Services.GetRequiredService<IOrganizationRepository>();
+        _organization.Name = encodedName;
+        await organizationRepository.ReplaceAsync(_organization);
+
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+            Invite = _invite,
+            SupportsConfirmation = false,
+        };
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(created);
+
+        var anonClient = _factory.CreateClient();
+        var statusResponse = await anonClient.PostAsJsonAsync(
+            "/organizations/invite-link/status",
+            new GetOrganizationInviteLinkStatusRequestModel { OrganizationId = _organization.Id, Code = created.Code });
+
+        Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+        var status = await statusResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkStatusResponseModel>();
+        Assert.NotNull(status);
+        Assert.Equal(decodedName, status.OrganizationName);
+    }
+
+    [Fact]
     public async Task GetPolicies_WithExistingLink_ReturnsListResponseModel()
     {
         var createRequest = new CreateOrganizationInviteLinkRequestModel

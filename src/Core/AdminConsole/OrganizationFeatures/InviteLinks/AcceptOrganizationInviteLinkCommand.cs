@@ -82,7 +82,7 @@ public class AcceptOrganizationInviteLinkCommand(
         }
 
         var acceptResult = existingOrganizationUser is not null
-            ? await AcceptExistingInviteAsync(existingOrganizationUser, user, autoConfirmPolicyEnabled)
+            ? await AcceptExistingOrgUserAsync(organization, existingOrganizationUser, user, autoConfirmPolicyEnabled)
             : await CreateNewMembershipAsync(organization, user, autoConfirmPolicyEnabled);
         if (acceptResult.IsError)
         {
@@ -123,9 +123,18 @@ public class AcceptOrganizationInviteLinkCommand(
         return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 
-    private async Task<CommandResult<OrganizationUser>> AcceptExistingInviteAsync(
-        OrganizationUser existingOrganizationUser, User user, bool autoConfirmPolicyEnabled)
+    private async Task<CommandResult<OrganizationUser>> AcceptExistingOrgUserAsync(
+        Organization organization, OrganizationUser existingOrganizationUser, User user, bool autoConfirmPolicyEnabled)
     {
+        if (existingOrganizationUser.Status == OrganizationUserStatusType.Staged)
+        {
+            var seatReservationError = await ReserveSeatAsync(organization);
+            if (seatReservationError is not null)
+            {
+                return seatReservationError;
+            }
+        }
+
         existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         existingOrganizationUser.UserId = user.Id;
         existingOrganizationUser.Email = null;
@@ -143,16 +152,10 @@ public class AcceptOrganizationInviteLinkCommand(
     private async Task<CommandResult<OrganizationUser>> CreateNewMembershipAsync(
         Organization organization, User user, bool autoConfirmPolicyEnabled)
     {
-        var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
-        if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
+        var seatReservationError = await ReserveSeatAsync(organization);
+        if (seatReservationError is not null)
         {
-            return new OrganizationHasNoAvailableSeats(organization.DisplayName());
-        }
-
-        var seatExpansionError = await TryExpandSeatsAsync(organization, occupiedSeatCount);
-        if (seatExpansionError is not null)
-        {
-            return seatExpansionError;
+            return seatReservationError;
         }
 
         var accessSecretsManager = await stripePaymentService.HasSecretsManagerStandalone(organization);
@@ -177,8 +180,22 @@ public class AcceptOrganizationInviteLinkCommand(
     }
 
     /// <summary>
-    /// Expands the organization's seats before the new membership is created, so that a billing or
-    /// persistence failure leaves no orphaned seat. Only auto-adds when the org is already at capacity.
+    /// Reserves capacity for one more seat-occupying member. Runs before the membership is written so that a
+    /// billing or persistence failure leaves no orphaned seat.
+    /// </summary>
+    private async Task<Error?> ReserveSeatAsync(Organization organization)
+    {
+        var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
+        if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
+        {
+            return new OrganizationHasNoAvailableSeats(organization.DisplayName());
+        }
+
+        return await TryExpandSeatsAsync(organization, occupiedSeatCount);
+    }
+
+    /// <summary>
+    /// Only auto-adds when the organization is already at capacity.
     /// </summary>
     private async Task<Error?> TryExpandSeatsAsync(Organization organization, int occupiedSeatCount)
     {

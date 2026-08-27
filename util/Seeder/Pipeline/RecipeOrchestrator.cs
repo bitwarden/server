@@ -40,6 +40,8 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var effectiveKdf = kdfIterations ?? preset.KdfIterations ?? 5_000;
 
         var services = new ServiceCollection();
+        services.AddSingleton(deps.LoggerFactory);
+        services.AddLogging();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(deps.AttachmentStorageService);
@@ -67,6 +69,8 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
             email => deps.Db.Users.Any(u => u.Email == email));
 
         var services = new ServiceCollection();
+        services.AddSingleton(deps.LoggerFactory);
+        services.AddLogging();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(deps.AttachmentStorageService);
@@ -137,11 +141,14 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var maxStorageGb = premium ? (short)1 : (short)0;
 
         var services = new ServiceCollection();
+        services.AddSingleton(deps.LoggerFactory);
+        services.AddLogging();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(deps.AttachmentStorageService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
         services.AddSingleton(deps.LicensingService);
+        services.AddSingleton(deps.LicenseSigner);
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);
@@ -150,7 +157,11 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var recipeName = "individual-from-options";
         var builder = services.AddRecipe(recipeName);
 
-        builder.CreateIndividualUser(email, premium, maxStorageGb, options.SelfHosted);
+        DateTime? creationDate = options.AccountAgeDays > 0
+            ? DateTime.UtcNow.AddDays(-options.AccountAgeDays)
+            : null;
+
+        builder.CreateIndividualUser(email, premium, maxStorageGb, options.SelfHosted, creationDate);
         builder.WithGenerator("individual.example");
 
         if (options.GenerateVault)

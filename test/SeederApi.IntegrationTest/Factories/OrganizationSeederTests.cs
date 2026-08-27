@@ -62,6 +62,35 @@ public class OrganizationSeederTests
     }
 
     [Fact]
+    public void Create_OverrideDisablesSecretsManagerOnEnterprise()
+    {
+        // Enterprise flags Secrets Manager on by default; the override is the way to turn it back off.
+        var defaultOn = OrganizationSeeder.Create(
+            Seed() with { PlanType = PlanType.EnterpriseAnnually }, new NoOpManglerService());
+        Assert.True(defaultOn.UseSecretsManager);
+
+        var overriddenOff = OrganizationSeeder.Create(
+            Seed() with
+            {
+                PlanType = PlanType.EnterpriseAnnually,
+                Overrides = new OrganizationOverrides { UseSecretsManager = false }
+            },
+            new NoOpManglerService());
+        Assert.False(overriddenOff.UseSecretsManager);
+
+        // Intended precedence, not a bug: the EnableSecretsManager gate runs after overrides and forces SM on.
+        var gateWins = OrganizationSeeder.Create(
+            Seed() with
+            {
+                PlanType = PlanType.EnterpriseAnnually,
+                EnableSecretsManager = true,
+                Overrides = new OrganizationOverrides { UseSecretsManager = false }
+            },
+            new NoOpManglerService());
+        Assert.True(gateWins.UseSecretsManager);
+    }
+
+    [Fact]
     public void Create_SetsBillingGatewayIdentifiers()
     {
         var organization = OrganizationSeeder.Create(
@@ -127,9 +156,22 @@ public class OrganizationSeederTests
     }
 
     [Fact]
+    public void Create_FreeWithSecretsManager_SetsFreeTierDefaults()
+    {
+        var free = OrganizationSeeder.Create(
+            Seed() with { PlanType = PlanType.Free, EnableSecretsManager = true },
+            new NoOpManglerService());
+
+        Assert.True(free.UseSecretsManager);
+        Assert.Equal(2, free.SmSeats);            // Free tier base seats
+        Assert.Equal(3, free.SmServiceAccounts);  // Free tier base service accounts
+    }
+
+    [Fact]
     public void Create_SecretsManagerOnUnsupportedPlan_Throws()
     {
-        var seed = Seed() with { PlanType = PlanType.Free, EnableSecretsManager = true };
+        // Families has no Secrets Manager tier, so enabling it must still throw.
+        var seed = Seed() with { PlanType = PlanType.FamiliesAnnually, EnableSecretsManager = true };
 
         Assert.Throws<ArgumentException>(() => OrganizationSeeder.Create(seed, new NoOpManglerService()));
     }

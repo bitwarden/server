@@ -8,6 +8,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -540,7 +541,7 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
 
         foreach (var user in userList)
         {
-            await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushLogOutAsync(user.Id);
+            await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
         }
 
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -552,7 +553,7 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
     private static async Task AssertNoUserOperations(SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider)
     {
         await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().DeleteManyAsync(default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushLogOutAsync(default);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive().PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogOrganizationUserEventsAsync(default(IEnumerable<(OrganizationUser, EventType, DateTime?)>));
     }

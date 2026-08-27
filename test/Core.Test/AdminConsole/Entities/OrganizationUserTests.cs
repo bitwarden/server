@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
@@ -137,5 +138,32 @@ public class OrganizationUserTests
         orgUser.UpdateOrganizationUser(OrganizationUserType.User, null, false, false, timeProvider);
 
         Assert.Equal(now.UtcDateTime, orgUser.RevisionDate);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserType.User)]
+    [InlineData(OrganizationUserType.Admin)]
+    [InlineData(OrganizationUserType.Owner)]
+    public void UpdateOrganizationUser_ConvertedFromCustom_ClearsPermissions(OrganizationUserType newType)
+    {
+        var orgUser = new OrganizationUser { Type = OrganizationUserType.Custom };
+        orgUser.SetPermissions(new Permissions { ManageUsers = true });
+
+        orgUser.UpdateOrganizationUser(newType, new Permissions { ManageUsers = true }, false, false,
+            TimeProvider.System);
+
+        Assert.Null(orgUser.Permissions);
+        Assert.Null(orgUser.GetPermissions());
+    }
+
+    [Fact]
+    public void UpdateOrganizationUser_ConvertedToCustom_SetsPermissions()
+    {
+        var orgUser = new OrganizationUser { Type = OrganizationUserType.User };
+
+        orgUser.UpdateOrganizationUser(OrganizationUserType.Custom, new Permissions { ManageUsers = true }, false,
+            false, TimeProvider.System);
+
+        Assert.True(orgUser.GetPermissions()!.ManageUsers);
     }
 }
