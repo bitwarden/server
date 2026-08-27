@@ -17,7 +17,7 @@ namespace Bit.SharedWeb.Test.DataProtectionServicesTests;
 public class DataProtectionServicesTests
 {
     private const string AzuriteImage =
-        "mcr.microsoft.com/azure-storage/azurite:3.36.0@sha256:76b8127d608fab8287a14a4bfeb9a5502cdcffb4bf1e86f09f324ebb0e70edba";
+        "mcr.microsoft.com/azure-storage/azurite:3.37.0@sha256:830430c1da1a2d537e08f3e6764dd1f5ae00cf0346bcaf625b968ec3f0971fd5";
 
     // Created using:
     // using var rsa = RSA.Create(2048);
@@ -857,16 +857,6 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     private static IContainer CreateAzuriteContainer() =>
         new ContainerBuilder(AzuriteImage)
             .WithPortBinding(10000, true)
-            // The container's CMD is reproduced here in order to add `--skipApiVersionCheck` due
-            // to the Azure.Storage deps upgraded in bitwarden/server#6656 not being fully
-            // compatible with the latest Azurite image.
-            .WithCommand(
-                "azurite",
-                "-l", "/data",
-                "--blobHost", "0.0.0.0",
-                "--queueHost", "0.0.0.0",
-                "--tableHost", "0.0.0.0",
-                "--skipApiVersionCheck")
             .Build();
 
     private static async Task RunTestAsync(Func<TestSetupContext, Task> testSetup, Action<TestRunContext> test)
