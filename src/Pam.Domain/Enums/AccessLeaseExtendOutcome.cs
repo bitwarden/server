@@ -11,8 +11,14 @@ public enum AccessLeaseExtendOutcome
 
     /// <summary>
     /// The lease was no longer active, or its window had already ended, when the guarded update ran (stored proc
-    /// returned 0). A concurrent revoke or expiry likely won.
+    /// returned 0). A concurrent revoke or expiry likely won — most often the lease simply ran out while the Extend
+    /// dialog sat open.
     /// </summary>
+    /// <remarks>
+    /// The request was still recorded, as Denied with an automatic Deny decision naming why, so the requester can
+    /// inspect it (PM-42632). Only the parent lease is untouched — nothing was extended. Contrast
+    /// <see cref="AlreadyExtended"/>, which persists nothing at all.
+    /// </remarks>
     LeaseNotActive = 0,
 
     /// <summary>
