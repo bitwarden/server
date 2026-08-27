@@ -565,4 +565,47 @@ public class SendVerificationEmailForRegistrationCommandTests
             .SendRegistrationVerificationEmailAsync(email, mockedToken, null, openOrgInvite.SealedOpenOrgInviteData);
         Assert.Null(result);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_OpenOrgInvite_Provided_OpenRegistrationDisabled_Succeeds(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
+    {
+        // The DisableUserRegistration toggle targets open self-registration. A validated open-org
+        // invite is the authorization for that path, so the toggle must not block it — fedramp
+        // deployments rely on this combination.
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = BuildOpenOrgInvite(organizationId, code);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .ReturnsNull();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = true;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = true;
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        var mockedToken = "token";
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(mockedToken);
+
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, openOrgInvite);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null, openOrgInvite.SealedOpenOrgInviteData);
+        Assert.Null(result);
+    }
 }

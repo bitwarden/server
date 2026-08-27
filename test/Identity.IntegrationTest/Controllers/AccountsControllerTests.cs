@@ -601,13 +601,15 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
 
     [Theory, BitAutoData]
     public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndOpenRegistrationDisabled_Succeeds(
-        [Required] string name, [StringLength(1000), Required] string masterPasswordHash,
-        [StringLength(50)] string masterPasswordHint, [Required] string userSymmetricKey,
-        [Required] KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
+        [Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
     {
         // The DisableUserRegistration self-hosted admin toggle targets open self-registration.
-        // Possession of a valid invite link is the authorization for this path, so register-finish
-        // via an open org invite must proceed even when that toggle is on.
+        // Possession of a valid invite link is the authorization for this path, so both
+        // register-start and register-finish via an open org invite must proceed even when
+        // that toggle is on.
         userAsymmetricKeys.AccountKeys = null;
         var localFactory = new IdentityApplicationFactory();
         localFactory.UpdateConfiguration("globalSettings:disableUserRegistration", "true");
@@ -616,19 +618,28 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         var email = $"test+openinvitedisabled+{name}@email.com";
         var (_, inviteLink) = await SeedOrgWithInviteLinkAsync(localFactory, allowedDomains: new[] { "email.com" });
 
-        // Mint a real email verification token via the same factory the send endpoint uses. The
-        // send endpoint currently short-circuits on DisableUserRegistration regardless of payload,
-        // so exercising register-finish requires bypassing it — that gate is out of scope here.
-        var tokenFactory = localFactory.Services
-            .GetRequiredService<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
-        var emailVerificationToken = tokenFactory.Protect(new RegistrationEmailVerificationTokenable(email, name));
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status204NoContent, sendCtx.Response.StatusCode);
+        Assert.NotNull(localFactory.RegistrationTokens[email]);
 
         var registerFinishReqModel = new RegisterFinishRequestModel
         {
             Email = email,
             MasterPasswordHash = masterPasswordHash,
             MasterPasswordHint = masterPasswordHint,
-            EmailVerificationToken = emailVerificationToken,
+            EmailVerificationToken = localFactory.RegistrationTokens[email],
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
