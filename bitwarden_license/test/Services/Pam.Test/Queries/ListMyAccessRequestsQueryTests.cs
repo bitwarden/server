@@ -3,7 +3,6 @@ using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -24,7 +23,7 @@ public class ListMyAccessRequestsQueryTests
         sutProvider.GetDependency<IAccessRequestRepository>()
             .GetManyByRequesterIdAsync(userId, expectedSince, _now).Returns([row]);
 
-        var result = await sutProvider.Sut.GetMineAsync(userId);
+        var result = await sutProvider.Sut.GetMineAsync(userId, _now);
 
         Assert.Single(result);
         // `now` is passed alongside `since` because it does two further jobs the window bound does not: it decides
@@ -41,7 +40,7 @@ public class ListMyAccessRequestsQueryTests
         sutProvider.GetDependency<IAccessRequestRepository>()
             .GetManyByRequesterIdAsync(userId, Arg.Any<DateTime?>(), Arg.Any<DateTime>()).Returns([]);
 
-        Assert.Empty(await sutProvider.Sut.GetMineAsync(userId));
+        Assert.Empty(await sutProvider.Sut.GetMineAsync(userId, _now));
     }
 
     [Theory, BitAutoData]
@@ -59,13 +58,12 @@ public class ListMyAccessRequestsQueryTests
         sutProvider.GetDependency<IAccessRequestRepository>()
             .GetManyByRequesterIdAsync(userId, Arg.Any<DateTime?>(), Arg.Any<DateTime>()).Returns([aged]);
 
-        Assert.Equal(aged.Id, Assert.Single(await sutProvider.Sut.GetMineAsync(userId)).Id);
+        Assert.Equal(aged.Id, Assert.Single(await sutProvider.Sut.GetMineAsync(userId, _now)).Id);
     }
 
     private static SutProvider<ListMyAccessRequestsQuery> Setup()
     {
-        var sutProvider = new SutProvider<ListMyAccessRequestsQuery>().WithFakeTimeProvider().Create();
-        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        var sutProvider = new SutProvider<ListMyAccessRequestsQuery>().Create();
         return sutProvider;
     }
 }

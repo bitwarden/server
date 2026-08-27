@@ -9,19 +9,16 @@ public class ListInboxHistoryQuery : IListInboxHistoryQuery
 {
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IAccessRequestRepository _accessRequestRepository;
-    private readonly TimeProvider _timeProvider;
 
     public ListInboxHistoryQuery(
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
-        IAccessRequestRepository accessRequestRepository,
-        TimeProvider timeProvider)
+        IAccessRequestRepository accessRequestRepository)
     {
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _accessRequestRepository = accessRequestRepository;
-        _timeProvider = timeProvider;
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetHistoryAsync(Guid userId)
+    public async Task<ICollection<AccessRequestDetails>> GetHistoryAsync(Guid userId, DateTime now)
     {
         var manageableCollectionIds = await _approverCollectionAccessQuery.GetManageableCollectionIdsAsync(userId);
         if (manageableCollectionIds.Count == 0)
@@ -29,9 +26,8 @@ public class ListInboxHistoryQuery : IListInboxHistoryQuery
             return new List<AccessRequestDetails>();
         }
 
-        // One clock, two jobs: `now` bounds the history window through `since`, and separately projects each row's
-        // produced-lease status (see AccessRequestDetails.ProducedLeaseStatus).
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        // One clock (the caller's), two jobs: `now` bounds the history window through `since`, and separately
+        // projects each row's derived statuses (see AccessRequestDetails.ProducedLeaseStatus).
         return await _accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
             manageableCollectionIds, now.AddDays(-AccessHistoryWindow.RetentionDays), now);
     }

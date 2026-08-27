@@ -47,13 +47,13 @@ public class RequestLeaseExtensionCommandTests
     }
 
     [Theory]
-    [BitAutoData(AccessLeaseStatus.Revoked)]
-    [BitAutoData(AccessLeaseStatus.Expired)]
-    public async Task ExtendAsync_LeaseNotActive_StillReachesTheGuardedWrite(AccessLeaseStatus status, AccessLease lease)
+    [BitAutoData(AccessLeaseAction.Revoked)]
+    [BitAutoData(AccessLeaseAction.Cancelled)]
+    public async Task ExtendAsync_LeaseNotActive_StillReachesTheGuardedWrite(AccessLeaseAction action, AccessLease lease)
     {
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
-        lease.Status = status;
+        lease.Action = action;
 
         // No pre-check on the lease's liveness: whether there is anything left to extend is settled once, under the
         // lease lock, by the write itself — which answers it with a denied request rather than a refusal (PM-42632).
@@ -189,7 +189,7 @@ public class RequestLeaseExtensionCommandTests
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
             Arg.Is<AccessRequest>(r =>
                 r.ExtensionOfLeaseId == lease.Id
-                && r.Status == AccessRequestStatus.Approved
+                && r.Action == AccessRequestAction.Approved
                 && r.RuleId == ruleId
                 && r.NotBefore == lease.NotAfter
                 && r.NotAfter == expectedNotAfter),
@@ -305,7 +305,7 @@ public class RequestLeaseExtensionCommandTests
         SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLease lease, bool allowsExtensions = true,
         Guid ruleId = default)
     {
-        lease.Status = AccessLeaseStatus.Active;
+        lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
 

@@ -11,6 +11,7 @@ using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -19,10 +20,15 @@ namespace Bit.Services.Pam.Test.Queries;
 [SutProviderCustomize]
 public class GetCipherAccessStateQueryTests
 {
+    // A pinned clock far from the wall clock on purpose: a derivation that accidentally reads the real clock instead
+    // of the query's TimeProvider lands on the wrong side of every window built from _now and fails loudly.
+    private static readonly DateTime _now = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+
     [Theory, BitAutoData]
     public async Task GetStateAsync_CipherNotAccessible_ThrowsNotFound(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId)
+        Guid userId, Guid cipherId)
     {
+        var sutProvider = Setup();
         sutProvider.GetDependency<ICipherRepository>()
             .GetByIdAsync(cipherId, userId)
             .Returns((CipherDetails?)null);
@@ -32,8 +38,9 @@ public class GetCipherAccessStateQueryTests
 
     [Theory, BitAutoData]
     public async Task GetStateAsync_NotGatedAndNothingHeld_ThrowsNotFound(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId)
+        Guid userId, Guid cipherId)
     {
+        var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         // No active lease, no pending request, and the resolver finds no governing rule.
         sutProvider.GetDependency<IGoverningRuleResolver>()
@@ -45,11 +52,12 @@ public class GetCipherAccessStateQueryTests
 
     [Theory, BitAutoData]
     public async Task GetStateAsync_ActiveLease_ReturnsSnapshotWithLease(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, AccessLease activeLease)
+        Guid userId, Guid cipherId, AccessLease activeLease)
     {
+        var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(activeLease);
 
         var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
@@ -61,11 +69,12 @@ public class GetCipherAccessStateQueryTests
 
     [Theory, BitAutoData]
     public async Task GetStateAsync_LeaseHeldButRuleRemoved_StillReturnsSnapshot(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, AccessLease activeLease)
+        Guid userId, Guid cipherId, AccessLease activeLease)
     {
+        var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(activeLease);
         // Access rule since removed: resolver returns null, but the held lease must not be hidden.
         sutProvider.GetDependency<IGoverningRuleResolver>()
@@ -79,14 +88,17 @@ public class GetCipherAccessStateQueryTests
 
     [Theory, BitAutoData]
     public async Task GetStateAsync_PendingRequest_MapsToDetails(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, AccessRequest pending)
+        Guid userId, Guid cipherId, AccessRequest pending)
     {
+        var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         pending.CipherId = cipherId;
         pending.RequesterId = userId;
-        pending.Status = AccessRequestStatus.Pending;
+        pending.Action = AccessRequestAction.None;
+        // The status derives against the query's clock; pin an open window so this reads as Pending.
+        pending.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId)
+            .GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(pending);
 
         var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
@@ -103,14 +115,17 @@ public class GetCipherAccessStateQueryTests
 
     [Theory, BitAutoData]
     public async Task GetStateAsync_ApprovedRequest_MapsToDetails(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, AccessRequest approved)
+        Guid userId, Guid cipherId, AccessRequest approved)
     {
+        var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         approved.CipherId = cipherId;
         approved.RequesterId = userId;
-        approved.Status = AccessRequestStatus.Approved;
+        approved.Action = AccessRequestAction.Approved;
+        // The status derives against the query's clock; pin an open window so this reads as Approved.
+        approved.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(approved);
 
         var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
@@ -130,12 +145,14 @@ public class GetCipherAccessStateQueryTests
 
     [Theory, BitAutoData]
     public async Task GetStateAsync_ApprovedHeldButRuleRemoved_StillReturnsSnapshot(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, AccessRequest approved)
+        Guid userId, Guid cipherId, AccessRequest approved)
     {
+        var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
-        approved.Status = AccessRequestStatus.Approved;
+        approved.Action = AccessRequestAction.Approved;
+        approved.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(approved);
         // Access rule since removed: resolver returns null, but the startable approval must not be hidden.
         sutProvider.GetDependency<IGoverningRuleResolver>()
@@ -150,8 +167,9 @@ public class GetCipherAccessStateQueryTests
 
     [Theory, BitAutoData]
     public async Task GetStateAsync_GatedButEmpty_ReturnsEmptySnapshot(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
+        var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
@@ -168,12 +186,13 @@ public class GetCipherAccessStateQueryTests
 
     [Theory, BitAutoData]
     public async Task GetStateAsync_ActiveLease_NotYetExtended_AllowedWithMaxLength(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
         AccessLease activeLease)
     {
+        var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(activeLease);
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
@@ -194,12 +213,13 @@ public class GetCipherAccessStateQueryTests
 
     [Theory, BitAutoData]
     public async Task GetStateAsync_ActiveLease_AlreadyExtended_NotAllowed(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
         AccessLease activeLease)
     {
+        var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(activeLease);
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
@@ -221,12 +241,13 @@ public class GetCipherAccessStateQueryTests
 
     [Theory, BitAutoData]
     public async Task GetStateAsync_ActiveLease_ExtensionsDisallowed_ReportsNotAllowed(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
         AccessLease activeLease)
     {
+        var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(activeLease);
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
@@ -242,6 +263,13 @@ public class GetCipherAccessStateQueryTests
         Assert.Null(result.MaxExtensionDurationSeconds);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CountExtensionsByLeaseIdAsync(default);
+    }
+
+    private static SutProvider<GetCipherAccessStateQuery> Setup()
+    {
+        var sutProvider = new SutProvider<GetCipherAccessStateQuery>().WithFakeTimeProvider().Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        return sutProvider;
     }
 
     private static void SetupCipher(SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId)

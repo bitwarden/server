@@ -4,7 +4,6 @@ using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -22,7 +21,7 @@ public class ListInboxHistoryQueryTests
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .GetManageableCollectionIdsAsync(userId).Returns([]);
 
-        var result = await sutProvider.Sut.GetHistoryAsync(userId);
+        var result = await sutProvider.Sut.GetHistoryAsync(userId, _now);
 
         Assert.Empty(result);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -40,7 +39,7 @@ public class ListInboxHistoryQueryTests
         sutProvider.GetDependency<IAccessRequestRepository>()
             .GetManyInboxHistoryByCollectionIdsAsync(manageable, expectedSince, _now).Returns([row]);
 
-        var result = await sutProvider.Sut.GetHistoryAsync(userId);
+        var result = await sutProvider.Sut.GetHistoryAsync(userId, _now);
 
         Assert.Single(result);
         // `now` is passed alongside `since`: it is the clock each row's produced-lease status is projected against
@@ -51,8 +50,7 @@ public class ListInboxHistoryQueryTests
 
     private static SutProvider<ListInboxHistoryQuery> Setup()
     {
-        var sutProvider = new SutProvider<ListInboxHistoryQuery>().WithFakeTimeProvider().Create();
-        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        var sutProvider = new SutProvider<ListInboxHistoryQuery>().Create();
         return sutProvider;
     }
 }

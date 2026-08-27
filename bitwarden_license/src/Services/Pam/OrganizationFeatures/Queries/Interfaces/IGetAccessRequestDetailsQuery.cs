@@ -11,5 +11,7 @@ public interface IGetAccessRequestDetailsQuery
     /// they have no business seeing. Unlike the decide surface this is a read and does NOT block the requester from
     /// viewing their own request.
     /// </summary>
-    Task<AccessRequestDetails> GetDetailsAsync(Guid userId, Guid requestId);
+    /// <param name="now">The caller's read clock: it filters/windows the read where applicable, and the derived
+    /// statuses stamped on the returned details are computed against the same instant.</param>
+    Task<AccessRequestDetails> GetDetailsAsync(Guid userId, Guid requestId, DateTime now);
 }

@@ -8,10 +8,19 @@ CREATE PROCEDURE [dbo].[AccessLease_Revoke]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls back both writes together on any failure.
+    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
+    -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
     SET XACT_ABORT ON
 
-    -- Ends a running lease (2 Revoked or 3 Cancelled), idempotently; feeds a Deny AccessDecision.
+    -- Atomically end a running lease and capture who/why. @Action is the early end being recorded: 2 (Revoked) when
+    -- an operator ended it, 3 (Cancelled) when the holder ended their own; RevokedDate/RevokedBy record when/who
+    -- either way. The reason has no dedicated column, so it is preserved as a human AccessDecision (Deny) against the
+    -- lease's originating request, keeping the audit trail without a schema change. The WHERE guard keeps the end
+    -- idempotent if two callers race.
+    --
+    -- OUTPUT captures the ended lease's own AccessRequestId, which does double duty: the decision is written only when
+    -- the transition actually happened (a repeat revoke ends nothing and appends nothing), and it is written against
+    -- the request that lease actually came from rather than one supplied by the caller.
     DECLARE @Ended TABLE ([AccessRequestId] UNIQUEIDENTIFIER)
 
     BEGIN TRANSACTION AccessLease_Revoke
@@ -21,9 +30,7 @@ BEGIN
         [RevokedDate] = @Now,
         [RevokedBy] = @RevokedBy
     OUTPUT INSERTED.[AccessRequestId] INTO @Ended
-    WHERE [Id] = @AccessLeaseId
-        AND [Action] = 0 -- None (no early end)
-        AND [NotAfter] > @Now
+    WHERE [Id] = @AccessLeaseId AND [Action] = 0 -- None (no early end)
 
     INSERT INTO [dbo].[AccessDecision]
     (

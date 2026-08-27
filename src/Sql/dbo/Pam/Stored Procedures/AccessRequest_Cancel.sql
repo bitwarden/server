@@ -4,18 +4,13 @@ CREATE PROCEDURE [dbo].[AccessRequest_Cancel]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- Explicit transaction needed; autocommit would release the claim's lock before the check.
-    SET XACT_ABORT ON
 
-    BEGIN TRANSACTION AccessRequest_Cancel
-
-    -- Claims the row before the lease probe so a concurrent activation can't mint meanwhile.
-    DECLARE @Claimed TINYINT
-    SELECT @Claimed = [Action]
-    FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)
-    WHERE [Id] = @AccessRequestId
-
-    -- Requester withdrawal of a not-yet-activated request; no AccessDecision, since it isn't an approver verdict.
+    -- The requester withdraws their own not-yet-activated request (open, or an approval they have not activated).
+    -- Unlike [AccessRequest_CancelWithDecision], no AccessDecision is written: a cancellation is the requester acting
+    -- on their own request, not an approver verdict. The WHERE guard keeps the write idempotent under a race, refuses
+    -- a request that has already produced a lease (that access is governed by the lease, which must be revoked
+    -- instead), and refuses a lapsed window -- a row users saw as derived-Expired must not later restamp to
+    -- Cancelled.
     UPDATE [dbo].[AccessRequest]
     SET [Action] = 3, -- Cancelled
         [ActionDate] = @Now
@@ -23,6 +18,4 @@ BEGIN
         AND [Action] IN (0, 1) -- None (open) or Approved
         AND [NotAfter] > @Now
         AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] L WHERE L.[AccessRequestId] = @AccessRequestId)
-
-    COMMIT TRANSACTION AccessRequest_Cancel
 END

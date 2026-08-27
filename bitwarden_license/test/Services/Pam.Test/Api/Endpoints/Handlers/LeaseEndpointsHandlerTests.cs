@@ -11,6 +11,7 @@ using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -21,13 +22,19 @@ public class LeaseEndpointsHandlerTests
 {
     private static readonly ClaimsPrincipal _user = new();
 
+    // A pinned clock far from the wall clock on purpose: a derivation that accidentally reads the real clock instead
+    // of the handler's TimeProvider lands on the wrong side of every window built from _now and fails loudly.
+    private static readonly DateTime _now = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+
     [Theory, BitAutoData]
-    public async Task GetActive_ReturnsMappedLeases(
-        Guid userId, AccessLease lease, SutProvider<LeaseEndpointsHandler> sutProvider)
+    public async Task GetActive_DerivesStatusAgainstTheClockThatFilteredTheRead(Guid userId, AccessLease lease)
     {
-        SetupUser(sutProvider, userId);
-        lease.Status = AccessLeaseStatus.Active;
-        sutProvider.GetDependency<IListActiveLeasesQuery>().GetActiveAsync(userId).Returns([lease]);
+        var sutProvider = Setup(userId);
+        // Live only relative to the pinned clock: no early end + a window open at _now reads as Active. The exact-
+        // argument mock proves the filter clock and the derivation clock are one value.
+        lease.Action = AccessLeaseAction.None;
+        lease.NotAfter = _now.AddHours(1);
+        sutProvider.GetDependency<IListActiveLeasesQuery>().GetActiveAsync(userId, _now).Returns([lease]);
 
         var result = (await sutProvider.Sut.GetActive(_user)).Data.ToList();
 
@@ -37,11 +44,10 @@ public class LeaseEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetActive_NoLeases_ReturnsEmpty(
-        Guid userId, SutProvider<LeaseEndpointsHandler> sutProvider)
+    public async Task GetActive_NoLeases_ReturnsEmpty(Guid userId)
     {
-        SetupUser(sutProvider, userId);
-        sutProvider.GetDependency<IListActiveLeasesQuery>().GetActiveAsync(userId).Returns([]);
+        var sutProvider = Setup(userId);
+        sutProvider.GetDependency<IListActiveLeasesQuery>().GetActiveAsync(userId, _now).Returns([]);
 
         var result = await sutProvider.Sut.GetActive(_user);
 
@@ -49,12 +55,11 @@ public class LeaseEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetHistory_ReturnsMappedLeases(
-        Guid userId, AccessLease lease, SutProvider<LeaseEndpointsHandler> sutProvider)
+    public async Task GetHistory_ReturnsMappedLeases(Guid userId, AccessLease lease)
     {
-        SetupUser(sutProvider, userId);
-        lease.Status = AccessLeaseStatus.Revoked;
-        sutProvider.GetDependency<IListLeaseHistoryQuery>().GetHistoryAsync(userId).Returns([lease]);
+        var sutProvider = Setup(userId);
+        lease.Action = AccessLeaseAction.Revoked;
+        sutProvider.GetDependency<IListLeaseHistoryQuery>().GetHistoryAsync(userId, _now).Returns([lease]);
 
         var result = (await sutProvider.Sut.GetHistory(_user)).Data.ToList();
 
@@ -64,13 +69,13 @@ public class LeaseEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetMine_ReturnsMappedLeases(
-        Guid userId, AccessLease lease, SutProvider<LeaseEndpointsHandler> sutProvider)
+    public async Task GetMine_DerivesStatusAgainstTheClockThatFilteredTheRead(Guid userId, AccessLease lease)
     {
-        SetupUser(sutProvider, userId);
-        lease.Status = AccessLeaseStatus.Active;
+        var sutProvider = Setup(userId);
+        lease.Action = AccessLeaseAction.None;
+        lease.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .GetManyActiveByRequesterIdAsync(userId, Arg.Any<DateTime>())
+            .GetManyActiveByRequesterIdAsync(userId, _now)
             .Returns([lease]);
 
         var result = (await sutProvider.Sut.GetMine(_user)).Data.ToList();
@@ -81,10 +86,9 @@ public class LeaseEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Revoke_InvokesRevokeCommand(
-        Guid userId, Guid leaseId, SutProvider<LeaseEndpointsHandler> sutProvider)
+    public async Task Revoke_InvokesRevokeCommand(Guid userId, Guid leaseId)
     {
-        SetupUser(sutProvider, userId);
+        var sutProvider = Setup(userId);
 
         await sutProvider.Sut.Revoke(_user, leaseId, new AccessLeaseRevokeRequestModel { Reason = "policy" });
 
@@ -93,10 +97,9 @@ public class LeaseEndpointsHandlerTests
 
     [Theory, BitAutoData]
     public async Task Extend_ForwardsRouteLeaseId_ReturnsApprovedExtensionDetails(
-        Guid userId, Guid leaseId, AccessLeaseExtensionRequestModel model, AccessRequestDetails details,
-        SutProvider<LeaseEndpointsHandler> sutProvider)
+        Guid userId, Guid leaseId, AccessLeaseExtensionRequestModel model, AccessRequestDetails details)
     {
-        SetupUser(sutProvider, userId);
+        var sutProvider = Setup(userId);
         details.Status = AccessRequestStatus.Approved;
         details.ProducedLeaseId = null; // an extension produces no lease of its own, so the status stays Approved
         sutProvider.GetDependency<IRequestLeaseExtensionCommand>()
@@ -114,10 +117,13 @@ public class LeaseEndpointsHandlerTests
                 s.LeaseId == leaseId && s.DurationSeconds == model.DurationSeconds && s.Reason == model.Reason));
     }
 
-    private static void SetupUser(SutProvider<LeaseEndpointsHandler> sutProvider, Guid userId)
+    private static SutProvider<LeaseEndpointsHandler> Setup(Guid userId)
     {
+        var sutProvider = new SutProvider<LeaseEndpointsHandler>().WithFakeTimeProvider().Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(userId);
+        return sutProvider;
     }
 }

@@ -10,6 +10,7 @@ using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -20,13 +21,16 @@ public class AccessRequestEndpointsHandlerTests
 {
     private static readonly ClaimsPrincipal _user = new();
 
+    // A pinned clock far from the wall clock on purpose: a derivation that accidentally reads the real clock instead
+    // of the handler's TimeProvider lands on the wrong side of every window built from _now and fails loudly.
+    private static readonly DateTime _now = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+
     [Theory, BitAutoData]
-    public async Task GetInbox_ReturnsMappedPendingRows(
-        Guid userId, AccessRequestDetails row, SutProvider<AccessRequestEndpointsHandler> sutProvider)
+    public async Task GetInbox_ReturnsMappedPendingRows(Guid userId, AccessRequestDetails row)
     {
-        SetupUser(sutProvider, userId);
+        var sutProvider = Setup(userId);
         row.Status = AccessRequestStatus.Pending;
-        sutProvider.GetDependency<IListInboxRequestsQuery>().GetPendingAsync(userId).Returns([row]);
+        sutProvider.GetDependency<IListInboxRequestsQuery>().GetPendingAsync(userId, _now).Returns([row]);
 
         var result = await sutProvider.Sut.GetInbox(_user);
 
@@ -35,12 +39,11 @@ public class AccessRequestEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetHistory_ReturnsMappedHistoryRows(
-        Guid userId, AccessRequestDetails row, SutProvider<AccessRequestEndpointsHandler> sutProvider)
+    public async Task GetHistory_ReturnsMappedHistoryRows(Guid userId, AccessRequestDetails row)
     {
-        SetupUser(sutProvider, userId);
+        var sutProvider = Setup(userId);
         row.Status = AccessRequestStatus.Approved;
-        sutProvider.GetDependency<IListInboxHistoryQuery>().GetHistoryAsync(userId).Returns([row]);
+        sutProvider.GetDependency<IListInboxHistoryQuery>().GetHistoryAsync(userId, _now).Returns([row]);
 
         var result = await sutProvider.Sut.GetHistory(_user);
 
@@ -48,12 +51,11 @@ public class AccessRequestEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetMine_ReturnsMappedRows(
-        Guid userId, AccessRequestDetails row, SutProvider<AccessRequestEndpointsHandler> sutProvider)
+    public async Task GetMine_ReturnsMappedRows(Guid userId, AccessRequestDetails row)
     {
-        SetupUser(sutProvider, userId);
+        var sutProvider = Setup(userId);
         row.Status = AccessRequestStatus.Pending;
-        sutProvider.GetDependency<IListMyAccessRequestsQuery>().GetMineAsync(userId).Returns([row]);
+        sutProvider.GetDependency<IListMyAccessRequestsQuery>().GetMineAsync(userId, _now).Returns([row]);
 
         var result = (await sutProvider.Sut.GetMine(_user)).Data.ToList();
 
@@ -63,11 +65,10 @@ public class AccessRequestEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetMine_NoRows_ReturnsEmpty(
-        Guid userId, SutProvider<AccessRequestEndpointsHandler> sutProvider)
+    public async Task GetMine_NoRows_ReturnsEmpty(Guid userId)
     {
-        SetupUser(sutProvider, userId);
-        sutProvider.GetDependency<IListMyAccessRequestsQuery>().GetMineAsync(userId).Returns([]);
+        var sutProvider = Setup(userId);
+        sutProvider.GetDependency<IListMyAccessRequestsQuery>().GetMineAsync(userId, _now).Returns([]);
 
         var result = await sutProvider.Sut.GetMine(_user);
 
@@ -75,14 +76,14 @@ public class AccessRequestEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetDetails_ReturnsMappedRow(
-        Guid userId, Guid requestId, AccessRequestDetails details, SutProvider<AccessRequestEndpointsHandler> sutProvider)
+    public async Task GetDetails_ReturnsMappedRow(Guid userId, Guid requestId, AccessRequestDetails details)
     {
-        SetupUser(sutProvider, userId);
+        var sutProvider = Setup(userId);
         details.Status = AccessRequestStatus.Approved;
         // No produced lease: the request keeps its own status, which the response model passes through verbatim.
         details.ProducedLeaseId = null;
-        sutProvider.GetDependency<IGetAccessRequestDetailsQuery>().GetDetailsAsync(userId, requestId).Returns(details);
+        sutProvider.GetDependency<IGetAccessRequestDetailsQuery>()
+            .GetDetailsAsync(userId, requestId, _now).Returns(details);
 
         var result = await sutProvider.Sut.GetDetails(_user, requestId);
 
@@ -91,10 +92,9 @@ public class AccessRequestEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Decide_ReturnsUpdatedRow(
-        Guid userId, Guid requestId, AccessRequestDetails updated, SutProvider<AccessRequestEndpointsHandler> sutProvider)
+    public async Task Decide_ReturnsUpdatedRow(Guid userId, Guid requestId, AccessRequestDetails updated)
     {
-        SetupUser(sutProvider, userId);
+        var sutProvider = Setup(userId);
         updated.Status = AccessRequestStatus.Approved;
         updated.ProducedLeaseId = null;
         sutProvider.GetDependency<IDecideAccessRequestCommand>()
@@ -108,13 +108,17 @@ public class AccessRequestEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Activate_ReturnsMintedLease(
-        Guid userId, Guid requestId, AccessLease lease, SutProvider<AccessRequestEndpointsHandler> sutProvider)
+    public async Task Activate_DerivesResponseAgainstTheClockItGaveTheCommand(
+        Guid userId, Guid requestId, AccessLease lease)
     {
-        SetupUser(sutProvider, userId);
-        lease.Status = AccessLeaseStatus.Active;
+        var sutProvider = Setup(userId);
+        // Live only relative to the pinned clock: no early end, window open at _now (and long lapsed in wall-clock
+        // terms). The Active assertion below therefore proves the response derived against the same instant the
+        // handler handed the command -- a second, later clock read would report the granted lease as expired.
+        lease.Action = AccessLeaseAction.None;
+        lease.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IActivateAccessRequestCommand>()
-            .ActivateAsync(userId, requestId)
+            .ActivateAsync(userId, requestId, _now)
             .Returns(lease);
 
         var result = await sutProvider.Sut.Activate(_user, requestId);
@@ -124,20 +128,22 @@ public class AccessRequestEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Revoke_InvokesCancelCommand(
-        Guid userId, Guid requestId, SutProvider<AccessRequestEndpointsHandler> sutProvider)
+    public async Task Revoke_InvokesCancelCommand(Guid userId, Guid requestId)
     {
-        SetupUser(sutProvider, userId);
+        var sutProvider = Setup(userId);
 
         await sutProvider.Sut.Revoke(_user, requestId);
 
         await sutProvider.GetDependency<ICancelAccessRequestCommand>().Received(1).CancelAsync(userId, requestId);
     }
 
-    private static void SetupUser(SutProvider<AccessRequestEndpointsHandler> sutProvider, Guid userId)
+    private static SutProvider<AccessRequestEndpointsHandler> Setup(Guid userId)
     {
+        var sutProvider = new SutProvider<AccessRequestEndpointsHandler>().WithFakeTimeProvider().Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(userId);
+        return sutProvider;
     }
 }

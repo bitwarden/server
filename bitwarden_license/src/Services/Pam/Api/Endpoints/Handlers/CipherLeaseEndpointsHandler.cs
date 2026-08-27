@@ -14,6 +14,7 @@ namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 /// </summary>
 public class CipherLeaseEndpointsHandler(
     IUserService userService,
+    TimeProvider timeProvider,
     IAccessPreCheckQuery preCheckQuery,
     IGetCipherAccessStateQuery cipherAccessStateQuery,
     ISubmitAccessRequestCommand submitAccessRequestCommand)
@@ -36,6 +37,6 @@ public class CipherLeaseEndpointsHandler(
     {
         var userId = userService.GetProperUserId(user)!.Value;
         var result = await submitAccessRequestCommand.SubmitAsync(userId, id, model.ToSubmission());
-        return new AccessRequestResultResponseModel(result);
+        return new AccessRequestResultResponseModel(result, timeProvider.GetUtcNow().UtcDateTime);
     }
 }

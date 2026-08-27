@@ -186,9 +186,10 @@ public class DatabaseContext : DbContext
         eAccessRequest.Property(p => p.Id).ValueGeneratedNever();
         eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action });
         eAccessRequest.HasIndex(p => new { p.OrganizationId, p.Action });
-        // (CollectionId, Action, NotAfter) mirrors the pending-inbox filter, since lapsed unanswered rows pile up at
-        // Action = 0 and NotAfter must be a key column to seek them out. The CreationDate indexes carry the history
-        // reads, whose action/clock OR can't seek; the retention bound is the only predicate left to bound them.
+        // (CollectionId, Action, NotAfter) mirrors the pending-inbox read's full filter: under derived status nothing
+        // writes Expired, so lapsed unanswered rows pile up at Action = 0 and NotAfter has to be a key column to keep
+        // them out of the seek. The two CreationDate indexes carry the history reads, whose action/clock OR cannot
+        // seek -- the retention bound is the only predicate left that can bound them. See PM-42655.
         eAccessRequest.HasIndex(p => new { p.CollectionId, p.Action, p.NotAfter });
         eAccessRequest.HasIndex(p => new { p.CollectionId, p.CreationDate });
         eAccessRequest.HasIndex(p => new { p.RequesterId, p.CreationDate });
@@ -209,7 +210,7 @@ public class DatabaseContext : DbContext
         eAccessLease.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action });
         eAccessLease.HasIndex(p => new { p.NotAfter, p.Action });
         eAccessLease.HasIndex(p => new { p.CollectionId, p.Action });
-        eAccessLease.HasIndex(p => new { p.CipherId, p.Action, p.NotAfter }).IsDescending(false, false, true);
+        eAccessLease.HasIndex(p => new { p.CipherId, p.Action });
         eAccessLease.HasIndex(p => p.AccessRequestId).IsUnique();
         eAccessLease
             .HasOne<AccessRequest>()

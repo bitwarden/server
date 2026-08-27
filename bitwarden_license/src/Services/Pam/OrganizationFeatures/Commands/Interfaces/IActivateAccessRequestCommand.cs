@@ -26,5 +26,8 @@ public interface IActivateAccessRequestCommand
     /// longer admit the caller (their source IP has left the rule's allowlist, or the rule's stored conditions can no
     /// longer be read).
     /// </exception>
-    Task<AccessLease> ActivateAsync(Guid userId, Guid requestId);
+    /// <param name="now">The caller's clock. Every guard, the mint, and the audit trail use this one instant, and the
+    /// caller must derive the response status against the same value — a second, later clock read could report a
+    /// just-minted lease as already expired.</param>
+    Task<AccessLease> ActivateAsync(Guid userId, Guid requestId, DateTime now);
 }

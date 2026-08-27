@@ -78,7 +78,9 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException("You already have active access to this item.");
         }
 
-        if (await _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId) is not null)
+        // Lapsed unanswered requests don't match here (derived Expired), so they correctly don't block a fresh
+        // request.
+        if (await _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
         {
             throw new BadRequestException("You already have a pending request for this item.");
         }
@@ -138,9 +140,9 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             NotBefore = now,
             NotAfter = notAfter,
             Reason = string.IsNullOrWhiteSpace(submission.Reason) ? null : submission.Reason,
-            Status = AccessRequestStatus.Approved,
+            Action = AccessRequestAction.Approved,
             CreationDate = now,
-            ResolvedDate = now,
+            ActionDate = now,
         };
         request.SetNewId();
 
@@ -218,6 +220,17 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException("The start date must be before the end date.");
         }
 
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        // A window that has already closed can never produce access: the row would be born derived-Expired --
+        // filtered out of the approver's pending inbox by its clock predicate, and refused by both Decide and
+        // Cancel -- so it is refused here, where the requester can fix the dates. This guard is also what lets the
+        // submit response derive against an open window by construction (AccessRequestResultResponseModel).
+        if (end <= now)
+        {
+            throw new BadRequestException("The end date must be in the future.");
+        }
+
         // Same per-rule cap as the automatic path: an approver can only act on the window pinned here, so a window that
         // exceeds the rule's maximum has to be refused at submit rather than left for the approver to notice.
         var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
@@ -226,7 +239,6 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException($"The requested window exceeds the maximum of {maxDurationSeconds} seconds.");
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var request = new AccessRequest
         {
             OrganizationId = governingRule.OrganizationId,
@@ -237,7 +249,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             NotBefore = start,
             NotAfter = end,
             Reason = submission.Reason,
-            Status = AccessRequestStatus.Pending,
+            // No Action is set: the request is born open, awaiting the approver.
             CreationDate = now,
         };
 

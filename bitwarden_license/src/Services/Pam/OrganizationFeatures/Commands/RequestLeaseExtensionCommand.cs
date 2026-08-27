@@ -117,9 +117,9 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             NotBefore = lease.NotAfter,
             NotAfter = lease.NotAfter.AddSeconds(submission.DurationSeconds),
             Reason = submission.Reason,
-            Status = AccessRequestStatus.Approved,
+            Action = AccessRequestAction.Approved,
             CreationDate = now,
-            ResolvedDate = now,
+            ActionDate = now,
         };
         request.SetNewId();
 
@@ -179,7 +179,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             // approver inbox has nothing to re-fetch.
             await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
 
-            return Project(request, AccessRequestStatus.Denied, AccessDecisionVerdict.Deny,
+            return Project(request, AccessRequestAction.Denied, AccessDecisionVerdict.Deny,
                 LeaseEndedDenialComment, now);
         }
 
@@ -193,41 +193,32 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
         // The parent lease's end has already been pushed out, so the next access-state snapshot re-emits the longer
         // countdown.
-        return Project(request, AccessRequestStatus.Approved, AccessDecisionVerdict.Approve, comment: null, now);
+        return Project(request, AccessRequestAction.Approved, AccessDecisionVerdict.Approve, comment: null, now);
     }
 
     /// <summary>
     /// Projects the extension state the client renders from what was just written: <c>ExtensionOfLeaseId</c> set, plus
-    /// the automatic decision that resolved it. <paramref name="status"/> and <paramref name="verdict"/> come from the
+    /// the automatic decision that resolved it. <paramref name="action"/> and <paramref name="verdict"/> come from the
     /// repository's outcome rather than from <paramref name="request"/>, which carries the approved shape the caller
-    /// asked for; a lease that ended under the request is written Denied, and only the comment says why.
+    /// asked for; a lease that ended under the request is written Denied, and only the comment says why. The entity is
+    /// brought to match what was written before it is projected, so the derived status (Approved by the applied-
+    /// extension carve-out, or terminal Denied) matches every later read of this row.
     /// </summary>
-    private static AccessRequestDetails Project(AccessRequest request, AccessRequestStatus status,
-        AccessDecisionVerdict verdict, string? comment, DateTime now) =>
-        new()
-        {
-            Id = request.Id,
-            ExtensionOfLeaseId = request.ExtensionOfLeaseId,
-            OrganizationId = request.OrganizationId,
-            CollectionId = request.CollectionId,
-            CipherId = request.CipherId,
-            RequesterId = request.RequesterId,
-            RuleId = request.RuleId,
-            NotBefore = request.NotBefore,
-            NotAfter = request.NotAfter,
-            Reason = request.Reason,
-            Status = status,
-            CreationDate = request.CreationDate,
-            ResolvedDate = request.ResolvedDate,
-            Decisions =
-            [
-                new AccessRequestDecision
-                {
-                    DeciderKind = AccessDeciderKind.Automatic,
-                    Verdict = verdict,
-                    Comment = comment,
-                    DecidedAt = now,
-                }
-            ],
-        };
+    private static AccessRequestDetails Project(AccessRequest request, AccessRequestAction action,
+        AccessDecisionVerdict verdict, string? comment, DateTime now)
+    {
+        request.Action = action;
+        var details = AccessRequestDetails.From(request, now);
+        details.Decisions =
+        [
+            new AccessRequestDecision
+            {
+                DeciderKind = AccessDeciderKind.Automatic,
+                Verdict = verdict,
+                Comment = comment,
+                DecidedAt = now,
+            }
+        ];
+        return details;
+    }
 }

@@ -23,7 +23,7 @@ public class CipherLeaseEndpointsHandlerTests
             .Returns(userId);
         sutProvider.GetDependency<IGetCipherAccessStateQuery>()
             .GetStateAsync(userId, id)
-            .Returns(new Bit.Services.Pam.Models.CipherAccessState(id, activeLease, null, null));
+            .Returns(new Bit.Services.Pam.Models.CipherAccessState(id, DateTime.UtcNow, activeLease, null, null));
 
         var result = await sutProvider.Sut.State(_user, id);
 

@@ -32,7 +32,7 @@ public class CancelAccessRequestCommandTests
     public async Task CancelAsync_NeitherRequesterNorManager_ThrowsNotFound(Guid userId, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Pending;
+        request.Action = AccessRequestAction.None;
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         // userId is neither the requester nor a manager (CanManageCollectionAsync defaults to false).
 
@@ -45,13 +45,12 @@ public class CancelAccessRequestCommandTests
     }
 
     [Theory]
-    [BitAutoData(AccessRequestStatus.Denied)]
-    [BitAutoData(AccessRequestStatus.Cancelled)]
-    [BitAutoData(AccessRequestStatus.Expired)]
-    public async Task CancelAsync_TerminalStatus_ThrowsConflict(AccessRequestStatus status, AccessRequest request)
+    [BitAutoData(AccessRequestAction.Denied)]
+    [BitAutoData(AccessRequestAction.Cancelled)]
+    public async Task CancelAsync_TerminalAction_ThrowsConflict(AccessRequestAction action, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = status;
+        request.Action = action;
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
 
         await Assert.ThrowsAsync<ConflictException>(
@@ -63,12 +62,34 @@ public class CancelAccessRequestCommandTests
     }
 
     [Theory]
-    [BitAutoData(AccessRequestStatus.Pending)]
-    [BitAutoData(AccessRequestStatus.Approved)]
-    public async Task CancelAsync_RequesterNoLease_CancelsAndNotifies(AccessRequestStatus status, AccessRequest request)
+    [BitAutoData(AccessRequestAction.None)]
+    [BitAutoData(AccessRequestAction.Approved)]
+    public async Task CancelAsync_WindowLapsed_ThrowsConflict(AccessRequestAction action, AccessRequest request)
+    {
+        // A lapsed row is derived Expired everywhere it is read; a cancellation must not restamp it.
+        var sutProvider = Setup();
+        request.Action = action;
+        request.NotBefore = _now.AddHours(-2);
+        request.NotAfter = _now.AddHours(-1);
+        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+
+        var ex = await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+        Assert.Contains("already ended", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CancelAsync(default, default);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CancelWithDecisionAsync(default!, default!, default);
+    }
+
+    [Theory]
+    [BitAutoData(AccessRequestAction.None)]
+    [BitAutoData(AccessRequestAction.Approved)]
+    public async Task CancelAsync_RequesterNoLease_CancelsAndNotifies(AccessRequestAction action, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = status;
+        request.Action = action;
+        SetOpenWindow(request);
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         // No lease produced (GetByAccessRequestIdAsync defaults to null).
 
@@ -84,13 +105,14 @@ public class CancelAccessRequestCommandTests
     }
 
     [Theory]
-    [BitAutoData(AccessRequestStatus.Pending)]
-    [BitAutoData(AccessRequestStatus.Approved)]
+    [BitAutoData(AccessRequestAction.None)]
+    [BitAutoData(AccessRequestAction.Approved)]
     public async Task CancelAsync_ManagerNoLease_DeniesWithDecisionAndNotifies(
-        AccessRequestStatus status, Guid managerId, AccessRequest request)
+        AccessRequestAction action, Guid managerId, AccessRequest request)
     {
         var sutProvider = Setup();
-        request.Status = status;
+        request.Action = action;
+        SetOpenWindow(request);
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(managerId, request.CollectionId).Returns(true);
@@ -117,8 +139,9 @@ public class CancelAccessRequestCommandTests
     public async Task CancelAsync_ApprovedWithActiveLease_ThrowsConflict(AccessRequest request, AccessLease lease)
     {
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Approved;
-        lease.Status = AccessLeaseStatus.Active;
+        request.Action = AccessRequestAction.Approved;
+        SetOpenWindow(request);
+        lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
@@ -134,14 +157,15 @@ public class CancelAccessRequestCommandTests
     }
 
     [Theory]
-    [BitAutoData(AccessLeaseStatus.Revoked)]
-    [BitAutoData(AccessLeaseStatus.Expired)]
+    [BitAutoData(AccessLeaseAction.Revoked)]
+    [BitAutoData(AccessLeaseAction.Cancelled)]
     public async Task CancelAsync_ApprovedWithEndedLease_ThrowsConflict(
-        AccessLeaseStatus leaseStatus, AccessRequest request, AccessLease lease)
+        AccessLeaseAction leaseAction, AccessRequest request, AccessLease lease)
     {
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Approved;
-        lease.Status = leaseStatus;
+        request.Action = AccessRequestAction.Approved;
+        SetOpenWindow(request);
+        lease.Action = leaseAction;
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
 
@@ -155,11 +179,13 @@ public class CancelAccessRequestCommandTests
     public async Task CancelAsync_ApprovedWithLapsedLease_ReportsAlreadyResolvedRatherThanPointingAtRevoke(
         AccessRequest request, AccessLease lease)
     {
-        // A lease whose window has closed is stored Active, so reading the status raw sent the caller to a Revoke
-        // that revoke itself now refuses. The lease has already ended: the request is terminal history (PM-42355).
+        // A lease whose window has closed carries no early end, so judging the recorded action alone would send the
+        // caller to a Revoke that revoke itself refuses. The lease has already ended: the request is terminal
+        // history (PM-42355). The request's own window is pinned open so this exercises the lease branch.
         var sutProvider = Setup();
-        request.Status = AccessRequestStatus.Approved;
-        lease.Status = AccessLeaseStatus.Active;
+        request.Action = AccessRequestAction.Approved;
+        SetOpenWindow(request);
+        lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddMinutes(-1);
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
@@ -171,6 +197,14 @@ public class CancelAccessRequestCommandTests
         Assert.DoesNotContain("revoke the lease instead", conflict.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
+    }
+
+    // BitAutoData generates arbitrary dates; pin a window containing _now so the lapsed-window guard doesn't trip
+    // in tests that aren't about it.
+    private static void SetOpenWindow(AccessRequest request)
+    {
+        request.NotBefore = _now.AddMinutes(-5);
+        request.NotAfter = _now.AddHours(1);
     }
 
     private static SutProvider<CancelAccessRequestCommand> Setup()
