@@ -247,6 +247,70 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         await LogSendDeletedEventAsync(send);
     }
 
+    public async Task<ICollection<Guid>> DeleteManySendsAsync(IEnumerable<Send> sends)
+    {
+        var toDelete = new List<Send>();
+        foreach (var send in sends)
+        {
+            if (send.Type == SendType.File && send.Data != null)
+            {
+                SendFileData data;
+                try
+                {
+                    data = JsonSerializer.Deserialize<SendFileData>(send.Data);
+                }
+                catch (JsonException ex)
+                {
+                    // Deterministic failure — retrying changes nothing. Match DeleteSendAsync: delete
+                    // the row anyway rather than letting an unparseable Send block the batch forever.
+                    _logger.LogWarning(ex, "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
+                    data = null;
+                }
+
+                if (data?.Id != null)
+                {
+                    try
+                    {
+                        await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        // ISendFileStorageService has multiple implementations (Azure, local disk, no-op)
+                        // with no shared exception contract, so any failure here is treated as transient:
+                        // skip this Send, it's retried next run since its DeletionDate is still in the past.
+                        _logger.LogWarning(ex,
+                            "Failed to delete blob for Send {SendId}; skipping this run, will retry.", send.Id);
+                        continue;
+                    }
+                }
+            }
+            toDelete.Add(send);
+        }
+
+        if (toDelete.Count > 0)
+        {
+            await _sendRepository.DeleteManyAsync(toDelete.Select(s => s.Id));
+        }
+
+        foreach (var send in toDelete)
+        {
+            try
+            {
+                await _pushNotificationService.PushSyncSendDeleteAsync(send);
+                await LogSendDeletedEventAsync(send);
+            }
+            catch (Exception ex)
+            {
+                // The row is already gone (DeleteManyAsync above already committed the whole
+                // batch) — a throw here would abort the loop and silently drop the push/event for
+                // every remaining already-deleted Send, with no way to retry a row that no longer exists.
+                _logger.LogWarning(ex, "Failed to publish delete notification/event for Send {SendId}.", send.Id);
+            }
+        }
+
+        return toDelete.Select(s => s.Id).ToList();
+    }
+
     public async Task<bool> ConfirmFileSize(Send send)
     {
         var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);

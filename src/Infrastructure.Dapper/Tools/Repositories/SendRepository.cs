@@ -105,13 +105,13 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
+    public async Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore, int batchSize)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<Send>(
                 $"[{Schema}].[Send_ReadByDeletionDateBefore]",
-                new { DeletionDate = deletionDateBefore },
+                new { DeletionDate = deletionDateBefore, BatchSize = batchSize },
                 commandType: CommandType.StoredProcedure);
 
             // Don't filter or decrypt here — the cleanup job needs to see every row
@@ -226,6 +226,19 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
             new { Ids = ids.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure);
         return results.Where(UnprotectData).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(IEnumerable<Guid> ids)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[Send_DeleteMany]",
+            new { Ids = ids.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure,
+            // Send_DeleteMany loops User_UpdateStorage once per distinct file-Send owner in the
+            // batch; UserRepository's own single-user UpdateStorageAsync already uses this timeout.
+            commandTimeout: 180);
     }
 
     private async Task ProtectDataAndSaveAsync(Send send, Func<Task> saveTask)
