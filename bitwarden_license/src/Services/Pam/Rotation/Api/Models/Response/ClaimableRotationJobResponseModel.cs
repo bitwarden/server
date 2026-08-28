@@ -24,9 +24,28 @@ public class ClaimableRotationJobResponseModel : ResponseModel
         TargetSystemId = job.TargetSystemId;
     }
 
+    /// <summary>
+    /// The rotation job's unique identifier -- the id a claim is placed against.
+    /// </summary>
     public Guid JobId { get; }
+
+    /// <summary>
+    /// What caused the job to be offered -- see <see cref="PamRotationSource"/>.
+    /// </summary>
     public PamRotationSource Source { get; }
+
+    /// <summary>
+    /// The earliest time the job can be claimed (UTC). Pushed out on retry (backoff) or release.
+    /// </summary>
     public DateTime NextClaimableAt { get; }
+
+    /// <summary>
+    /// When the job times out if no attempt has succeeded by then (UTC).
+    /// </summary>
     public DateTime ExpiresAt { get; }
+
+    /// <summary>
+    /// The target system the job's rotation runs against.
+    /// </summary>
     public Guid TargetSystemId { get; }
 }

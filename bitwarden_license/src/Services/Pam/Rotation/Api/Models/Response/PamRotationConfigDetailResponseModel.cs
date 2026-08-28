@@ -19,6 +19,8 @@ public class PamRotationConfigDetailResponseModel : PamRotationConfigResponseMod
         Jobs = history.Jobs.Select(job => new PamRotationJobResponseModel(job)).ToList();
     }
 
-    /// <summary>Every job recorded against the config, newest first, each carrying its own attempts (oldest first).</summary>
+    /// <summary>
+    /// Every job recorded against the config, newest first, each carrying its own attempts (oldest first).
+    /// </summary>
     public IReadOnlyList<PamRotationJobResponseModel> Jobs { get; }
 }

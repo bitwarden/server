@@ -24,13 +24,35 @@ public class RotationCipherResponseModel
         RevisionDate = cipher.RevisionDate.AsUtc();
     }
 
+    /// <summary>
+    /// The cipher's unique identifier.
+    /// </summary>
     public Guid CipherId { get; }
+
+    /// <summary>
+    /// The organization owning the cipher.
+    /// </summary>
     public Guid OrganizationId { get; }
+
+    /// <summary>
+    /// The cipher's type.
+    /// </summary>
     public CipherType Type { get; }
 
-    /// <summary>The cipher's encrypted JSON blob, verbatim -- opaque ciphertext.</summary>
+    /// <summary>
+    /// The cipher's encrypted JSON blob, verbatim -- opaque ciphertext.
+    /// </summary>
     public string Data { get; }
 
+    /// <summary>
+    /// The cipher's own wrapped encryption key, when it has one -- opaque ciphertext. Null when the cipher is
+    /// encrypted under the organization key directly.
+    /// </summary>
     public string? Key { get; }
+
+    /// <summary>
+    /// The cipher's current revision date (UTC) -- what the daemon sends back as its last-known revision when
+    /// writing the rotated secret.
+    /// </summary>
     public DateTime RevisionDate { get; }
 }

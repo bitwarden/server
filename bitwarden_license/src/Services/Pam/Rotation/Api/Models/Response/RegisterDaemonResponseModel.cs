@@ -22,16 +22,34 @@ public class RegisterDaemonResponseModel : ResponseModel
         ClientSecret = result.ClientSecret;
     }
 
+    /// <summary>
+    /// The daemon's unique identifier.
+    /// </summary>
     public Guid Id { get; }
+
+    /// <summary>
+    /// The organization the daemon was registered in.
+    /// </summary>
     public Guid OrganizationId { get; }
+
+    /// <summary>
+    /// The daemon's display label, as supplied at registration.
+    /// </summary>
     public string Name { get; }
+
+    /// <summary>
+    /// Whether the daemon may authenticate, poll, and claim jobs -- see <see cref="PamDaemonStatus"/>.
+    /// </summary>
     public PamDaemonStatus Status { get; }
+
+    /// <summary>
+    /// When the daemon was registered (UTC).
+    /// </summary>
     public DateTime CreationDate { get; }
 
     /// <summary>
-    /// The id of the daemon's <c>dbo.ApiKey</c> credential. Required by the operator to assemble the daemon's
-    /// OAuth client id (<c>daemon.&lt;ApiKeyId&gt;</c>, resolved server-side by <c>PamDaemonClientProvider</c> in
-    /// Identity) -- without it there is no way to derive the client id from the admin API surface.
+    /// The id of the daemon's <c>dbo.ApiKey</c> credential. The operator assembles the daemon's OAuth client id
+    /// from it (<c>daemon.&lt;ApiKeyId&gt;</c>, resolved server-side by <c>PamDaemonClientProvider</c> in Identity).
     /// </summary>
     public Guid ApiKeyId { get; }
 

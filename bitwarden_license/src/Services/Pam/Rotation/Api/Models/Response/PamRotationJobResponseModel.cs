@@ -26,16 +26,56 @@ public class PamRotationJobResponseModel
         Attempts = job.Attempts.Select(attempt => new PamRotationAttemptResponseModel(attempt)).ToList();
     }
 
+    /// <summary>
+    /// The job's unique identifier.
+    /// </summary>
     public Guid Id { get; }
+
+    /// <summary>
+    /// The rotation config this job was offered for.
+    /// </summary>
     public Guid RotationConfigId { get; }
+
+    /// <summary>
+    /// What caused the job to be offered -- see <see cref="PamRotationSource"/>.
+    /// </summary>
     public PamRotationSource Source { get; }
+
+    /// <summary>
+    /// Where the job stands -- see <see cref="PamRotationJobStatus"/>. A config has at most one job in an active
+    /// status at a time.
+    /// </summary>
     public PamRotationJobStatus Status { get; }
+
+    /// <summary>
+    /// The daemon currently holding the job's claim. Null unless <see cref="Status"/> is
+    /// <see cref="PamRotationJobStatus.Claimed"/>.
+    /// </summary>
     public Guid? ClaimedByDaemonId { get; }
+
+    /// <summary>
+    /// When the current claim was taken (UTC). Null unless <see cref="Status"/> is
+    /// <see cref="PamRotationJobStatus.Claimed"/>.
+    /// </summary>
     public DateTime? ClaimedAt { get; }
+
+    /// <summary>
+    /// When the job was offered (UTC).
+    /// </summary>
     public DateTime CreationDate { get; }
+
+    /// <summary>
+    /// The earliest time the job can be claimed (UTC). Pushed out on retry (backoff) or release.
+    /// </summary>
     public DateTime NextClaimableAt { get; }
+
+    /// <summary>
+    /// When the job times out if no attempt has succeeded by then (UTC).
+    /// </summary>
     public DateTime ExpiresAt { get; }
 
-    /// <summary>Oldest first.</summary>
+    /// <summary>
+    /// Every attempt recorded against this job, oldest first.
+    /// </summary>
     public IReadOnlyList<PamRotationAttemptResponseModel> Attempts { get; }
 }

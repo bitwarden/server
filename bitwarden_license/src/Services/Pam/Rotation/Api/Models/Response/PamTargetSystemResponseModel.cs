@@ -27,14 +27,58 @@ public class PamTargetSystemResponseModel : ResponseModel
         RevisionDate = targetSystem.RevisionDate.AsUtc();
     }
 
+    /// <summary>
+    /// The target system's unique identifier.
+    /// </summary>
     public Guid Id { get; }
+
+    /// <summary>
+    /// The organization this target system belongs to.
+    /// </summary>
     public Guid OrganizationId { get; }
+
+    /// <summary>
+    /// The target system's display name, shown wherever targets are listed and managed.
+    /// </summary>
     public string Name { get; }
+
+    /// <summary>
+    /// How the target's credentials are rotated -- see <see cref="PamTargetSystemMethod"/>. Decides which of the
+    /// fields below carry a value.
+    /// </summary>
     public PamTargetSystemMethod Method { get; }
+
+    /// <summary>
+    /// The connector an automatic target is rotated through -- see <see cref="PamTargetSystemKind"/>. Null on a
+    /// manual target, which has no connector.
+    /// </summary>
     public PamTargetSystemKind? Kind { get; }
+
+    /// <summary>
+    /// The password-generation constraints the daemon must satisfy when rotating credentials on this target. Null
+    /// on a manual target.
+    /// </summary>
     public PamPasswordPolicyResponseModel? PasswordPolicy { get; }
+
+    /// <summary>
+    /// Whether the connector can terminate the account's live sessions after a rotation; gates whether rotation
+    /// configs on this target may request session termination. Null on a manual target.
+    /// </summary>
     public bool? SupportsSessionTermination { get; }
+
+    /// <summary>
+    /// Whether the target is offerable for rotation and assignable to a daemon -- see
+    /// <see cref="PamTargetSystemStatus"/>.
+    /// </summary>
     public PamTargetSystemStatus Status { get; }
+
+    /// <summary>
+    /// When the target system was registered (UTC).
+    /// </summary>
     public DateTime CreationDate { get; }
+
+    /// <summary>
+    /// When the target system was last modified (UTC).
+    /// </summary>
     public DateTime RevisionDate { get; }
 }
