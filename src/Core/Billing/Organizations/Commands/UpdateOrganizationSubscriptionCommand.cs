@@ -165,17 +165,11 @@ public class UpdateOrganizationSubscriptionCommand(
                     CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
 
                 // Annual upgrade reuses existing discounts and adds no coupon.
-                List<SubscriptionSchedulePhaseOptions> phases;
-                if (annualUpgradePlans is not null)
-                {
-                    phases = AnnualUpgradeSchedulePhaseRebuilder.BuildUpdatedPhases(
-                        migrationPhases, changeSet.Changes, plans.source, plans.target);
-                }
-                else
-                {
-                    phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes,
+                var phases = annualUpgradePlans is not null
+                    ? AnnualUpgradeSchedulePhaseRebuilder.BuildUpdatedPhases(
+                        migrationPhases, changeSet.Changes, plans.source, plans.target)
+                    : BuildUpdatedPhases(migrationPhases, changeSet.Changes,
                         plans.source, plans.target, subscription);
-                }
 
                 await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                     new SubscriptionScheduleUpdateOptions

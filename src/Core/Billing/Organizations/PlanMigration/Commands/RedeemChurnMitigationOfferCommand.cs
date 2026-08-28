@@ -299,12 +299,10 @@ public class RedeemChurnMitigationOfferCommand(
     private static HashSet<string> BuildCouponFootprint(params IEnumerable<string?>[] couponIdSources)
     {
         var footprint = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var couponId in couponIdSources.SelectMany(source => source))
+        foreach (var couponId in couponIdSources.SelectMany(source => source)
+                     .Where(couponId => !string.IsNullOrEmpty(couponId)))
         {
-            if (!string.IsNullOrEmpty(couponId))
-            {
-                footprint.Add(couponId);
-            }
+            footprint.Add(couponId!);
         }
         return footprint;
     }
