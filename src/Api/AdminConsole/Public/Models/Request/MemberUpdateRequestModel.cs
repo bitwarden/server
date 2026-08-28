@@ -2,8 +2,8 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Public.Models.Request;
 
@@ -19,24 +19,19 @@ public class MemberUpdateRequestModel : MemberBaseModel, IValidatableObject
     /// </summary>
     public IEnumerable<Guid> Groups { get; set; }
 
-    public virtual OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
-    {
-        existingUser.Type = Type.Value;
-        existingUser.ExternalId = ExternalId;
+    /// <summary>
+    /// The member's email address. Can only be changed for a claimed member without a master password when the
+    /// new address is on a domain verified by the organization.
+    /// </summary>
+    [StrictEmailAddressNullable]
+    [StringLength(256)]
+    public string Email { get; set; }
 
-        if (existingUser.Type is not OrganizationUserType.Custom)
-        {
-            // Clear any permissions left over from a previous Custom role.
-            existingUser.Permissions = null;
-        }
-        else if (Permissions is not null)
-        {
-            // Permissions property is optional for backwards compatibility with existing usage
-            existingUser.SetPermissions(Permissions.ToData());
-        }
-
-        return existingUser;
-    }
+    /// <summary>
+    /// The member's name. Can only be changed for a claimed member.
+    /// </summary>
+    [StringLength(50)]
+    public string Name { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

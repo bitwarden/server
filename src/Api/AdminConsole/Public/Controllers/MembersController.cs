@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
@@ -20,17 +21,18 @@ using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors.ErrorMapper;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Api.AdminConsole.Public.Controllers;
 
 [Route("public/members")]
 [Authorize("Organization")]
-public class MembersController : Controller
+public class MembersController : BaseAdminConsoleController
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
+    private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IStripePaymentService _paymentService;
     private readonly IOrganizationRepository _organizationRepository;
@@ -46,7 +48,7 @@ public class MembersController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
         ICurrentContext currentContext,
-        IUpdateOrganizationUserCommand updateOrganizationUserCommand,
+        V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IStripePaymentService paymentService,
         IOrganizationRepository organizationRepository,
@@ -191,29 +193,50 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(MemberResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> Put(Guid id, [FromBody] MemberUpdateRequestModel model)
+    public async Task<IResult> Put(Guid id, [FromBody] MemberUpdateRequestModel model)
     {
         var existingUser = await _organizationUserRepository.GetByIdAsync(id);
         if (existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
         {
-            return new NotFoundResult();
+            return TypedResults.NotFound();
         }
-        var existingUserType = existingUser.Type;
-        var updatedUser = model.ToOrganizationUser(existingUser);
+
+        existingUser.ExternalId = model.ExternalId;
+
+        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId!.Value);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
-        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, existingUserType, null, associations, model.Groups);
-        MemberResponseModel response;
-        if (existingUser.UserId.HasValue)
-        {
-            var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
-            response = new MemberResponseModel(existingUserDetails!,
-                await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails!), associations);
-        }
-        else
-        {
-            response = new MemberResponseModel(updatedUser, associations);
-        }
-        return new JsonResult(response);
+
+        var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
+            existingUser,
+            organization!,
+            model.Type!.Value,
+            model.Permissions?.ToData(),
+            existingUser.AccessSecretsManager,
+            existingUser.AccessPam,
+            associations,
+            model.Groups,
+            model.Email,
+            model.Name,
+            null,
+            new SystemUser(EventSystemUser.PublicApi));
+
+        return await Handle(await _updateOrganizationUserCommand.UpdateUserAsync(request),
+            async _ =>
+            {
+                MemberResponseModel response;
+                if (existingUser.UserId.HasValue)
+                {
+                    var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
+                    response = new MemberResponseModel(existingUserDetails!,
+                        await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails!), associations);
+                }
+                else
+                {
+                    response = new MemberResponseModel(existingUser, associations);
+                }
+
+                return TypedResults.Json(response);
+            });
     }
 
     /// <summary>

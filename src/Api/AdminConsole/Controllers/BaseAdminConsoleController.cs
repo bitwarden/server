@@ -20,6 +20,7 @@ public abstract class BaseAdminConsoleController : Controller
             _ => TypedResults.NoContent()
         );
 
+
     /// <summary>
     /// Maps a <see cref="CommandResult{T}"/> to an HTTP response.
     /// On success, delegates to <paramref name="success"/> so the caller can choose the response shape
@@ -29,6 +30,17 @@ public abstract class BaseAdminConsoleController : Controller
     protected static IResult Handle<T>(CommandResult<T> commandResult, Func<T, IResult> success) =>
         commandResult.Match<IResult>(
             error => MapError(error),
+            success
+        );
+
+    /// <summary>
+    /// Maps a <see cref="CommandResult{T}"/> to an HTTP response.
+    /// On success, delegates to <paramref name="success"/> so the caller can use an async func.
+    /// On failure, returns the appropriate error status code.
+    /// </summary>
+    protected static Task<IResult> Handle<T>(CommandResult<T> commandResult, Func<T, Task<IResult>> success) =>
+        commandResult.Match(
+            error => Task.FromResult(MapError(error)),
             success
         );
 
