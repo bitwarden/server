@@ -4,6 +4,7 @@ using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -18,6 +19,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
         services.AddScoped<CipherLeaseEndpointsHandler>();
+        services.AddScoped<RotationDaemonEndpointsHandler>();
+        services.AddScoped<RotationTargetSystemEndpointsHandler>();
+        services.AddScoped<RotationConfigEndpointsHandler>();
+        services.AddScoped<RotationDaemonJobsEndpointsHandler>();
+        services.AddScoped<RotationJobEndpointsHandler>();
+        services.AddScoped<RotationAttemptEndpointsHandler>();
 
         // Rule evaluation engine. Pure and stateless, so a singleton is safe.
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();

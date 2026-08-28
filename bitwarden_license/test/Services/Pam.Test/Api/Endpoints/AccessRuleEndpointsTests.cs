@@ -6,6 +6,7 @@ using Bit.Services.Pam.Api.Authorization;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
+using Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -34,6 +35,12 @@ public class AccessRuleEndpointsTests
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
         builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
+        builder.Services.AddScoped<RotationDaemonEndpointsHandler>();
+        builder.Services.AddScoped<RotationTargetSystemEndpointsHandler>();
+        builder.Services.AddScoped<RotationConfigEndpointsHandler>();
+        builder.Services.AddScoped<RotationDaemonJobsEndpointsHandler>();
+        builder.Services.AddScoped<RotationJobEndpointsHandler>();
+        builder.Services.AddScoped<RotationAttemptEndpointsHandler>();
 
         var app = builder.Build();
         app.MapPamEndpoints();
