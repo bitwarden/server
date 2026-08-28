@@ -28,7 +28,7 @@ public class RotationAttemptEndpointsHandler(
     public async Task PutCipher(Guid id, SubmitCipherUpdateRequestModel model)
     {
         await submitCipherUpdateCommand.SubmitAsync(
-            currentContext.PamDaemonId!.Value, id, model.Data, model.LastKnownRevisionDate);
+            currentContext.PamDaemonId!.Value, id, model.Data, model.LastKnownRevisionDate!.Value);
     }
 
     public async Task Success(Guid id, ReportRotationSucceededRequestModel model)

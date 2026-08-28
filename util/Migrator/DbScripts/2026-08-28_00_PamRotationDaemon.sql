@@ -1073,7 +1073,7 @@ BEGIN
     -- vault item changed since the daemon last read it, so the write is rejected to protect a concurrent user edit
     -- rather than silently clobbering it. The 1-second tolerance mirrors CipherService's own last-known-revision
     -- check.
-    IF ABS(DATEDIFF(MILLISECOND, (SELECT [RevisionDate] FROM [dbo].[Cipher] WHERE [Id] = @CipherId), @LastKnownRevisionDate)) > 1000
+    IF ABS(DATEDIFF_BIG(MILLISECOND, (SELECT [RevisionDate] FROM [dbo].[Cipher] WHERE [Id] = @CipherId), @LastKnownRevisionDate)) > 1000
     BEGIN
         ROLLBACK TRANSACTION
         SELECT -1 -- RevisionMismatch

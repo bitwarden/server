@@ -338,6 +338,34 @@ public class PamRotationJobRepositoryTests
         Assert.False(attempt!.CipherUpdated);
     }
 
+    // A millisecond drift wider than int.MaxValue (~24.8 days): MSSQL's DATEDIFF(MILLISECOND, ...) raised an
+    // overflow error here instead of classifying the drift as a mismatch, diverging from the EF providers.
+    [DatabaseTheory, DatabaseData]
+    public async Task AcceptCipherWriteAsync_DriftBeyondDateDiffIntRange_RevisionMismatch(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IApiKeyRepository apiKeyRepository,
+        IPamDaemonRepository pamDaemonRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IPamRotationJobRepository pamRotationJobRepository)
+    {
+        var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
+            pamDaemonRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
+        var claim = await pamRotationJobRepository.ClaimAsync(
+            fixture.Job.Id, fixture.Daemon.Id, fixture.Now, _releaseDelay);
+
+        var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
+            claim.AttemptId!.Value, fixture.Daemon.Id, "{\"rotated\":true}",
+            fixture.Cipher.RevisionDate.AddDays(-60), fixture.Now);
+
+        Assert.Equal(PamRotationCipherWriteOutcome.RevisionMismatch, outcome);
+        var cipher = await cipherRepository.GetByIdAsync(fixture.Cipher.Id);
+        Assert.Equal(fixture.Cipher.Data, cipher!.Data);
+        var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId.Value);
+        Assert.False(attempt!.CipherUpdated);
+    }
+
     // The release-sweep vs cipher-write interleaving: once the sweep has released the job (status back to Pending,
     // attempt Abandoned), the daemon's late write must be refused -- the atomic accept sproc re-verifies the claim
     // under the same job-row lock the sweep takes.

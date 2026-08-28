@@ -32,6 +32,28 @@ public class PamValidationEndpointFilterTests
         Assert.True(jsonResult.Value.ValidationErrors!.ContainsKey(nameof(AccessDecisionRequestModel.Verdict)));
     }
 
+    // LastKnownRevisionDate is a nullable DateTime precisely so an omitted field fails [Required] here as a 400,
+    // rather than binding to DateTime.MinValue and reaching the revision-drift guard as a plausible instant.
+    [Fact]
+    public async Task InvokeAsync_CipherUpdateWithoutLastKnownRevisionDate_Returns400()
+    {
+        var context = CreateContext(new SubmitCipherUpdateRequestModel { Data = "{\"rotated\":true}" });
+        var nextCalled = false;
+        EndpointFilterDelegate next = _ =>
+        {
+            nextCalled = true;
+            return ValueTask.FromResult<object?>("ok");
+        };
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, next);
+
+        Assert.False(nextCalled);
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.True(jsonResult.Value!.ValidationErrors!.ContainsKey(
+            nameof(SubmitCipherUpdateRequestModel.LastKnownRevisionDate)));
+    }
+
     [Fact]
     public async Task InvokeAsync_ValidRequestModel_CallsNext()
     {

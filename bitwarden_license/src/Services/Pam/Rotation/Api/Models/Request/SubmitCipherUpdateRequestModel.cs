@@ -22,5 +22,5 @@ public class SubmitCipherUpdateRequestModel
     /// the cipher concurrently, and the write is rejected rather than overwriting their change.
     /// </summary>
     [Required]
-    public DateTime LastKnownRevisionDate { get; set; }
+    public DateTime? LastKnownRevisionDate { get; set; }
 }
