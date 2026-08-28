@@ -1,6 +1,4 @@
 ﻿using Bit.Pam.Enums;
-using Bit.Pam.Models;
-using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.Rotation.Api.Models.Response;
 
@@ -10,72 +8,56 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Response;
 /// </summary>
 public class PamRotationJobResponseModel
 {
-    public PamRotationJobResponseModel(PamRotationJobDetails job)
-    {
-        ArgumentNullException.ThrowIfNull(job);
-
-        Id = job.Id;
-        RotationConfigId = job.RotationConfigId;
-        Source = job.Source;
-        Status = job.Status;
-        ClaimedByDaemonId = job.ClaimedByDaemonId;
-        ClaimedAt = job.ClaimedAt.AsUtc();
-        CreationDate = job.CreationDate.AsUtc();
-        NextClaimableAt = job.NextClaimableAt.AsUtc();
-        ExpiresAt = job.ExpiresAt.AsUtc();
-        Attempts = job.Attempts.Select(attempt => new PamRotationAttemptResponseModel(attempt)).ToList();
-    }
-
     /// <summary>
     /// The job's unique identifier.
     /// </summary>
-    public Guid Id { get; }
+    public Guid Id { get; set; }
 
     /// <summary>
     /// The rotation config this job was offered for.
     /// </summary>
-    public Guid RotationConfigId { get; }
+    public Guid RotationConfigId { get; set; }
 
     /// <summary>
     /// What caused the job to be offered -- see <see cref="PamRotationSource"/>.
     /// </summary>
-    public PamRotationSource Source { get; }
+    public PamRotationSource Source { get; set; }
 
     /// <summary>
     /// Where the job stands -- see <see cref="PamRotationJobStatus"/>. A config has at most one job in an active
     /// status at a time.
     /// </summary>
-    public PamRotationJobStatus Status { get; }
+    public PamRotationJobStatus Status { get; set; }
 
     /// <summary>
     /// The daemon currently holding the job's claim. Null unless <see cref="Status"/> is
     /// <see cref="PamRotationJobStatus.Claimed"/>.
     /// </summary>
-    public Guid? ClaimedByDaemonId { get; }
+    public Guid? ClaimedByDaemonId { get; set; }
 
     /// <summary>
     /// When the current claim was taken (UTC). Null unless <see cref="Status"/> is
     /// <see cref="PamRotationJobStatus.Claimed"/>.
     /// </summary>
-    public DateTime? ClaimedAt { get; }
+    public DateTime? ClaimedAt { get; set; }
 
     /// <summary>
     /// When the job was offered (UTC).
     /// </summary>
-    public DateTime CreationDate { get; }
+    public DateTime CreationDate { get; set; }
 
     /// <summary>
     /// The earliest time the job can be claimed (UTC). Pushed out on retry (backoff) or release.
     /// </summary>
-    public DateTime NextClaimableAt { get; }
+    public DateTime NextClaimableAt { get; set; }
 
     /// <summary>
     /// When the job times out if no attempt has succeeded by then (UTC).
     /// </summary>
-    public DateTime ExpiresAt { get; }
+    public DateTime ExpiresAt { get; set; }
 
     /// <summary>
     /// Every attempt recorded against this job, oldest first.
     /// </summary>
-    public IReadOnlyList<PamRotationAttemptResponseModel> Attempts { get; }
+    public IReadOnlyList<PamRotationAttemptResponseModel> Attempts { get; set; } = [];
 }

@@ -1,6 +1,4 @@
-﻿using Bit.Services.Pam.Rotation.Models;
-
-namespace Bit.Services.Pam.Rotation.Api.Models.Response;
+﻿namespace Bit.Services.Pam.Rotation.Api.Models.Response;
 
 /// <summary>
 /// A rotation daemon's detail view for <c>GET rotation/daemons/{id}</c>: the list shape flattened onto the same
@@ -9,15 +7,14 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Response;
 /// </summary>
 public class PamDaemonDetailResponseModel : PamDaemonResponseModel
 {
-    public PamDaemonDetailResponseModel(PamDaemonHistory history)
-        : base(history?.Daemon ?? throw new ArgumentNullException(nameof(history)), "pamDaemonDetails")
+    public PamDaemonDetailResponseModel()
+        : base("pamDaemonDetails")
     {
-        Jobs = history.Jobs.Select(job => new PamRotationJobResponseModel(job)).ToList();
     }
 
     /// <summary>
     /// The daemon's recent jobs, newest first, each carrying only the attempts this daemon recorded -- capped by
     /// <c>GetDaemonDetailsQuery</c> rather than being the daemon's whole history.
     /// </summary>
-    public IReadOnlyList<PamRotationJobResponseModel> Jobs { get; }
+    public IReadOnlyList<PamRotationJobResponseModel> Jobs { get; set; } = [];
 }
