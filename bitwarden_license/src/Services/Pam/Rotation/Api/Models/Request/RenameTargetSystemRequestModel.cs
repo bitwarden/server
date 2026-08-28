@@ -2,7 +2,7 @@
 
 namespace Bit.Services.Pam.Rotation.Api.Models.Request;
 
-/// <summary>The body of <c>PUT target-systems/{id}/name</c>. Display-only -- the id keys the daemon's connector resolver.</summary>
+/// <summary>The body of <c>PUT target-systems/{id}/name</c>.</summary>
 public class RenameTargetSystemRequestModel
 {
     /// <summary>The target system's new display name.</summary>

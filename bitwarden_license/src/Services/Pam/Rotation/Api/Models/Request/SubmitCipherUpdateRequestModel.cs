@@ -2,12 +2,7 @@
 
 namespace Bit.Services.Pam.Rotation.Api.Models.Request;
 
-/// <summary>
-/// The body of <c>PUT rotation/attempts/{id}/cipher</c> (spec <c>AcceptCipherUpdate</c>). <see cref="Data"/> is the
-/// rotated cipher's encrypted JSON blob, written back verbatim -- opaque ciphertext to the server.
-/// <see cref="LastKnownRevisionDate"/> must still match the cipher's current revision date at write time or the
-/// write is rejected (409) as a concurrent user edit.
-/// </summary>
+/// <summary>The body of <c>PUT rotation/attempts/{id}/cipher</c> (spec <c>AcceptCipherUpdate</c>).</summary>
 public class SubmitCipherUpdateRequestModel
 {
     /// <summary>

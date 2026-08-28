@@ -5,10 +5,9 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Request;
 
 /// <summary>
 /// The body of <c>POST rotation/attempts/{id}/failure</c> (spec <c>RecordRotationFailed</c>). The contract forbids
-/// forwarding raw target-system error output -- it can echo credentials -- so the daemon reports a bounded
-/// <see cref="ErrorCode"/> (an enum-ish string token it defines) plus an optional, separately-capped
-/// <see cref="Detail"/>. Each field is bounded independently and a body exceeding either is rejected; the combined
-/// reason the two produce is truncated rather than rejected, since it can exceed the length the server records.
+/// forwarding raw target-system error output -- it can echo credentials -- so the daemon reports an
+/// <see cref="ErrorCode"/> token it defines plus an optional <see cref="Detail"/>. The combined reason the two
+/// produce is truncated rather than rejected, since it can exceed the length the server records.
 /// </summary>
 public class ReportRotationFailedRequestModel
 {
@@ -22,9 +21,7 @@ public class ReportRotationFailedRequestModel
     [EnumDataType(typeof(PamRotationSyncState))]
     public PamRotationSyncState? SyncState { get; set; }
 
-    /// <summary>
-    /// A bounded, daemon-defined token classifying the failure -- never raw target-system output.
-    /// </summary>
+    /// <summary>A daemon-defined token classifying the failure -- never raw target-system output.</summary>
     [Required]
     [StringLength(100)]
     public string ErrorCode { get; set; } = null!;

@@ -6,10 +6,9 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Request;
 /// <summary>
 /// Registers a target system, automatic or manual (spec <c>RegisterAutomaticTargetSystem</c> /
 /// <c>RegisterManualTargetSystem</c>) -- method-discriminated on <see cref="Method"/>: an
-/// <see cref="PamTargetSystemMethod.Automatic"/> target requires <see cref="Kind"/>, <see cref="PasswordPolicy"/>,
-/// and <see cref="SupportsSessionTermination"/>; a <see cref="PamTargetSystemMethod.Manual"/> target requires all
-/// three to be absent. <c>RegisterTargetSystemCommand</c> re-checks this shape server-side as defense in depth;
-/// this validation exists so a shape mismatch comes back as a field-level 400 instead of a generic one.
+/// <see cref="PamTargetSystemMethod.Automatic"/> target carries <see cref="Kind"/>, <see cref="PasswordPolicy"/>,
+/// and <see cref="SupportsSessionTermination"/>; a <see cref="PamTargetSystemMethod.Manual"/> target carries none
+/// of the three.
 /// </summary>
 public class RegisterTargetSystemRequestModel : IValidatableObject
 {
