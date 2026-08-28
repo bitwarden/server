@@ -1,8 +1,8 @@
 ﻿namespace Bit.Services.Pam.Rotation.Jobs;
 
 /// <summary>
-/// Runs the lease natural-expiry sweep: flips every <see cref="Bit.Pam.Enums.AccessLeaseStatus.Active"/> lease whose
-/// window has closed on its own to <see cref="Bit.Pam.Enums.AccessLeaseStatus.Expired"/>, emits the deferred
+/// Runs the lease natural-expiry sweep: finds every lease whose window has closed on its own (expiry is derived at
+/// read time, so nothing is flipped — the sweep journals each lease it has handled instead), emits the deferred
 /// <see cref="Bit.Pam.Enums.AccessAuditEventKind.LeaseExpired"/> audit event, and fires the rotation access-end
 /// trigger for each -- closing the standing PAM gap where a lease's own expiry never produced a
 /// <see cref="Bit.Pam.Enums.AccessAuditEventKind.LeaseRevoked"/>-shaped record. Invoked on a Quartz cron by

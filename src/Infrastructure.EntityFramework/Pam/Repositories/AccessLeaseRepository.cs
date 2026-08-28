@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CoreEntity = Bit.Pam.Entities.AccessLease;
 using EfDecision = Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision;
+using EfLeaseExpirySweep = Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep;
 using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease;
 
 #nullable enable
@@ -270,15 +271,14 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // The stored procedure flips and projects in one UPDATE ... OUTPUT; EF has no portable equivalent, so the due
-        // rows are projected first and the flip is constrained to those ids. A Serializable transaction keeps a
-        // concurrent sweep from flipping the same rows between the read and the write, so a lease is returned only by
-        // the run that actually expired it -- the LeaseExpired audit event and the rotation access-end trigger fire
-        // once per lease. The revoke fields are deliberately left untouched: natural expiry has no revoker.
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-
+        // Expiry is derived rather than stored (a lease whose window closed on its own keeps Action = None forever),
+        // so there is no status flip to mark a lease as processed. The PamLeaseExpirySweep journal is the once-only
+        // arbiter instead: a lease is returned only by the run that journals it. No stronger isolation is needed --
+        // if two sweeps race past the read, the journal's primary key fails the loser's SaveChanges before it can
+        // return anything, which keeps at-most-once without serializable range locks across the whole lease table.
         var due = await dbContext.AccessLeases
-            .Where(l => l.Status == AccessLeaseStatus.Active && l.NotAfter <= now)
+            .Where(l => l.Action == AccessLeaseAction.None && l.NotAfter <= now &&
+                !dbContext.PamLeaseExpirySweeps.Any(s => s.AccessLeaseId == l.Id))
             .Select(l => new PamExpiredLease
             {
                 Id = l.Id,
@@ -293,13 +293,11 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
 
         if (due.Count > 0)
         {
-            var ids = due.Select(l => l.Id).ToList();
-            await dbContext.AccessLeases
-                .Where(l => ids.Contains(l.Id) && l.Status == AccessLeaseStatus.Active)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(l => l.Status, AccessLeaseStatus.Expired));
+            dbContext.PamLeaseExpirySweeps.AddRange(due.Select(l =>
+                new EfLeaseExpirySweep { AccessLeaseId = l.Id, SweptDate = now }));
+            await dbContext.SaveChangesAsync();
         }
 
-        await transaction.CommitAsync();
         return due;
     }
 

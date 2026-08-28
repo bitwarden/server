@@ -1,8 +1,7 @@
 ﻿namespace Bit.Pam.Models;
 
 /// <summary>
-/// One lease the natural-expiry sweep flipped from <see cref="Enums.AccessLeaseStatus.Active"/> to
-/// <see cref="Enums.AccessLeaseStatus.Expired"/> because its window closed on its own (no revoke or cancel
+/// One lease the natural-expiry sweep found newly ended because its window closed on its own (no revoke or cancel
 /// involved) — the row <c>IAccessLeaseRepository.ExpireDueAsync</c> returns for the deferred LeaseExpired audit
 /// event and the rotation access-end trigger.
 /// </summary>

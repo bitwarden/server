@@ -2805,6 +2805,19 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("PamDaemonTargetAssignment", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep", b =>
+                {
+                    b.Property<Guid>("AccessLeaseId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("SweptDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("AccessLeaseId");
+
+                    b.ToTable("PamLeaseExpirySweep", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationAttempt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4174,6 +4187,15 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease", null)
+                        .WithMany()
+                        .HasForeignKey("AccessLeaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationAttempt", b =>

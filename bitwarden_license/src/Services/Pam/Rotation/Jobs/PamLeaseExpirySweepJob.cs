@@ -7,9 +7,8 @@ namespace Bit.Services.Pam.Rotation.Jobs;
 
 /// <summary>
 /// Quartz entry point for <see cref="IPamLeaseExpirySweepService"/> (the lease natural-expiry sweep). Gated on
-/// <see cref="FeatureFlagKeys.Pam"/> rather than <see cref="FeatureFlagKeys.PamRotation"/>: flipping an
-/// <see cref="Bit.Pam.Enums.AccessLeaseStatus.Active"/> lease to
-/// <see cref="Bit.Pam.Enums.AccessLeaseStatus.Expired"/> and emitting the deferred
+/// <see cref="FeatureFlagKeys.Pam"/> rather than <see cref="FeatureFlagKeys.PamRotation"/>: noticing a lease whose
+/// window closed on its own and emitting the deferred
 /// <see cref="Bit.Pam.Enums.AccessAuditEventKind.LeaseExpired"/> event is a leasing fix that belongs to PAM v0, not
 /// rotation; the rotation trigger it also fires (via <see cref="IPamLeaseExpirySweepService"/> calling
 /// <see cref="Bit.Services.Pam.Rotation.Commands.Interfaces.IHandleAccessGrantEndedCommand"/>) self-gates on

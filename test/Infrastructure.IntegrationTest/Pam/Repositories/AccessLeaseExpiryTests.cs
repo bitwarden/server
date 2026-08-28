@@ -10,14 +10,15 @@ namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 /// <summary>
 /// The lease natural-expiry sweep (<c>AccessLease_ExpireDue</c> via
-/// <see cref="IAccessLeaseRepository.ExpireDueAsync"/>): Active leases whose window closed on its own flip to
-/// Expired and are returned for the LeaseExpired audit emission / rotation access-end trigger. The sweep is
-/// set-based across the whole table, so assertions scope to this test's lease ids rather than the full result.
+/// <see cref="IAccessLeaseRepository.ExpireDueAsync"/>): leases whose window closed on its own are returned once for
+/// the LeaseExpired audit emission / rotation access-end trigger, journaled in <c>PamLeaseExpirySweep</c> so a later
+/// run never returns them again (expiry itself is derived at read time, never stored). The sweep is set-based across
+/// the whole table, so assertions scope to this test's lease ids rather than the full result.
 /// </summary>
 public class AccessLeaseExpiryTests
 {
     [DatabaseTheory, DatabaseData]
-    public async Task ExpireDueAsync_ActiveLeasePastNotAfter_ExpiresAndReturnsIt(
+    public async Task ExpireDueAsync_LeasePastNotAfter_ReturnsIt(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
@@ -40,15 +41,18 @@ public class AccessLeaseExpiryTests
         Assert.Equal(lease.NotBefore, row.NotBefore);
         Assert.Equal(lease.NotAfter, row.NotAfter);
 
+        // Natural expiry is derived, never stored: the sweep records nothing on the lease itself, so the row still
+        // carries no early end and no revoker, and the read model derives Expired from the closed window.
         var persisted = await accessLeaseRepository.GetByIdAsync(lease.Id);
-        Assert.Equal(AccessLeaseStatus.Expired, persisted!.Status);
-        // Natural expiry involves no revoker: the revoke fields stay untouched.
+        Assert.Equal(AccessLeaseAction.None, persisted!.Action);
         Assert.Null(persisted.RevokedDate);
         Assert.Null(persisted.RevokedBy);
+        Assert.Equal(AccessLeaseStatus.Expired,
+            AccessStatusDerivation.ComputeLeaseStatus(persisted.Action, persisted.NotAfter, now));
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ExpireDueAsync_InWindowAndRevokedLeases_Untouched(
+    public async Task ExpireDueAsync_InWindowAndRevokedLeases_NotReturned(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
@@ -60,11 +64,11 @@ public class AccessLeaseExpiryTests
         var active = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddMinutes(-5), now.AddHours(1));
 
-        // Past its window but already Revoked: the sweep only flips Active leases -- an operator-ended lease must
-        // never be rewritten to Expired.
+        // Past its window but already Revoked: the sweep only handles natural expiry -- an operator-ended lease's
+        // access-end trigger fired on the revoke path, so returning it here would fire it twice.
         var revoked = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
-        await accessLeaseRepository.RevokeAsync(revoked, AccessLeaseStatus.Revoked, new AccessDecision
+        await accessLeaseRepository.RevokeAsync(revoked, AccessLeaseAction.Revoked, new AccessDecision
         {
             Id = CombGuid.Generate(),
             AccessRequestId = revoked.AccessRequestId,
@@ -79,14 +83,15 @@ public class AccessLeaseExpiryTests
 
         Assert.DoesNotContain(expired, r => r.Id == active.Id);
         Assert.DoesNotContain(expired, r => r.Id == revoked.Id);
-        Assert.Equal(AccessLeaseStatus.Active, (await accessLeaseRepository.GetByIdAsync(active.Id))!.Status);
-        Assert.Equal(AccessLeaseStatus.Revoked, (await accessLeaseRepository.GetByIdAsync(revoked.Id))!.Status);
+        Assert.Equal(AccessLeaseAction.None, (await accessLeaseRepository.GetByIdAsync(active.Id))!.Action);
+        Assert.Equal(AccessLeaseAction.Revoked, (await accessLeaseRepository.GetByIdAsync(revoked.Id))!.Action);
     }
 
-    // The sweep is idempotent: a lease it already flipped is no longer Active, so a second run never returns it
-    // again -- the LeaseExpired audit event and the rotation access-end trigger fire exactly once per lease.
+    // The sweep fires at most once per lease: a returned lease is journaled in the same call, so a second run never
+    // returns it again -- the LeaseExpired audit event and the rotation access-end trigger fire exactly once. This
+    // is the guarantee the retired stored-status flip used to provide.
     [DatabaseTheory, DatabaseData]
-    public async Task ExpireDueAsync_SecondRun_DoesNotReturnAlreadyExpiredLease(
+    public async Task ExpireDueAsync_SecondRun_DoesNotReturnAlreadySweptLease(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
@@ -101,7 +106,6 @@ public class AccessLeaseExpiryTests
 
         var secondRun = await accessLeaseRepository.ExpireDueAsync(now.AddMinutes(1));
         Assert.DoesNotContain(secondRun, r => r.Id == lease.Id);
-        Assert.Equal(AccessLeaseStatus.Expired, (await accessLeaseRepository.GetByIdAsync(lease.Id))!.Status);
     }
 
     // Seeds an active lease the way production does: record the auto-approved request, then mint the lease by
@@ -121,7 +125,7 @@ public class AccessLeaseExpiryTests
             RequesterId = Guid.NewGuid(),
             NotBefore = notBefore,
             NotAfter = notAfter,
-            Status = AccessRequestStatus.Approved,
+            Action = AccessRequestAction.Approved,
         };
         var decision = new AccessDecision
         {
@@ -140,7 +144,7 @@ public class AccessLeaseExpiryTests
             CollectionId = request.CollectionId,
             CipherId = request.CipherId,
             RequesterId = request.RequesterId,
-            Status = AccessLeaseStatus.Active,
+            Action = AccessLeaseAction.None,
             NotBefore = notBefore,
             NotAfter = notAfter,
             CreationDate = notBefore,

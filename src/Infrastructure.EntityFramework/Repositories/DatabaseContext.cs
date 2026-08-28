@@ -56,6 +56,7 @@ public class DatabaseContext : DbContext
     public DbSet<PamRotationConfig> PamRotationConfigs { get; set; }
     public DbSet<PamRotationJob> PamRotationJobs { get; set; }
     public DbSet<PamRotationAttempt> PamRotationAttempts { get; set; }
+    public DbSet<PamLeaseExpirySweep> PamLeaseExpirySweeps { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -132,6 +133,7 @@ public class DatabaseContext : DbContext
         var ePamRotationConfig = builder.Entity<PamRotationConfig>();
         var ePamRotationJob = builder.Entity<PamRotationJob>();
         var ePamRotationAttempt = builder.Entity<PamRotationAttempt>();
+        var ePamLeaseExpirySweep = builder.Entity<PamLeaseExpirySweep>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
@@ -229,6 +231,14 @@ public class DatabaseContext : DbContext
             .WithMany()
             .HasForeignKey(l => l.AccessRequestId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        ePamLeaseExpirySweep.HasKey(p => p.AccessLeaseId);
+        ePamLeaseExpirySweep.Property(p => p.AccessLeaseId).ValueGeneratedNever();
+        ePamLeaseExpirySweep
+            .HasOne<AccessLease>()
+            .WithMany()
+            .HasForeignKey(p => p.AccessLeaseId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         eAccessDecision.Property(p => p.Id).ValueGeneratedNever();
         eAccessDecision.HasIndex(p => p.AccessRequestId);
@@ -361,6 +371,7 @@ public class DatabaseContext : DbContext
         ePamRotationConfig.ToTable(nameof(PamRotationConfig));
         ePamRotationJob.ToTable(nameof(PamRotationJob));
         ePamRotationAttempt.ToTable(nameof(PamRotationAttempt));
+        ePamLeaseExpirySweep.ToTable(nameof(PamLeaseExpirySweep));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));

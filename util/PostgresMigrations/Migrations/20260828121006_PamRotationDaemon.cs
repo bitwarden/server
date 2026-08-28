@@ -229,6 +229,24 @@ public partial class PamRotationDaemon : Migration
                     principalColumn: "Id");
             });
 
+        migrationBuilder.CreateTable(
+            name: "PamLeaseExpirySweep",
+            columns: table => new
+            {
+                AccessLeaseId = table.Column<Guid>(type: "uuid", nullable: false),
+                SweptDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_PamLeaseExpirySweep", x => x.AccessLeaseId);
+                table.ForeignKey(
+                    name: "FK_PamLeaseExpirySweep_AccessLease_AccessLeaseId",
+                    column: x => x.AccessLeaseId,
+                    principalTable: "AccessLease",
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
+            });
+
         migrationBuilder.CreateIndex(
             name: "IX_PamDaemon_ApiKeyId",
             table: "PamDaemon",
@@ -313,6 +331,9 @@ public partial class PamRotationDaemon : Migration
     {
         migrationBuilder.DropTable(
             name: "PamDaemonTargetAssignment");
+
+        migrationBuilder.DropTable(
+            name: "PamLeaseExpirySweep");
 
         migrationBuilder.DropTable(
             name: "PamRotationAttempt");
