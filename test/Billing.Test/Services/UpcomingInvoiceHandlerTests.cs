@@ -1172,10 +1172,11 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_SchedulePresent_CarriesCustomerDiscountIntoEveryPhase()
+    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_SchedulePresent_OmitsCustomerDiscountFromActivePhase()
     {
-        // The customer coupon is carried into every rebuilt phase, current phase included — the
-        // shared builder no longer special-cases the active phase.
+        // The customer coupon is omitted from the active phase so it isn't stacked onto the current
+        // period; with no live subscription discounts to carry, the active phase has no explicit
+        // discounts. It is still re-listed on the future phase, or it would drop off there.
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
         var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
         var subscription = new Subscription
@@ -1252,8 +1253,8 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is("sub_sched_123"),
             Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
                 o.Phases.Count == 2 &&
-                // Active phase 0: customer coupon carried in.
-                o.Phases[0].Discounts.Any(d => d.Coupon == "retention") &&
+                // Active phase 0: customer coupon omitted, no live subscription discounts to carry.
+                o.Phases[0].Discounts == null &&
                 // Future phase 1: customer coupon carried in, stacked with the existing milestone.
                 o.Phases[1].Discounts.Any(d => d.Coupon == "retention") &&
                 o.Phases[1].Discounts.Any(d => d.Coupon == "milestone-coupon")));

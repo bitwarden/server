@@ -785,10 +785,11 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
-    public async Task Run_PersonalOrganization_SchedulePresent_CarriesCustomerDiscountIntoEveryPhase()
+    public async Task Run_PersonalOrganization_SchedulePresent_OmitsCustomerDiscountFromActivePhase()
     {
-        // The customer coupon is carried into every rebuilt phase, current phase included — the
-        // shared builder no longer special-cases the active phase.
+        // The customer coupon is omitted from the active phase so it isn't stacked onto the current
+        // period; with no live subscription discounts to carry, the active phase has no explicit
+        // discounts. It is still re-listed on the future phase, or it would drop off there.
         var organization = new Organization
         {
             PlanType = PlanType.FamiliesAnnually,
@@ -874,8 +875,8 @@ public class UpdateBillingAddressCommandTests
             Arg.Is("sub_sched_123"),
             Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
                 o.Phases.Count == 2 &&
-                // Active phase 0: customer coupon carried in.
-                o.Phases[0].Discounts.Any(d => d.Coupon == "retention") &&
+                // Active phase 0: customer coupon omitted, no live subscription discounts to carry.
+                o.Phases[0].Discounts == null &&
                 // Future phase 1: customer coupon carried in, stacked with the existing milestone.
                 o.Phases[1].Discounts.Any(d => d.Coupon == "retention") &&
                 o.Phases[1].Discounts.Any(d => d.Coupon == "milestone-3")));
@@ -885,13 +886,14 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
-    public async Task Run_PersonalOrganization_Phase2Active_ConsumedMilestoneCouponNotReadded_CustomerCouponCarried()
+    public async Task Run_PersonalOrganization_Phase2Active_ConsumedMilestoneCouponNotReadded()
     {
         // Phase 1 already ended; phase 2 is now the active phase. Its "milestone-3" coupon was a
         // one-time coupon consumed when phase 2 activated -- it must NOT reappear (it's absent
         // from both phase.Discounts' preserved set, since only future phases preserve, and from
-        // subscription.Discounts, since it was consumed). The still-valid customer coupon carries
-        // forward, so the phase is never left with an empty discounts array.
+        // subscription.Discounts, since it was consumed). With no live subscription discounts, the
+        // active phase carries no explicit discounts; the still-valid customer coupon cascades on
+        // its own rather than being stacked on.
         var organization = new Organization
         {
             PlanType = PlanType.FamiliesAnnually,
@@ -971,15 +973,13 @@ public class UpdateBillingAddressCommandTests
 
         Assert.True(result.IsT0);
 
-        // Only the active phase remains updatable; the consumed milestone coupon is gone but the
-        // live customer coupon carries the phase's discounts -- never an empty array.
+        // Only the active phase remains updatable; the consumed milestone coupon is gone and no
+        // explicit discounts are listed, so the customer coupon cascades on its own.
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             Arg.Is("sub_sched_123"),
             Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
                 o.Phases.Count == 1 &&
-                o.Phases[0].Discounts != null &&
-                o.Phases[0].Discounts.Count == 1 &&
-                o.Phases[0].Discounts[0].Coupon == "retention"));
+                o.Phases[0].Discounts == null));
     }
 
     [Fact]

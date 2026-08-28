@@ -421,9 +421,10 @@ public class UpdateOrganizationSubscriptionCommand(
             StartDate = sourcePhase.StartDate,
             EndDate = sourcePhase.EndDate,
             Items = SchedulePhaseMapper.ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
-            Discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
-                subscription, [],
-                preservedCouponIds: isFuture ? sourcePhase.Discounts?.Select(d => d.CouponId) : null),
+            Discounts = isFuture
+                ? DiscountExtensions.BuildPhaseLevelDiscounts(
+                    subscription, [], preservedCouponIds: sourcePhase.Discounts?.Select(d => d.CouponId))
+                : DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
             Metadata = sourcePhase.Metadata,
             ProrationBehavior = sourcePhase.ProrationBehavior
         };

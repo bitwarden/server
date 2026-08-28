@@ -842,7 +842,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_BusinessMigration_CustomerDiscount_CarriedOntoBothPhases()
+    public async Task Run_BusinessMigration_CustomerDiscount_OmittedFromActivePhase_CarriedOntoFuture()
     {
         // Discount stacking is migration-only, so this is set up as a migration org.
         var organization = CreateOrganization();
@@ -867,6 +867,10 @@ public class UpdateOrganizationSubscriptionCommandTests
             },
             items: [(sourceSeat, "si_1", 5)]);
 
+        // A live subscription discount on the active phase; carried forward by discount id.
+        subscription.Discounts =
+            [new Discount { Id = "di_live", Source = new DiscountSource { Coupon = new Coupon { Id = "live-coupon" } } }];
+
         SetupGetSubscription(organization, subscription);
 
         var schedule = CreateMockSchedule(subscription.Id, [(sourceSeat, 5)], [(targetSeat, 5)],
@@ -887,10 +891,13 @@ public class UpdateOrganizationSubscriptionCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             schedule.Id,
             Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
-                // An explicit phase discounts array overrides Stripe's customer-level cascade, so the
-                // customer coupon must be carried onto both phases or it silently drops off the active one.
+                // The active phase carries only live subscription discounts by id; the customer coupon is
+                // omitted so it isn't stacked onto the current period. The future phase re-lists the customer
+                // coupon (or it would drop off) plus the preserved migration coupon.
                 opts.Phases[0].Discounts != null &&
-                opts.Phases[0].Discounts.Any(d => d.Coupon == "retention") &&
+                opts.Phases[0].Discounts.Count == 1 &&
+                opts.Phases[0].Discounts[0].Discount == "di_live" &&
+                opts.Phases[0].Discounts.All(d => d.Coupon != "retention") &&
                 opts.Phases[1].Discounts.Any(d => d.Coupon == "retention") &&
                 opts.Phases[1].Discounts.Any(d => d.Coupon == "migration-coupon")));
     }

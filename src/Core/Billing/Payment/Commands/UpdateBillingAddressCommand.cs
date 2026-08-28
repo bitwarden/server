@@ -181,9 +181,10 @@ public class UpdateBillingAddressCommand(
                                 Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
                                     item.Discounts?.Select(d => d.CouponId) ?? [])
                             }).ToList(),
-                            Discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
-                                subscription, [],
-                                preservedCouponIds: isFuture ? phase.Discounts?.Select(d => d.CouponId) : null),
+                            Discounts = isFuture
+                                ? DiscountExtensions.BuildPhaseLevelDiscounts(
+                                    subscription, [], preservedCouponIds: phase.Discounts?.Select(d => d.CouponId))
+                                : DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
                             Metadata = phase.Metadata,
                             ProrationBehavior = phase.ProrationBehavior,
                             AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
