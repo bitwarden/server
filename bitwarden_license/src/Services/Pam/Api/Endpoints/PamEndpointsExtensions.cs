@@ -22,9 +22,7 @@ public static class PamEndpointsExtensions
         endpoints.MapGroup("/organizations/{orgId:guid}/access-rules").WithPamDefaults().MapAccessRuleEndpoints();
         endpoints.MapGroup("/leases/ciphers/{id:guid}").WithPamDefaults().MapCipherLeaseEndpoints();
 
-        // Credential rotation -- admin fleet/config management, gated behind the PamRotation flag on top of the
-        // same Policies.Application every other admin group uses, plus ManageRotationRequirement for the org-scoped
-        // role check. Nested groups inherit both, so every route below is gated identically.
+        // Credential rotation -- admin fleet/config management.
         var rotationAdmin = endpoints.MapGroup("/organizations/{orgId:guid}/rotation").WithPamRotationDefaults();
         rotationAdmin.MapGroup("/daemons").MapRotationDaemonEndpoints();
         rotationAdmin.MapGroup("/target-systems").MapRotationTargetSystemEndpoints();

@@ -54,7 +54,9 @@ internal static class RotationAttemptEndpoints
             .WithDescription(
                 "Reports a failed rotation attempt (spec RecordRotationFailed). Never forward raw target-system " +
                 "error output as ErrorCode/Detail -- it can echo credentials. Send a bounded error code plus an " +
-                "optional short detail instead; both are truncated (never rejected) server-side.");
+                "optional short detail instead. Either field exceeding its documented length is rejected as a 400, " +
+                "so cap them before sending -- a rejected report leaves the failure unrecorded until the job " +
+                "times out. The single reason the two combine into is truncated rather than rejected.");
 
         return group;
     }

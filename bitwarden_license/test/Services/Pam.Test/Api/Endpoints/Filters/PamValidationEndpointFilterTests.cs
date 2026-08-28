@@ -54,6 +54,96 @@ public class PamValidationEndpointFilterTests
             nameof(SubmitCipherUpdateRequestModel.LastKnownRevisionDate)));
     }
 
+    // The rotation report enums are nullable for the same reason. [Required] alone would not catch an omitted
+    // value on a non-nullable enum -- it only rejects null -- so the field would bind to whichever member is zero:
+    // "the vault credential is still correct" for SyncState, "termination was never attempted" for
+    // SessionTermination. Both are the reassuring answer, reported for a daemon that said nothing.
+    [Fact]
+    public async Task InvokeAsync_FailureReportWithoutSyncState_Returns400()
+    {
+        var context = CreateContext(new ReportRotationFailedRequestModel { ErrorCode = "target_unreachable" });
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.Contains(nameof(ReportRotationFailedRequestModel.SyncState), jsonResult.Value!.ValidationErrors!.Keys);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_FailureReportWithOutOfRangeSyncState_Returns400()
+    {
+        // Without [EnumDataType] an undefined member deserializes and validates, reaching the attempt record as a
+        // sync state nothing can interpret.
+        var context = CreateContext(new ReportRotationFailedRequestModel
+        {
+            ErrorCode = "target_unreachable",
+            SyncState = (PamRotationSyncState)99,
+        });
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.Contains(nameof(ReportRotationFailedRequestModel.SyncState), jsonResult.Value!.ValidationErrors!.Keys);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_SuccessReportWithoutSessionTermination_Returns400()
+    {
+        var context = CreateContext(new ReportRotationSucceededRequestModel());
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.Contains(
+            nameof(ReportRotationSucceededRequestModel.SessionTermination),
+            jsonResult.Value!.ValidationErrors!.Keys);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_TargetSystemRegistrationWithoutMethod_ReportsOnlyTheOmittedMethod()
+    {
+        // An omitted Method used to bind to Automatic and fail the automatic shape rules, blaming Kind and
+        // PasswordPolicy. The caller never chose a method, so Method is the only honest complaint.
+        var context = CreateContext(new RegisterTargetSystemRequestModel { Name = "db-prod" });
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.Equal(
+            [nameof(RegisterTargetSystemRequestModel.Method)],
+            jsonResult.Value!.ValidationErrors!.Keys);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_TargetSystemRegistrationWithOutOfRangeKind_Returns400()
+    {
+        // Kind is optional rather than [Required], but an undefined member still needs rejecting: it would be
+        // stored as the connector the daemon is expected to rotate through.
+        var context = CreateContext(new RegisterTargetSystemRequestModel
+        {
+            Name = "db-prod",
+            Method = PamTargetSystemMethod.Automatic,
+            Kind = (PamTargetSystemKind)99,
+            PasswordPolicy = new PamPasswordPolicyRequestModel
+            {
+                MinLength = 16,
+                MaxLength = 32,
+                IncludeLowercase = true,
+            },
+            SupportsSessionTermination = false,
+        });
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.Contains(nameof(RegisterTargetSystemRequestModel.Kind), jsonResult.Value!.ValidationErrors!.Keys);
+    }
+
     [Fact]
     public async Task InvokeAsync_ValidRequestModel_CallsNext()
     {

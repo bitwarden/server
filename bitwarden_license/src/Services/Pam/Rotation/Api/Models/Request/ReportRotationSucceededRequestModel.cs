@@ -8,8 +8,11 @@ public class ReportRotationSucceededRequestModel
 {
     /// <summary>
     /// The result of the rotation's optional session-termination step, recorded on the resolved attempt. A
-    /// termination failure does not undo the success -- the credential was still rotated.
+    /// termination failure does not undo the success -- the credential was still rotated. Nullable so an omitted
+    /// value is rejected rather than binding to <see cref="PamSessionTerminationOutcome.NotRequested"/>, which
+    /// would record an attempted termination as one never tried.
     /// </summary>
     [Required]
-    public PamSessionTerminationOutcome SessionTermination { get; set; }
+    [EnumDataType(typeof(PamSessionTerminationOutcome))]
+    public PamSessionTerminationOutcome? SessionTermination { get; set; }
 }

@@ -20,12 +20,16 @@ public class RegisterTargetSystemRequestModel : IValidatableObject
 
     /// <summary>
     /// How the target's credentials are rotated -- by a rotation daemon (automatic) or by a human out of band
-    /// (manual). Decides which of the remaining fields apply.
+    /// (manual). Decides which of the remaining fields apply. Nullable so an omitted value is rejected rather than
+    /// binding to <see cref="PamTargetSystemMethod.Automatic"/>, which would register an automatic target for a
+    /// caller who never asked for one.
     /// </summary>
     [Required]
-    public PamTargetSystemMethod Method { get; set; }
+    [EnumDataType(typeof(PamTargetSystemMethod))]
+    public PamTargetSystemMethod? Method { get; set; }
 
     /// <summary>The connector an automatic target is rotated through.</summary>
+    [EnumDataType(typeof(PamTargetSystemKind))]
     public PamTargetSystemKind? Kind { get; set; }
 
     /// <summary>
@@ -41,6 +45,13 @@ public class RegisterTargetSystemRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (Method is null)
+        {
+            // [Required] reports the omission on its own. Falling through would additionally report the manual
+            // shape rules, blaming fields the caller never had the chance to get wrong.
+            yield break;
+        }
+
         if (Method == PamTargetSystemMethod.Automatic)
         {
             if (Kind is null)

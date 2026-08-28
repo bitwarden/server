@@ -7,17 +7,20 @@ namespace Bit.Services.Pam.Rotation.Api.Models.Request;
 /// The body of <c>POST rotation/attempts/{id}/failure</c> (spec <c>RecordRotationFailed</c>). The contract forbids
 /// forwarding raw target-system error output -- it can echo credentials -- so the daemon reports a bounded
 /// <see cref="ErrorCode"/> (an enum-ish string token it defines) plus an optional, separately-capped
-/// <see cref="Detail"/>; the server truncates the combined reason to 500 characters regardless (never rejected).
+/// <see cref="Detail"/>. Each field is bounded independently and a body exceeding either is rejected; the combined
+/// reason the two produce is truncated rather than rejected, since it can exceed the length the server records.
 /// </summary>
 public class ReportRotationFailedRequestModel
 {
     /// <summary>
     /// Whether the failure left the target system's password changed -- that is, whether the vault credential
     /// still matches the target. Recorded on the attempt so an operator can tell a clean failure from
-    /// credential drift.
+    /// credential drift. Nullable so an omitted value is rejected rather than binding to
+    /// <see cref="PamRotationSyncState.TargetUnchanged"/>, which would report drift as no drift.
     /// </summary>
     [Required]
-    public PamRotationSyncState SyncState { get; set; }
+    [EnumDataType(typeof(PamRotationSyncState))]
+    public PamRotationSyncState? SyncState { get; set; }
 
     /// <summary>
     /// A bounded, daemon-defined token classifying the failure -- never raw target-system output.
