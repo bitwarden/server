@@ -3,14 +3,12 @@ CREATE PROCEDURE [dbo].[Send_DeleteMany]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT makes the DELETE + bump all-or-nothing: DeleteManySendsAsync needs a throw here
-    -- to mean nothing was deleted, so it doesn't emit Send_Deleted_* events for rows that don't
-    -- exist. The transaction is committed before the storage-recompute cursor below runs — that
-    -- cursor's User_UpdateStorage calls otherwise hold X locks (from the bump, above) on every
-    -- affected User row for the whole loop, blocking the account-revision-date read every client
-    -- sync poll hits. Storage recompute is idempotent and self-healing, so it doesn't need to
-    -- share the DELETE + bump's atomicity — a failure there just leaves that user's Storage stale
-    -- until the next Send affecting them is created or deleted.
+    -- XACT_ABORT makes this all-or-nothing: DeleteManyAsync needs a throw here to mean nothing was
+    -- deleted, so the caller doesn't emit Send_Deleted_* events for rows that don't exist. Storage
+    -- recompute for File-type Send owners is a separate, best-effort concern handled by the caller
+    -- (one User_UpdateStorage call per id in the returned result set) — it is idempotent and
+    -- self-healing, so it doesn't need this transaction's atomicity, and keeping it out avoids
+    -- holding X locks (from the bump, below) on affected User rows for longer than this statement.
     SET XACT_ABORT ON
 
     CREATE TABLE #Temp
@@ -51,24 +49,14 @@ BEGIN
 
     COMMIT TRANSACTION Send_DeleteMany
 
-    DECLARE @UserId UNIQUEIDENTIFIER
-    DECLARE [FileUserCursor] CURSOR FORWARD_ONLY FOR
-        SELECT DISTINCT
-            [UserId]
-        FROM
-            #Temp
-        WHERE
-            [UserId] IS NOT NULL
-            AND [Type] = 1 -- File
-    OPEN [FileUserCursor]
-    FETCH NEXT FROM [FileUserCursor] INTO @UserId
-    WHILE @@FETCH_STATUS = 0
-    BEGIN
-        EXEC [dbo].[User_UpdateStorage] @UserId
-        FETCH NEXT FROM [FileUserCursor] INTO @UserId
-    END
-    CLOSE [FileUserCursor]
-    DEALLOCATE [FileUserCursor]
+    -- Returned to the caller so it can recompute storage per id, outside this transaction.
+    SELECT DISTINCT
+        [UserId]
+    FROM
+        #Temp
+    WHERE
+        [UserId] IS NOT NULL
+        AND [Type] = 1 -- File
 
     DROP TABLE #Temp
 END

@@ -232,13 +232,36 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     public async Task DeleteManyAsync(IEnumerable<Guid> ids)
     {
         using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
+
+        // Send_DeleteMany's DELETE + revision bump are transactional: a throw here reliably means
+        // nothing was deleted. It returns the distinct File-type Send owners so storage can be
+        // recomputed per user afterward, outside that transaction and outside this method's own
+        // exception surface — a failure recomputing one user's storage must not be mistaken for
+        // "this batch wasn't deleted", and must not block the recompute for other users.
+        var fileUserIds = await connection.QueryAsync<Guid>(
             $"[{Schema}].[Send_DeleteMany]",
             new { Ids = ids.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure,
-            // Send_DeleteMany loops User_UpdateStorage once per distinct file-Send owner in the
-            // batch; UserRepository's own single-user UpdateStorageAsync already uses this timeout.
             commandTimeout: 180);
+
+        foreach (var userId in fileUserIds)
+        {
+            try
+            {
+                // Matches UserRepository.UpdateStorageAsync's timeout for the same single-user call.
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[User_UpdateStorage]",
+                    new { Id = userId },
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 180);
+            }
+            catch (Exception ex)
+            {
+                // Idempotent and self-healing: this user's Storage stays stale until their next
+                // Send create/delete recomputes it. Not worth failing the whole batch delete over.
+                _logger.LogWarning(ex, "Failed to recompute storage for User {UserId} after a Send batch delete.", userId);
+            }
+        }
     }
 
     private async Task ProtectDataAndSaveAsync(Send send, Func<Task> saveTask)

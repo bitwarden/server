@@ -7,6 +7,11 @@ using Quartz;
 
 namespace Bit.Admin.Tools.Jobs;
 
+// A run loops until the backlog drains and can span many 5-minute trigger intervals. Send_DeleteMany
+// doesn't report rows-affected, so an overlapping run re-fetching the same head-of-queue batch would
+// have its DELETE affect zero rows while DeleteManySendsAsync still reports every id as deleted —
+// duplicate Send_Deleted_* events and push notifications for Sends the other run already handled.
+[DisallowConcurrentExecution]
 public class DeleteSendsJob : BaseJob
 {
     private const int BatchSize = 2000;

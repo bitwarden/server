@@ -231,7 +231,17 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         await dbContext.UserBumpManyAccountRevisionDatesAsync(userIds);
         foreach (var userId in fileUserIds)
         {
-            await UserUpdateStorage(userId);
+            try
+            {
+                // Idempotent and self-healing: this user's Storage stays stale until their next
+                // Send create/delete recomputes it. Not worth failing the whole batch delete over,
+                // and must not be mistaken by the caller for "this batch wasn't deleted".
+                await UserUpdateStorage(userId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to recompute storage for User {UserId} after a Send batch delete.", userId);
+            }
         }
         await dbContext.SaveChangesAsync();
     }

@@ -1728,23 +1728,21 @@ public class NonAnonymousSendCommandTests
     }
 
     [Fact]
-    public async Task DeleteManySendsAsync_DeleteManyAsyncThrows_StillPublishesPushAndEvents()
+    public async Task DeleteManySendsAsync_DeleteManyAsyncThrows_PropagatesAndPublishesNothing()
     {
-        // Send_DeleteMany commits the DELETE + revision bump before its storage-recompute cursor
-        // runs, so a throw here is assumed to mean the delete succeeded and only the (idempotent,
-        // self-healing) storage recompute failed. The batch's audit trail must not be dropped over it.
+        // DeleteManyAsync catches its own storage-recompute failures (per-user, both ORMs), so a
+        // throw reaching here reliably means the delete + revision bump itself didn't happen —
+        // nothing was removed, and no push/event should be published for it.
         var firstSend = new Send { Id = Guid.NewGuid(), Type = SendType.Text, UserId = Guid.NewGuid() };
         var secondSend = new Send { Id = Guid.NewGuid(), Type = SendType.Text, UserId = Guid.NewGuid() };
 
         _sendRepository.DeleteManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns<Task>(_ => throw new InvalidOperationException("Send_DeleteMany timed out"));
+            .Returns<Task>(_ => throw new InvalidOperationException("Send_DeleteMany failed"));
 
-        var result = await _nonAnonymousSendCommand.DeleteManySendsAsync(new[] { firstSend, secondSend });
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _nonAnonymousSendCommand.DeleteManySendsAsync(new[] { firstSend, secondSend }));
 
-        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Payload.Id == firstSend.Id));
-        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Payload.Id == secondSend.Id));
-        await _eventService.Received(1).LogSendEventAsync(firstSend.UserId!.Value, firstSend.Id, EventType.Send_Deleted_Text);
-        await _eventService.Received(1).LogSendEventAsync(secondSend.UserId!.Value, secondSend.Id, EventType.Send_Deleted_Text);
-        Assert.Equal(new[] { firstSend.Id, secondSend.Id }, result);
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default);
     }
 }
