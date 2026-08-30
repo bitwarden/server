@@ -714,7 +714,8 @@ public class AccountsControllerTests : IDisposable
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
-        _userService.IsClaimedByAnyOrganizationAsync(user.Id).Returns(true);
+        _userService.DeleteAsync(user)
+            .ThrowsAsync(new BadRequestException(new CannotDeleteClaimedAccountError().Message));
 
         var result = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(new SecretVerificationRequestModel()));
 
@@ -727,12 +728,77 @@ public class AccountsControllerTests : IDisposable
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
-        _userService.IsClaimedByAnyOrganizationAsync(user.Id).Returns(false);
         _userService.DeleteAsync(user).Returns(IdentityResult.Success);
 
         await _sut.Delete(new SecretVerificationRequestModel());
 
         await _userService.Received(1).DeleteAsync(user);
+    }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException()
+    {
+        ConfigureUserServiceToReturnNullUserId();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _sut.PostDeleteRecoverToken(new VerifyDeleteRecoverRequestModel
+            {
+                UserId = Guid.NewGuid().ToString(),
+                Token = "token"
+            })
+        );
+    }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_WithValidToken_ShouldDeleteAccount()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidIdFor(user);
+        _userService.DeleteAsync(user, "token").Returns(Task.FromResult(IdentityResult.Success));
+
+        await _sut.PostDeleteRecoverToken(new VerifyDeleteRecoverRequestModel
+        {
+            UserId = Guid.NewGuid().ToString(),
+            Token = "token"
+        });
+
+        await _userService.Received(1).DeleteAsync(user, "token");
+    }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_WithInvalidToken_ShouldThrowBadRequestException()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidIdFor(user);
+        _userService.DeleteAsync(user, "token")
+            .Returns(Task.FromResult(IdentityResult.Failed(new IdentityError { Description = "Invalid token." })));
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostDeleteRecoverToken(new VerifyDeleteRecoverRequestModel
+            {
+                UserId = Guid.NewGuid().ToString(),
+                Token = "token"
+            })
+        );
+    }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_WithClaimedAccount_ThrowsBadRequestException()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidIdFor(user);
+        _userService.DeleteAsync(user, "token")
+            .ThrowsAsync(new BadRequestException(new CannotDeleteClaimedAccountError().Message));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostDeleteRecoverToken(new VerifyDeleteRecoverRequestModel
+            {
+                UserId = Guid.NewGuid().ToString(),
+                Token = "token"
+            })
+        );
+
+        Assert.Equal(new CannotDeleteClaimedAccountError().Message, exception.Message);
     }
 
     [Theory]
