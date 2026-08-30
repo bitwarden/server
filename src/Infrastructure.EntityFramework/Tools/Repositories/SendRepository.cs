@@ -226,16 +226,29 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         var fileUserIds = await sends.Where(s => s.UserId != null && s.Type == SendType.File)
             .Select(s => s.UserId!.Value).Distinct().ToArrayAsync();
 
-        await sends.ExecuteDeleteAsync();
+        // ExecuteDeleteAsync commits immediately in its own implicit transaction, and
+        // UserBumpManyAccountRevisionDatesAsync only stages tracked changes that SaveChangesAsync
+        // commits separately — without an explicit transaction, a failure between them leaves Sends
+        // deleted with no bump, and the caller (DeleteManySendsAsync) treats any throw from this
+        // method as "nothing was deleted", permanently skipping their push notifications and
+        // Send_Deleted_* events. Wrapping both in one transaction makes them all-or-nothing, matching
+        // the Dapper path's Send_DeleteMany + SET XACT_ABORT ON guarantee.
+        await using (var transaction = await dbContext.Database.BeginTransactionAsync())
+        {
+            await sends.ExecuteDeleteAsync();
+            await dbContext.UserBumpManyAccountRevisionDatesAsync(userIds);
+            await dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
 
-        await dbContext.UserBumpManyAccountRevisionDatesAsync(userIds);
         foreach (var userId in fileUserIds)
         {
             try
             {
                 // Idempotent and self-healing: this user's Storage stays stale until their next
                 // Send create/delete recomputes it. Not worth failing the whole batch delete over,
-                // and must not be mistaken by the caller for "this batch wasn't deleted".
+                // and must not be mistaken by the caller for "this batch wasn't deleted" — kept
+                // outside the transaction above, using its own scope/context either way.
                 await UserUpdateStorage(userId);
             }
             catch (Exception ex)
@@ -243,7 +256,6 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
                 _logger.LogWarning(ex, "Failed to recompute storage for User {UserId} after a Send batch delete.", userId);
             }
         }
-        await dbContext.SaveChangesAsync();
     }
 
     private void ProtectData(Core.Tools.Entities.Send send)
