@@ -320,6 +320,12 @@ public static partial class FeatureFlagKeys
     /// </summary>
     public const string PamDisableSqlAuditLogging = "pm-42480-disable-pam-sql-audit-logging";
 
+    /// <summary>
+    /// Gates every email PAM sends. Off — the absent-flag default, and the only state self-host ever sees — PAM
+    /// works exactly as it does without it, notifying through the SignalR refresh pushes alone.
+    /// </summary>
+    public const string PamEmailNotifications = "pm-00000-pam-email-notifications";
+
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
 
