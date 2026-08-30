@@ -1726,4 +1726,25 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceiveWithAnyArgs().DeleteManyAsync(default!);
         Assert.Empty(result);
     }
+
+    [Fact]
+    public async Task DeleteManySendsAsync_DeleteManyAsyncThrows_StillPublishesPushAndEvents()
+    {
+        // Send_DeleteMany commits the DELETE + revision bump before its storage-recompute cursor
+        // runs, so a throw here is assumed to mean the delete succeeded and only the (idempotent,
+        // self-healing) storage recompute failed. The batch's audit trail must not be dropped over it.
+        var firstSend = new Send { Id = Guid.NewGuid(), Type = SendType.Text, UserId = Guid.NewGuid() };
+        var secondSend = new Send { Id = Guid.NewGuid(), Type = SendType.Text, UserId = Guid.NewGuid() };
+
+        _sendRepository.DeleteManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns<Task>(_ => throw new InvalidOperationException("Send_DeleteMany timed out"));
+
+        var result = await _nonAnonymousSendCommand.DeleteManySendsAsync(new[] { firstSend, secondSend });
+
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Payload.Id == firstSend.Id));
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Payload.Id == secondSend.Id));
+        await _eventService.Received(1).LogSendEventAsync(firstSend.UserId!.Value, firstSend.Id, EventType.Send_Deleted_Text);
+        await _eventService.Received(1).LogSendEventAsync(secondSend.UserId!.Value, secondSend.Id, EventType.Send_Deleted_Text);
+        Assert.Equal(new[] { firstSend.Id, secondSend.Id }, result);
+    }
 }

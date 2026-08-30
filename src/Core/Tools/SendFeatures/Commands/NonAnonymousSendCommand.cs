@@ -289,7 +289,22 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         if (toDelete.Count > 0)
         {
-            await _sendRepository.DeleteManyAsync(toDelete.Select(s => s.Id));
+            try
+            {
+                await _sendRepository.DeleteManyAsync(toDelete.Select(s => s.Id));
+            }
+            catch (Exception ex)
+            {
+                // Send_DeleteMany commits the DELETE + account-revision bump before its storage-recompute
+                // cursor runs, so a failure reaching here overwhelmingly means that cursor failed (e.g. a
+                // timeout during a per-user Cipher/Send scan), not the small, fast, already-committed
+                // delete itself. Storage recompute is idempotent and self-healing — a stale value corrects
+                // itself the next time that user creates or deletes a Send — so it's not worth silently
+                // dropping this batch's audit events over. Proceed to push/log deletion for toDelete.
+                _logger.LogWarning(ex,
+                    "Send_DeleteMany reported an error for a batch of {Count}; delete and revision bump are assumed to have succeeded, but storage recompute may be incomplete for some users.",
+                    toDelete.Count);
+            }
         }
 
         foreach (var send in toDelete)

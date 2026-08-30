@@ -21,10 +21,14 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_DeleteMany]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT makes this all-or-nothing: the caller batches the DELETE and the audit-event
-    -- loop separately (DeleteManySendsAsync), so it needs a throw here to mean nothing was
-    -- deleted — otherwise a failure partway through the cursor would leave the DELETE committed
-    -- with no way to emit the Send_Deleted_* events for rows that no longer exist to retry.
+    -- XACT_ABORT makes the DELETE + bump all-or-nothing: DeleteManySendsAsync needs a throw here
+    -- to mean nothing was deleted, so it doesn't emit Send_Deleted_* events for rows that don't
+    -- exist. The transaction is committed before the storage-recompute cursor below runs — that
+    -- cursor's User_UpdateStorage calls otherwise hold X locks (from the bump, above) on every
+    -- affected User row for the whole loop, blocking the account-revision-date read every client
+    -- sync poll hits. Storage recompute is idempotent and self-healing, so it doesn't need to
+    -- share the DELETE + bump's atomicity — a failure there just leaves that user's Storage stale
+    -- until the next Send affecting them is created or deleted.
     SET XACT_ABORT ON
 
     CREATE TABLE #Temp
@@ -63,6 +67,8 @@ BEGIN
 
     EXEC [dbo].[User_BumpManyAccountRevisionDates] @UserIds
 
+    COMMIT TRANSACTION Send_DeleteMany
+
     DECLARE @UserId UNIQUEIDENTIFIER
     DECLARE [FileUserCursor] CURSOR FORWARD_ONLY FOR
         SELECT DISTINCT
@@ -81,8 +87,6 @@ BEGIN
     END
     CLOSE [FileUserCursor]
     DEALLOCATE [FileUserCursor]
-
-    COMMIT TRANSACTION Send_DeleteMany
 
     DROP TABLE #Temp
 END
