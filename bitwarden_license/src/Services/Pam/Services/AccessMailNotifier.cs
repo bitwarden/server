@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Entities;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bitwarden.Server.Sdk.Features;
@@ -61,12 +62,10 @@ public class AccessMailNotifier : IAccessMailNotifier
             return;
         }
 
-        IEnumerable<KeyValuePair<Guid, string?>> addresses;
+        List<User> recipients;
         try
         {
-            addresses = (await _userRepository.GetManyAsync(userIds))
-                .Select(u => new KeyValuePair<Guid, string?>(u.Id, u.Email))
-                .ToList();
+            recipients = (await _userRepository.GetManyAsync(userIds)).ToList();
         }
         catch (Exception ex)
         {
@@ -76,15 +75,15 @@ public class AccessMailNotifier : IAccessMailNotifier
             return;
         }
 
-        foreach (var (userId, email) in addresses)
+        foreach (var recipient in recipients)
         {
             try
             {
-                await SendOneAsync(userId, email, buildMail);
+                await SendOneAsync(recipient.Id, recipient.Email, buildMail);
             }
             catch (Exception ex)
             {
-                LogFailure(ex, userId);
+                LogFailure(ex, recipient.Id);
             }
         }
     }
