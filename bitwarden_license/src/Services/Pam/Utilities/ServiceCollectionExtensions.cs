@@ -98,6 +98,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRequesterNotifier, RequesterNotifier>();
         services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
 
+        // The out-of-band side channel: the same news as the pushes, delivered to a mailbox. Self-gates on
+        // FeatureFlagKeys.PamEmailNotifications and never throws, so a command may call it unconditionally.
+        services.TryAddScoped<IAccessMailNotifier, AccessMailNotifier>();
+
         // Runs on every connector-facing route (see PamEndpointsExtensions.WithPamAccessConnectorMachineDefaults).
         // Its
         // parameterless constructor would let AddEndpointFilter<T>() construct it unregistered, as
