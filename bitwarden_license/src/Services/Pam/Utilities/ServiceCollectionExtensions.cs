@@ -93,6 +93,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRequesterNotifier, RequesterNotifier>();
         services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
 
+        // The out-of-band side channel: the same news as the pushes, delivered to a mailbox. Self-gates on
+        // FeatureFlagKeys.PamEmailNotifications and never throws, so a command may call it unconditionally.
+        services.TryAddScoped<IAccessMailNotifier, AccessMailNotifier>();
+
         // Registered explicitly, unlike a parameterless-constructor filter, since it resolves services of its own.
         services.AddScoped<AccessConnectorHeartbeatEndpointFilter>();
 
