@@ -96,7 +96,7 @@ def main():
     ap.add_argument("--org-id", required=True)
     ap.add_argument("--admin-email", required=True)
     ap.add_argument("--daemon-id", required=True, help="PamDaemon.Id to assign to the target")
-    ap.add_argument("--kind", default="entra", choices=["entra", "mssql", "customscript"],
+    ap.add_argument("--kind", default="entra", choices=["entra", "mssql", "customscript", "activedirectory"],
                     help="automatic connector kind for a newly registered target (default: entra)")
     ap.add_argument("--target-id", help="reuse an existing target system instead of registering one")
     ap.add_argument("--cipher-id", help="org cipher to rotate; auto-selected if omitted")
@@ -135,7 +135,7 @@ def main():
         target_id = args.target_id
         print(f"\n[1] reusing target system {target_id}")
     else:
-        kind_val = {"entra": 0, "mssql": 1, "customscript": 2}[args.kind]
+        kind_val = {"entra": 0, "mssql": 1, "customscript": 2, "activedirectory": 3}[args.kind]
         step(1, f"register automatic target system (kind={args.kind})")
         _, target = http("POST", f"{api}/organizations/{org}/rotation/target-systems", admin, {
             "name": f"sim-{args.kind}-{cipher_id[:8]}",
