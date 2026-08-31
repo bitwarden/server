@@ -16,7 +16,6 @@ using Xunit;
 
 namespace Bit.Services.Pam.Test.Services;
 
-[SutProviderCustomize]
 public class ApproverMailNotifierTests
 {
     private const string _vaultUrl = "https://vault.example.com/#";
@@ -45,11 +44,11 @@ public class ApproverMailNotifierTests
 
         var sutProvider = Setup();
         SetupApprovers(sutProvider, request, approverId);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         await sutProvider.Sut.NotifyPendingRequestAsync(request);
 
-        var (recipients, mail) = Assert.Single(recorder.Pending);
+        var (recipients, mail) = Assert.Single(sent);
         Assert.Equal(new[] { approverId }, recipients);
         Assert.Equal(_requesterEmail, mail.View.RequesterEmail);
         Assert.Equal(_organizationName, mail.View.OrganizationName);
@@ -64,17 +63,17 @@ public class ApproverMailNotifierTests
     {
         var sutProvider = Setup();
         SetupApprovers(sutProvider, request, firstApprover, secondApprover);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         await sutProvider.Sut.NotifyPendingRequestAsync(request);
 
-        var (recipients, _) = Assert.Single(recorder.Pending);
+        var (recipients, _) = Assert.Single(sent);
         Assert.Equal(new[] { firstApprover, secondApprover }, recipients);
     }
 
     /// <summary>
     /// An org Owner manages every collection when AllowAdminAccessToAllCollectionItems is on, so a requester is
-    /// routinely among their own collection's managers — and DecideAccessRequestCommand refuses a self-decision.
+    /// routinely among their own collection's managers, and DecideAccessRequestCommand refuses a self-decision.
     /// </summary>
     [Theory, BitAutoData]
     public async Task NotifyPendingRequestAsync_RequesterManagesTheCollection_IsNotMailedTheirOwnRequest(
@@ -82,11 +81,11 @@ public class ApproverMailNotifierTests
     {
         var sutProvider = Setup();
         SetupApprovers(sutProvider, request, approverId, request.RequesterId);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         await sutProvider.Sut.NotifyPendingRequestAsync(request);
 
-        var (recipients, _) = Assert.Single(recorder.Pending);
+        var (recipients, _) = Assert.Single(sent);
         Assert.Equal(new[] { approverId }, recipients);
     }
 
@@ -95,11 +94,11 @@ public class ApproverMailNotifierTests
     {
         var sutProvider = Setup();
         SetupApprovers(sutProvider, request, request.RequesterId);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         await sutProvider.Sut.NotifyPendingRequestAsync(request);
 
-        Assert.Empty(recorder.Pending);
+        Assert.Empty(sent);
     }
 
     [Theory, BitAutoData]
@@ -108,7 +107,7 @@ public class ApproverMailNotifierTests
     {
         var sutProvider = Setup();
         SetupApprovers(sutProvider, request, approverId);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         var requestIds = new List<Guid>();
         for (var i = 0; i < 12; i++)
@@ -118,8 +117,8 @@ public class ApproverMailNotifierTests
             await sutProvider.Sut.NotifyPendingRequestAsync(request);
         }
 
-        Assert.Equal(requestIds, recorder.Pending.Select(sent => sent.Mail.View.AccessRequestId));
-        Assert.All(recorder.Pending, sent => Assert.Equal(new[] { approverId }, sent.Recipients));
+        Assert.Equal(requestIds, sent.Select(mailing => mailing.Mail.View.AccessRequestId));
+        Assert.All(sent, mailing => Assert.Equal(new[] { approverId }, mailing.Recipients));
     }
 
     [Theory, BitAutoData]
@@ -127,11 +126,11 @@ public class ApproverMailNotifierTests
     {
         var sutProvider = Setup();
         SetupApprovers(sutProvider, request);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         await sutProvider.Sut.NotifyPendingRequestAsync(request);
 
-        Assert.Empty(recorder.Pending);
+        Assert.Empty(sent);
     }
 
     [Theory, BitAutoData]
@@ -142,11 +141,11 @@ public class ApproverMailNotifierTests
         SetupApprovers(sutProvider, request, approverId);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(request.OrganizationId)
             .Returns((Organization?)null);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         await sutProvider.Sut.NotifyPendingRequestAsync(request);
 
-        Assert.Empty(recorder.Pending);
+        Assert.Empty(sent);
     }
 
     [Theory, BitAutoData]
@@ -199,29 +198,20 @@ public class ApproverMailNotifierTests
             .Returns(new User { Id = request.RequesterId, Email = _requesterEmail });
     }
 
-    private static MailRecorder RecordMail(SutProvider<ApproverMailNotifier> sutProvider)
+    private static List<(List<Guid> Recipients, AccessRequestPendingMail Mail)> RecordMail(
+        SutProvider<ApproverMailNotifier> sutProvider)
     {
-        var recorder = new MailRecorder();
-        var notifier = sutProvider.GetDependency<IAccessMailNotifier>();
+        List<(List<Guid> Recipients, AccessRequestPendingMail Mail)> sent = [];
 
-        RecordInto<AccessRequestPendingView, AccessRequestPendingMail>(notifier, recorder.Pending);
-
-        return recorder;
-    }
-
-    private static void RecordInto<TView, TMail>(
-        IAccessMailNotifier notifier, List<(List<Guid> Recipients, TMail Mail)> sink)
-        where TView : BaseMailView
-        where TMail : BaseMail<TView> =>
-        notifier.When(x => x.SendToUsersAsync(
+        sutProvider.GetDependency<IAccessMailNotifier>()
+            .When(x => x.SendToUsersAsync(
                 Arg.Any<IEnumerable<Guid>>(),
-                Arg.Any<Func<string, BaseMail<TView>>>()))
-            .Do(call => sink.Add((
+                Arg.Any<Func<string, BaseMail<AccessRequestPendingView>>>()))
+            .Do(call => sent.Add((
                 call.Arg<IEnumerable<Guid>>().ToList(),
-                (TMail)call.Arg<Func<string, BaseMail<TView>>>()("a@example.com"))));
+                (AccessRequestPendingMail)call.Arg<Func<string, BaseMail<AccessRequestPendingView>>>()(
+                    "approver@example.com"))));
 
-    private sealed class MailRecorder
-    {
-        public List<(List<Guid> Recipients, AccessRequestPendingMail Mail)> Pending { get; } = [];
+        return sent;
     }
 }

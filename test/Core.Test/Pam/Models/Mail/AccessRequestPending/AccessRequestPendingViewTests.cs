@@ -11,11 +11,7 @@ public class AccessRequestPendingViewTests
 {
     private static readonly Guid _requestId = Guid.Parse("6d1f2b7c-0b8a-4a1e-9f0d-2f7b3c4d5e6a");
 
-    /// <summary>
-    /// <see cref="HandlebarMailRenderer" /> resolves both templates from the view's full class name and only fails
-    /// when a mail is actually sent, which no other spec in this feature reaches. This is the spec that catches a
-    /// misnamed or misplaced <c>.hbs</c>.
-    /// </summary>
+    /// <summary>The only spec that renders, so the only one that catches a misnamed or misplaced <c>.hbs</c>.</summary>
     [Fact]
     public async Task RenderAsync_CarriesTheRequesterWindowAndLinkInBothTemplates()
     {
@@ -31,9 +27,6 @@ public class AccessRequestPendingViewTests
         }
     }
 
-    /// <summary>
-    /// An organization name is member-supplied text, so the HTML body must escape it rather than interpolate it raw.
-    /// </summary>
     [Fact]
     public async Task RenderAsync_EscapesTheOrganizationNameInTheHtmlBody()
     {
