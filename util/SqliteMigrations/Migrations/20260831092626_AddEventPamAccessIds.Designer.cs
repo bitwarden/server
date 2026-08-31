@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,12 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260831092626_AddEventPamAccessIds")]
+    partial class AddEventPamAccessIds
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.11");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
 
             modelBuilder.Entity("Bit.Core.Dirt.Reports.Models.Data.OrganizationMemberBaseDetail", b =>
                 {
@@ -230,9 +233,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("LimitItemDeletion")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("MaxAutoscalePamSeats")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("INTEGER");
 
@@ -255,12 +255,6 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("TEXT");
-
-                    b.Property<int?>("PamSeatMinimum")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("PamSeats")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Plan")
                         .IsRequired()
@@ -2430,13 +2424,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("AccessConnectorId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AccessConnectorName")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid?>("AccessLeaseId")
                         .HasColumnType("TEXT");
 
@@ -2460,10 +2447,23 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CipherName")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("CollectionId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CollectionName")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("CorrelationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("DaemonId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DaemonName")
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Detail")
@@ -2478,7 +2478,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("LeaseNotBefore")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("OccurredDate")
+                    b.Property<DateTime>("OccurredAt")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
@@ -2523,10 +2523,8 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CorrelationId");
-
-                    b.HasIndex("OrganizationId", "OccurredDate", "Id")
-                        .IsDescending(false, true, true);
+                    b.HasIndex("OrganizationId", "OccurredAt")
+                        .IsDescending(false, true);
 
                     b.ToTable("AccessAuditEvent", (string)null);
                 });
@@ -2612,12 +2610,11 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
+                    b.HasIndex("CipherId", "Action");
+
                     b.HasIndex("CollectionId", "Action");
 
                     b.HasIndex("NotAfter", "Action");
-
-                    b.HasIndex("CipherId", "Action", "NotAfter")
-                        .IsDescending(false, false, true);
 
                     b.HasIndex("RequesterId", "CipherId", "Action");
 

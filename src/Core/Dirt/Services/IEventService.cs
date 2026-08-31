@@ -59,4 +59,12 @@ public interface IEventService
     Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
         IReadOnlyDictionary<Guid, SendAccessEventOrgContext> organizationContext = null);
     Task LogSendEventsAsync(IEnumerable<(Send send, EventType type)> events, Guid organizationId);
+
+    /// <summary>
+    /// Logs one PAM access event to the organization's event log. PAM's own audit store is the system of record and is
+    /// written first; this is the derived organization-wide copy, so it is gated on the organization's event
+    /// entitlement (<c>Enabled</c> and <c>UseEvents</c>) like every other organization event and is silently skipped
+    /// when that entitlement is absent.
+    /// </summary>
+    Task LogPamAccessEventAsync(EventType type, PamAccessEventContext context);
 }

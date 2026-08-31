@@ -1,4 +1,25 @@
-﻿CREATE PROCEDURE [dbo].[Event_Create]
+-- Add AccessRequestId and AccessLeaseId to Event so PAM access events can record which access request or
+-- lease they concern. PAM's own AccessAuditEvent store remains the system of record for the full trail; these
+-- columns carry the subject of the subset that is fanned out to the organization event log.
+IF COL_LENGTH('[dbo].[Event]', 'AccessRequestId') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[Event]
+        ADD [AccessRequestId] UNIQUEIDENTIFIER NULL;
+END
+GO
+
+IF COL_LENGTH('[dbo].[Event]', 'AccessLeaseId') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[Event]
+        ADD [AccessLeaseId] UNIQUEIDENTIFIER NULL;
+END
+GO
+
+-- Refresh the view so SELECT * surfaces the new columns.
+EXECUTE sp_refreshview N'[dbo].[EventView]';
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Event_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Type INT,
     @UserId UNIQUEIDENTIFIER,
@@ -88,3 +109,4 @@ BEGIN
         @AccessLeaseId
     )
 END
+GO
