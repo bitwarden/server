@@ -28,7 +28,7 @@ public class AccessLeaseRevokedViewTests
             Assert.Contains("before it was due to finish", body);
             Assert.Contains("Contoso", body);
             Assert.Contains("1 Sep 2026 at 17:00 UTC", body);
-            Assert.Contains($"https://vault.example.com/#/privileged-controls/requests/{_requestId}", body);
+            Assert.Contains($"https://vault.example.com/#/pam/requests/{_requestId}", body);
         }
     }
 
@@ -77,7 +77,7 @@ public class AccessLeaseRevokedViewTests
 
     [Fact]
     public void Url_TargetsTheHoldersOwnRequestPage() =>
-        Assert.Equal($"https://vault.example.com/#/privileged-controls/requests/{_requestId}", View().Url);
+        Assert.Equal($"https://vault.example.com/#/pam/requests/{_requestId}", View().Url);
 
     [Fact]
     public void Subject_SaysTheAccessEndedWithoutNamingTheItemOrTheReason() =>

@@ -45,12 +45,12 @@ public class AccessLeaseRevokedView : BaseMailView
 
     /// <summary>
     /// The holder's own view of the request this lease came from, where the revocation is recorded as a decision
-    /// with whatever reason the operator gave. The user-scoped PAM pages mount at <c>privileged-controls</c>
+    /// with whatever reason the operator gave. The user-scoped PAM pages mount at <c>pam</c>
     /// (<c>apps/web/src/app/oss-routing.module.ts:687</c>) and the request page is <c>requests/:id</c> beneath it
     /// (<c>access-requests-routing.module.ts:47</c>). The organization-scoped admin surface under
     /// <c>/organizations/:organizationId/pam</c> is a different route tree and does not serve this page.
     /// </summary>
-    public string Url => $"{WebVaultUrl}/privileged-controls/requests/{AccessRequestId}";
+    public string Url => $"{WebVaultUrl}/pam/requests/{AccessRequestId}";
 }
 
 public class AccessLeaseRevokedMail : BaseMail<AccessLeaseRevokedView>
