@@ -23,7 +23,7 @@ public class AccessRequestsWaitingViewTests
         {
             Assert.Contains("6 access requests have reached you in the last few minutes", body);
             Assert.Contains("for the rest of this 15-minute window", body);
-            Assert.Contains("https://vault.example.com/#/privileged-controls/approvals", body);
+            Assert.Contains("https://vault.example.com/#/pam/approvals", body);
         }
     }
 
@@ -38,14 +38,14 @@ public class AccessRequestsWaitingViewTests
 
         foreach (var body in new[] { html, text })
         {
-            Assert.DoesNotContain("privileged-controls/requests/", body);
+            Assert.DoesNotContain("pam/requests/", body);
         }
     }
 
     [Fact]
     public void Url_TargetsTheUserScopedApproverInbox()
     {
-        Assert.Equal("https://vault.example.com/#/privileged-controls/approvals", View().Url);
+        Assert.Equal("https://vault.example.com/#/pam/approvals", View().Url);
     }
 
     private static AccessRequestsWaitingView View() => new()
