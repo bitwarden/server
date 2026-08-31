@@ -128,7 +128,8 @@ public class DecideAccessRequestCommandTests
 
         // The clock closed the request: it reads as Expired everywhere, and neither verdict may restamp it -- a
         // denial would rewrite a row users already saw as Expired. (This retires the old "denial still closes the
-        // audit trail out" behavior.)
+        // audit trail out" behavior.) Denied without a reason on purpose: a lapsed request is refused for having
+        // lapsed, not sent back to be resubmitted with a reason that would change nothing.
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny()));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -169,6 +170,48 @@ public class DecideAccessRequestCommandTests
             .NotifyRequesterAsync(request.RequesterId);
     }
 
+    [Theory]
+    [BitAutoData((string?)null)]
+    [BitAutoData("")]
+    [BitAutoData("   ")]
+    public async Task DecideAsync_Deny_WithoutReason_ThrowsBadRequest(
+        string? comment, Guid userId, AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
+        SetupManageableRequest(sutProvider, userId, request);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny(comment)));
+        Assert.Contains("reason is required", ex.Message);
+        // Nothing is written and nobody is told: a denial the requester cannot be given a reason for must leave the
+        // request pending so the approver can resubmit it with one.
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .ResolveWithDecisionAsync(default!, default!, default, default);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
+            .EmitAsync(default!);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DecideAsync_Approve_WithoutComment_Resolves(Guid userId, AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
+        SetupManageableRequest(sutProvider, userId, request);
+
+        // The required-reason gate is the denial's alone; an approval still needs no explanation.
+        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Approve());
+
+        Assert.Equal(AccessRequestStatus.Approved, result.Status);
+        Assert.Null(Assert.Single(result.Decisions).Comment);
+    }
+
     [Theory, BitAutoData]
     public async Task DecideAsync_Deny_ResolvesAsDenied(Guid userId, AccessRequest request)
     {
@@ -177,12 +220,15 @@ public class DecideAccessRequestCommandTests
         SetOpenWindow(request);
         SetupManageableRequest(sutProvider, userId, request);
 
-        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Deny());
+        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Deny("use the read replica instead"));
 
         Assert.Equal(AccessRequestStatus.Denied, result.Status);
+        Assert.Equal("use the read replica instead", Assert.Single(result.Decisions).Comment);
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).ResolveWithDecisionAsync(
             request,
-            Arg.Is<AccessDecision>(d => d.Verdict == AccessDecisionVerdict.Deny),
+            Arg.Is<AccessDecision>(d =>
+                d.Verdict == AccessDecisionVerdict.Deny &&
+                d.Comment == "use the read replica instead"),
             AccessRequestAction.Denied,
             _now);
         // A denial reaches the requester too (their "My requests" view flips to denied).
