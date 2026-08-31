@@ -181,7 +181,7 @@ public class ApproverMailNotifierTests
         var sutProvider = new SutProvider<ApproverMailNotifier>().Create();
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PamEmailNotifications)
+            .IsEnabled(FeatureFlagKeys.Pam)
             .Returns(flagOn);
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.VaultWithHash.Returns(_vaultUrl);
 

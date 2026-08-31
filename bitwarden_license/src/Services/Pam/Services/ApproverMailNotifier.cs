@@ -39,7 +39,7 @@ public class ApproverMailNotifier : IApproverMailNotifier
     {
         // Duplicates the guard inside IAccessMailNotifier so the organization and requester reads below do not run on
         // every submission in the flag-off state -- which is every submission on self-host.
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PamEmailNotifications))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.Pam))
         {
             return;
         }
