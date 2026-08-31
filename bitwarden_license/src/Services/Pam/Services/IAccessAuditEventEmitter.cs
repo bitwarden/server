@@ -8,7 +8,8 @@ namespace Bit.Services.Pam.Services;
 ///
 /// Every state-changing PAM command emits through this seam, so the call sites do not depend on where the events land.
 /// <see cref="AccessAuditEventEmitter"/> appends them to the dedicated append-only audit store, which the access-audit
-/// trail is read back from.
+/// trail is read back from, and copies the subset that has an organization-wide equivalent into the organization's
+/// event log.
 /// </summary>
 public interface IAccessAuditEventEmitter
 {
