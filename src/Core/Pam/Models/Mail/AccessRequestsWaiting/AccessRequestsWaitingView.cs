@@ -28,10 +28,10 @@ public class AccessRequestsWaitingView : BaseMailView
 
     /// <summary>
     /// The approver inbox. Same route tree as <c>AccessRequestPendingView.Url</c>: the user-scoped
-    /// <c>privileged-controls</c> mount (<c>apps/web/src/app/oss-routing.module.ts:687</c>) plus
+    /// <c>pam</c> mount (<c>apps/web/src/app/oss-routing.module.ts:687</c>) plus
     /// <c>approvals</c> (<c>access-requests-routing.module.ts:25</c>).
     /// </summary>
-    public string Url => $"{WebVaultUrl}/privileged-controls/approvals";
+    public string Url => $"{WebVaultUrl}/pam/approvals";
 }
 
 public class AccessRequestsWaitingMail : BaseMail<AccessRequestsWaitingView>
