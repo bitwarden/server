@@ -443,6 +443,41 @@ public class CollectControllerTests : IAsyncLifetime
         response.EnsureSuccessStatusCode();
     }
 
+    [Fact]
+    public async Task Post_CipherClientCopiedPassword_WithSkewedClientDate_Success()
+    {
+        var cipher = await CreateCipherForUserAsync(_ownerId);
+
+        var response = await _client.PostAsJsonAsync<IEnumerable<EventModel>>("collect",
+        [
+            new EventModel
+            {
+                Type = EventType.Cipher_ClientCopiedPassword,
+                CipherId = cipher.Id,
+                Date = DateTime.UtcNow.AddMinutes(-4),
+            },
+        ]);
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Post_CipherClientCopiedPassword_WithoutClientDate_Success()
+    {
+        var cipher = await CreateCipherForUserAsync(_ownerId);
+
+        var response = await _client.PostAsJsonAsync<IEnumerable<EventModel>>("collect",
+        [
+            new EventModel
+            {
+                Type = EventType.Cipher_ClientCopiedPassword,
+                CipherId = cipher.Id,
+            },
+        ]);
+
+        response.EnsureSuccessStatusCode();
+    }
+
     private async Task<Cipher> CreateCipherForUserAsync(Guid userId)
     {
         var cipherRepository = _factory.GetService<ICipherRepository>();
