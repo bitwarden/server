@@ -25,13 +25,10 @@ public static class ServiceCollectionExtensions
 {
     /// <summary>
     /// Registers PAM's commercial services, including credential rotation. <paramref name="configuration"/> binds
-    /// <see cref="PamRotationOptions"/> from <c>globalSettings:pam:rotation</c> -- AddPamServices previously took no
-    /// configuration, so this is a new parameter on an existing call site (see <c>Startup.ConfigureServices</c>)
-    /// rather than a pre-existing pattern in this file.
+    /// <see cref="PamRotationOptions"/> from <c>globalSettings:pam:rotation</c>.
     /// </summary>
     public static IServiceCollection AddPamServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Minimal API endpoint handlers. The endpoints (see PamEndpointsExtensions) resolve these from DI.
         services.AddScoped<LeaseEndpointsHandler>();
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
@@ -53,10 +50,8 @@ public static class ServiceCollectionExtensions
         // Rule evaluation engine. Pure and stateless, so a singleton is safe.
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
 
-        // Resolves the access rule governing a cipher for a caller, then evaluates it via the engine.
         services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
 
-        // AccessRule write path.
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
         services.AddScoped<IAccessRuleWriteValidator, AccessRuleWriteValidator>();
@@ -64,8 +59,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
 
-        // Read models behind the approver inbox, the lease surfaces, and the per-cipher pre-check and access-state
-        // snapshot.
         services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
         services.AddScoped<IGetCipherAccessStateQuery, GetCipherAccessStateQuery>();
         services.AddScoped<IGetAccessRequestDetailsQuery, GetAccessRequestDetailsQuery>();
@@ -77,7 +70,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
         services.AddScoped<IListRuleBypassableCiphersQuery, ListRuleBypassableCiphersQuery>();
 
-        // Access-request and lease write path.
         services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
         services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();
         services.AddScoped<IActivateAccessRequestCommand, ActivateAccessRequestCommand>();
@@ -85,8 +77,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRequestLeaseExtensionCommand, RequestLeaseExtensionCommand>();
         services.AddScoped<IRevokeAccessLeaseCommand, RevokeAccessLeaseCommand>();
 
-        // Supporting reads for the write path: who may approve for a collection, and the per-cipher
-        // single-active-lease guard applied at activation.
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
 
@@ -97,6 +87,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
         services.AddScoped<IRequesterNotifier, RequesterNotifier>();
         services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
+
+        services.TryAddScoped<IAccessMailNotifier, AccessMailNotifier>();
 
         // Runs on every connector-facing route (see PamEndpointsExtensions.WithPamAccessConnectorMachineDefaults).
         // Its
@@ -124,7 +116,6 @@ public static class ServiceCollectionExtensions
         // Stateless and cheap to construct; shared across the process like IAccessRuleEngine.
         services.AddSingleton<IRotationScheduleCalculator, RotationScheduleCalculator>();
 
-        // Admin commands
         services.AddScoped<IRegisterAccessConnectorCommand, RegisterAccessConnectorCommand>();
         services.AddScoped<ISetAccessConnectorStatusCommand, SetAccessConnectorStatusCommand>();
         services.AddScoped<IDeleteAccessConnectorCommand, DeleteAccessConnectorCommand>();
@@ -143,7 +134,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITriggerRotationCommand, TriggerRotationCommand>();
         services.AddScoped<IRecordManualRotationCommand, RecordManualRotationCommand>();
 
-        // Dispatch / daemon commands
         services.AddScoped<IOfferRotationCommand, OfferRotationCommand>();
         services.AddScoped<IHandleAccessGrantEndedCommand, HandleAccessGrantEndedCommand>();
         services.AddScoped<IClaimRotationJobCommand, ClaimRotationJobCommand>();
@@ -151,7 +141,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReportRotationFailedCommand, ReportRotationFailedCommand>();
         services.AddScoped<ISubmitCipherUpdateCommand, SubmitCipherUpdateCommand>();
 
-        // Read queries
         services.AddScoped<IGetRotationConfigDetailsQuery, GetRotationConfigDetailsQuery>();
         services.AddScoped<IListAccessConnectorsQuery, ListAccessConnectorsQuery>();
         services.AddScoped<IGetAccessConnectorDetailsQuery, GetAccessConnectorDetailsQuery>();
