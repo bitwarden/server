@@ -22,11 +22,7 @@ AS
 BEGIN
     SET NOCOUNT ON
     -- XACT_ABORT makes this all-or-nothing: DeleteManyAsync needs a throw here to mean nothing was
-    -- deleted, so the caller doesn't emit Send_Deleted_* events for rows that don't exist. Storage
-    -- recompute for File-type Send owners is a separate, best-effort concern handled by the caller
-    -- (one User_UpdateStorage call per id in the returned result set) — it is idempotent and
-    -- self-healing, so it doesn't need this transaction's atomicity, and keeping it out avoids
-    -- holding X locks (from the bump, below) on affected User rows for longer than this statement.
+    -- deleted, so the caller doesn't emit Send_Deleted_* events for rows that don't exist.
     SET XACT_ABORT ON
 
     CREATE TABLE #Temp

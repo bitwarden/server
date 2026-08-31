@@ -225,6 +225,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             throw new BadRequestException("File received does not match expected file length.");
         }
     }
+
     public async Task DeleteSendAsync(Send send)
     {
         if (send.Type == Enums.SendType.File && send.Data != null)
@@ -261,8 +262,8 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
                 }
                 catch (JsonException ex)
                 {
-                    // Deterministic failure — retrying changes nothing. Match DeleteSendAsync: delete
-                    // the row anyway rather than letting an unparseable Send block the batch forever.
+                    // Retrying changes nothing. JSON exception will never work.
+                    // Match DeleteSendAsync: delete the row and log possible orphan.
                     _logger.LogWarning(ex, "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
                     data = null;
                 }
@@ -275,9 +276,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
                     }
                     catch (Exception ex)
                     {
-                        // ISendFileStorageService has multiple implementations (Azure, local disk, no-op)
-                        // with no shared exception contract, so any failure here is treated as transient:
-                        // skip this Send, it's retried next run since its DeletionDate is still in the past.
+                        // Skip this Send, it's retried next run since its DeletionDate is still in the past.
                         _logger.LogWarning(ex,
                             "Failed to delete blob for Send {SendId}; skipping this run, will retry.", send.Id);
                         continue;
@@ -289,11 +288,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         if (toDelete.Count > 0)
         {
-            // DeleteManyAsync's own storage-recompute step (Dapper: per-user after Send_DeleteMany's
-            // transaction commits; EF: per-user after ExecuteDeleteAsync) catches its own failures, so
-            // a throw here reliably means the delete + revision bump itself didn't happen — nothing in
-            // toDelete was removed, and it's correct to let this propagate rather than push/log a
-            // deletion that didn't occur.
             await _sendRepository.DeleteManyAsync(toDelete.Select(s => s.Id));
         }
 
@@ -306,9 +300,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             }
             catch (Exception ex)
             {
-                // The row is already gone (DeleteManyAsync above already committed the whole
-                // batch) — a throw here would abort the loop and silently drop the push/event for
-                // every remaining already-deleted Send, with no way to retry a row that no longer exists.
                 _logger.LogWarning(ex, "Failed to publish delete notification/event for Send {SendId}.", send.Id);
             }
         }

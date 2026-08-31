@@ -235,9 +235,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
 
         // Send_DeleteMany's DELETE + revision bump are transactional: a throw here reliably means
         // nothing was deleted. It returns the distinct File-type Send owners so storage can be
-        // recomputed per user afterward, outside that transaction and outside this method's own
-        // exception surface — a failure recomputing one user's storage must not be mistaken for
-        // "this batch wasn't deleted", and must not block the recompute for other users.
+        // recomputed per user afterward.
         var fileUserIds = await connection.QueryAsync<Guid>(
             $"[{Schema}].[Send_DeleteMany]",
             new { Ids = ids.ToGuidIdArrayTVP() },
@@ -248,7 +246,6 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         {
             try
             {
-                // Matches UserRepository.UpdateStorageAsync's timeout for the same single-user call.
                 await connection.ExecuteAsync(
                     $"[{Schema}].[User_UpdateStorage]",
                     new { Id = userId },
@@ -257,8 +254,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
             }
             catch (Exception ex)
             {
-                // Idempotent and self-healing: this user's Storage stays stale until their next
-                // Send create/delete recomputes it. Not worth failing the whole batch delete over.
+                // Storage stays stale until their next Send create/delete recomputes it.
                 _logger.LogWarning(ex, "Failed to recompute storage for User {UserId} after a Send batch delete.", userId);
             }
         }

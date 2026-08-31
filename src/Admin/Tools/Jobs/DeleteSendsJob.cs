@@ -7,10 +7,7 @@ using Quartz;
 
 namespace Bit.Admin.Tools.Jobs;
 
-// A run loops until the backlog drains and can span many 5-minute trigger intervals. Send_DeleteMany
-// doesn't report rows-affected, so an overlapping run re-fetching the same head-of-queue batch would
-// have its DELETE affect zero rows while DeleteManySendsAsync still reports every id as deleted —
-// duplicate Send_Deleted_* events and push notifications for Sends the other run already handled.
+// A run loops until the backlog drains and can span many 5-minute trigger intervals
 [DisallowConcurrentExecution]
 public class DeleteSendsJob : BaseJob
 {
@@ -58,8 +55,7 @@ public class DeleteSendsJob : BaseJob
             if (deletedIds.Count == 0 || skippedIds.Count >= BatchSize)
             {
                 // Either every Send in this batch was skipped, or enough distinct Sends have been
-                // skipped across this run that the next fetch can only return already-known-stuck
-                // rows. Stop instead of re-reading and re-retrying them.
+                // skipped across this run that the next fetch can only return already-known-stuck rows.
                 _logger.LogWarning(Constants.BypassFiltersEventId,
                     "Stopping after {0} skipped sends this run; the next batch would only re-read stuck rows.", skippedIds.Count);
                 break;
@@ -67,7 +63,6 @@ public class DeleteSendsJob : BaseJob
 
             if (sends.Count < BatchSize)
             {
-                // Fewer rows than requested means the backlog is drained; no need to delay after it.
                 break;
             }
 

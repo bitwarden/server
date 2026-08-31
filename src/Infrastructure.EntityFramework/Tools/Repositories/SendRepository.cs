@@ -226,12 +226,7 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         var fileUserIds = await sends.Where(s => s.UserId != null && s.Type == SendType.File)
             .Select(s => s.UserId!.Value).Distinct().ToArrayAsync();
 
-        // ExecuteDeleteAsync commits immediately in its own implicit transaction, and
-        // UserBumpManyAccountRevisionDatesAsync only stages tracked changes that SaveChangesAsync
-        // commits separately — without an explicit transaction, a failure between them leaves Sends
-        // deleted with no bump, and the caller (DeleteManySendsAsync) treats any throw from this
-        // method as "nothing was deleted", permanently skipping their push notifications and
-        // Send_Deleted_* events. Wrapping both in one transaction makes them all-or-nothing, matching
+        // Wrapping  in one transaction makes this all-or-nothing, matching
         // the Dapper path's Send_DeleteMany + SET XACT_ABORT ON guarantee.
         await using (var transaction = await dbContext.Database.BeginTransactionAsync())
         {
@@ -245,10 +240,7 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         {
             try
             {
-                // Idempotent and self-healing: this user's Storage stays stale until their next
-                // Send create/delete recomputes it. Not worth failing the whole batch delete over,
-                // and must not be mistaken by the caller for "this batch wasn't deleted" — kept
-                // outside the transaction above, using its own scope/context either way.
+                // Storage stays stale until their next Send create/delete recomputes it.
                 await UserUpdateStorage(userId);
             }
             catch (Exception ex)
