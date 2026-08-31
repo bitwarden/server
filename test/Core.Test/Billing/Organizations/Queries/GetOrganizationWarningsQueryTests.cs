@@ -114,7 +114,7 @@ public class GetOrganizationWarningsQueryTests
                 },
                 Metadata = new Dictionary<string, string>
                 {
-                    [MetadataKeys.TrialInitiationPath] = MetadataKeys.TrialInitiationPathSalesAssisted
+                    [MetadataKeys.TrialInitiationPath] = TrialInitiationPaths.SalesAssisted
                 },
                 TestClock = new TestClock
                 {

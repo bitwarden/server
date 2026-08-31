@@ -111,9 +111,6 @@ public static class StripeConstants
         public const string OriginatingPlatform = "originatingPlatform";
         public const string OriginatingAppVersion = "originatingAppVersion";
         public const string TrialInitiationPath = "trialInitiationPath";
-        public const string TrialInitiationPathMarketingInitiated = "marketing-initiated";
-        public const string TrialInitiationPathProductInitiated = "product-initiated";
-        public const string TrialInitiationPathSalesAssisted = "sales-assisted";
         public const string CancelledDuringDeferredPriceIncrease = "cancelled_during_deferred_price_increase";
         public const string MigrationCohortId = "migration_cohort_id";
         public const string MigrationCohortName = "migration_cohort_name";
@@ -136,6 +133,16 @@ public static class StripeConstants
     public static class CancellationOrigins
     {
         public const string UnpaidSubscription = "unpaid_subscription";
+    }
+
+    /// <summary>
+    /// The values carried in <see cref="MetadataKeys.TrialInitiationPath"/>.
+    /// </summary>
+    public static class TrialInitiationPaths
+    {
+        public const string MarketingInitiated = "marketing-initiated";
+        public const string ProductInitiated = "product-initiated";
+        public const string SalesAssisted = "sales-assisted";
     }
 
     public static class PaymentBehavior

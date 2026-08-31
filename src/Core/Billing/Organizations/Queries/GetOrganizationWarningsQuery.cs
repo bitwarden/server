@@ -105,7 +105,7 @@ public class GetOrganizationWarningsQuery(
         var isSalesAssisted = subscription.Metadata.TryGetValue(
                                   StripeConstants.MetadataKeys.TrialInitiationPath,
                                   out var trialInitiationPath) &&
-                              trialInitiationPath == StripeConstants.MetadataKeys.TrialInitiationPathSalesAssisted;
+                              trialInitiationPath == StripeConstants.TrialInitiationPaths.SalesAssisted;
 
         return new FreeTrialWarning { RemainingTrialDays = remainingTrialDays, IsSalesAssisted = isSalesAssisted };
     }
