@@ -15,7 +15,6 @@ using Xunit;
 
 namespace Bit.Services.Pam.Test.Services;
 
-[SutProviderCustomize]
 public class RequesterMailNotifierTests
 {
     private const string _vaultUrl = "https://vault.example.com/#";
@@ -53,6 +52,9 @@ public class RequesterMailNotifierTests
         Assert.Equal("1 Sep 2026 at 08:30 UTC", mail.View.WindowStart);
         Assert.Equal("1 Sep 2026 at 17:00 UTC", mail.View.WindowEnd);
         Assert.Equal($"{_vaultUrl}/pam/requests/{request.Id}", mail.View.Url);
+        // One message per recipient: the requester is never named alongside anyone else.
+        await sutProvider.GetDependency<IAccessMailNotifier>().DidNotReceiveWithAnyArgs()
+            .SendToUsersAsync(default!, (Func<string, BaseMail<AccessRequestDecidedView>>)default!);
     }
 
     [Theory, BitAutoData]
@@ -69,25 +71,6 @@ public class RequesterMailNotifierTests
         Assert.False(mail.View.Approved);
         Assert.Equal("Your access request was denied", mail.Subject);
         Assert.Equal($"{_vaultUrl}/pam/requests/{request.Id}", mail.View.Url);
-    }
-
-    /// <summary>
-    /// The approver is the actor, not an audience: they pressed the button and already know the outcome. The
-    /// notifier is given no approver identity at all, so the only recipient it can reach is the requester.
-    /// </summary>
-    [Theory, BitAutoData]
-    public async Task NotifyDecisionAsync_MailsTheRequesterAndNobodyElse(AccessRequest request)
-    {
-        var sutProvider = Setup();
-        SetupOrganization(sutProvider, request);
-        var sent = RecordMail(sutProvider);
-
-        await sutProvider.Sut.NotifyDecisionAsync(request, approved: true);
-
-        var (recipientId, _) = Assert.Single(sent);
-        Assert.Equal(request.RequesterId, recipientId);
-        await sutProvider.GetDependency<IAccessMailNotifier>().DidNotReceiveWithAnyArgs()
-            .SendToUsersAsync(default!, (Func<string, BaseMail<AccessRequestDecidedView>>)default!);
     }
 
     [Theory, BitAutoData]

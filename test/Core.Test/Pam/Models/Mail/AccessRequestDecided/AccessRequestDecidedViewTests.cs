@@ -12,11 +12,7 @@ public class AccessRequestDecidedViewTests
 {
     private static readonly Guid _requestId = Guid.Parse("2c9a4f10-7b6e-4d33-9c21-5a8e0f1d3b47");
 
-    /// <summary>
-    /// <see cref="HandlebarMailRenderer" /> resolves both templates from the view's full class name and only fails
-    /// when a mail is actually sent, which no other spec in this feature reaches. This is the spec that catches a
-    /// misnamed or misplaced <c>.hbs</c>.
-    /// </summary>
+    /// <summary>The only spec that renders, so the only one that catches a misnamed or misplaced <c>.hbs</c>.</summary>
     [Fact]
     public async Task RenderAsync_Approved_SaysApprovedAndDoesNotClaimAccessHasStarted()
     {
@@ -53,10 +49,7 @@ public class AccessRequestDecidedViewTests
         }
     }
 
-    /// <summary>
-    /// The approver's comment is free text that may name the very system being accessed, so it is linked to rather
-    /// than rendered — the same call the request's reason gets. Nothing on the view can carry it.
-    /// </summary>
+    /// <summary>The comment is free text that may name the system being accessed, so it is linked to, not rendered.</summary>
     [Fact]
     public void View_HasNoPlaceToCarryTheApproverComment() =>
         Assert.DoesNotContain(
@@ -64,9 +57,6 @@ public class AccessRequestDecidedViewTests
             property => property.Name.Contains("Comment", StringComparison.OrdinalIgnoreCase)
                 || property.Name.Contains("Reason", StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>
-    /// An organization name is member-supplied text, so the HTML body must escape it rather than interpolate it raw.
-    /// </summary>
     [Fact]
     public async Task RenderAsync_EscapesTheOrganizationNameInTheHtmlBody()
     {
@@ -98,10 +88,7 @@ public class AccessRequestDecidedViewTests
         NotAfter = new DateTime(2026, 9, 1, 17, 0, 0, DateTimeKind.Utc),
     };
 
-    /// <summary>
-    /// Both templates wrap their copy across source lines, so a sentence these specs assert on is not contiguous in
-    /// the rendered output. Collapsing runs of whitespace keeps them about the wording rather than the line breaks.
-    /// </summary>
+    /// <summary>Both templates wrap copy across source lines; collapsing whitespace keeps the specs about wording.</summary>
     private static string Reflow(string body) => Regex.Replace(body, @"\s+", " ");
 
     private static Task<(string html, string txt)> RenderAsync(BaseMailView view) =>
