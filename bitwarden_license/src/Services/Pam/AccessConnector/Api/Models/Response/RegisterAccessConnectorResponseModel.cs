@@ -1,14 +1,25 @@
-﻿using Bit.HttpExtensions;
+﻿using  Bit.HttpExtensions;
 using Bit.Pam.Enums;
+using Bit.Services.Pam.AccessConnector.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Api.Models.Response;
 
 /// <summary>The response to <c>POST access-connectors</c> (spec <c>ConnectorRegistration</c>).</summary>
 public class RegisterAccessConnectorResponseModel : ResponseModel
 {
-    public RegisterAccessConnectorResponseModel()
+    public RegisterAccessConnectorResponseModel(PamAccessConnectorRegistrationResult result)
         : base("pamAccessConnector")
     {
+        ArgumentNullException.ThrowIfNull(result);
+
+        Id = result.Daemon.Id;
+        OrganizationId = result.Daemon.OrganizationId;
+        Name = result.Daemon.Name;
+        Status = result.Daemon.Status;
+        CreationDate = result.Daemon.CreationDate.AsUtc();
+        ApiKeyId = result.Daemon.ApiKeyId;
+        ClientSecret = result.ClientSecret;
     }
 
     /// <summary>
