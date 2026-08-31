@@ -121,9 +121,8 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         // Tell the lease holder their access ended, so an open cipher re-locks and the badges drop the lease.
         await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
 
-        // The push above only reaches a client that is already open, so the mail is what a holder mid-task gets. The
-        // notifier is handed endAction and mails only a Revoked one -- a holder is never mailed about their own
-        // cancel, and keeping that rule inside the notifier means an edit here cannot drop it.
+        // The same news out of band: the push above only lands on a client that is already open. Every early end is
+        // handed over, and only a revocation is mailed -- a holder is not mailed about ending their own access.
         await _leaseRevokedMailNotifier.NotifyLeaseEndedAsync(lease, endAction);
     }
 }
