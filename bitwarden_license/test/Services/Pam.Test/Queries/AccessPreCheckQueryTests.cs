@@ -148,6 +148,90 @@ public class AccessPreCheckQueryTests
         Assert.Equal(LeaseDurationBounds.GlobalMaxSeconds, result.MaxDurationSeconds);
     }
 
+    [Theory, BitAutoData]
+    public async Task PreCheckAsync_SingletonDoesNotBind_ReportsStartableWithoutQueryingTheCipher(
+        SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupRule(sutProvider, userId, cipherId, orgId, collectionId, null, null);
+        SetupSingleActiveLease(sutProvider, userId, cipherId, applies: false);
+
+        var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
+
+        Assert.True(result.CanStartLease);
+        Assert.Null(result.SlotFreesAt);
+        // The short-circuit is the contract, not an optimization: an unconstrained caller must read as startable
+        // however many leases are live, so the cipher must not even be consulted.
+        await sutProvider.GetDependency<IAccessLeaseRepository>()
+            .DidNotReceive()
+            .GetActiveByCipherIdAsync(Arg.Any<Guid>(), Arg.Any<DateTime>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PreCheckAsync_SingletonBindsAndSlotFree_ReportsStartable(
+        SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupRule(sutProvider, userId, cipherId, orgId, collectionId, null, null);
+        SetupSingleActiveLease(sutProvider, userId, cipherId, applies: true);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByCipherIdAsync(cipherId, Arg.Any<DateTime>())
+            .Returns((AccessLease?)null);
+
+        var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
+
+        Assert.True(result.CanStartLease);
+        Assert.Null(result.SlotFreesAt);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PreCheckAsync_SingletonBindsAndAnotherMemberHoldsTheSlot_ReportsBlockedWithFreeTime(
+        SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
+        AccessLease blockingLease)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupRule(sutProvider, userId, cipherId, orgId, collectionId, null, null);
+        SetupSingleActiveLease(sutProvider, userId, cipherId, applies: true);
+        blockingLease.NotAfter = new DateTime(2026, 8, 31, 10, 52, 0, DateTimeKind.Utc);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByCipherIdAsync(cipherId, Arg.Any<DateTime>())
+            .Returns(blockingLease);
+
+        var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
+
+        Assert.False(result.CanStartLease);
+        Assert.Equal(blockingLease.NotAfter, result.SlotFreesAt);
+        // Nothing about the holder travels with the answer -- PM-42446 Alternative A.
+        Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PreCheckAsync_ExistingActiveLease_ReportsStartableWithoutEvaluatingTheSingleton(
+        SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, AccessLease activeLease)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .Returns(activeLease);
+
+        var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
+
+        // The early return reveals the credential instead of rendering a form, so the field has nothing to qualify.
+        Assert.True(result.CanStartLease);
+        Assert.Null(result.SlotFreesAt);
+        await sutProvider.GetDependency<ISingleActiveLeaseEvaluator>()
+            .DidNotReceive()
+            .AppliesAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+    }
+
+    private static void SetupSingleActiveLease(SutProvider<AccessPreCheckQuery> sutProvider, Guid userId,
+        Guid cipherId, bool applies)
+    {
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>()
+            .AppliesAsync(userId, cipherId)
+            .Returns(applies);
+    }
+
     private static void SetupCipher(SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId)
     {
         sutProvider.GetDependency<ICipherRepository>()

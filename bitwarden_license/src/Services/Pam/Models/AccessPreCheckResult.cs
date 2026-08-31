@@ -19,8 +19,22 @@ namespace Bit.Services.Pam.Models;
 /// governing rule's cap narrowed by the global ceiling. Published so the client can offer only durations that will be
 /// accepted, instead of letting the requester pick one that submit then rejects.
 /// </param>
+/// <param name="CanStartLease">
+/// Whether a lease could be started right now — the spec's <c>RuleAllowsLease</c>. False only when the per-cipher
+/// single-active-lease constraint binds for this caller <em>and</em> another member's lease is currently active on the
+/// cipher; a caller with an ungated or non-singleton path is unconstrained and reads true regardless. A current-state
+/// hint, re-checked for real at start: the mint procedure's range lock is the actual gate. Defaults true so absence
+/// never reads as blocked.
+/// </param>
+/// <param name="SlotFreesAt">
+/// When the lease blocking <paramref name="CanStartLease"/> ends, so the requester gets a retry time instead of
+/// polling. The <em>latest</em> end among any concurrent leases — the slot frees when the last one does. Null whenever
+/// <paramref name="CanStartLease"/> is true. Carries no holder identity by design (PM-42446, Alternative A).
+/// </param>
 public sealed record AccessPreCheckResult(
     AccessApprovalMode ApprovalMode,
     bool HasActiveLease = false,
     int DefaultDurationSeconds = LeaseDurationBounds.GlobalDefaultSeconds,
-    int MaxDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds);
+    int MaxDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds,
+    bool CanStartLease = true,
+    DateTime? SlotFreesAt = null);
