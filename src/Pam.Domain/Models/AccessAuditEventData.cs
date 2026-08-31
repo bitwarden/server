@@ -46,6 +46,31 @@ public record AccessAuditEventData
     /// </summary>
     public string? RuleName { get; init; }
 
+    public Guid? TargetSystemId { get; init; }
+
+    /// <summary>
+    /// The target system's name, supplied by the rotation commands (which hold the entity) — same snapshot-at-write
+    /// pattern as <see cref="RuleName"/>, not a read-time JOIN. Null for non-target events.
+    /// </summary>
+    public string? TargetSystemName { get; init; }
+
+    public Guid? DaemonId { get; init; }
+
+    /// <summary>
+    /// The daemon's name, supplied by the rotation commands (which hold the entity) — same snapshot-at-write pattern
+    /// as <see cref="RuleName"/>, not a read-time JOIN. Null for non-daemon events.
+    /// </summary>
+    public string? DaemonName { get; init; }
+
+    public Guid? RotationConfigId { get; init; }
+    public Guid? RotationJobId { get; init; }
+
+    /// <summary>What triggered the rotation job (scheduled, on-demand, or access-end); set on job/attempt-scoped events.</summary>
+    public PamRotationSource? RotationSource { get; init; }
+
+    /// <summary>Whether a failed attempt left the target system's password changed; set on failure/report events.</summary>
+    public PamRotationSyncState? SyncState { get; init; }
+
     /// <summary>An approver comment, an auto-denial reason, or a revoke reason — whatever the action carried.</summary>
     public string? Detail { get; init; }
 

@@ -1,5 +1,8 @@
-﻿using Bit.HttpExtensions;
+﻿using  Bit.HttpExtensions;
+using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
@@ -7,9 +10,22 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 /// access-connectors/target-systems</c>.</summary>
 public class PamTargetSystemResponseModel : ResponseModel
 {
-    public PamTargetSystemResponseModel()
+    public PamTargetSystemResponseModel(PamTargetSystem targetSystem)
         : base("pamTargetSystem")
     {
+        ArgumentNullException.ThrowIfNull(targetSystem);
+
+        Id = targetSystem.Id;
+        OrganizationId = targetSystem.OrganizationId;
+        Name = targetSystem.Name;
+        Method = targetSystem.Method;
+        Kind = targetSystem.Kind;
+        var policy = PamPasswordPolicy.Parse(targetSystem.PasswordPolicy);
+        PasswordPolicy = policy is null ? null : new PamPasswordPolicyResponseModel(policy);
+        SupportsSessionTermination = targetSystem.SupportsSessionTermination;
+        Status = targetSystem.Status;
+        CreationDate = targetSystem.CreationDate.AsUtc();
+        RevisionDate = targetSystem.RevisionDate.AsUtc();
     }
 
     /// <summary>

@@ -3,6 +3,7 @@ using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -132,5 +133,21 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
                 Now = now,
             },
             commandType: CommandType.StoredProcedure);
+    }
+
+    /// <summary>
+    /// Deviation: <see cref="IAccessLeaseRepository.ExpireDueAsync"/> was added to the interface alongside this
+    /// implementation — see the interface's doc comment for why it lives here rather than on
+    /// <c>IPamRotationJobRepository</c>.
+    /// </summary>
+    public async Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<PamExpiredLease>(
+            $"[{Schema}].[AccessLease_ExpireDue]",
+            new { Now = now },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
     }
 }

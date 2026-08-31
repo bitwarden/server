@@ -1,5 +1,6 @@
 ﻿using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 
 namespace Bit.Pam.Repositories;
 
@@ -64,4 +65,15 @@ public interface IAccessLeaseRepository
     /// decision must already have its id assigned.
     /// </summary>
     Task RevokeAsync(AccessLease lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now);
+
+    /// <summary>
+    /// Deviation: no interface in the ground-truth contract declared the natural-expiry sweep
+    /// (<c>AccessLease_ExpireDue</c>), even though the sproc exists. Added here — rather than on
+    /// <c>IPamRotationJobRepository</c>, whose sweeps are all rotation-job-shaped — because the sproc operates
+    /// purely on <see cref="AccessLease"/> and sits naturally alongside <see cref="RevokeAsync"/>, the other
+    /// lease-ending write. Returns one row per lease whose window closed on its own (<c>NotAfter &lt;= now</c>,
+    /// no early end recorded) that the sweep has not returned before, for the caller's LeaseExpired audit
+    /// emission / access-end rotation trigger.
+    /// </summary>
+    Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now);
 }
