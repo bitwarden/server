@@ -3,7 +3,7 @@
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
 /// <summary>
-/// The body of <c>PUT rotation/target-systems/{id}</c> (spec <c>UpdateTargetSystem</c>), which replaces the
+/// The body of <c>PUT rotation/target-systems/{id}</c> (spec <c>UpdateAutomaticTargetSystem</c> / <c>UpdateManualTargetSystem</c>), which replaces the
 /// separate rename and policy operations. Carries the target's whole updatable shape: every field is written as
 /// sent, so a caller editing one of them must send the others as they stand rather than omitting them. The target's
 /// method and kind are fixed at registration and cannot be updated here.
