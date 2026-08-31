@@ -1573,6 +1573,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ActingUserId")
                         .HasColumnType("TEXT");
 
