@@ -15,6 +15,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
+    private readonly IRequesterMailNotifier _requesterMailNotifier;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
@@ -23,6 +24,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
+        IRequesterMailNotifier requesterMailNotifier,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
@@ -30,6 +32,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
+        _requesterMailNotifier = requesterMailNotifier;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -133,6 +136,10 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         // Tell the requester their request was resolved, so their "My requests" view flips to approved/denied and
         // an approval becomes activatable without a manual refresh.
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
+
+        // The same news out of band, to the requester alone: the push only lands on a client that is already open,
+        // and the approver is the actor here rather than an audience.
+        await _requesterMailNotifier.NotifyDecisionAsync(request, approved);
 
         // The client repaints the row from Status, ResolvedAt, and the single Decisions element (verdict + comment),
         // so those must be accurate; the approver's denormalized name/email is resolved on the next read. Project
