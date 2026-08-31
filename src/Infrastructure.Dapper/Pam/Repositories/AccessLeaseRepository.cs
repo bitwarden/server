@@ -55,6 +55,17 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         return results.ToList();
     }
 
+    public async Task<AccessLease?> GetActiveByCipherIdAsync(Guid cipherId, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<AccessLease>(
+            $"[{Schema}].[AccessLease_ReadActiveByCipherId]",
+            new { CipherId = cipherId, Now = now },
+            commandType: CommandType.StoredProcedure);
+
+        return results.FirstOrDefault();
+    }
+
     public async Task<ICollection<AccessLease>> GetManyActiveByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now)
     {
         var ids = collectionIds.ToList();
