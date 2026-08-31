@@ -52,7 +52,7 @@ public class RequesterMailNotifierTests
         Assert.Equal(_organizationName, mail.View.OrganizationName);
         Assert.Equal("1 Sep 2026 at 08:30 UTC", mail.View.WindowStart);
         Assert.Equal("1 Sep 2026 at 17:00 UTC", mail.View.WindowEnd);
-        Assert.Equal($"{_vaultUrl}/privileged-controls/requests/{request.Id}", mail.View.Url);
+        Assert.Equal($"{_vaultUrl}/pam/requests/{request.Id}", mail.View.Url);
     }
 
     [Theory, BitAutoData]
@@ -68,7 +68,7 @@ public class RequesterMailNotifierTests
         Assert.Equal(request.RequesterId, recipientId);
         Assert.False(mail.View.Approved);
         Assert.Equal("Your access request was denied", mail.Subject);
-        Assert.Equal($"{_vaultUrl}/privileged-controls/requests/{request.Id}", mail.View.Url);
+        Assert.Equal($"{_vaultUrl}/pam/requests/{request.Id}", mail.View.Url);
     }
 
     /// <summary>
