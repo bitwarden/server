@@ -27,7 +27,7 @@ public class AccessRequestPendingViewTests
             Assert.Contains("Contoso", body);
             Assert.Contains("1 Sep 2026 at 08:30 UTC", body);
             Assert.Contains("1 Sep 2026 at 17:00 UTC", body);
-            Assert.Contains($"https://vault.example.com/#/privileged-controls/requests/{_requestId}", body);
+            Assert.Contains($"https://vault.example.com/#/pam/requests/{_requestId}", body);
         }
     }
 
@@ -47,7 +47,7 @@ public class AccessRequestPendingViewTests
     public void Url_TargetsTheUserScopedRequestPage()
     {
         Assert.Equal(
-            $"https://vault.example.com/#/privileged-controls/requests/{_requestId}",
+            $"https://vault.example.com/#/pam/requests/{_requestId}",
             View().Url);
     }
 
