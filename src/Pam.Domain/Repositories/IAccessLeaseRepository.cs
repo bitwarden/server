@@ -25,6 +25,24 @@ public interface IAccessLeaseRepository
     Task<ICollection<AccessLease>> GetManyActiveByRequesterIdAsync(Guid requesterId, DateTime now);
 
     /// <summary>
+    /// Returns the active lease (no early end recorded, window containing <paramref name="now"/>) on the cipher that
+    /// ends <em>last</em>, across all members, or null when the cipher is free. Answers "is this cipher's
+    /// single-active-lease slot taken, and when does it free" for a caller who holds no lease of their own.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately cipher-scoped, mirroring the singleton guard inside
+    /// <see cref="CreateFromApprovedRequestAsync"/>'s procedure: that guard filters on the cipher alone and ignores
+    /// <see cref="AccessLease.CollectionId"/>, so answering this from
+    /// <see cref="GetManyActiveByCollectionIdsAsync"/> over the caller's reachable collections would miss a holder
+    /// whose path the caller cannot reach and would call a taken slot free.
+    ///
+    /// Latest-ending rather than first, because the guard blocks while <em>any</em> in-window lease exists. More than
+    /// one is routine: enforcement is decided per-caller, so a member with an escape path mints without the guard
+    /// even while a constrained member holds one.
+    /// </remarks>
+    Task<AccessLease?> GetActiveByCipherIdAsync(Guid cipherId, DateTime now);
+
+    /// <summary>
     /// Returns every currently-active lease (no early end recorded, window containing <paramref name="now"/>) on
     /// the given collections, across all members — the governance view over a set of caller-manageable collections. Returns an
     /// empty collection when none are active.
