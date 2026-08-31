@@ -13,15 +13,11 @@
       <mj-section background-color="#fff" padding="24px 0px">
         <mj-column padding="0px 25px">
           <mj-text padding="0px 0px 16px 0px" font-weight="600" font-size="18px" line-height="28px">
-            Your access was ended
-          </mj-text>
-          <mj-text padding="0px 0px 16px 0px" font-weight="400" line-height="24px">
-            Someone who manages this collection ended your active access in <b>{{OrganizationName}}</b> before it was
-            due to finish. The item is locked again, and this access cannot be resumed.
+            Your access was revoked
           </mj-text>
           <mj-text padding="0px 0px 24px 0px" font-weight="400" line-height="24px">
-            <b>It was scheduled to end</b><br />
-            {{ScheduledEnd}}
+            Someone who manages this collection revoked your access in <b>{{OrganizationName}}</b>, which was due to
+            run until {{ScheduledEnd}}. The item is locked again, and this access cannot be resumed.
           </mj-text>
           <mj-button
             padding="0px 0px 24px 0px"
@@ -33,8 +29,8 @@
             >View the request</mj-button
           >
           <mj-text padding="0px" font-size="12px" font-weight="400" line-height="24px">
-            If you still need access, ask for it again with a new request. Any reason given for ending this one is on
-            the request, along with the item it covered; neither is included in this email.
+            If you still need access, ask for it again with a new request. Any reason given for revoking this one is
+            on the request, along with the item it covered; neither is included in this email.
           </mj-text>
         </mj-column>
       </mj-section>

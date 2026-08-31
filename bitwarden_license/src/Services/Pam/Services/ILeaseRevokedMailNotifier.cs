@@ -23,7 +23,7 @@ public interface ILeaseRevokedMailNotifier
     /// </summary>
     /// <remarks>
     /// Handed every early end rather than only the revocations so the rule that a holder is never mailed about
-    /// their own action lives in one place. Mailing someone "your access was ended" seconds after they ended it
+    /// their own action lives in one place. Mailing someone "your access was revoked" seconds after they ended it
     /// themselves is the kind of notification that teaches people to ignore the channel.
     /// </remarks>
     /// <param name="lease">The lease just ended. Its <c>Action</c> may not be stamped yet at the call site.</param>
