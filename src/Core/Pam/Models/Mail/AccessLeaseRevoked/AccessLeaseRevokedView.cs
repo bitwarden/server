@@ -4,7 +4,7 @@ using Bit.Core.Platform.Mail.Mailer;
 namespace Bit.Core.Pam.Models.Mail.AccessLeaseRevoked;
 
 /// <summary>
-/// The lease holder's notice that someone else ended their active access before its window ran out.
+/// The lease holder's notice that someone else revoked their active access before its window ran out.
 /// </summary>
 /// <remarks>
 /// This is a courtesy, not a control: the lease is already dead and the client has already re-locked by the time
@@ -55,5 +55,5 @@ public class AccessLeaseRevokedView : BaseMailView
 
 public class AccessLeaseRevokedMail : BaseMail<AccessLeaseRevokedView>
 {
-    public override string Subject { get; set; } = "Your access was ended";
+    public override string Subject { get; set; } = "Your access was revoked";
 }
