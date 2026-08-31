@@ -53,19 +53,23 @@ public class RegisterTargetSystemCommandTests
         await sutProvider.GetDependency<IPamTargetSystemRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(PamTargetSystemKind.Entra)]
+    [BitAutoData(PamTargetSystemKind.Mssql)]
+    [BitAutoData(PamTargetSystemKind.CustomScript)]
+    [BitAutoData(PamTargetSystemKind.ActiveDirectory)]
     public async Task RegisterAsync_AutomaticHappyPath_CreatesTargetWithSerializedPolicy(
-        Guid organizationId, Guid actingUserId, string name)
+        PamTargetSystemKind kind, Guid organizationId, Guid actingUserId, string name)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamTargetSystemRepository>().CreateAsync(Arg.Any<PamTargetSystem>())
             .Returns(call => Task.FromResult(call.Arg<PamTargetSystem>()));
 
         var result = await sutProvider.Sut.RegisterAsync(
-            organizationId, actingUserId, name, PamTargetSystemMethod.Automatic, PamTargetSystemKind.Mssql, _policy, true);
+            organizationId, actingUserId, name, PamTargetSystemMethod.Automatic, kind, _policy, true);
 
         Assert.Equal(PamTargetSystemMethod.Automatic, result.Method);
-        Assert.Equal(PamTargetSystemKind.Mssql, result.Kind);
+        Assert.Equal(kind, result.Kind);
         Assert.True(result.SupportsSessionTermination);
         Assert.Equal(PamTargetSystemStatus.Active, result.Status);
         Assert.Equal(PamPasswordPolicy.Serialize(_policy), result.PasswordPolicy);
