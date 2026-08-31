@@ -101,7 +101,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Contains(events, e => e.AccessRequestId == newestId);
 
         var ordered = events.ToList();
-        Assert.Equal(ordered.OrderByDescending(e => e.OccurredAt), ordered);
+        Assert.Equal(ordered.OrderByDescending(e => e.OccurredDate), ordered);
     }
 
     // The snapshotted name survives deleting the referenced entity, which is the point of the self-contained store.
@@ -215,7 +215,7 @@ public class AccessAuditEventRepositoryTests
     }
 
     // The pages partition the trail exactly, with no event served twice and none skipped. All five events deliberately
-    // share an OccurredAt, which is the case the Id tiebreaker exists for.
+    // share an OccurredDate, which is the case the Id tiebreaker exists for.
     [DatabaseTheory, DatabaseData]
     public async Task GetManyByOrganizationId_PagesWithoutDuplicatingOrSkipping(
         IOrganizationRepository organizationRepository,
@@ -248,7 +248,7 @@ public class AccessAuditEventRepositoryTests
             pageSizes.Add(page.Count);
             paged.AddRange(page.Select(e => e.AccessRequestId!.Value));
             var last = page.Last();
-            cursor = new AccessAuditEventCursor(last.OccurredAt, last.Id);
+            cursor = new AccessAuditEventCursor(last.OccurredDate, last.Id);
         }
 
         Assert.Equal(new[] { 2, 2, 1 }, pageSizes);
@@ -294,7 +294,7 @@ public class AccessAuditEventRepositoryTests
 
         var last = firstPage.Last();
         var secondPage = await accessAuditEventRepository.GetManyByOrganizationIdAsync(
-            organization.Id, now.AddDays(-1), new AccessAuditEventCursor(last.OccurredAt, last.Id), 2);
+            organization.Id, now.AddDays(-1), new AccessAuditEventCursor(last.OccurredDate, last.Id), 2);
         var secondPageIds = secondPage.Select(e => e.AccessRequestId!.Value).ToList();
 
         Assert.Empty(firstPageIds.Intersect(secondPageIds));
@@ -303,12 +303,12 @@ public class AccessAuditEventRepositoryTests
     }
 
     private static AccessAuditEventData BuildEvent(
-        Guid organizationId, AccessAuditEventKind kind, AccessAuditEventPhase phase, DateTime occurredAt)
+        Guid organizationId, AccessAuditEventKind kind, AccessAuditEventPhase phase, DateTime occurredDate)
         => new()
         {
             Kind = kind,
             Phase = phase,
-            OccurredAt = occurredAt,
+            OccurredDate = occurredDate,
             OrganizationId = organizationId,
         };
 }

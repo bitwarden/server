@@ -2486,7 +2486,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("LeaseNotBefore")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("OccurredAt")
+                    b.Property<DateTime>("OccurredDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("OrganizationId")
@@ -2531,7 +2531,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId", "OccurredAt", "Id")
+                    b.HasIndex("OrganizationId", "OccurredDate", "Id")
                         .IsDescending(false, true, true);
 
                     b.ToTable("AccessAuditEvent", (string)null);

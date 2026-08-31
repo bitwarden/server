@@ -20,7 +20,7 @@ public record AccessAuditEventData
     /// </summary>
     public Guid CorrelationId { get; init; } = Guid.NewGuid();
 
-    public required DateTime OccurredAt { get; init; }
+    public required DateTime OccurredDate { get; init; }
     public required Guid OrganizationId { get; init; }
     public Guid? ActorId { get; init; }
     public Guid? RequesterId { get; init; }

@@ -15,7 +15,7 @@ BEGIN
         [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
         [Kind]              TINYINT             NOT NULL,
         [Phase]             TINYINT             NOT NULL,
-        [OccurredAt]        DATETIME2(7)        NOT NULL,
+        [OccurredDate]      DATETIME2(7)        NOT NULL,
         [ActorId]           UNIQUEIDENTIFIER    NULL,
         [RequesterId]       UNIQUEIDENTIFIER    NULL,
         [CollectionId]      UNIQUEIDENTIFIER    NULL,
@@ -63,14 +63,14 @@ BEGIN
 END
 GO
 
--- Serves AccessAuditEvent_ReadManyByOrganizationId, the only read: org-scoped, filtered on OccurredAt, returned newest
+-- Serves AccessAuditEvent_ReadManyByOrganizationId, the only read: org-scoped, filtered on OccurredDate, returned newest
 -- first a page at a time. The DESC key order lets the ORDER BY come straight off the index instead of sorting the whole
--- matched range. [Id] is the third key because OccurredAt is not unique (an action's Attempt and Outcome share a
+-- matched range. [Id] is the third key because OccurredDate is not unique (an action's Attempt and Outcome share a
 -- timestamp) and an OFFSET page needs a total order to not double-serve or skip a boundary row.
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessAuditEvent_OrganizationId_OccurredAt_Id' AND object_id = OBJECT_ID('[dbo].[AccessAuditEvent]'))
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessAuditEvent_OrganizationId_OccurredDate_Id' AND object_id = OBJECT_ID('[dbo].[AccessAuditEvent]'))
 BEGIN
-    CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredAt_Id]
-        ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredAt] DESC, [Id] DESC);
+    CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredDate_Id]
+        ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredDate] DESC, [Id] DESC);
 END
 GO
 
@@ -80,7 +80,7 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessAuditEvent_Create]
     @CorrelationId UNIQUEIDENTIFIER,
     @Kind TINYINT,
     @Phase TINYINT,
-    @OccurredAt DATETIME2(7),
+    @OccurredDate DATETIME2(7),
     @ActorId UNIQUEIDENTIFIER = NULL,
     @RequesterId UNIQUEIDENTIFIER = NULL,
     @CollectionId UNIQUEIDENTIFIER = NULL,
@@ -116,7 +116,7 @@ BEGIN
         [CorrelationId],
         [Kind],
         [Phase],
-        [OccurredAt],
+        [OccurredDate],
         [ActorId],
         [RequesterId],
         [CollectionId],
@@ -147,7 +147,7 @@ BEGIN
         @CorrelationId,
         @Kind,
         @Phase,
-        @OccurredAt,
+        @OccurredDate,
         @ActorId,
         @RequesterId,
         @CollectionId,
@@ -180,7 +180,7 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[AccessAuditEvent_ReadManyByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER,
     @Since DATETIME2(7),
-    @BeforeOccurredAt DATETIME2(7) = NULL,
+    @BeforeOccurredDate DATETIME2(7) = NULL,
     @BeforeId UNIQUEIDENTIFIER = NULL,
     @Take INT = 25
 AS
@@ -194,11 +194,11 @@ BEGIN
     -- authorized by the AccessEventLogs permission at the endpoint. [Kind], [Phase], [RotationSource], and [SyncState]
     -- hold Bit.Pam.Enums.AccessAuditEventKind, AccessAuditEventPhase, PamRotationSource, and PamRotationSyncState.
     --
-    -- Paging is keyset, not OFFSET. (@BeforeOccurredAt, @BeforeId) is the last row the caller already has, and the
-    -- predicate seeks straight to that position in IX_AccessAuditEvent_OrganizationId_OccurredAt_Id, so every page
+    -- Paging is keyset, not OFFSET. (@BeforeOccurredDate, @BeforeId) is the last row the caller already has, and the
+    -- predicate seeks straight to that position in IX_AccessAuditEvent_OrganizationId_OccurredDate_Id, so every page
     -- costs the same no matter how deep it is. An OFFSET would instead re-serve rows: the store is append-only and read
     -- newest first, so each event written between two requests shifts the window down by one and pushes a row the
-    -- caller has already seen onto the next page. Both cursor halves are needed because [OccurredAt] is not unique,
+    -- caller has already seen onto the next page. Both cursor halves are needed because [OccurredDate] is not unique,
     -- since an action's Attempt and Outcome are written with the same timestamp; [Id] breaks that tie and is the third
     -- index key so the ORDER BY is satisfied by the index rather than by sorting the whole matched range.
     SELECT
@@ -206,7 +206,7 @@ BEGIN
         [Kind],
         [Phase],
         [CorrelationId],
-        [OccurredAt],
+        [OccurredDate],
         [OrganizationId],
         [ActorId],
         [RequesterId],
@@ -233,11 +233,11 @@ BEGIN
         [SyncState]
     FROM [dbo].[AccessAuditEvent]
     WHERE [OrganizationId] = @OrganizationId
-        AND [OccurredAt] >= @Since
-        AND (@BeforeOccurredAt IS NULL
-             OR [OccurredAt] < @BeforeOccurredAt
-             OR ([OccurredAt] = @BeforeOccurredAt AND [Id] < @BeforeId))
-    ORDER BY [OccurredAt] DESC, [Id] DESC
+        AND [OccurredDate] >= @Since
+        AND (@BeforeOccurredDate IS NULL
+             OR [OccurredDate] < @BeforeOccurredDate
+             OR ([OccurredDate] = @BeforeOccurredDate AND [Id] < @BeforeId))
+    ORDER BY [OccurredDate] DESC, [Id] DESC
     OFFSET 0 ROWS
     FETCH NEXT @Take ROWS ONLY
 END

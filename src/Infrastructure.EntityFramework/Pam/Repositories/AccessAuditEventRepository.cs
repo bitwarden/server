@@ -40,7 +40,7 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
             CorrelationId = auditEvent.CorrelationId,
             Kind = auditEvent.Kind,
             Phase = auditEvent.Phase,
-            OccurredAt = auditEvent.OccurredAt,
+            OccurredDate = auditEvent.OccurredDate,
             ActorId = auditEvent.ActorId,
             RequesterId = auditEvent.RequesterId,
             CollectionId = auditEvent.CollectionId,
@@ -78,22 +78,22 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
 
         // Rows are self-contained, so this touches no other table. Paging is keyset rather than Skip: the store is
         // append-only and read newest first, so an offset would re-serve rows as events arrive. Id breaks ties on
-        // OccurredAt, which an action's Attempt and Outcome share, and the comparison has to match the ORDER BY below
+        // OccurredDate, which an action's Attempt and Outcome share, and the comparison has to match the ORDER BY below
         // for the cursor to land on the same boundary the previous page ended at.
         var query = dbContext.AccessAuditEvents
-            .Where(e => e.OrganizationId == organizationId && e.OccurredAt >= since);
+            .Where(e => e.OrganizationId == organizationId && e.OccurredDate >= since);
 
         if (before is not null)
         {
-            var beforeOccurredAt = before.OccurredAt;
+            var beforeOccurredDate = before.OccurredDate;
             var beforeId = before.Id;
             query = query.Where(e =>
-                e.OccurredAt < beforeOccurredAt
-                || (e.OccurredAt == beforeOccurredAt && e.Id.CompareTo(beforeId) < 0));
+                e.OccurredDate < beforeOccurredDate
+                || (e.OccurredDate == beforeOccurredDate && e.Id.CompareTo(beforeId) < 0));
         }
 
         return await query
-            .OrderByDescending(e => e.OccurredAt)
+            .OrderByDescending(e => e.OccurredDate)
             .ThenByDescending(e => e.Id)
             .Take(take)
             .AsNoTracking()
@@ -103,7 +103,7 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
                 Kind = e.Kind,
                 Phase = e.Phase,
                 CorrelationId = e.CorrelationId,
-                OccurredAt = e.OccurredAt,
+                OccurredDate = e.OccurredDate,
                 OrganizationId = e.OrganizationId,
                 ActorId = e.ActorId,
                 RequesterId = e.RequesterId,

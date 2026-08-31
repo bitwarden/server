@@ -19,7 +19,7 @@ public partial class AddAccessAuditEvent : Migration
                 CorrelationId = table.Column<Guid>(type: "uuid", nullable: false),
                 Kind = table.Column<byte>(type: "smallint", nullable: false),
                 Phase = table.Column<byte>(type: "smallint", nullable: false),
-                OccurredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                OccurredDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 ActorId = table.Column<Guid>(type: "uuid", nullable: true),
                 RequesterId = table.Column<Guid>(type: "uuid", nullable: true),
                 CollectionId = table.Column<Guid>(type: "uuid", nullable: true),
@@ -56,9 +56,9 @@ public partial class AddAccessAuditEvent : Migration
             });
 
         migrationBuilder.CreateIndex(
-            name: "IX_AccessAuditEvent_OrganizationId_OccurredAt_Id",
+            name: "IX_AccessAuditEvent_OrganizationId_OccurredDate_Id",
             table: "AccessAuditEvent",
-            columns: new[] { "OrganizationId", "OccurredAt", "Id" },
+            columns: new[] { "OrganizationId", "OccurredDate", "Id" },
             descending: new[] { false, true, true });
     }
 
