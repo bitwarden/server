@@ -8,11 +8,14 @@ namespace Bit.Core.Pam.Models.Mail.AccessRequestsWaiting;
 /// because the requests it stands in for are still arriving; the approver inbox at <see cref="Url" /> is the
 /// only live count.
 /// </summary>
+/// <remarks>
+/// It names no organization either. The breaker counts per approver across every organization they manage in, so
+/// attributing the count to the organization of the request that happened to trip it would misstate where the
+/// backlog is. <see cref="Url" /> is not organization-scoped and shows the true set.
+/// </remarks>
 public class AccessRequestsWaitingView : BaseMailView
 {
     public required string WebVaultUrl { get; init; }
-
-    public required string OrganizationName { get; init; }
 
     /// <summary>How many requests reached this approver inside the current window, including the one that tripped the breaker.</summary>
     public required int RequestCount { get; init; }

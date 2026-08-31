@@ -90,6 +90,37 @@ public class ApproverMailNotifierTests
         Assert.Equal(new[] { firstApprover, secondApprover }, recipients);
     }
 
+    /// <summary>
+    /// An org Owner manages every collection when AllowAdminAccessToAllCollectionItems is on, so a requester is
+    /// routinely among their own collection's managers — and DecideAccessRequestCommand refuses a self-decision.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task NotifyPendingRequestAsync_RequesterManagesTheCollection_IsNotMailedTheirOwnRequest(
+        AccessRequest request, Guid approverId)
+    {
+        var sutProvider = Setup();
+        SetupApprovers(sutProvider, request, approverId, request.RequesterId);
+        var recorder = RecordMail(sutProvider);
+
+        await sutProvider.Sut.NotifyPendingRequestAsync(request);
+
+        var (recipients, _) = Assert.Single(recorder.Pending);
+        Assert.Equal(new[] { approverId }, recipients);
+    }
+
+    [Theory, BitAutoData]
+    public async Task NotifyPendingRequestAsync_RequesterIsTheOnlyManager_SendsNothing(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovers(sutProvider, request, request.RequesterId);
+        var recorder = RecordMail(sutProvider);
+
+        await sutProvider.Sut.NotifyPendingRequestAsync(request);
+
+        Assert.Empty(recorder.Pending);
+        Assert.Empty(recorder.Waiting);
+    }
+
     [Theory, BitAutoData]
     public async Task NotifyPendingRequestAsync_BelowTheThreshold_EachRequestGetsItsOwnMail(
         AccessRequest request, Guid approverId)
@@ -125,7 +156,6 @@ public class ApproverMailNotifierTests
         Assert.Equal(new[] { approverId }, recipients);
         Assert.Equal(ApproverMailNotifier.BurstThreshold + 1, collapsed.View.RequestCount);
         Assert.Equal(ApproverMailNotifier.BurstWindowMinutes, collapsed.View.WindowMinutes);
-        Assert.Equal(_organizationName, collapsed.View.OrganizationName);
         Assert.Equal($"{_vaultUrl}/privileged-controls/approvals", collapsed.View.Url);
     }
 

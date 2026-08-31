@@ -74,7 +74,11 @@ public class ApproverMailNotifier : IApproverMailNotifier
 
         try
         {
+            // A requester may well manage the collection they are requesting against — an org Owner always does when
+            // AllowAdminAccessToAllCollectionItems is on — but DecideAccessRequestCommand refuses a self-decision, so
+            // mailing them would send the one person who already knows to an action the server rejects.
             var approverIds = (await _collectionRepository.GetManagingUserIdsAsync(request.CollectionId))
+                .Where(id => id != request.RequesterId)
                 .Distinct()
                 .ToList();
             if (approverIds.Count == 0)
@@ -108,7 +112,7 @@ public class ApproverMailNotifier : IApproverMailNotifier
             }
 
             await SendPerRequestAsync(perRequest, request, organization.Name, requester.Email);
-            await SendCollapsedAsync(collapsed, organization.Name);
+            await SendCollapsedAsync(collapsed);
         }
         catch (Exception ex)
         {
@@ -140,7 +144,7 @@ public class ApproverMailNotifier : IApproverMailNotifier
             email => new AccessRequestPendingMail { ToEmails = [email], View = view });
     }
 
-    private async Task SendCollapsedAsync(IReadOnlyCollection<Guid> approverIds, string organizationName)
+    private async Task SendCollapsedAsync(IReadOnlyCollection<Guid> approverIds)
     {
         if (approverIds.Count == 0)
         {
@@ -148,11 +152,11 @@ public class ApproverMailNotifier : IApproverMailNotifier
         }
 
         // Every recipient here tripped the breaker on this same request, so their count is BurstThreshold + 1 by
-        // construction and one shared view is correct.
+        // construction and one shared view is correct. The count spans every organization the approver manages in,
+        // which is why the view names none of them.
         var view = new AccessRequestsWaitingView
         {
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            OrganizationName = organizationName,
             RequestCount = BurstThreshold + 1,
             WindowMinutes = BurstWindowMinutes,
         };
