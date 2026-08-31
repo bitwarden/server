@@ -136,7 +136,7 @@ public class LeaseRevokedMailNotifierTests
         var sutProvider = new SutProvider<LeaseRevokedMailNotifier>().Create();
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PamEmailNotifications)
+            .IsEnabled(FeatureFlagKeys.Pam)
             .Returns(flagOn);
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.VaultWithHash.Returns(_vaultUrl);
 
