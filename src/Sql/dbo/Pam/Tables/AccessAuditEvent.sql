@@ -42,9 +42,26 @@ GO
 -- the frozen names mean a later delete or rename cannot rewrite history. The rotation columns are NULL for
 -- non-rotation events.
 --
--- [Id] is the third key column purely so the paged read's ORDER BY comes straight off the index: OccurredDate alone is
--- not unique (an action's Attempt and Outcome share a timestamp), and without a tiebreaker in the key an OFFSET page
--- can serve the same row twice or skip it entirely.
+-- The trail's own read: org-scoped, ranged on [OccurredDate], newest first, one page at a time. [Id] is the third key
+-- column purely so that order comes straight off the index: [OccurredDate] alone is not unique (an action's Attempt
+-- and Outcome share a timestamp), and without a tiebreaker in the key a page boundary landing among events that share
+-- an instant cannot be resumed exactly.
+--
+-- [CorrelationId] and [Phase] are what the before/after collapse tests each candidate row on -- without them every row
+-- considered for a page, not just the ones returned, would cost a key lookup. The four subject columns after them
+-- cover AccessAuditEvent_ReadItemsByOrganizationId, which reads the whole range rather than a page and would otherwise
+-- pay that lookup on every row of it. They ride here rather than on an index of their own because the page read is a
+-- TOP-N seek -- it stops as soon as it has filled a page -- so a wider leaf row costs it almost nothing, where a
+-- second index would cost every insert, and INCLUDE has no Entity Framework equivalent to mirror onto the other three
+-- databases.
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredDate_Id]
-    ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredDate] DESC, [Id] DESC);
+    ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredDate] DESC, [Id] DESC)
+    INCLUDE ([CorrelationId], [Phase], [CipherId], [CollectionId], [AccessRuleId], [RuleName]);
+GO
+
+-- Serves the collapse itself, which asks "is there a further-along half of this action?" once per candidate row. A
+-- correlation holds one or two rows, so this is a point lookup; without it the question would be a scan.
+CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_CorrelationId]
+    ON [dbo].[AccessAuditEvent] ([CorrelationId] ASC)
+    INCLUDE ([OrganizationId], [OccurredDate], [Phase]);
 GO
