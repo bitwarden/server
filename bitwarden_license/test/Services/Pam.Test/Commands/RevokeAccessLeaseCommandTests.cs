@@ -45,14 +45,12 @@ public class RevokeAccessLeaseCommandTests
         var sutProvider = Setup();
         lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddHours(1);
-        // The caller IS the lease's own holder, but cannot Manage the collection — they may still end their own access.
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(lease.RequesterId, lease.CollectionId).Returns(false);
 
         await sutProvider.Sut.RevokeAsync(lease.RequesterId, lease.Id, "done with it");
 
-        // Settles to Cancelled (the holder ended their own access) with the holder recorded as the revoker.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
             lease,
             AccessLeaseAction.Cancelled,
@@ -67,6 +65,8 @@ public class RevokeAccessLeaseCommandTests
             .NotifyCollectionApproversAsync(lease.CollectionId);
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
             .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Cancelled);
     }
 
     [Theory, BitAutoData]
@@ -104,6 +104,8 @@ public class RevokeAccessLeaseCommandTests
             .NotifyCollectionApproversAsync(lease.CollectionId);
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
             .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Revoked);
     }
 
     [Theory, BitAutoData]

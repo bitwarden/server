@@ -15,6 +15,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
+    private readonly ILeaseRevokedMailNotifier _leaseRevokedMailNotifier;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly IHandleAccessGrantEndedCommand _handleAccessGrantEndedCommand;
     private readonly TimeProvider _timeProvider;
@@ -25,6 +26,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
+        ILeaseRevokedMailNotifier leaseRevokedMailNotifier,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         IHandleAccessGrantEndedCommand handleAccessGrantEndedCommand,
         TimeProvider timeProvider,
@@ -34,6 +36,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
+        _leaseRevokedMailNotifier = leaseRevokedMailNotifier;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _handleAccessGrantEndedCommand = handleAccessGrantEndedCommand;
         _timeProvider = timeProvider;
@@ -123,5 +126,9 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         // Tell the lease holder their access ended, so an open cipher re-locks and the banner/badges drop the lease
         // — whether an operator revoked it or the holder ended it from another device.
         await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
+
+        // The same news out of band: the push above only lands on a client that is already open. Every early end is
+        // handed over, and only a revocation is mailed -- a holder is not mailed about ending their own access.
+        await _leaseRevokedMailNotifier.NotifyLeaseEndedAsync(lease, endAction);
     }
 }
