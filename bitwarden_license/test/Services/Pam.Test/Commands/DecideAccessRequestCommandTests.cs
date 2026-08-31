@@ -235,7 +235,6 @@ public class DecideAccessRequestCommandTests
                 d.Comment == "use the read replica instead"),
             AccessRequestAction.Denied,
             _now);
-        // A denial reaches the requester too (their "My requests" view flips to denied).
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
             .NotifyRequesterAsync(request.RequesterId);
         await sutProvider.GetDependency<IRequesterMailNotifier>().Received(1)
