@@ -63,6 +63,11 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids);
     Task DeleteManyAsync(IEnumerable<Guid> userIds);
     Task<OrganizationUser?> GetByOrganizationEmailAsync(Guid organizationId, string email);
+    /// <summary>
+    /// The batch form of <see cref="GetByOrganizationEmailAsync"/>. Matches on OrganizationUser.Email, which
+    /// only members without a linked account (staged, invited) have.
+    /// </summary>
+    Task<ICollection<OrganizationUser>> GetManyByOrganizationEmailsAsync(Guid organizationId, IEnumerable<string> emails);
     Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids);
     Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole);
     /// <summary>

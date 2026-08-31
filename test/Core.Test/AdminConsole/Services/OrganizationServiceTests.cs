@@ -1466,4 +1466,164 @@ public class OrganizationServiceTests
             }
         );
     }
+
+    /// <summary>
+    /// Arranges a single-email invite where that email already belongs to <paramref name="existingOrgUser"/>,
+    /// so the invite flow has to decide between skipping it and promoting it.
+    /// </summary>
+    private void InviteUser_ArrangeExistingOrgUser(Organization organization, OrganizationUserInvite invite,
+        OrganizationUser existingOrgUser, SutProvider<OrganizationService> sutProvider)
+    {
+        invite.Emails = [invite.Emails.First()];
+        existingOrgUser.OrganizationId = organization.Id;
+        existingOrgUser.Email = invite.Emails.First();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
+            .Returns(new List<string> { invite.Emails.First() });
+
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        InviteUser_ArrangeCurrentContextPermissions(organization, sutProvider);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>())
+            .Returns(new List<OrganizationUser> { existingOrgUser });
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>())
+            .Returns(true);
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+        SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_EmailBelongsToStagedUser_PromotesRowInPlace(Organization organization,
+        OrganizationUserInvite invite, string externalId, OrganizationUser invitor, OrganizationUser stagedUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        stagedUser.Status = OrganizationUserStatusType.Staged;
+        stagedUser.ExternalId = "directory-connector-id";
+        var originalId = stagedUser.Id;
+        InviteUser_ArrangeExistingOrgUser(organization, invite, stagedUser, sutProvider);
+
+        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
+
+        Assert.Equal(OrganizationUserStatusType.Invited, stagedUser.Status);
+        // Id and ExternalId are the provisioning keys; promotion must not disturb them.
+        Assert.Equal(originalId, stagedUser.Id);
+        Assert.Equal("directory-connector-id", stagedUser.ExternalId);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(stagedUser, Arg.Any<IEnumerable<CollectionAccessSelection>>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default, default(IEnumerable<CollectionAccessSelection>));
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(r => r.Users.Single().Id == stagedUser.Id));
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_EmailBelongsToStagedUser_AndInviteFails_NeverWritesTheRow(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        stagedUser.Status = OrganizationUserStatusType.Staged;
+        stagedUser.Type = OrganizationUserType.User;
+        InviteUser_ArrangeExistingOrgUser(organization, invite, stagedUser, sutProvider);
+
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
+            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+
+        await Assert.ThrowsAsync<AggregateException>(() => sutProvider.Sut
+            .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
+
+        // The promotion is persisted only once the invitations are out, so a failure leaves the row as its
+        // provisioning tool created it. There is nothing to put back.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default, default(IEnumerable<CollectionAccessSelection>));
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateGroupsAsync(default, default, default);
+
+        // The row predates this call, so it must not be swept up in the delete either.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()));
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize]
+    public async Task InviteUser_EmailBelongsToNonStagedUser_IsStillSkipped(OrganizationUserStatusType status,
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser existingOrgUser, SutProvider<OrganizationService> sutProvider)
+    {
+        existingOrgUser.Status = status;
+        InviteUser_ArrangeExistingOrgUser(organization, invite, existingOrgUser, sutProvider);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut
+            .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
+
+        Assert.Contains("This user has already been invited", exception.Message);
+        Assert.Equal(status, existingOrgUser.Status);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default, default(IEnumerable<CollectionAccessSelection>));
+        // SendInvitesAsync is always reached; it is a no-op when nothing was invited.
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(r => r.Users.Length == 0));
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUsers_SameStagedEmailAcrossInvites_PromotesRowOnce(Organization organization,
+        OrganizationUserInvite invite, OrganizationUser invitor, OrganizationUser stagedUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        stagedUser.Status = OrganizationUserStatusType.Staged;
+        InviteUser_ArrangeExistingOrgUser(organization, invite, stagedUser, sutProvider);
+
+        // Emails are only deduplicated within a single invite, so the same address can arrive twice.
+        var email = invite.Emails.First();
+        var duplicateInvite = new OrganizationUserInvite
+        {
+            Emails = [email],
+            Type = invite.Type,
+            Collections = invite.Collections,
+            Groups = invite.Groups,
+            Permissions = invite.Permissions,
+            AccessSecretsManager = invite.AccessSecretsManager
+        };
+
+        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null,
+            [(invite, null), (duplicateInvite, null)]);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(stagedUser, Arg.Any<IEnumerable<CollectionAccessSelection>>());
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(r => r.Users.Length == 1));
+    }
 }

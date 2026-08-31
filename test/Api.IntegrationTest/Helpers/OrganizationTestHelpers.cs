@@ -3,6 +3,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -224,5 +225,23 @@ public static class OrganizationTestHelpers
             OrganizationUserType.User, externalId: email);
 
         return (user, organizationUser);
+    }
+
+    public static async Task<OrganizationUser> CreateStagedUserAsync(
+        ApiApplicationFactory factory,
+        Organization organization,
+        string email,
+        string? externalId = null)
+    {
+        var command = factory.GetService<ICreateStagedOrganizationUsersCommand>();
+
+        var result = await command.RunAsync(new CreateStagedOrganizationUsersRequest
+        {
+            Organization = organization,
+            Users = [new StagedOrganizationUserRequest { Email = email, ExternalId = externalId ?? $"external-{email}" }],
+            EventSystemUser = EventSystemUser.SCIM
+        });
+
+        return result.AsSuccess.Single();
     }
 }
