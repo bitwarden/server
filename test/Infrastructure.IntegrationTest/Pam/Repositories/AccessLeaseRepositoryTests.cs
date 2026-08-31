@@ -310,6 +310,38 @@ public class LeaseRepositoryTests
         Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(second.Id));
     }
 
+    // The same per-cipher contention under real concurrency: two users activate approved requests for one cipher at
+    // the same instant on separate connections. Serializable isolation makes the loser a candidate for a provider
+    // serialization failure at commit rather than a clean refusal, so this is the guard for the mint's retry -- the
+    // loser must still report the conflict, and the cipher must end up carrying exactly one lease.
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateFromApprovedRequestAsync_ConcurrentSameCipherActivations_OneMintsAndTheOtherConflicts(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var cipherId = Guid.NewGuid();
+        var first = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1), cipherId: cipherId);
+        var second = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1), cipherId: cipherId);
+
+        var outcomes = await Task.WhenAll(
+            accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(first, now), now, true),
+            accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(second, now), now, true));
+
+        Assert.Single(outcomes, outcome => outcome == AccessLeaseMintOutcome.Minted);
+        Assert.Single(outcomes, outcome => outcome == AccessLeaseMintOutcome.SingleActiveLeaseConflict);
+
+        // Whichever request won, only its lease exists: the refused activation left nothing behind.
+        var minted = outcomes[0] == AccessLeaseMintOutcome.Minted ? first : second;
+        var refused = outcomes[0] == AccessLeaseMintOutcome.Minted ? second : first;
+        Assert.NotNull(await accessLeaseRepository.GetByAccessRequestIdAsync(minted.Id));
+        Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(refused.Id));
+    }
+
     [DatabaseTheory, DatabaseData]
     public async Task GetManyActiveByCollectionIdsAsync_ReturnsActiveInWindowLeasesOnGivenCollections(
         IOrganizationRepository organizationRepository,
