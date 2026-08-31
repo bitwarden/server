@@ -31,7 +31,7 @@ public class AccessRequestDecidedViewTests
             Assert.Contains("Contoso", body);
             Assert.Contains("1 Sep 2026 at 08:30 UTC", body);
             Assert.Contains("1 Sep 2026 at 17:00 UTC", body);
-            Assert.Contains($"https://vault.example.com/#/privileged-controls/requests/{_requestId}", body);
+            Assert.Contains($"https://vault.example.com/#/pam/requests/{_requestId}", body);
             Assert.DoesNotContain("declined", body);
             Assert.DoesNotContain("was denied", body);
         }
@@ -47,7 +47,7 @@ public class AccessRequestDecidedViewTests
             Assert.Contains("was denied", body);
             Assert.Contains("declined", body);
             Assert.Contains("No access was granted", body);
-            Assert.Contains($"https://vault.example.com/#/privileged-controls/requests/{_requestId}", body);
+            Assert.Contains($"https://vault.example.com/#/pam/requests/{_requestId}", body);
             Assert.DoesNotContain("approved", body);
             Assert.DoesNotContain("Start access", body);
         }
@@ -79,7 +79,7 @@ public class AccessRequestDecidedViewTests
     [Fact]
     public void Url_TargetsTheRequestersOwnRequestPage() =>
         Assert.Equal(
-            $"https://vault.example.com/#/privileged-controls/requests/{_requestId}",
+            $"https://vault.example.com/#/pam/requests/{_requestId}",
             View(approved: true).Url);
 
     [Theory]
