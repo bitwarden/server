@@ -18,14 +18,14 @@ public class AccessLeaseRevokedViewTests
     /// misnamed or misplaced <c>.hbs</c>.
     /// </summary>
     [Fact]
-    public async Task RenderAsync_SaysAccessEndedAndPointsAtTheRequest()
+    public async Task RenderAsync_SaysAccessWasRevokedAndPointsAtTheRequest()
     {
         var (html, text) = await RenderAsync(View());
 
         foreach (var body in new[] { Reflow(html), Reflow(text) })
         {
-            Assert.Contains("Your access was ended", body);
-            Assert.Contains("before it was due to finish", body);
+            Assert.Contains("Your access was revoked", body);
+            Assert.Contains("which was due to run until", body);
             Assert.Contains("Contoso", body);
             Assert.Contains("1 Sep 2026 at 17:00 UTC", body);
             Assert.Contains($"https://vault.example.com/#/pam/requests/{_requestId}", body);
@@ -80,9 +80,9 @@ public class AccessLeaseRevokedViewTests
         Assert.Equal($"https://vault.example.com/#/pam/requests/{_requestId}", View().Url);
 
     [Fact]
-    public void Subject_SaysTheAccessEndedWithoutNamingTheItemOrTheReason() =>
+    public void Subject_SaysTheAccessWasRevokedWithoutNamingTheItemOrTheReason() =>
         Assert.Equal(
-            "Your access was ended",
+            "Your access was revoked",
             new AccessLeaseRevokedMail { ToEmails = ["holder@acme.com"], View = View() }.Subject);
 
     private static AccessLeaseRevokedView View(string organizationName = "Contoso") => new()

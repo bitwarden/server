@@ -35,7 +35,7 @@ public class LeaseRevokedMailNotifierTests
 
         var (recipientId, mail) = Assert.Single(sent);
         Assert.Equal(lease.RequesterId, recipientId);
-        Assert.Equal("Your access was ended", mail.Subject);
+        Assert.Equal("Your access was revoked", mail.Subject);
         Assert.Equal(_organizationName, mail.View.OrganizationName);
         Assert.Equal("1 Sep 2026 at 17:00 UTC", mail.View.ScheduledEnd);
         Assert.Equal($"{_vaultUrl}/pam/requests/{lease.AccessRequestId}", mail.View.Url);
