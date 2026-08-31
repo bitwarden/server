@@ -70,20 +70,26 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<ICollection<AccessAuditEvent>> GetManyByOrganizationIdAsync(
-        Guid organizationId, DateTime since, AccessAuditEventCursor? before, int take)
+    public async Task<ICollection<AccessAuditEvent>> GetPageByOrganizationIdAsync(
+        Guid organizationId, AccessAuditTrailFilter filter)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Rows are self-contained, so this touches no other table. Paging is keyset rather than Skip: the store is
-        // append-only and read newest first, so an offset would re-serve rows as events arrive. Id breaks ties on
-        // OccurredDate, which an action's Attempt and Outcome share, and the comparison has to match the ORDER BY below
-        // for the cursor to land on the same boundary the previous page ended at.
-        var query = dbContext.AccessAuditEvents
-            .Where(e => e.OrganizationId == organizationId && e.OccurredDate >= since);
+        var since = filter.Since;
+        var until = filter.Until;
 
-        if (before is not null)
+        // Rows are self-contained, so this touches no other table -- the names were frozen at write time.
+        var query = dbContext.AccessAuditEvents
+            .Where(e => e.OrganizationId == organizationId && e.OccurredDate >= since && e.OccurredDate <= until);
+
+        // Resume where the previous page stopped. Paging is keyset rather than Skip: the store is append-only and read
+        // newest first, so an offset would re-serve rows as events arrive. Keyed on (OccurredDate, Id) rather than
+        // OccurredDate alone because an action writes its before/after halves at one instant, so a boundary landing
+        // inside a group of events sharing a timestamp is ordinary here and a date-only key would drop every row tied
+        // with it. The comparison has to match the ORDER BY below for the cursor to land on the same boundary the
+        // previous page ended at.
+        if (filter.Before is { } before)
         {
             var beforeOccurredDate = before.OccurredDate;
             var beforeId = before.Id;
@@ -92,10 +98,58 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
                 || (e.OccurredDate == beforeOccurredDate && e.Id.CompareTo(beforeId) < 0));
         }
 
+        // Collapse each action's before/after pair (shared CorrelationId) into one row -- the Outcome when it landed,
+        // otherwise the lone Attempt. Expressed as "no further-along half of this action exists" rather than as a
+        // GroupBy, which is what the Dapper procedure's NOT EXISTS does and what translates to SQL here. Scoped to the
+        // page's own range, so an action straddling a bound reads as in-doubt at that edge rather than disappearing.
+        query = query.Where(e => !dbContext.AccessAuditEvents.Any(p =>
+            p.CorrelationId == e.CorrelationId
+            && p.OrganizationId == organizationId
+            && p.OccurredDate >= since
+            && p.OccurredDate <= until
+            && (p.Phase > e.Phase || (p.Phase == e.Phase && p.Id.CompareTo(e.Id) < 0))));
+
+        // The dimensions are applied AFTER the collapse, to the row that survived it, because the two halves of one
+        // action need not agree: a refused activation writes its Attempt as LeaseActivated and its Outcome as
+        // LeaseActivationRejected, so filtering before the collapse would answer "activated" with an action that was
+        // turned down.
+        if (filter.Kinds.Count > 0)
+        {
+            var kinds = filter.Kinds.ToList();
+            query = query.Where(e => kinds.Contains(e.Kind));
+        }
+
+        // An actor selection unions the chosen identities with the automatic bucket, which has no id of its own.
+        if (filter.ActorIds.Count > 0 || filter.IncludeAutomatedActor)
+        {
+            var actorIds = filter.ActorIds.ToList();
+            var includeAutomated = filter.IncludeAutomatedActor;
+            query = query.Where(e =>
+                (includeAutomated && e.ActorId == null)
+                || (e.ActorId != null && actorIds.Contains(e.ActorId.Value)));
+        }
+
+        if (filter.RequesterIds.Count > 0)
+        {
+            var requesterIds = filter.RequesterIds.ToList();
+            query = query.Where(e => e.RequesterId != null && requesterIds.Contains(e.RequesterId.Value));
+        }
+
+        // The Item dimension is two columns, and they UNION rather than narrow: a rule-administration event names a
+        // rule and no cipher, so one selection spanning both is asking for either, not for the empty intersection.
+        if (filter.CipherIds.Count > 0 || filter.RuleIds.Count > 0)
+        {
+            var cipherIds = filter.CipherIds.ToList();
+            var ruleIds = filter.RuleIds.ToList();
+            query = query.Where(e =>
+                (e.CipherId != null && cipherIds.Contains(e.CipherId.Value))
+                || (e.AccessRuleId != null && ruleIds.Contains(e.AccessRuleId.Value)));
+        }
+
         return await query
             .OrderByDescending(e => e.OccurredDate)
             .ThenByDescending(e => e.Id)
-            .Take(take)
+            .Take(filter.PageSize)
             .AsNoTracking()
             .Select(e => new AccessAuditEvent
             {
@@ -130,6 +184,51 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
                 SyncState = e.SyncState,
             })
             .ToListAsync();
+    }
+
+    public async Task<ICollection<AccessAuditItem>> GetItemsByOrganizationIdAsync(
+        Guid organizationId, DateTime since, DateTime until)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var inRange = dbContext.AccessAuditEvents
+            .Where(e => e.OrganizationId == organizationId && e.OccurredDate >= since && e.OccurredDate <= until)
+            .AsNoTracking();
+
+        // Grouped and ordered rather than aggregated so each subject carries its MOST RECENT context: a renamed rule
+        // reads in the menu the way the newest rows read in the table, and a cipher's collection is the one it was
+        // last gated through. Expressed as GroupBy + First rather than the procedure's ROW_NUMBER because that is what
+        // translates across the three providers; the answer is the same.
+        var ciphers = await inRange
+            .Where(e => e.CipherId != null)
+            .GroupBy(e => e.CipherId!.Value)
+            .Select(group => new AccessAuditItem
+            {
+                CipherId = group.Key,
+                CollectionId = group
+                    .OrderByDescending(e => e.OccurredDate)
+                    .ThenByDescending(e => e.Id)
+                    .Select(e => e.CollectionId)
+                    .First(),
+            })
+            .ToListAsync();
+
+        var rules = await inRange
+            .Where(e => e.AccessRuleId != null)
+            .GroupBy(e => e.AccessRuleId!.Value)
+            .Select(group => new AccessAuditItem
+            {
+                RuleId = group.Key,
+                RuleName = group
+                    .OrderByDescending(e => e.OccurredDate)
+                    .ThenByDescending(e => e.Id)
+                    .Select(e => e.RuleName)
+                    .First(),
+            })
+            .ToListAsync();
+
+        return [.. ciphers, .. rules];
     }
 
     private static async Task<(string? Name, string? Email)?> ReadUserAsync(DatabaseContext dbContext, Guid? userId)
