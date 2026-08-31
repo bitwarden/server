@@ -91,6 +91,28 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
+        try
+        {
+            var keyEncryptionAlgorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+
+            // An empty list reports an envelope with no encrypted assertion, and the census skips it.
+            if (keyEncryptionAlgorithms.Count > 0)
+            {
+                var logger = context.RequestServices.GetRequiredService<ILogger<Saml2Options>>();
+                foreach (var keyEncryptionAlgorithm in keyEncryptionAlgorithms)
+                {
+                    logger.LogInformation(
+                        "SAML assertion encryption census. Scheme: {Scheme}, " +
+                        "IsEncrypted: {IsEncrypted}, KeyEncryptionAlgorithm: {KeyEncryptionAlgorithm}",
+                        scheme, true, keyEncryptionAlgorithm);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // The census must not interfere with SSO login.
+        }
+
         if (options.SPOptions.WantAssertionsSigned)
         {
             // An encrypted assertion may arrive as <saml:EncryptedAssertion>.
