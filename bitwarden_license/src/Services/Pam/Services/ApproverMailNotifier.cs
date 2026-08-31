@@ -51,15 +51,18 @@ public class ApproverMailNotifier : IApproverMailNotifier
             // mailing them would send the one person who already knows to an action the server rejects.
             var approverIds = (await _collectionRepository.GetManagingUserIdsAsync(request.CollectionId))
                 .Where(id => id != request.RequesterId)
-                .Distinct()
                 .ToList();
             if (approverIds.Count == 0)
             {
                 return;
             }
 
-            var organization = await _organizationRepository.GetByIdAsync(request.OrganizationId);
-            var requester = await _userRepository.GetByIdAsync(request.RequesterId);
+            // Two independent reads, fetched concurrently.
+            var organizationTask = _organizationRepository.GetByIdAsync(request.OrganizationId);
+            var requesterTask = _userRepository.GetByIdAsync(request.RequesterId);
+            await Task.WhenAll(organizationTask, requesterTask);
+            var organization = await organizationTask;
+            var requester = await requesterTask;
             if (organization is null || string.IsNullOrWhiteSpace(requester?.Email))
             {
                 _logger.LogWarning(
