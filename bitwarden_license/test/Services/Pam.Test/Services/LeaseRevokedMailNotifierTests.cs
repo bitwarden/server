@@ -41,10 +41,6 @@ public class LeaseRevokedMailNotifierTests
         Assert.Equal($"{_vaultUrl}/pam/requests/{lease.AccessRequestId}", mail.View.Url);
     }
 
-    /// <summary>
-    /// The point of the whole feature. A holder who ends their own access already knows, and a mail thirty seconds
-    /// behind their own click is what teaches people to filter the channel.
-    /// </summary>
     [Theory]
     [BitAutoData(AccessLeaseAction.Cancelled)]
     [BitAutoData(AccessLeaseAction.None)]
