@@ -15,11 +15,7 @@ namespace Bit.Services.Pam.Test.Services;
 [SutProviderCustomize]
 public class AccessMailNotifierTests
 {
-    /// <summary>
-    /// A stand-in for the mails later milestones will send. The notifier is a seam over <see cref="IMailer" /> and
-    /// is deliberately indifferent to which mail travels through it, so the specs supply their own rather than
-    /// coupling to a shipped one.
-    /// </summary>
+    /// <summary>Stands in for a shipped mail; the notifier is indifferent to which mail travels through it.</summary>
     private class TestMailView : BaseMailView;
 
     private class TestMail : BaseMail<TestMailView>
