@@ -1,5 +1,7 @@
-﻿using Bit.HttpExtensions;
+﻿using  Bit.HttpExtensions;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
@@ -10,9 +12,29 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 /// </summary>
 public class PamRotationConfigResponseModel : ResponseModel
 {
-    public PamRotationConfigResponseModel(string obj = "pamRotationConfig")
+    public PamRotationConfigResponseModel(
+        PamRotationConfigDetails config, bool awaitingManualRotation, string obj = "pamRotationConfig")
         : base(obj)
     {
+        ArgumentNullException.ThrowIfNull(config);
+
+        Id = config.Id;
+        OrganizationId = config.OrganizationId;
+        CipherId = config.CipherId;
+        TargetSystemId = config.TargetSystemId;
+        TargetSystemName = config.TargetSystemName;
+        TargetSystemMethod = config.TargetSystemMethod;
+        AccountIdentity = config.AccountIdentity;
+        TerminateSessions = config.TerminateSessions;
+        ScheduleCron = config.ScheduleCron;
+        RotateOnAccessEnd = config.RotateOnAccessEnd;
+        NextRotationAt = config.NextRotationAt.AsUtc();
+        Enabled = config.Enabled;
+        LastRotationAt = config.LastRotationAt.AsUtc();
+        HasActiveJob = config.HasActiveJob;
+        AwaitingManualRotation = awaitingManualRotation;
+        CreationDate = config.CreationDate.AsUtc();
+        RevisionDate = config.RevisionDate.AsUtc();
     }
 
     /// <summary>

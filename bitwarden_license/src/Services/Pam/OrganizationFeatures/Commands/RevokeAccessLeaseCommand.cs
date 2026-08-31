@@ -3,6 +3,7 @@ using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 
@@ -14,6 +15,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<RevokeAccessLeaseCommand> _logger;
 
     public RevokeAccessLeaseCommand(
         IAccessLeaseRepository accessLeaseRepository,
@@ -25,6 +27,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     public async Task RevokeAsync(Guid userId, Guid leaseId, string? reason)
