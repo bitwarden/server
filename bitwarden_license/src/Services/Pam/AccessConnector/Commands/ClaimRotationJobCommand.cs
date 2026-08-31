@@ -12,46 +12,46 @@ namespace Bit.Services.Pam.AccessConnector.Commands;
 public class ClaimRotationJobCommand : IClaimRotationJobCommand
 {
     private readonly IPamRotationJobRepository _jobRepository;
-    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
+    private readonly IPamDaemonRepository _daemonRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly IOptions<PamRotationOptions> _options;
     private readonly TimeProvider _timeProvider;
 
     public ClaimRotationJobCommand(
         IPamRotationJobRepository jobRepository,
-        IPamAccessConnectorRepository accessConnectorRepository,
+        IPamDaemonRepository daemonRepository,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         IOptions<PamRotationOptions> options,
         TimeProvider timeProvider)
     {
         _jobRepository = jobRepository;
-        _accessConnectorRepository = accessConnectorRepository;
+        _daemonRepository = daemonRepository;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _options = options;
         _timeProvider = timeProvider;
     }
 
-    public async Task<PamRotationClaimResult> ClaimAsync(Guid accessConnectorId, Guid jobId)
+    public async Task<PamRotationClaimResult> ClaimAsync(Guid daemonId, Guid jobId)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var result = await _jobRepository.ClaimAsync(jobId, accessConnectorId, now, _options.Value.ReleaseDelay);
+        var result = await _jobRepository.ClaimAsync(jobId, daemonId, now, _options.Value.ReleaseDelay);
 
         switch (result.Outcome)
         {
             case PamRotationClaimOutcome.Claimed:
-                // EligibleClaimsOnly makes the access connector's organization the config's, so the audit uses it as
-                // OrganizationId.
-                var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
+                // The daemon's organization is the config's organization by construction of EligibleClaimsOnly, so
+                // it is a cheap, correct stand-in for the audit's required OrganizationId.
+                var daemon = await _daemonRepository.GetByIdAsync(daemonId);
                 var job = await _jobRepository.GetByIdAsync(jobId);
 
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.RotationDispatched,
-                    OccurredDate = now,
-                    OrganizationId = accessConnector?.OrganizationId ?? Guid.Empty,
+                    OccurredAt = now,
+                    OrganizationId = daemon?.OrganizationId ?? Guid.Empty,
                     ActorId = null,
-                    AccessConnectorId = accessConnectorId,
-                    AccessConnectorName = accessConnector?.Name,
+                    DaemonId = daemonId,
+                    DaemonName = daemon?.Name,
                     RotationJobId = jobId,
                     RotationConfigId = job?.RotationConfigId,
                     CipherId = result.CipherId,
@@ -63,11 +63,11 @@ public class ClaimRotationJobCommand : IClaimRotationJobCommand
                 return result;
 
             case PamRotationClaimOutcome.NotClaimable:
-                // Another access connector likely won the race; the caller should claim a different job.
+                // Another daemon likely won the race -- 409, retry a different job.
                 throw new ConflictException("This job is no longer claimable.");
 
             default:
-                // NotEligible answers like an unknown job, so it reveals nothing about why.
+                // NotEligible: never leak *why* -- looks the same as a job that never existed.
                 throw new NotFoundException();
         }
     }
