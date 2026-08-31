@@ -39,6 +39,8 @@ public class AzureEvent : ITableEntity
     public Guid? ServiceAccountId { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
     public Guid? SendId { get; set; }
+    public Guid? AccessRequestId { get; set; }
+    public Guid? AccessLeaseId { get; set; }
 
     public EventTableEntity ToEventTableEntity()
     {
@@ -71,7 +73,9 @@ public class AzureEvent : ITableEntity
             ServiceAccountId = ServiceAccountId,
             ProjectId = ProjectId,
             GrantedServiceAccountId = GrantedServiceAccountId,
-            SendId = SendId
+            SendId = SendId,
+            AccessRequestId = AccessRequestId,
+            AccessLeaseId = AccessLeaseId
         };
     }
 }
@@ -105,6 +109,8 @@ public class EventTableEntity : IEvent
         ServiceAccountId = e.ServiceAccountId;
         GrantedServiceAccountId = e.GrantedServiceAccountId;
         SendId = e.SendId;
+        AccessRequestId = e.AccessRequestId;
+        AccessLeaseId = e.AccessLeaseId;
     }
 
     public string PartitionKey { get; set; }
@@ -135,6 +141,8 @@ public class EventTableEntity : IEvent
     public Guid? ServiceAccountId { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
     public Guid? SendId { get; set; }
+    public Guid? AccessRequestId { get; set; }
+    public Guid? AccessLeaseId { get; set; }
 
     public AzureEvent ToAzureEvent()
     {
@@ -167,7 +175,9 @@ public class EventTableEntity : IEvent
             ProjectId = ProjectId,
             ServiceAccountId = ServiceAccountId,
             GrantedServiceAccountId = GrantedServiceAccountId,
-            SendId = SendId
+            SendId = SendId,
+            AccessRequestId = AccessRequestId,
+            AccessLeaseId = AccessLeaseId
         };
     }
 

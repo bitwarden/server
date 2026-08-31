@@ -4,6 +4,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260831092610_AddEventPamAccessIds")]
+    partial class AddEventPamAccessIds
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -235,9 +238,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("LimitItemDeletion")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<int?>("MaxAutoscalePamSeats")
-                        .HasColumnType("int");
-
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("int");
 
@@ -260,9 +260,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<int?>("PamSeats")
-                        .HasColumnType("int");
 
                     b.Property<string>("Plan")
                         .IsRequired()
@@ -2438,13 +2435,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid?>("AccessConnectorId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("AccessConnectorName")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
                     b.Property<Guid?>("AccessLeaseId")
                         .HasColumnType("char(36)");
 
@@ -2468,11 +2458,24 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("CipherName")
+                        .HasColumnType("longtext");
+
                     b.Property<Guid?>("CollectionId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("CollectionName")
+                        .HasColumnType("longtext");
+
                     b.Property<Guid>("CorrelationId")
                         .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("DaemonId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("DaemonName")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("Detail")
                         .HasColumnType("longtext");
@@ -2486,7 +2489,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("LeaseNotBefore")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime>("OccurredDate")
+                    b.Property<DateTime>("OccurredAt")
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("OrganizationId")
@@ -2531,10 +2534,8 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CorrelationId");
-
-                    b.HasIndex("OrganizationId", "OccurredDate", "Id")
-                        .IsDescending(false, true, true);
+                    b.HasIndex("OrganizationId", "OccurredAt")
+                        .IsDescending(false, true);
 
                     b.ToTable("AccessAuditEvent", (string)null);
                 });
@@ -2620,12 +2621,11 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
+                    b.HasIndex("CipherId", "Action");
+
                     b.HasIndex("CollectionId", "Action");
 
                     b.HasIndex("NotAfter", "Action");
-
-                    b.HasIndex("CipherId", "Action", "NotAfter")
-                        .IsDescending(false, false, true);
 
                     b.HasIndex("RequesterId", "CipherId", "Action");
 
