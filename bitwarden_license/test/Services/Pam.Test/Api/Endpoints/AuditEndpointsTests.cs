@@ -47,6 +47,8 @@ public class AuditEndpointsTests
             .ToList();
     }
 
+    // Two reads over the one resource: the trail itself, and the subjects it names -- which is what the Item filter's
+    // menu is built from, and cannot be derived from a page of the trail.
     [Fact]
     public void MapPamEndpoints_RegistersTheAuditRoutes_InTheInternalDoc()
     {
