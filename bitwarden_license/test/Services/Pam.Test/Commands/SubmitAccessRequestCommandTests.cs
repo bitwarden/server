@@ -109,7 +109,6 @@ public class SubmitAccessRequestCommandTests
         var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
             new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
 
-        // The automatic path produces a startable, approved request; the requester activates it explicitly.
         Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
         Assert.Equal(AccessRequestAction.Approved, result.Request.Action);
         Assert.Equal(_now, result.Request.NotBefore);
@@ -227,7 +226,6 @@ public class SubmitAccessRequestCommandTests
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
         Assert.Contains("network", ex.Message);
-        // A rule the caller fails to satisfy must not produce an approved request.
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!);
     }
