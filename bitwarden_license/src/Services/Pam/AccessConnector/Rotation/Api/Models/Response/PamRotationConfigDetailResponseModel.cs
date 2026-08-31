@@ -1,4 +1,6 @@
-﻿namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
+﻿using Bit.Services.Pam.AccessConnector.Models;
+
+namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
 /// <summary>
 /// A rotation config's detail view: the list shape flattened onto the same object, plus the config's full job/attempt
@@ -9,9 +11,13 @@
 /// </summary>
 public class PamRotationConfigDetailResponseModel : PamRotationConfigResponseModel
 {
-    public PamRotationConfigDetailResponseModel()
-        : base("pamRotationConfigDetails")
+    public PamRotationConfigDetailResponseModel(PamRotationConfigHistory history, bool awaitingManualRotation)
+        : base(
+            history?.Config ?? throw new ArgumentNullException(nameof(history)),
+            awaitingManualRotation,
+            "pamRotationConfigDetails")
     {
+        Jobs = history.Jobs.Select(job => new PamRotationJobResponseModel(job)).ToList();
     }
 
     /// <summary>
