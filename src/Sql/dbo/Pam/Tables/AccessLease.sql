@@ -37,8 +37,14 @@ GO
 -- Supports the per-cipher singleton guard in AccessLease_CreateFromApprovedRequest. That guard filters on CipherId
 -- alone under UPDLOCK/HOLDLOCK, so without a CipherId-leading index the range lock it takes covers either the whole
 -- table or every currently-running and future lease, serializing unrelated organizations' activations against it.
+--
+-- NotAfter DESC is the third key so AccessLease_ReadActiveByCipherId (the pre-check's "is the slot taken, and when
+-- does it free") seeks straight to the in-window rows in the order it wants them. On (CipherId, Action) alone that
+-- read has to look up every Action = 0 row for the cipher -- its whole happy-path lease history, since an untouched
+-- lease keeps Action = 0 forever -- and then sort. The guard is unaffected: its predicate uses the same two leading
+-- columns.
 CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action]
-    ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC);
+    ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC, [NotAfter] DESC);
 GO
 
 -- A request produces at most one lease, ever: activating an approved request and the automatic path each insert

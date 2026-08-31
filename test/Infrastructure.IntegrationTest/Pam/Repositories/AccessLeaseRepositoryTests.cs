@@ -377,6 +377,88 @@ public class LeaseRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task GetActiveByCipherIdAsync_ReturnsAnotherMembersLeaseAndTheLatestEnd(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var cipherId = Guid.NewGuid();
+
+        // A free cipher reads as free.
+        Assert.Null(await accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now));
+
+        // Someone else's lease on the cipher. BuildAutoApproved mints a fresh collection per lease, so this is also
+        // the cross-collection case: the read must find it without being told which collection it sits on -- that is
+        // the whole reason this method is cipher-scoped rather than reusing the collection-scoped governance read.
+        var (req1, dec1, lease1) = BuildAutoApproved(
+            organization.Id, cipherId, Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, req1, dec1, lease1, now);
+
+        var found = await accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now);
+        Assert.NotNull(found);
+        Assert.Equal(lease1.Id, found.Id);
+
+        // A second, longer, concurrent lease on the same cipher through a different collection -- reachable whenever
+        // one member has an escape path. The slot frees when the LAST one ends, so the later NotAfter must win.
+        var (req2, dec2, lease2) = BuildAutoApproved(
+            organization.Id, cipherId, Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(3));
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, req2, dec2, lease2, now);
+
+        var latest = await accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now);
+        Assert.NotNull(latest);
+        Assert.Equal(lease2.Id, latest.Id);
+
+        // Out-of-window leases do not hold the slot: asked about a moment after both windows close, the cipher is
+        // free again.
+        Assert.Null(await accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now.AddHours(4)));
+
+        // Nor do leases on other ciphers leak in.
+        Assert.Null(await accessLeaseRepository.GetActiveByCipherIdAsync(Guid.NewGuid(), now));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetActiveByCipherIdAsync_FlipsInStepWithTheSingletonGuardItMirrors(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        // The pre-check's answer is only useful if it agrees with the mint guard. The two carry the same predicate in
+        // two places -- this read's WHERE, and AccessLease_CreateFromApprovedRequest's EXISTS under UPDLOCK/HOLDLOCK
+        // -- held in step by nothing but comments, and a divergence reproduces exactly the bug PM-42446 exists to fix
+        // ("the form said you could start, then activation returned 409"). So assert both together rather than in two
+        // tests that never meet.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var cipherId = Guid.NewGuid();
+
+        var holder = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1), cipherId: cipherId);
+        // Outlives the holder's window, so it is still activatable at the later instant below.
+        var contender = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(3), cipherId: cipherId);
+
+        Assert.Equal(AccessLeaseMintOutcome.Minted,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(holder, now), now, true));
+
+        // Slot taken: the read reports a blocker, and the guard refuses the contender.
+        var blocker = await accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now);
+        Assert.NotNull(blocker);
+        Assert.Equal(AccessLeaseMintOutcome.SingleActiveLeaseConflict,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(contender, now), now, true));
+
+        // Past the blocker's own SlotFreesAt the slot is free: the read says so, and the very mint that was just
+        // refused now succeeds. Read and guard flip together -- that is the property worth pinning, and it also
+        // proves SlotFreesAt is the instant activation actually becomes possible rather than an approximation.
+        var afterSlotFrees = blocker.NotAfter;
+        Assert.Null(await accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, afterSlotFrees));
+        Assert.Equal(AccessLeaseMintOutcome.Minted,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(
+                BuildLeaseFor(contender, afterSlotFrees), afterSlotFrees, true));
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyEndedByCollectionIdsAsync_ReturnsRecentlyEndedLeasesOnGivenCollections(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
