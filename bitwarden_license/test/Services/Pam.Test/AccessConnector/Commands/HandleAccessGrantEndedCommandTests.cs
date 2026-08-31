@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -8,7 +9,6 @@ using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
@@ -105,7 +105,7 @@ public class HandleAccessGrantEndedCommandTests
             .OfferAsync(config.Id, PamRotationSource.AccessEnd);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
             .ReplaceAsync(default!);
-        // OfferRotationCommand audits the offer itself.
+        // OfferRotationCommand owns its own audit; the automatic branch here emits nothing directly.
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
             .EmitAsync(default!);
     }
@@ -128,7 +128,7 @@ public class HandleAccessGrantEndedCommandTests
         await sutProvider.GetDependency<IOfferRotationCommand>().DidNotReceiveWithAnyArgs()
             .OfferAsync(default, default);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(
-            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationDate == _now));
+            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationAt == _now));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.ManualRotationDue
                 && a.OrganizationId == config.OrganizationId

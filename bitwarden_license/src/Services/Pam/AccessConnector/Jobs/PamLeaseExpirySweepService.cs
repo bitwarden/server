@@ -9,12 +9,6 @@ namespace Bit.Services.Pam.AccessConnector.Jobs;
 /// <inheritdoc cref="IPamLeaseExpirySweepService" />
 public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
 {
-    /// <summary>
-    /// How far back the sweep looks. A lease that ends while the sweep is down for longer is never swept, so this
-    /// stays far longer than any realistic outage.
-    /// </summary>
-    private static readonly TimeSpan _lookback = TimeSpan.FromDays(30);
-
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly IHandleAccessGrantEndedCommand _handleAccessGrantEndedCommand;
@@ -38,17 +32,18 @@ public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
     public async Task SweepAsync()
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var expiredLeases = await _accessLeaseRepository.ExpireDueAsync(now, now - _lookback);
+        var expiredLeases = await _accessLeaseRepository.ExpireDueAsync(now);
 
         foreach (var lease in expiredLeases)
         {
             try
             {
-                // Machinery event: single Outcome-phase, no human actor.
+                // Machinery event: single Outcome-phase, no human actor -- mirrors RevokeAccessLeaseCommand's
+                // LeaseRevoked construction, adapted for a lease that ended on its own rather than by a decision.
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.LeaseExpired,
-                    OccurredDate = now,
+                    OccurredAt = now,
                     OrganizationId = lease.OrganizationId,
                     ActorId = null,
                     RequesterId = lease.RequesterId,
@@ -58,8 +53,11 @@ public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
                     LeaseNotBefore = lease.NotBefore,
                     LeaseNotAfter = lease.NotAfter,
                 };
-                // A separate try, so an audit failure cannot skip the rotation trigger that retires the credential
-                // the user held.
+                // Emitting the audit and firing the access-end trigger are independent, so they get independent
+                // try blocks: ExpireDueAsync has already journaled the whole batch as swept, so a lease is never
+                // returned twice. Sharing one block meant an audit-store hiccup silently swallowed the rotation
+                // trigger for that lease -- and RotateOnAccessEnd is the control that stops a credential the user
+                // just held from staying valid.
                 try
                 {
                     await _accessAuditEventEmitter.EmitAsync(audit);
@@ -71,7 +69,8 @@ public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
                         lease.Id);
                 }
 
-                // Gates itself on the PamAccessConnector flag, so it is safe to call unconditionally.
+                // Self-gates on the PamRotation flag -- safe to call unconditionally here, the same as the
+                // RevokeAccessLeaseCommand hook.
                 await _handleAccessGrantEndedCommand.HandleAsync(lease.CipherId);
             }
             catch (Exception ex)

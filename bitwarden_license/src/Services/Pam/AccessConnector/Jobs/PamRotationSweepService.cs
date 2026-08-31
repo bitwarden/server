@@ -40,7 +40,9 @@ public class PamRotationSweepService : IPamRotationSweepService
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // Each phase sweeps a disjoint set of rows; a failure in one must never prevent the other two from running.
+        // Each phase sweeps a disjoint set of rows -- a bug or transient failure in one (including the repository
+        // call itself) must never prevent the other two from running, mirroring BaseJob's swallow-and-log philosophy
+        // one level down.
         await RunPhaseAsync("due", () => SweepDueAsync(now));
         await RunPhaseAsync("timeouts", () => SweepTimeoutsAsync(now));
         await RunPhaseAsync("releases", () => SweepReleasesAsync(now));
@@ -65,7 +67,8 @@ public class PamRotationSweepService : IPamRotationSweepService
         {
             try
             {
-                // OfferAsync no-ops on an active job or a config it cannot offer, so only genuine failures throw.
+                // OfferAsync re-checks can_offer and no-ops silently on ActiveJobExists/ConfigNotOfferable -- the
+                // sweep does not need to inspect the outcome, only isolate genuine failures per config.
                 await _offerRotationCommand.OfferAsync(config.Id, PamRotationSource.Scheduled);
             }
             catch (Exception ex)
@@ -86,11 +89,13 @@ public class PamRotationSweepService : IPamRotationSweepService
             {
                 var config = await _configRepository.GetByIdAsync(job.RotationConfigId);
 
-                // Only a scheduled config is pushed out. A cron-less config has nothing to clear NextRotationDate
-                // again, so it would stay in the due sweep forever.
+                // Only a config that actually has a schedule gets its next rotation pushed out. Writing a concrete
+                // NextRotationAt onto a cron-less config would enrol it in the due sweep permanently -- it has no
+                // cron to clear the value again on success -- and every subsequent offer would be tagged Scheduled
+                // on a config the admin set up as on-demand or access-end only.
                 if (config is { ScheduleCron: not null })
                 {
-                    config.NextRotationDate = now + _options.Value.FailureRetryDelay;
+                    config.NextRotationAt = now + _options.Value.FailureRetryDelay;
                     config.RevisionDate = now;
                     await _configRepository.ReplaceAsync(config);
                 }
@@ -99,17 +104,17 @@ public class PamRotationSweepService : IPamRotationSweepService
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.RotationJobTimedOut,
-                    OccurredDate = now,
+                    OccurredAt = now,
                     OrganizationId = job.OrganizationId,
                     ActorId = null,
                     CipherId = job.CipherId,
                     RotationConfigId = job.RotationConfigId,
                     RotationJobId = job.JobId,
                     RotationSource = job.Source,
-                    AccessConnectorId = job.ClaimedByAccessConnectorId,
+                    DaemonId = job.ClaimedByDaemonId,
                     Detail = job.AttemptCount == 0
-                        ? "rotation job timed out (unroutable: no eligible access connector)"
-                        : "rotation job timed out (stuck access connector)",
+                        ? "rotation job timed out (unroutable: no eligible daemon)"
+                        : "rotation job timed out (stuck daemon)",
                 };
                 await _accessAuditEventEmitter.EmitAsync(audit);
             }
@@ -124,24 +129,24 @@ public class PamRotationSweepService : IPamRotationSweepService
     private async Task SweepReleasesAsync(DateTime now)
     {
         var releasedJobs = await _jobRepository.ReleaseExpiredLeasesAsync(
-            now, _options.Value.AccessConnectorOfflineAfter, _options.Value.ReleaseDelay);
+            now, _options.Value.DaemonOfflineAfter, _options.Value.ReleaseDelay);
         foreach (var job in releasedJobs)
         {
             try
             {
-                // Machinery event: single Outcome-phase, no human actor. ClaimedByAccessConnectorId is the claimant
-                // from before ReleaseExpiredLeasesAsync cleared it.
+                // Machinery event: single Outcome-phase, no human actor. The job's claim fields were already
+                // cleared by ReleaseExpiredLeasesAsync -- ClaimedByDaemonId here is the pre-clear value it returned.
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.RotationJobReleased,
-                    OccurredDate = now,
+                    OccurredAt = now,
                     OrganizationId = job.OrganizationId,
                     ActorId = null,
                     CipherId = job.CipherId,
                     RotationConfigId = job.RotationConfigId,
                     RotationJobId = job.JobId,
                     RotationSource = job.Source,
-                    AccessConnectorId = job.ClaimedByAccessConnectorId,
+                    DaemonId = job.ClaimedByDaemonId,
                 };
                 await _accessAuditEventEmitter.EmitAsync(audit);
             }

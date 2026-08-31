@@ -16,7 +16,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
 
     private readonly IPamRotationJobRepository _jobRepository;
     private readonly IPamRotationConfigRepository _configRepository;
-    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
+    private readonly IPamDaemonRepository _daemonRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly IOptions<PamRotationOptions> _options;
     private readonly TimeProvider _timeProvider;
@@ -24,44 +24,43 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
     public ReportRotationFailedCommand(
         IPamRotationJobRepository jobRepository,
         IPamRotationConfigRepository configRepository,
-        IPamAccessConnectorRepository accessConnectorRepository,
+        IPamDaemonRepository daemonRepository,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         IOptions<PamRotationOptions> options,
         TimeProvider timeProvider)
     {
         _jobRepository = jobRepository;
         _configRepository = configRepository;
-        _accessConnectorRepository = accessConnectorRepository;
+        _daemonRepository = daemonRepository;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _options = options;
         _timeProvider = timeProvider;
     }
 
     public async Task<PamRotationAttempt> ReportFailedAsync(
-        Guid accessConnectorId, Guid attemptId, string? failureReason, PamRotationSyncState syncState)
+        Guid daemonId, Guid attemptId, string? failureReason, PamRotationSyncState syncState)
     {
-        // The reason is a connector-defined code and detail, never raw target output, which can echo credentials.
-        // It is truncated rather than rejected, since the two combined can exceed the stored length.
+        // Truncate before anything else -- the contract forbids forwarding raw target-system error output (it can
+        // echo credentials), and truncation never rejects the report.
         var truncatedReason = Truncate(failureReason);
 
-        // A cross-org attempt looks unknown, so this access connector's name stays out of another org's trail.
+        // Unknown attempt id: nothing to audit against (spec's `exists attempt` precondition). The attempt id is a
+        // bare route value the daemon supplies, so an attempt in another organization has to be indistinguishable
+        // from one that does not exist -- otherwise the reject audit below lands in the victim organization's trail
+        // carrying this daemon's name, and the 404-vs-409 split tells the caller which foreign ids are real.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
         var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
-        var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
+        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
 
-        if (attempt is null
-            || job is null
-            || config is null
-            || accessConnector is null
-            || config.OrganizationId != accessConnector.OrganizationId)
+        if (attempt is null || config is null || daemon is null || config.OrganizationId != daemon.OrganizationId)
         {
             throw new NotFoundException();
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var result = await _jobRepository.MarkAttemptErroredAsync(
-            attemptId, accessConnectorId, truncatedReason, syncState, now, _options.Value.MaxAttempts,
+            attemptId, daemonId, truncatedReason, syncState, now, _options.Value.MaxAttempts,
             _options.Value.RetryBaseDelay);
 
         if (result.Outcome != PamRotationAttemptResolveOutcome.Resolved)
@@ -70,15 +69,15 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             var rejectedAudit = new AccessAuditEventData
             {
                 Kind = AccessAuditEventKind.RotationReportRejected,
-                OccurredDate = now,
+                OccurredAt = now,
                 OrganizationId = config.OrganizationId,
                 ActorId = null,
-                AccessConnectorId = accessConnectorId,
-                AccessConnectorName = accessConnector.Name,
-                RotationJobId = job.Id,
+                DaemonId = daemonId,
+                DaemonName = daemon.Name,
+                RotationJobId = job?.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
-                Detail = "Stale failure report: the attempt is no longer executing under this access connector's claim.",
+                Detail = "Stale failure report: the attempt is no longer executing under this daemon's claim.",
             };
             await _accessAuditEventEmitter.EmitAsync(rejectedAudit);
 
@@ -89,10 +88,12 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
 
         if (result.JobStatus == PamRotationJobStatus.Failed)
         {
-            // Retry budget exhausted: push the next rotation out instead of retrying immediately, if scheduled.
+            // Retry budget exhausted: the job failed outright, so the config's next rotation is pushed out rather
+            // than immediately retried. Only for a config that has a schedule -- see PamRotationSweepService's
+            // timeout phase for why a cron-less config must keep a null NextRotationAt.
             if (config.ScheduleCron is not null)
             {
-                config.NextRotationDate = now + _options.Value.FailureRetryDelay;
+                config.NextRotationAt = now + _options.Value.FailureRetryDelay;
                 config.RevisionDate = now;
                 await _configRepository.ReplaceAsync(config);
             }
@@ -100,15 +101,15 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             var failedAudit = new AccessAuditEventData
             {
                 Kind = AccessAuditEventKind.RotationFailed,
-                OccurredDate = now,
+                OccurredAt = now,
                 OrganizationId = organizationId,
                 ActorId = null,
-                AccessConnectorId = accessConnectorId,
-                AccessConnectorName = accessConnector.Name,
-                RotationJobId = job.Id,
+                DaemonId = daemonId,
+                DaemonName = daemon.Name,
+                RotationJobId = job?.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
-                RotationSource = job.Source,
+                RotationSource = job?.Source,
                 SyncState = syncState,
                 Detail = truncatedReason,
             };
@@ -120,22 +121,23 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             var attemptFailedAudit = new AccessAuditEventData
             {
                 Kind = AccessAuditEventKind.RotationAttemptFailed,
-                OccurredDate = now,
+                OccurredAt = now,
                 OrganizationId = organizationId,
                 ActorId = null,
-                AccessConnectorId = accessConnectorId,
-                AccessConnectorName = accessConnector.Name,
-                RotationJobId = job.Id,
+                DaemonId = daemonId,
+                DaemonName = daemon.Name,
+                RotationJobId = job?.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
-                RotationSource = job.Source,
+                RotationSource = job?.Source,
                 SyncState = syncState,
                 Detail = truncatedReason,
             };
             await _accessAuditEventEmitter.EmitAsync(attemptFailedAudit);
         }
 
-        // The repository resolved the attempt, so re-read it for the response.
+        // Re-fetch: the repository just mutated the attempt's Status/FailureReason/SyncState/ResolvedDate under the
+        // hood, and the caller expects the resolved snapshot back.
         return await _jobRepository.GetAttemptByIdAsync(attemptId) ?? attempt;
     }
 

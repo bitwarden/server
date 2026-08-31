@@ -46,6 +46,8 @@ public class PamRotationSweepServiceTests
         sutProvider.GetDependency<IOfferRotationCommand>().OfferAsync(config1.Id, PamRotationSource.Scheduled)
             .Returns(Task.FromException<PamRotationJobCreateOutcome>(new InvalidOperationException("boom")));
 
+        // The due phase's own try/catch (plus the outer RunPhaseAsync) must swallow config1's failure and still
+        // process config2 -- and never let the phase's exception escape SweepAsync itself.
         await sutProvider.Sut.SweepAsync();
 
         await sutProvider.GetDependency<IOfferRotationCommand>().Received(1)
@@ -64,7 +66,7 @@ public class PamRotationSweepServiceTests
             OrganizationId = config.OrganizationId,
             CipherId = config.CipherId,
             Source = PamRotationSource.Scheduled,
-            ClaimedByAccessConnectorId = null,
+            ClaimedByDaemonId = null,
             AttemptCount = 0,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>().TimeoutDueAsync(_now)
@@ -74,7 +76,7 @@ public class PamRotationSweepServiceTests
         await sutProvider.Sut.SweepAsync();
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(
-            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationDate == _now + _failureRetryDelay));
+            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationAt == _now + _failureRetryDelay));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobTimedOut
                 && a.RotationJobId == timedOutJob.JobId
@@ -86,7 +88,8 @@ public class PamRotationSweepServiceTests
     public async Task SweepAsync_TimeoutPhase_ConfigWithoutASchedule_LeavesNextRotationAlone(PamRotationConfig config)
     {
         var sutProvider = Setup();
-        // A concrete NextRotationDate here would enrol this config in the due sweep permanently.
+        // On-demand / access-end only: writing a concrete NextRotationAt here would enrol it in the due sweep
+        // permanently, since only the success path (via the schedule calculator) ever clears the value again.
         config.ScheduleCron = null;
         var timedOutJob = new PamTimedOutJob
         {
@@ -95,7 +98,7 @@ public class PamRotationSweepServiceTests
             OrganizationId = config.OrganizationId,
             CipherId = config.CipherId,
             Source = PamRotationSource.AccessEnd,
-            ClaimedByAccessConnectorId = null,
+            ClaimedByDaemonId = null,
             AttemptCount = 0,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>().TimeoutDueAsync(_now)
@@ -106,13 +109,14 @@ public class PamRotationSweepServiceTests
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
             .ReplaceAsync(default!);
+        // The timeout is still audited -- only the scheduling side effect is suppressed.
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobTimedOut));
     }
 
     [Theory, BitAutoData]
     public async Task SweepAsync_TimeoutPhase_StuckJob_EmitsAuditWithStuckDetail(
-        PamRotationConfig config, Guid claimedByAccessConnectorId)
+        PamRotationConfig config, Guid claimedByDaemonId)
     {
         var sutProvider = Setup();
         var timedOutJob = new PamTimedOutJob
@@ -122,7 +126,7 @@ public class PamRotationSweepServiceTests
             OrganizationId = config.OrganizationId,
             CipherId = config.CipherId,
             Source = PamRotationSource.Scheduled,
-            ClaimedByAccessConnectorId = claimedByAccessConnectorId,
+            ClaimedByDaemonId = claimedByDaemonId,
             AttemptCount = 3,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>().TimeoutDueAsync(_now)
@@ -133,12 +137,12 @@ public class PamRotationSweepServiceTests
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobTimedOut
-                && a.AccessConnectorId == claimedByAccessConnectorId
+                && a.DaemonId == claimedByDaemonId
                 && a.Detail!.Contains("stuck")));
     }
 
     [Theory, BitAutoData]
-    public async Task SweepAsync_ReleasePhase_EmitsReleasedAuditPerRow(Guid accessConnectorId1, Guid accessConnectorId2)
+    public async Task SweepAsync_ReleasePhase_EmitsReleasedAuditPerRow(Guid daemonId1, Guid daemonId2)
     {
         var sutProvider = Setup();
         var released1 = new PamReleasedJob
@@ -148,7 +152,7 @@ public class PamRotationSweepServiceTests
             OrganizationId = Guid.NewGuid(),
             CipherId = Guid.NewGuid(),
             Source = PamRotationSource.Scheduled,
-            ClaimedByAccessConnectorId = accessConnectorId1,
+            ClaimedByDaemonId = daemonId1,
         };
         var released2 = new PamReleasedJob
         {
@@ -157,7 +161,7 @@ public class PamRotationSweepServiceTests
             OrganizationId = Guid.NewGuid(),
             CipherId = Guid.NewGuid(),
             Source = PamRotationSource.OnDemand,
-            ClaimedByAccessConnectorId = accessConnectorId2,
+            ClaimedByDaemonId = daemonId2,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>()
             .ReleaseExpiredLeasesAsync(_now, Arg.Any<TimeSpan>(), Arg.Any<TimeSpan>())
@@ -172,11 +176,11 @@ public class PamRotationSweepServiceTests
                 && a.OrganizationId == released1.OrganizationId
                 && a.CipherId == released1.CipherId
                 && a.RotationSource == released1.Source
-                && a.AccessConnectorId == released1.ClaimedByAccessConnectorId));
+                && a.DaemonId == released1.ClaimedByDaemonId));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobReleased
                 && a.RotationJobId == released2.JobId
-                && a.AccessConnectorId == released2.ClaimedByAccessConnectorId));
+                && a.DaemonId == released2.ClaimedByDaemonId));
     }
 
     private static SutProvider<PamRotationSweepService> Setup()
