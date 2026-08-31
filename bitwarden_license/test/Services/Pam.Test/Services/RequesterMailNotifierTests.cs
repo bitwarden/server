@@ -41,11 +41,11 @@ public class RequesterMailNotifierTests
 
         var sutProvider = Setup();
         SetupOrganization(sutProvider, request);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         await sutProvider.Sut.NotifyDecisionAsync(request, approved: true);
 
-        var (recipientId, mail) = Assert.Single(recorder.Sent);
+        var (recipientId, mail) = Assert.Single(sent);
         Assert.Equal(request.RequesterId, recipientId);
         Assert.True(mail.View.Approved);
         Assert.Equal("Your access request was approved", mail.Subject);
@@ -60,11 +60,11 @@ public class RequesterMailNotifierTests
     {
         var sutProvider = Setup();
         SetupOrganization(sutProvider, request);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         await sutProvider.Sut.NotifyDecisionAsync(request, approved: false);
 
-        var (recipientId, mail) = Assert.Single(recorder.Sent);
+        var (recipientId, mail) = Assert.Single(sent);
         Assert.Equal(request.RequesterId, recipientId);
         Assert.False(mail.View.Approved);
         Assert.Equal("Your access request was denied", mail.Subject);
@@ -80,11 +80,11 @@ public class RequesterMailNotifierTests
     {
         var sutProvider = Setup();
         SetupOrganization(sutProvider, request);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         await sutProvider.Sut.NotifyDecisionAsync(request, approved: true);
 
-        var (recipientId, _) = Assert.Single(recorder.Sent);
+        var (recipientId, _) = Assert.Single(sent);
         Assert.Equal(request.RequesterId, recipientId);
         await sutProvider.GetDependency<IAccessMailNotifier>().DidNotReceiveWithAnyArgs()
             .SendToUsersAsync(default!, (Func<string, BaseMail<AccessRequestDecidedView>>)default!);
@@ -96,11 +96,11 @@ public class RequesterMailNotifierTests
         var sutProvider = Setup();
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(request.OrganizationId)
             .Returns((Organization?)null);
-        var recorder = RecordMail(sutProvider);
+        var sent = RecordMail(sutProvider);
 
         await sutProvider.Sut.NotifyDecisionAsync(request, approved: true);
 
-        Assert.Empty(recorder.Sent);
+        Assert.Empty(sent);
     }
 
     [Theory, BitAutoData]
@@ -145,24 +145,20 @@ public class RequesterMailNotifierTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(request.OrganizationId)
             .Returns(new Organization { Id = request.OrganizationId, Name = _organizationName });
 
-    private static MailRecorder RecordMail(SutProvider<RequesterMailNotifier> sutProvider)
+    private static List<(Guid RecipientId, AccessRequestDecidedMail Mail)> RecordMail(
+        SutProvider<RequesterMailNotifier> sutProvider)
     {
-        var recorder = new MailRecorder();
+        List<(Guid RecipientId, AccessRequestDecidedMail Mail)> sent = [];
 
         sutProvider.GetDependency<IAccessMailNotifier>()
             .When(x => x.SendToUserAsync(
                 Arg.Any<Guid>(),
                 Arg.Any<Func<string, BaseMail<AccessRequestDecidedView>>>()))
-            .Do(call => recorder.Sent.Add((
+            .Do(call => sent.Add((
                 call.Arg<Guid>(),
                 (AccessRequestDecidedMail)call.Arg<Func<string, BaseMail<AccessRequestDecidedView>>>()(
                     "requester@example.com"))));
 
-        return recorder;
-    }
-
-    private sealed class MailRecorder
-    {
-        public List<(Guid RecipientId, AccessRequestDecidedMail Mail)> Sent { get; } = [];
+        return sent;
     }
 }
