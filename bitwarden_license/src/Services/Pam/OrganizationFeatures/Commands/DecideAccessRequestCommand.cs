@@ -80,6 +80,16 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         }
 
         var approved = submission.Verdict == AccessDecisionVerdict.Approve;
+
+        // A denial must say why: the reason is what the requester's "denied" notification carries and what the audit
+        // record explains the refusal with, and once the request is resolved there is no second chance to supply it.
+        // Whitespace is refused alongside null for the same reason the comment is nulled below. Enforced here and
+        // not only by the client's disabled confirm button, because every caller writes to the same audit trail.
+        if (!approved && string.IsNullOrWhiteSpace(submission.Comment))
+        {
+            throw new BadRequestException("A reason is required when denying a request.");
+        }
+
         var action = approved ? AccessRequestAction.Approved : AccessRequestAction.Denied;
 
         var decision = new AccessDecision
