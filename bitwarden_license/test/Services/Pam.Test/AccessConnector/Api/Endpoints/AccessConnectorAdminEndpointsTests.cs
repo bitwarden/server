@@ -79,7 +79,7 @@ public class AccessConnectorAdminEndpointsTests
     {
         var endpoints = AdminEndpoints();
 
-        Assert.Equal(24, endpoints.Count);
+        Assert.Equal(22, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
@@ -97,13 +97,11 @@ public class AccessConnectorAdminEndpointsTests
     [InlineData("Pam_AccessConnectors_Rotation_TargetSystems_Post", "POST", "rotation/target-systems")]
     [InlineData("Pam_AccessConnectors_Rotation_TargetSystems_Enable", "POST", "rotation/target-systems/{id:guid}/enable")]
     [InlineData("Pam_AccessConnectors_Rotation_TargetSystems_Disable", "POST", "rotation/target-systems/{id:guid}/disable")]
-    [InlineData("Pam_AccessConnectors_Rotation_TargetSystems_Rename", "PUT", "rotation/target-systems/{id:guid}/name")]
-    [InlineData("Pam_AccessConnectors_Rotation_TargetSystems_UpdatePolicy", "PUT", "rotation/target-systems/{id:guid}/policy")]
+    [InlineData("Pam_AccessConnectors_Rotation_TargetSystems_Put", "PUT", "rotation/target-systems/{id:guid}")]
     [InlineData("Pam_AccessConnectors_Rotation_Configs_GetAll", "GET", "rotation/configs")]
     [InlineData("Pam_AccessConnectors_Rotation_Configs_Get", "GET", "rotation/configs/{id:guid}")]
     [InlineData("Pam_AccessConnectors_Rotation_Configs_Post", "POST", "rotation/configs")]
-    [InlineData("Pam_AccessConnectors_Rotation_Configs_PutSettings", "PUT", "rotation/configs/{id:guid}/settings")]
-    [InlineData("Pam_AccessConnectors_Rotation_Configs_PutAccount", "PUT", "rotation/configs/{id:guid}/account")]
+    [InlineData("Pam_AccessConnectors_Rotation_Configs_Put", "PUT", "rotation/configs/{id:guid}")]
     [InlineData("Pam_AccessConnectors_Rotation_Configs_Pause", "POST", "rotation/configs/{id:guid}/pause")]
     [InlineData("Pam_AccessConnectors_Rotation_Configs_Resume", "POST", "rotation/configs/{id:guid}/resume")]
     [InlineData("Pam_AccessConnectors_Rotation_Configs_Rotate", "POST", "rotation/configs/{id:guid}/rotate")]
@@ -181,9 +179,7 @@ public class AccessConnectorAdminEndpointsTests
         typeof(Task<PamRotationConfigDetailResponseModel>))]
     [InlineData(typeof(RotationConfigEndpointsHandler), nameof(RotationConfigEndpointsHandler.Post),
         typeof(Task<PamRotationConfigDetailResponseModel>))]
-    [InlineData(typeof(RotationConfigEndpointsHandler), nameof(RotationConfigEndpointsHandler.PutSettings),
-        typeof(Task<PamRotationConfigDetailResponseModel>))]
-    [InlineData(typeof(RotationConfigEndpointsHandler), nameof(RotationConfigEndpointsHandler.PutAccount),
+    [InlineData(typeof(RotationConfigEndpointsHandler), nameof(RotationConfigEndpointsHandler.Put),
         typeof(Task<PamRotationConfigDetailResponseModel>))]
     public void Handler_HasExpectedReturnType(Type handlerType, string methodName, Type expectedReturnType)
     {

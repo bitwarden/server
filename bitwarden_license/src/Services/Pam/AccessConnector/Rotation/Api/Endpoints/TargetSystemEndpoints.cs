@@ -35,21 +35,13 @@ internal static class TargetSystemEndpoints
             })
             .WithName("Pam_AccessConnectors_Rotation_TargetSystems_Disable");
 
-        group.MapPut("{id:guid}/name",
-            async (Guid orgId, Guid id, RenameTargetSystemRequestModel model, TargetSystemEndpointsHandler handler) =>
+        group.MapPut("{id:guid}",
+            async (Guid orgId, Guid id, UpdateTargetSystemRequestModel model, TargetSystemEndpointsHandler handler) =>
             {
-                await handler.Rename(orgId, id, model);
+                await handler.Put(orgId, id, model);
                 return TypedResults.NoContent();
             })
-            .WithName("Pam_AccessConnectors_Rotation_TargetSystems_Rename");
-
-        group.MapPut("{id:guid}/policy",
-            async (Guid orgId, Guid id, UpdateTargetSystemPolicyRequestModel model, TargetSystemEndpointsHandler handler) =>
-            {
-                await handler.UpdatePolicy(orgId, id, model);
-                return TypedResults.NoContent();
-            })
-            .WithName("Pam_AccessConnectors_Rotation_TargetSystems_UpdatePolicy");
+            .WithName("Pam_AccessConnectors_Rotation_TargetSystems_Put");
 
         return group;
     }

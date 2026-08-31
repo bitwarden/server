@@ -27,9 +27,6 @@ public class TargetSystemEndpointsHandler
     public Task Disable(Guid orgId, Guid id)
         => throw new NotImplementedException();
 
-    public Task Rename(Guid orgId, Guid id, RenameTargetSystemRequestModel model)
-        => throw new NotImplementedException();
-
-    public Task UpdatePolicy(Guid orgId, Guid id, UpdateTargetSystemPolicyRequestModel model)
+    public Task Put(Guid orgId, Guid id, UpdateTargetSystemRequestModel model)
         => throw new NotImplementedException();
 }

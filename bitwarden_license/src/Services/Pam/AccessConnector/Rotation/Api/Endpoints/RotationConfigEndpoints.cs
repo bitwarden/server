@@ -22,15 +22,10 @@ internal static class RotationConfigEndpoints
         group.MapPost("", (Guid orgId, CreateRotationConfigRequestModel model, RotationConfigEndpointsHandler handler) => handler.Post(orgId, model))
             .WithName("Pam_AccessConnectors_Rotation_Configs_Post");
 
-        group.MapPut("{id:guid}/settings",
-            (Guid orgId, Guid id, UpdateRotationSettingsRequestModel model, RotationConfigEndpointsHandler handler) =>
-                handler.PutSettings(orgId, id, model))
-            .WithName("Pam_AccessConnectors_Rotation_Configs_PutSettings");
-
-        group.MapPut("{id:guid}/account",
-            (Guid orgId, Guid id, UpdateRotationAccountRequestModel model, RotationConfigEndpointsHandler handler) =>
-                handler.PutAccount(orgId, id, model))
-            .WithName("Pam_AccessConnectors_Rotation_Configs_PutAccount");
+        group.MapPut("{id:guid}",
+            (Guid orgId, Guid id, UpdateRotationConfigRequestModel model, RotationConfigEndpointsHandler handler) =>
+                handler.Put(orgId, id, model))
+            .WithName("Pam_AccessConnectors_Rotation_Configs_Put");
 
         group.MapPost("{id:guid}/pause",
             async (Guid orgId, Guid id, RotationConfigEndpointsHandler handler) =>

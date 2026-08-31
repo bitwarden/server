@@ -4,7 +4,7 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
 /// <summary>
 /// The password-generation constraints an automatic target system's access connector must satisfy. Embedded in
-/// <see cref="RegisterTargetSystemRequestModel"/> and <see cref="UpdateTargetSystemPolicyRequestModel"/>.
+/// <see cref="RegisterTargetSystemRequestModel"/> and <see cref="UpdateTargetSystemRequestModel"/>.
 /// </summary>
 public class PamPasswordPolicyRequestModel : IValidatableObject
 {

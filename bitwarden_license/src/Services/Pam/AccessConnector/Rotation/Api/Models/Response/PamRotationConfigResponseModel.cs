@@ -36,7 +36,9 @@ public class PamRotationConfigResponseModel : ResponseModel
     public Guid TargetSystemId { get; set; }
 
     /// <summary>
-    /// The target system's display name.
+    /// The target system's display name, joined in rather than nested: a config list renders a row per config, and
+    /// the target's own view carries a policy and a status a row has no use for. It is a copy, so it reflects the
+    /// target as of the read.
     /// </summary>
     public string TargetSystemName { get; set; } = null!;
 

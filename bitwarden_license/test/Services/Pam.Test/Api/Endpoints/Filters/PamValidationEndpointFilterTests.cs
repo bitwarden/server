@@ -3,6 +3,7 @@ using Bit.Pam.Enums;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 using Bit.Services.Pam.Api.Endpoints.Filters;
 using Bit.Services.Pam.Api.Models.Request;
+using Bit.Services.Pam.Test.Api.Models.Request;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Xunit;
@@ -184,8 +185,9 @@ public class PamValidationEndpointFilterTests
     {
         // PamPasswordPolicyRequestModel is only ever reached as a nested property, and TryValidateObject does not
         // recurse -- so without the filter's own walk these constraints would never run.
-        var context = CreateContext(new UpdateTargetSystemPolicyRequestModel
+        var context = CreateContext(new UpdateTargetSystemRequestModel
         {
+            Name = "Corp SQL",
             PasswordPolicy = new PamPasswordPolicyRequestModel
             {
                 MinLength = 0,
@@ -204,8 +206,9 @@ public class PamValidationEndpointFilterTests
     [Fact]
     public async Task InvokeAsync_NestedRequestModelViolatesItsValidatableObjectRule_Returns400()
     {
-        var context = CreateContext(new UpdateTargetSystemPolicyRequestModel
+        var context = CreateContext(new UpdateTargetSystemRequestModel
         {
+            Name = "Corp SQL",
             PasswordPolicy = new PamPasswordPolicyRequestModel
             {
                 MinLength = 32,
@@ -227,8 +230,9 @@ public class PamValidationEndpointFilterTests
     public async Task InvokeAsync_ValidNestedRequestModel_CallsNext()
     {
         var nextCalled = false;
-        var context = CreateContext(new UpdateTargetSystemPolicyRequestModel
+        var context = CreateContext(new UpdateTargetSystemRequestModel
         {
+            Name = "Corp SQL",
             PasswordPolicy = new PamPasswordPolicyRequestModel
             {
                 MinLength = 16,
@@ -245,6 +249,44 @@ public class PamValidationEndpointFilterTests
         };
 
         var result = await new PamValidationEndpointFilter().InvokeAsync(context, next);
+
+        Assert.True(nextCalled);
+        Assert.Equal("ok", result);
+    }
+
+    // The filter walks IEnumerable properties element by element. No PAM request model holds a collection of
+    // request models yet, so this is the only thing exercising that branch until one does.
+    [Fact]
+    public async Task InvokeAsync_NestedRequestModelInACollectionViolatesAnAttribute_Returns400()
+    {
+        var context = CreateContext(new ParentWithChildrenRequestModel
+        {
+            Children = [new ChildRequestModel { Value = 1 }, new ChildRequestModel { Value = 99 }],
+        });
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.Contains(nameof(ChildRequestModel.Value), jsonResult.Value!.ValidationErrors!.Keys);
+    }
+
+    // A model reachable from itself would recurse forever without the reference-based visited set. The child is
+    // valid, so reaching next at all is what proves the walk terminated.
+    [Fact]
+    public async Task InvokeAsync_CyclicNestedRequestModel_TerminatesAndCallsNext()
+    {
+        var nextCalled = false;
+        var parent = new CyclicRequestModel { Value = 1 };
+        var child = new CyclicRequestModel { Value = 1, Other = parent };
+        parent.Other = child;
+        EndpointFilterDelegate next = _ =>
+        {
+            nextCalled = true;
+            return ValueTask.FromResult<object?>("ok");
+        };
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(CreateContext(parent), next);
 
         Assert.True(nextCalled);
         Assert.Equal("ok", result);

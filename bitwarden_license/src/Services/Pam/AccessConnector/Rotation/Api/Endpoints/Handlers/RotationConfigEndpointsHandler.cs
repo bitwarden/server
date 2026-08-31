@@ -24,10 +24,7 @@ public class RotationConfigEndpointsHandler
     public Task<PamRotationConfigDetailResponseModel> Post(Guid orgId, CreateRotationConfigRequestModel model)
         => throw new NotImplementedException();
 
-    public Task<PamRotationConfigDetailResponseModel> PutSettings(Guid orgId, Guid id, UpdateRotationSettingsRequestModel model)
-        => throw new NotImplementedException();
-
-    public Task<PamRotationConfigDetailResponseModel> PutAccount(Guid orgId, Guid id, UpdateRotationAccountRequestModel model)
+    public Task<PamRotationConfigDetailResponseModel> Put(Guid orgId, Guid id, UpdateRotationConfigRequestModel model)
         => throw new NotImplementedException();
 
     public Task Pause(Guid orgId, Guid id)
