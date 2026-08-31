@@ -59,6 +59,10 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IAccessRequestRepository, Pam.Repositories.AccessRequestRepository>();
         services.AddSingleton<IAccessLeaseRepository, Pam.Repositories.AccessLeaseRepository>();
         services.AddSingleton<IAccessAuditEventRepository, Pam.Repositories.AccessAuditEventRepository>();
+        services.AddSingleton<IPamTargetSystemRepository, Pam.Repositories.PamTargetSystemRepository>();
+        services.AddSingleton<IPamDaemonRepository, Pam.Repositories.PamDaemonRepository>();
+        services.AddSingleton<IPamRotationConfigRepository, Pam.Repositories.PamRotationConfigRepository>();
+        services.AddSingleton<IPamRotationJobRepository, Pam.Repositories.PamRotationJobRepository>();
         services.AddSingleton<IPlayItemRepository, PlayItemRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();

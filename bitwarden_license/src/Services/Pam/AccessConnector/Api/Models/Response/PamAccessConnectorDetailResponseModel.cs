@@ -1,4 +1,5 @@
-﻿using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
+﻿using  Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
+using Bit.Services.Pam.AccessConnector.Models;
 
 namespace Bit.Services.Pam.AccessConnector.Api.Models.Response;
 
@@ -9,9 +10,10 @@ namespace Bit.Services.Pam.AccessConnector.Api.Models.Response;
 /// </summary>
 public class PamAccessConnectorDetailResponseModel : PamAccessConnectorResponseModel
 {
-    public PamAccessConnectorDetailResponseModel()
-        : base("pamAccessConnectorDetails")
+    public PamAccessConnectorDetailResponseModel(PamAccessConnectorHistory history)
+        : base(history?.Daemon ?? throw new ArgumentNullException(nameof(history)), "pamAccessConnectorDetails")
     {
+        Jobs = history.Jobs.Select(job => new PamRotationJobResponseModel(job)).ToList();
     }
 
     /// <summary>
