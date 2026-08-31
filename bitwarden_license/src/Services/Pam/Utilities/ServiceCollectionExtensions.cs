@@ -77,8 +77,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRequestLeaseExtensionCommand, RequestLeaseExtensionCommand>();
         services.AddScoped<IRevokeAccessLeaseCommand, RevokeAccessLeaseCommand>();
 
-        // Supporting reads for the write path: who may approve for a collection, and the per-cipher
-        // single-active-lease guard applied at activation.
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
 
