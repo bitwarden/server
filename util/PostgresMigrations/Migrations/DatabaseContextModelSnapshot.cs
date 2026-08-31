@@ -1586,6 +1586,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ActingUserId")
                         .HasColumnType("uuid");
 
