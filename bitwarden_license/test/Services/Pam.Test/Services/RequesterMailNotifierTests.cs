@@ -71,10 +71,7 @@ public class RequesterMailNotifierTests
         Assert.Equal($"{_vaultUrl}/pam/requests/{request.Id}", mail.View.Url);
     }
 
-    /// <summary>
-    /// The approver is the actor, not an audience: they pressed the button and already know the outcome. The
-    /// notifier is given no approver identity at all, so the only recipient it can reach is the requester.
-    /// </summary>
+    /// <summary>The notifier is given no approver identity at all, so the requester is the only reachable recipient.</summary>
     [Theory, BitAutoData]
     public async Task NotifyDecisionAsync_MailsTheRequesterAndNobodyElse(AccessRequest request)
     {
