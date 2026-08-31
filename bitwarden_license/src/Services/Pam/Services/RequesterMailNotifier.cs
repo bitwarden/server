@@ -32,8 +32,8 @@ public class RequesterMailNotifier : IRequesterMailNotifier
     public async Task NotifyDecisionAsync(AccessRequest request, bool approved)
     {
         // Duplicates the guard inside IAccessMailNotifier to keep the organization read off every decision in the
-        // flag-off state — which is every decision on self-host, and every decision in cloud until the flag is on.
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PamEmailNotifications))
+        // flag-off state — which is every decision on self-host.
+        if (!_featureService.IsEnabled(FeatureFlagKeys.Pam))
         {
             return;
         }
