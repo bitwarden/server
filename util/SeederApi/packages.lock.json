@@ -1113,6 +1113,14 @@
           "ZiggyCreatures.FusionCache": "2.0.2"
         }
       },
+      "commercial.infrastructure.entityframework": {
+        "type": "Project",
+        "dependencies": {
+          "AutoMapper": "[14.0.0, 14.0.0]",
+          "Core": "[2026.8.1, )",
+          "Infrastructure.EntityFramework": "[2026.8.1, )"
+        }
+      },
       "core": {
         "type": "Project",
         "dependencies": {

@@ -1312,6 +1312,14 @@
           "ZiggyCreatures.FusionCache": "2.0.2"
         }
       },
+      "commercial.infrastructure.entityframework": {
+        "type": "Project",
+        "dependencies": {
+          "AutoMapper": "[14.0.0, 14.0.0]",
+          "Core": "[2026.8.1, )",
+          "Infrastructure.EntityFramework": "[2026.8.1, )"
+        }
+      },
       "common": {
         "type": "Project",
         "dependencies": {
@@ -1477,6 +1485,7 @@
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
           "Bitwarden.Server.Sdk.WebEssentials": "[0.5.0, )",
+          "Commercial.Infrastructure.EntityFramework": "[2026.8.1, )",
           "Core": "[2026.8.1, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",

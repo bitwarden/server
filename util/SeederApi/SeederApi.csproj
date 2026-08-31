@@ -12,6 +12,7 @@
       <ProjectReference Include="..\..\src\Core\Core.csproj" />
       <ProjectReference Include="..\..\src\SharedWeb\SharedWeb.csproj" />
       <ProjectReference Include="..\Seeder\Seeder.csproj" />
+      <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Infrastructure.EntityFramework\Commercial.Infrastructure.EntityFramework.csproj" />
     </ItemGroup>
 
 </Project>
