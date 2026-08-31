@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using Bit.Core;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Pam.Models.Mail.AccessRequestPending;
 using Bit.Core.Pam.Models.Mail.AccessRequestsWaiting;
 using Bit.Core.Repositories;
@@ -177,14 +176,9 @@ public class ApproverMailNotifier : IApproverMailNotifier
         try
         {
             var existing = Parse(await _cache.GetStringAsync(key));
-            if (existing is not { } window || now - window.StartedAt >= _burstWindow)
-            {
-                (windowStart, count) = (now, 0);
-            }
-            else
-            {
-                (windowStart, count) = (window.StartedAt, window.Count);
-            }
+            (windowStart, count) = existing is { } window && now - window.StartedAt < _burstWindow
+                ? window
+                : (now, 0);
         }
         catch (Exception ex)
         {

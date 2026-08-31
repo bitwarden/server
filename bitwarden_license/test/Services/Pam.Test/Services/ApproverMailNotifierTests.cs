@@ -1,6 +1,5 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Pam.Models.Mail.AccessRequestPending;
 using Bit.Core.Pam.Models.Mail.AccessRequestsWaiting;
@@ -279,22 +278,22 @@ public class ApproverMailNotifierTests
         var recorder = new MailRecorder();
         var notifier = sutProvider.GetDependency<IAccessMailNotifier>();
 
-        notifier.When(x => x.SendToUsersAsync(
-                Arg.Any<IEnumerable<Guid>>(),
-                Arg.Any<Func<string, BaseMail<AccessRequestPendingView>>>()))
-            .Do(call => recorder.Pending.Add((
-                call.Arg<IEnumerable<Guid>>().ToList(),
-                (AccessRequestPendingMail)call.Arg<Func<string, BaseMail<AccessRequestPendingView>>>()("a@example.com"))));
-
-        notifier.When(x => x.SendToUsersAsync(
-                Arg.Any<IEnumerable<Guid>>(),
-                Arg.Any<Func<string, BaseMail<AccessRequestsWaitingView>>>()))
-            .Do(call => recorder.Waiting.Add((
-                call.Arg<IEnumerable<Guid>>().ToList(),
-                (AccessRequestsWaitingMail)call.Arg<Func<string, BaseMail<AccessRequestsWaitingView>>>()("a@example.com"))));
+        RecordInto<AccessRequestPendingView, AccessRequestPendingMail>(notifier, recorder.Pending);
+        RecordInto<AccessRequestsWaitingView, AccessRequestsWaitingMail>(notifier, recorder.Waiting);
 
         return recorder;
     }
+
+    private static void RecordInto<TView, TMail>(
+        IAccessMailNotifier notifier, List<(List<Guid> Recipients, TMail Mail)> sink)
+        where TView : BaseMailView
+        where TMail : BaseMail<TView> =>
+        notifier.When(x => x.SendToUsersAsync(
+                Arg.Any<IEnumerable<Guid>>(),
+                Arg.Any<Func<string, BaseMail<TView>>>()))
+            .Do(call => sink.Add((
+                call.Arg<IEnumerable<Guid>>().ToList(),
+                (TMail)call.Arg<Func<string, BaseMail<TView>>>()("a@example.com"))));
 
     private sealed class MailRecorder
     {
