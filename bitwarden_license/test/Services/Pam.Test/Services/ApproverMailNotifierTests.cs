@@ -74,7 +74,7 @@ public class ApproverMailNotifierTests
 
     /// <summary>
     /// An org Owner manages every collection when AllowAdminAccessToAllCollectionItems is on, so a requester is
-    /// routinely among their own collection's managers — and DecideAccessRequestCommand refuses a self-decision.
+    /// routinely among their own collection's managers, and DecideAccessRequestCommand refuses a self-decision.
     /// </summary>
     [Theory, BitAutoData]
     public async Task NotifyPendingRequestAsync_RequesterManagesTheCollection_IsNotMailedTheirOwnRequest(
