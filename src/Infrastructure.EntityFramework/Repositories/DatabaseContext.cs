@@ -222,12 +222,16 @@ public class DatabaseContext : DbContext
 
         // The audit store is append-only and self-contained. Only OrganizationId is a foreign key -- the subject ids
         // (actor, requester, cipher, collection, request, lease, rule) deliberately are not, so an event outlives what
-        // it references. The one index serves the only read: org-scoped, filtered on OccurredDate, newest first, a page
-        // at a time. Id is the third key because OccurredDate is not unique -- an action's Attempt and Outcome share a
-        // timestamp, and a paged read needs a total order to not double-serve or skip a boundary row.
+        // it references. The first index serves the trail read: org-scoped, ranged on OccurredDate, newest first, a
+        // page at a time. Id is the third key because OccurredDate is not unique -- an action's Attempt and Outcome
+        // share a timestamp, and a paged read needs a total order to not double-serve or skip a boundary row. The
+        // second serves the before/after collapse, which asks once per candidate row whether a further-along half of
+        // that action exists. The MSSQL schema also covers both reads with INCLUDE columns, which has no EF equivalent
+        // to mirror here.
         eAccessAuditEvent.Property(p => p.Id).ValueGeneratedNever();
         eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.OccurredDate, p.Id })
             .IsDescending(false, true, true);
+        eAccessAuditEvent.HasIndex(p => p.CorrelationId);
 
         eOrganizationMemberBaseDetail.HasNoKey();
 

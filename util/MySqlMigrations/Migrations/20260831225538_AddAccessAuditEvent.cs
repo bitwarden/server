@@ -65,6 +65,11 @@ public partial class AddAccessAuditEvent : Migration
             .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateIndex(
+            name: "IX_AccessAuditEvent_CorrelationId",
+            table: "AccessAuditEvent",
+            column: "CorrelationId");
+
+        migrationBuilder.CreateIndex(
             name: "IX_AccessAuditEvent_OrganizationId_OccurredDate_Id",
             table: "AccessAuditEvent",
             columns: new[] { "OrganizationId", "OccurredDate", "Id" },
