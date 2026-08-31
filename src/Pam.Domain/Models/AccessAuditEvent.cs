@@ -11,6 +11,13 @@ namespace Bit.Pam.Models;
 /// </summary>
 public class AccessAuditEvent
 {
+    /// <summary>
+    /// The stored row's own identifier. Not rendered anywhere — it is the tiebreaker that makes the trail's newest-first
+    /// order total, so a page boundary landing among events that share an <see cref="OccurredAt"/> can be resumed
+    /// without skipping or repeating one of them (see <see cref="AccessAuditTrailFilter.BeforeId"/>).
+    /// </summary>
+    public Guid Id { get; set; }
+
     public AccessAuditEventKind Kind { get; set; }
 
     /// <summary>Whether this row is the pre-action attempt or the post-action outcome (before/after model).</summary>

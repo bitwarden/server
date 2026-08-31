@@ -50,20 +50,23 @@ public class AuditEndpointsTests
             .ToList();
     }
 
+    // Two reads over the one resource: the trail itself, and the subjects it names -- which is what the Item filter's
+    // menu is built from, and cannot be derived from a page of the trail.
     [Fact]
-    public void MapPamEndpoints_RegistersTheSingleAuditRoute_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheAuditRoutes_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Audit"))
             .ToList();
 
-        Assert.Single(endpoints);
+        Assert.Equal(2, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
 
     [Theory]
     [InlineData("Pam_Audit_GetTrail", "GET", "organizations/{orgId:guid}/audit")]
+    [InlineData("Pam_Audit_GetItems", "GET", "organizations/{orgId:guid}/audit/items")]
     public void MapPamEndpoints_RegistersExpectedRoute(string name, string method, string route)
     {
         var endpoints = MaterializeEndpoints();
@@ -89,6 +92,7 @@ public class AuditEndpointsTests
 
     [Theory]
     [InlineData(nameof(AuditEndpointsHandler.GetTrail), typeof(Task<ListResponseModel<AccessAuditEventResponseModel>>))]
+    [InlineData(nameof(AuditEndpointsHandler.GetItems), typeof(Task<ListResponseModel<AccessAuditItemResponseModel>>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
         var method = typeof(AuditEndpointsHandler).GetMethod(methodName);

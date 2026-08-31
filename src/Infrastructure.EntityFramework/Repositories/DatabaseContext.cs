@@ -250,10 +250,14 @@ public class DatabaseContext : DbContext
 
         // The audit store is append-only and self-contained. Only OrganizationId is a foreign key -- the subject ids
         // (actor, requester, cipher, collection, request, lease, rule) deliberately are not, so an event outlives what
-        // it references. The one index serves the only read: org-scoped, filtered on OccurredAt, newest first.
+        // it references. The first index serves the trail read: org-scoped, ranged on OccurredAt, newest first, one
+        // page at a time, with Id carrying the order past a tie so a page boundary landing among events that share an
+        // instant resumes exactly. The second serves the before/after collapse, which asks once per candidate row
+        // whether a further-along half of that action exists.
         eAccessAuditEvent.Property(p => p.Id).ValueGeneratedNever();
-        eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.OccurredAt })
-            .IsDescending(false, true);
+        eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.OccurredAt, p.Id })
+            .IsDescending(false, true, true);
+        eAccessAuditEvent.HasIndex(p => p.CorrelationId);
 
         // PAM rotation. The MSSQL schema is the reference (src/Sql/dbo/Pam/Tables); these mirror its keys, indexes
         // and delete behaviour so the four supported databases agree. Organization carries the only cascade into

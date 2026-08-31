@@ -75,6 +75,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
         services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
         services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
+        services.AddScoped<IListAccessAuditItemsQuery, ListAccessAuditItemsQuery>();
         services.AddScoped<IListRuleBypassableCiphersQuery, ListRuleBypassableCiphersQuery>();
 
         // Access-request and lease write path.

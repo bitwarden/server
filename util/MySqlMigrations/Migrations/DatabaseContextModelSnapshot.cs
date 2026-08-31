@@ -2531,8 +2531,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId", "OccurredAt")
-                        .IsDescending(false, true);
+                    b.HasIndex("CorrelationId");
+
+                    b.HasIndex("OrganizationId", "OccurredAt", "Id")
+                        .IsDescending(false, true, true);
 
                     b.ToTable("AccessAuditEvent", (string)null);
                 });

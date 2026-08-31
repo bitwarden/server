@@ -111,4 +111,19 @@ public static class AccessAuditEventKindNames
         AccessAuditEventKind.TargetSystemPolicyUpdated => TargetSystemPolicyUpdated,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
+
+    /// <summary>
+    /// Built from <see cref="From"/> over every declared kind rather than written out a second time, so the two
+    /// directions cannot drift: a kind added to the enum and to <see cref="From"/> is filterable by the same name it
+    /// is reported under, and one missing from <see cref="From"/> fails loudly here on first use instead of quietly
+    /// becoming unfilterable.
+    /// </summary>
+    private static readonly Dictionary<string, AccessAuditEventKind> _byName =
+        Enum.GetValues<AccessAuditEventKind>().ToDictionary(From, kind => kind, StringComparer.Ordinal);
+
+    /// <summary>
+    /// Reads a governance vocabulary name back into its kind, for the trail's event-kind filter. False for anything
+    /// this does not emit — an unknown name is a caller error, not an empty filter.
+    /// </summary>
+    public static bool TryParse(string name, out AccessAuditEventKind kind) => _byName.TryGetValue(name, out kind);
 }
