@@ -3,7 +3,7 @@ CREATE TABLE [dbo].[AccessAuditEvent] (
     [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
     [Kind]              TINYINT             NOT NULL,
     [Phase]             TINYINT             NOT NULL,
-    [OccurredAt]        DATETIME2(7)        NOT NULL,
+    [OccurredDate]      DATETIME2(7)        NOT NULL,
     [ActorId]           UNIQUEIDENTIFIER    NULL,
     [RequesterId]       UNIQUEIDENTIFIER    NULL,
     [CollectionId]      UNIQUEIDENTIFIER    NULL,
@@ -42,9 +42,9 @@ GO
 -- the frozen names mean a later delete or rename cannot rewrite history. The rotation columns are NULL for
 -- non-rotation events.
 --
--- [Id] is the third key column purely so the paged read's ORDER BY comes straight off the index: OccurredAt alone is
+-- [Id] is the third key column purely so the paged read's ORDER BY comes straight off the index: OccurredDate alone is
 -- not unique (an action's Attempt and Outcome share a timestamp), and without a tiebreaker in the key an OFFSET page
 -- can serve the same row twice or skip it entirely.
-CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredAt_Id]
-    ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredAt] DESC, [Id] DESC);
+CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredDate_Id]
+    ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredDate] DESC, [Id] DESC);
 GO
