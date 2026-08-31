@@ -58,8 +58,6 @@ public class SubmitAccessRequestCommandTests
         var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
             new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
 
-        // The automatic path no longer mints a lease at submit; it produces a startable, already-approved request the
-        // requester activates explicitly. The window spans the requested duration from now.
         Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
         Assert.Equal(AccessRequestAction.Approved, result.Request.Action);
         Assert.Equal(_now, result.Request.NotBefore);
@@ -178,7 +176,6 @@ public class SubmitAccessRequestCommandTests
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
         Assert.Contains("network", ex.Message);
-        // A rule the caller fails to satisfy must not produce an approved request.
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!);
     }
@@ -211,6 +208,42 @@ public class SubmitAccessRequestCommandTests
             .NotifyCollectionApproversAsync(collectionId);
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
             .NotifyRequesterAsync(userId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Human_MailsTheApproversTheCreatedRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
+        SetupHumanCreate(sutProvider);
+
+        var start = _now.AddHours(1);
+        var end = _now.AddHours(2);
+        await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { Start = start, End = end, Reason = "audit" });
+
+        await sutProvider.GetDependency<IApproverMailNotifier>().Received(1)
+            .NotifyPendingRequestAsync(Arg.Is<AccessRequest>(r =>
+                r.CollectionId == collectionId && r.RequesterId == userId
+                && r.NotBefore == start && r.NotAfter == end));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Automatic_MailsNoApprovers(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+
+        await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
+
+        await sutProvider.GetDependency<IApproverMailNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyPendingRequestAsync(default!);
     }
 
     // The human path pins the window at submit and the approver can only act on what was pinned, so the rule's cap has

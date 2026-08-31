@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
 
         services.TryAddScoped<IAccessMailNotifier, AccessMailNotifier>();
+        services.TryAddScoped<IApproverMailNotifier, ApproverMailNotifier>();
 
         // Runs on every connector-facing route (see PamEndpointsExtensions.WithPamAccessConnectorMachineDefaults).
         // Its

@@ -1,0 +1,47 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../components/head.mjml" />
+  </mj-head>
+  <mj-body>
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 24px 0px 24px">
+      <mj-bw-simple-hero />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="0px 25px">
+      <mj-section background-color="#fff" padding="24px 0px">
+        <mj-column padding="0px 25px">
+          <mj-text padding="0px 0px 16px 0px" font-weight="600" font-size="18px" line-height="28px">
+            An access request needs your decision
+          </mj-text>
+          <mj-text padding="0px 0px 16px 0px" font-weight="400" line-height="24px">
+            <b>{{RequesterEmail}}</b> has requested access to an item in a collection you manage in
+            <b>{{OrganizationName}}</b>. They cannot use it until you approve or deny the request.
+          </mj-text>
+          <mj-text padding="0px 0px 24px 0px" font-weight="400" line-height="24px">
+            <b>Requested access window</b><br />
+            {{WindowStart}} &ndash; {{WindowEnd}}
+          </mj-text>
+          <mj-button
+            padding="0px 0px 24px 0px"
+            inner-padding="12px 24px"
+            border-radius="20px"
+            font-weight="600"
+            align="left"
+            href="{{{Url}}}"
+            >Review the request</mj-button
+          >
+          <mj-text padding="0px" font-size="12px" font-weight="400" line-height="24px">
+            The item and the reason given are not included in this email. Open the request to see them.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-wrapper padding-top="15px">
+      <mj-include path="../../components/footer.mjml" />
+    </mj-wrapper>
+  </mj-body>
+</mjml>
