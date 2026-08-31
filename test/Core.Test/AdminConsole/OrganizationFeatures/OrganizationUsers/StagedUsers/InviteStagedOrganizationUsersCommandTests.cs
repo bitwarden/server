@@ -185,12 +185,14 @@ public class InviteStagedOrganizationUsersCommandTests
 
         sutProvider.GetDependency<IOrganizationService>()
             .AutoAddSeatsAsync(organization, Arg.Any<int>())
-            .ThrowsAsync(new BadRequestException("No payment method on file."));
+            .ThrowsAsync(new BadRequestException("Seat limit has been reached. Please contact your provider."));
 
         var result = await sutProvider.Sut.RunAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<SeatExpansionFailed>(result.AsError);
+        // The subscription's own reason reaches the admin; a provider-managed organization has to be told
+        // to talk to its provider, not to check its own billing page.
+        Assert.Equal("Seat limit has been reached. Please contact your provider.", result.AsError.Message);
         await AssertNothingHappenedAsync(sutProvider);
     }
 
@@ -410,7 +412,7 @@ public class InviteStagedOrganizationUsersCommandTests
         var result = await sutProvider.Sut.RunAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<SecretsManagerSeatExpansionFailed>(result.AsError);
+        Assert.Equal("Secrets Manager seat limit reached.", result.AsError.Message);
         Assert.All(organizationUsers, organizationUser =>
             Assert.Equal(OrganizationUserStatusType.Staged, organizationUser.Status));
         await AssertNothingHappenedAsync(sutProvider);

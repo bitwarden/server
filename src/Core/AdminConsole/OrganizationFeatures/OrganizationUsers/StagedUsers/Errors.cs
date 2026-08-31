@@ -11,8 +11,8 @@ public record StagedOrganizationUserNotFound()
 public record OrganizationUserNotStaged()
     : BadRequestError("Only staged members can be sent an invitation.");
 
-public record SeatExpansionFailed(string OrganizationName)
-    : BadRequestError($"Could not add seats to {OrganizationName}. Check the organization's subscription and try again.");
+public record SeatExpansionFailed(string Reason)
+    : BadRequestError(Reason);
 
-public record SecretsManagerSeatExpansionFailed(string OrganizationName)
-    : BadRequestError($"Could not add Secrets Manager seats to {OrganizationName}. Check the organization's subscription and try again.");
+public record SecretsManagerSeatExpansionFailed(string Reason)
+    : BadRequestError(Reason);

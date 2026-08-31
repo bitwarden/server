@@ -153,7 +153,7 @@ public class InviteStagedOrganizationUsersCommand(
             logger.LogWarning(ex,
                 "Could not add {SeatsToAdd} Secrets Manager seat(s) while inviting staged members for organization {OrganizationId}",
                 seatsToAdd, organization.Id);
-            return new SecretsManagerSeatExpansionFailed(organization.DisplayName());
+            return new SecretsManagerSeatExpansionFailed(ex.Message);
         }
     }
 
@@ -183,7 +183,7 @@ public class InviteStagedOrganizationUsersCommand(
             logger.LogWarning(ex,
                 "Could not auto-add {SeatsToAdd} seat(s) while inviting staged members for organization {OrganizationId}",
                 seatsToAdd, organization.Id);
-            return new SeatExpansionFailed(organization.DisplayName());
+            return new SeatExpansionFailed(ex.Message);
         }
     }
 }
