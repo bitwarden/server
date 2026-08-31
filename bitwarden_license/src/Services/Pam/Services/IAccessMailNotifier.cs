@@ -18,8 +18,9 @@ namespace Bit.Services.Pam.Services;
 /// getting access to their own items. A failed send is logged and swallowed; the request still succeeds and the
 /// push still lands.
 ///
-/// It sends nothing while <see cref="Bit.Core.FeatureFlagKeys.PamEmailNotifications" /> is off, which is the
-/// absent-flag default and the only state self-host sees.
+/// It sends nothing while <see cref="Bit.Core.FeatureFlagKeys.Pam" /> is off, which is the absent-flag default
+/// and the only state self-host sees. PAM's own flag is the only switch: there is no separate one that silences
+/// the mail while the rest of PAM keeps running.
 /// </remarks>
 public interface IAccessMailNotifier
 {
