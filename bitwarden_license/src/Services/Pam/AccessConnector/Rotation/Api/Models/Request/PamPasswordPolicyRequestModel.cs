@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Pam.Models;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
@@ -29,6 +30,16 @@ public class PamPasswordPolicyRequestModel : IValidatableObject
 
     /// <summary>Whether generated passwords include symbols.</summary>
     public bool IncludeSymbols { get; set; }
+
+    public PamPasswordPolicy ToPasswordPolicy() => new()
+    {
+        MinLength = MinLength,
+        MaxLength = MaxLength,
+        IncludeUppercase = IncludeUppercase,
+        IncludeLowercase = IncludeLowercase,
+        IncludeDigits = IncludeDigits,
+        IncludeSymbols = IncludeSymbols,
+    };
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

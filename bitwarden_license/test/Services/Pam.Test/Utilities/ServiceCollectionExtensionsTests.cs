@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Pam.Services;
-using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Services;
 using Bit.Services.Pam.Utilities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -13,6 +13,11 @@ namespace Bit.Services.Pam.Test.Utilities;
 /// </summary>
 public class ServiceCollectionExtensionsTests
 {
+    // AddPamServices binds PamRotationOptions from configuration; an empty root leaves every option at
+    // its default, which is all these wiring assertions need.
+    private static IServiceCollection PamServices() =>
+        new ServiceCollection().AddPamServices(new ConfigurationBuilder().Build());
+
     /// <summary>
     /// Every PAM-owned dependency of every PAM-registered service must itself be registered. This is the check that
     /// catches a new constructor parameter added without a matching registration — including the inert seams, which
@@ -21,7 +26,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddPamServices_RegistersEveryPamOwnedDependency()
     {
-        var services = new ServiceCollection().AddPamServices();
+        var services = PamServices();
         var registered = services.Select(d => d.ServiceType).ToHashSet();
         var pamAssembly = typeof(ServiceCollectionExtensions).Assembly;
 
@@ -67,7 +72,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddPamServices_OverridesTheDefaultCipherLeaseGate()
     {
-        var services = new ServiceCollection().AddPamServices();
+        var services = PamServices();
 
         var descriptor = Assert.Single(services, d => d.ServiceType == typeof(ICipherLeaseGate));
         Assert.Equal(typeof(CipherLeaseGate), descriptor.ImplementationType);
@@ -78,7 +83,7 @@ public class ServiceCollectionExtensionsTests
     public void AddPamServices_RegistersTimeProvider()
     {
         // Every command stamps its timestamps from TimeProvider rather than DateTime.UtcNow.
-        var services = new ServiceCollection().AddPamServices();
+        var services = PamServices();
 
         Assert.Contains(services, d => d.ServiceType == typeof(TimeProvider));
     }
@@ -93,23 +98,45 @@ public class ServiceCollectionExtensionsTests
     [InlineData(typeof(IRequesterNotifier), typeof(RequesterNotifier))]
     public void AddPamServices_RegistersSideChannelSeam(Type serviceType, Type expectedImplementation)
     {
-        var services = new ServiceCollection().AddPamServices();
+        var services = PamServices();
 
         var descriptor = Assert.Single(services, d => d.ServiceType == serviceType);
         Assert.Equal(expectedImplementation, descriptor.ImplementationType);
     }
 
-    [Theory]
-    [InlineData(typeof(LeaseEndpointsHandler))]
-    [InlineData(typeof(AccessRequestEndpointsHandler))]
-    [InlineData(typeof(CipherLeaseEndpointsHandler))]
-    [InlineData(typeof(AccessRuleEndpointsHandler))]
+    /// <remarks>
+    /// Discovered by reflection rather than listed by hand: the hand-maintained list had drifted to four of the
+    /// eleven handlers PAM registers, and the sibling every-dependency test cannot catch that because it only walks
+    /// registrations that already exist.
+    /// </remarks>
+    public static TheoryData<Type> EndpointHandlers()
+    {
+        var data = new TheoryData<Type>();
+        foreach (var type in typeof(ServiceCollectionExtensions).Assembly.GetTypes()
+                     .Where(t => t is { IsClass: true, IsAbstract: false, IsPublic: true }
+                                 && t.Name.EndsWith("EndpointsHandler", StringComparison.Ordinal))
+                     .OrderBy(t => t.FullName, StringComparer.Ordinal))
+        {
+            data.Add(type);
+        }
+
+        return data;
+    }
+
+    [Theory, MemberData(nameof(EndpointHandlers))]
     public void AddPamServices_RegistersEndpointHandler(Type handlerType)
     {
         // The Minimal API endpoints resolve their handler from DI, and an unregistered handler would also make the
         // handler parameter look like a request body to Minimal API's binding.
-        var services = new ServiceCollection().AddPamServices();
+        var services = PamServices();
 
         Assert.Contains(services, d => d.ServiceType == handlerType);
+    }
+
+    [Fact]
+    public void EndpointHandlers_DiscoversEveryHandlerInTheAssembly()
+    {
+        // Guards the guard: a rename that stops matching the suffix would silently empty the theory above.
+        Assert.True(EndpointHandlers().Count >= 10);
     }
 }
