@@ -1,0 +1,51 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../components/head.mjml" />
+  </mj-head>
+  <mj-body>
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 24px 0px 24px">
+      <mj-bw-simple-hero />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="0px 25px">
+      <mj-section background-color="#fff" padding="24px 0px">
+        <mj-column padding="0px 25px">
+          <mj-text padding="0px 0px 16px 0px" font-weight="600" font-size="18px" line-height="28px">
+            {{#if Approved}}Your access request was approved{{else}}Your access request was denied{{/if}}
+          </mj-text>
+          <mj-text padding="0px 0px 16px 0px" font-weight="400" line-height="24px">
+            {{#if Approved}}An approver has approved your access request in <b>{{OrganizationName}}</b>. Your access
+            has not started yet &mdash; open the request and start it when you are ready to use
+            it.{{else}}An approver has declined your access request in <b>{{OrganizationName}}</b>. No access was
+            granted.{{/if}}
+          </mj-text>
+          <mj-text padding="0px 0px 24px 0px" font-weight="400" line-height="24px">
+            <b>{{#if Approved}}Approved access window{{else}}Requested access window{{/if}}</b><br />
+            {{WindowStart}} &ndash; {{WindowEnd}}
+          </mj-text>
+          <mj-button
+            padding="0px 0px 24px 0px"
+            inner-padding="12px 24px"
+            border-radius="20px"
+            font-weight="600"
+            align="left"
+            href="{{{Url}}}"
+            >{{#if Approved}}Start access{{else}}View the request{{/if}}</mj-button
+          >
+          <mj-text padding="0px" font-size="12px" font-weight="400" line-height="24px">
+            {{#if Approved}}Starting access is what grants it. If you do not start it before the window above ends,
+            the approval lapses and you will need to ask again.{{else}}Any comment the approver left is on the
+            request. The item and the reason you gave are not included in this email.{{/if}}
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-wrapper padding-top="15px">
+      <mj-include path="../../components/footer.mjml" />
+    </mj-wrapper>
+  </mj-body>
+</mjml>

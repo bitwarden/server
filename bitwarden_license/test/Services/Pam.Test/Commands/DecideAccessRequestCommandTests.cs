@@ -93,6 +93,8 @@ public class DecideAccessRequestCommandTests
             .ResolveWithDecisionAsync(default!, default!, default, default);
         await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyRequesterAsync(default);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyDecisionAsync(default!, default);
     }
 
     [Theory, BitAutoData]
@@ -163,6 +165,8 @@ public class DecideAccessRequestCommandTests
             .NotifyCollectionApproversAsync(request.CollectionId);
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
             .NotifyRequesterAsync(request.RequesterId);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().Received(1)
+            .NotifyDecisionAsync(request, true);
     }
 
     [Theory]
@@ -228,6 +232,8 @@ public class DecideAccessRequestCommandTests
         // A denial reaches the requester too (their "My requests" view flips to denied).
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
             .NotifyRequesterAsync(request.RequesterId);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().Received(1)
+            .NotifyDecisionAsync(request, false);
     }
 
     private static AccessDecisionSubmission Approve(string? comment = null) =>
