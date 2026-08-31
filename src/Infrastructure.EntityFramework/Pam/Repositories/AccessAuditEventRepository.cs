@@ -60,6 +60,14 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
             CipherName = await ReadCipherNameAsync(dbContext, auditEvent.CipherId),
             CollectionName = await ReadCollectionNameAsync(dbContext, auditEvent.CollectionId),
             RuleName = auditEvent.RuleName,
+            TargetSystemId = auditEvent.TargetSystemId,
+            TargetSystemName = auditEvent.TargetSystemName,
+            DaemonId = auditEvent.DaemonId,
+            DaemonName = auditEvent.DaemonName,
+            RotationConfigId = auditEvent.RotationConfigId,
+            RotationJobId = auditEvent.RotationJobId,
+            RotationSource = auditEvent.RotationSource,
+            SyncState = auditEvent.SyncState,
         };
 
         dbContext.Add(row);
@@ -101,6 +109,14 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
                 CipherName = e.CipherName,
                 CollectionName = e.CollectionName,
                 RuleName = e.RuleName,
+                TargetSystemId = e.TargetSystemId,
+                TargetSystemName = e.TargetSystemName,
+                DaemonId = e.DaemonId,
+                DaemonName = e.DaemonName,
+                RotationConfigId = e.RotationConfigId,
+                RotationJobId = e.RotationJobId,
+                RotationSource = e.RotationSource,
+                SyncState = e.SyncState,
             })
             .ToListAsync();
     }

@@ -1,4 +1,6 @@
-﻿using Bit.Pam.Enums;
+﻿using  Bit.Pam.Enums;
+using Bit.Pam.Entities;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
@@ -6,6 +8,22 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 /// <see cref="PamRotationJobResponseModel.Attempts"/>.</summary>
 public class PamRotationAttemptResponseModel
 {
+    public PamRotationAttemptResponseModel(PamRotationAttempt attempt)
+    {
+        ArgumentNullException.ThrowIfNull(attempt);
+
+        Id = attempt.Id;
+        JobId = attempt.JobId;
+        ClaimedByAccessConnectorId = attempt.ClaimedByDaemonId;
+        CipherUpdated = attempt.CipherUpdated;
+        Status = attempt.Status;
+        FailureReason = attempt.FailureReason;
+        SyncState = attempt.SyncState;
+        SessionTermination = attempt.SessionTermination;
+        CreationDate = attempt.CreationDate.AsUtc();
+        ResolvedDate = attempt.ResolvedDate.AsUtc();
+    }
+
     /// <summary>
     /// The attempt's unique identifier.
     /// </summary>

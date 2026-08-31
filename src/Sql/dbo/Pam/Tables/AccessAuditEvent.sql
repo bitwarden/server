@@ -22,6 +22,14 @@ CREATE TABLE [dbo].[AccessAuditEvent] (
     [CollectionName]    NVARCHAR(MAX)       NULL,
     [RuleName]          NVARCHAR(256)       NULL,
     [CorrelationId]     UNIQUEIDENTIFIER    NOT NULL CONSTRAINT [DF_AccessAuditEvent_CorrelationId] DEFAULT NEWID(),
+    [TargetSystemId]    UNIQUEIDENTIFIER    NULL,
+    [TargetSystemName]  NVARCHAR(200)       NULL,
+    [DaemonId]          UNIQUEIDENTIFIER    NULL,
+    [DaemonName]        NVARCHAR(200)       NULL,
+    [RotationConfigId]  UNIQUEIDENTIFIER    NULL,
+    [RotationJobId]     UNIQUEIDENTIFIER    NULL,
+    [RotationSource]    TINYINT             NULL,
+    [SyncState]         TINYINT             NULL,
     CONSTRAINT [PK_AccessAuditEvent] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AccessAuditEvent_Organization] FOREIGN KEY ([OrganizationId])
         REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE

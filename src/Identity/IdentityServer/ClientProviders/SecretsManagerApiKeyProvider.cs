@@ -39,13 +39,20 @@ internal class SecretsManagerApiKeyProvider : IClientProvider
 
         switch (apiKey)
         {
-            case ServiceAccountApiKeyDetails key:
+            // ApiKeyRepository always materializes ServiceAccountApiKeyDetails and ApiKeyDetailsView LEFT JOINs
+            // ServiceAccount, so a machine credential that is not a service account's -- a PAM rotation daemon's,
+            // for instance -- arrives here with ServiceAccountOrganizationId defaulted and no organization to load.
+            // Match on the service-account id rather than the type, and refuse anything else: those credentials
+            // belong to their own provider, reached under a different client-id prefix.
+            case ServiceAccountApiKeyDetails { ServiceAccountId: not null } key:
                 var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
-                if (!org.UseSecretsManager || !org.Enabled)
+                if (org == null || !org.UseSecretsManager || !org.Enabled)
                 {
                     return null;
                 }
                 break;
+            default:
+                return null;
         }
 
         var client = new Client
