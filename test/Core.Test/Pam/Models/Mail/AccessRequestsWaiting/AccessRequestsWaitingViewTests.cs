@@ -21,9 +21,8 @@ public class AccessRequestsWaitingViewTests
 
         foreach (var body in new[] { html, text })
         {
-            Assert.Contains("6 access requests have reached you in", body);
-            Assert.Contains("Contoso", body);
-            Assert.Contains("for the next 15 minutes", body);
+            Assert.Contains("6 access requests have reached you in the last few minutes", body);
+            Assert.Contains("for the rest of this 15-minute window", body);
             Assert.Contains("https://vault.example.com/#/privileged-controls/approvals", body);
         }
     }
@@ -52,7 +51,6 @@ public class AccessRequestsWaitingViewTests
     private static AccessRequestsWaitingView View() => new()
     {
         WebVaultUrl = "https://vault.example.com/#",
-        OrganizationName = "Contoso",
         RequestCount = 6,
         WindowMinutes = 15,
     };
