@@ -55,8 +55,12 @@ public class SendAccessResponseModel : ResponseModel
                 Text = new SendTextModel(textData);
                 break;
             case SendType.Item:
-                Name = string.Empty;
-                Data = send.Data ?? throw new NullReferenceException("Send Data is required");
+                var itemData = JsonSerializer.Deserialize<SendItemData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send item data.");
+                Name = itemData.Name;
+                Data = new SendDataModel(itemData);
                 break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
@@ -106,7 +110,7 @@ public class SendAccessResponseModel : ResponseModel
     /// <summary>
     /// Encrypted string containing secret Send data
     /// </summary>
-    public string? Data { get; set; }
+    public SendDataModel? Data { get; set; }
 
     /// <summary>
     /// The date after which a send cannot be accessed. When this value is

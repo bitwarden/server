@@ -28,6 +28,7 @@ public interface IStripeAdapter
     Task<List<Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options);
     Task<Invoice> CreateInvoiceAsync(InvoiceCreateOptions options);
     Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options);
+    Task<List<InvoiceLineItem>> ListInvoiceLineItemsAsync(string invoiceId, InvoiceLineItemListOptions options);
     Task<List<Invoice>> SearchInvoiceAsync(InvoiceSearchOptions options);
     Task<Invoice> UpdateInvoiceAsync(string id, InvoiceUpdateOptions options);
     Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options = null);

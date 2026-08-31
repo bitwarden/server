@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Vault.Commands;
 using Bit.Core.Vault.Entities;
@@ -31,9 +33,12 @@ public class DeleteManyFoldersCommandTest
             Arg.Is<IEnumerable<Guid>>(ids =>
                 ids.Count() == 2 && ids.Contains(firstFolder.Id) && ids.Contains(secondFolder.Id)),
             user.Id);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(user.Id);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
-            .PushSyncFolderDeleteAsync(default);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(p =>
+                p.Type == PushType.SyncVault && p.TargetId == user.Id));
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushAsync(Arg.Is<PushNotification<SyncFolderPushNotification>>(p =>
+                p.Type == PushType.SyncFolderDelete));
     }
 
     [Theory, BitAutoData]
@@ -53,7 +58,8 @@ public class DeleteManyFoldersCommandTest
             Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == folder.Id),
             user.Id);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushSyncVaultAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(p =>
+                p.Type == PushType.SyncVault && p.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -72,7 +78,8 @@ public class DeleteManyFoldersCommandTest
             Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == folder.Id),
             user.Id);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushSyncVaultAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(p =>
+                p.Type == PushType.SyncVault && p.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -89,8 +96,8 @@ public class DeleteManyFoldersCommandTest
 
         await sutProvider.GetDependency<IFolderRepository>().DidNotReceiveWithAnyArgs()
             .DeleteManyAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
-            .PushSyncVaultAsync(default);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]

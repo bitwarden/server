@@ -7,6 +7,10 @@ public class SendUtilities
 {
     public static AuthType InferAuthType(Send send)
     {
+        if (send.Type == SendType.Item)
+        {
+            return AuthType.Email;
+        }
         if (!string.IsNullOrWhiteSpace(send.Password))
         {
             return AuthType.Password;

@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationC
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -141,11 +142,11 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         // Assert — org-key push notification sent for each confirmed user
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(orgUser1.UserId!.Value);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == orgUser1.UserId!.Value));
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(orgUser2.UserId!.Value);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == orgUser2.UserId!.Value));
 
         // Assert — device registrations deleted per confirmed user
         await sutProvider.GetDependency<IPushRegistrationService>()
@@ -201,7 +202,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceive()
-            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
 
         await sutProvider.GetDependency<IPushRegistrationService>()
             .DidNotReceive()
@@ -265,11 +266,11 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(orgUser1.UserId!.Value);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == orgUser1.UserId!.Value));
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceive()
-            .PushSyncOrgKeysAsync(orgUser2.UserId!.Value);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == orgUser2.UserId!.Value));
     }
 
     [Theory, BitAutoData]

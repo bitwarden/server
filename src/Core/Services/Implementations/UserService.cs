@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
@@ -21,6 +22,7 @@ using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -221,6 +223,11 @@ public class UserService : UserManager<User>, IUserService
 
     public override async Task<IdentityResult> DeleteAsync(User user)
     {
+        if (await IsClaimedByAnyOrganizationAsync(user.Id))
+        {
+            throw new BadRequestException(new CannotDeleteClaimedAccountError().Message);
+        }
+
         // Check if user is the only owner of any organizations.
         var onlyOwnerCount = await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
         if (onlyOwnerCount > 0)
@@ -237,7 +244,10 @@ public class UserService : UserManager<User>, IUserService
                     if (orgCount <= 1)
                     {
                         await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
-                        await _organizationRepository.DeleteAsync(org);
+                        // This is a right-to-erasure flow, so the organization's event logs have to
+                        // be purged from storage too, not just its database rows.
+                        await _organizationRepository.DeleteAndCreateDeleteTasksAsync(
+                            org, [OrganizationDeleteTaskType.EventsCleanup]);
                         deletedOrg = true;
                     }
                 }

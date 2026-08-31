@@ -111,6 +111,8 @@ public static class PlanFeatures
         org.SyncSeats = overrides.SyncSeats ?? org.SyncSeats;
         org.UsePasswordManager = overrides.UsePasswordManager ?? org.UsePasswordManager;
         org.UsePam = overrides.UsePam ?? org.UsePam;
+        // Off-path only: the EnableSecretsManager gate in OrganizationSeeder.Create runs after this and forces SM on when set, so pair this with EnableSecretsManager=false to disable SM.
+        org.UseSecretsManager = overrides.UseSecretsManager ?? org.UseSecretsManager;
     }
 
     /// <summary>

@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -56,7 +57,7 @@ public class RegenerateUserAsymmetricKeysCommandTests
                 Arg.Is<IEnumerable<DatabaseTransactionAction>>(actions => !actions.Any()));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncSettingsAsync(Arg.Is(userAsymmetricKeys.UserId));
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == userAsymmetricKeys.UserId));
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .DidNotReceiveWithAnyArgs()
             .UpdateStatusAndKeyEncryptedById(Arg.Any<Guid>(), Arg.Any<EmergencyAccessStatusType>(),
@@ -109,8 +110,8 @@ public class RegenerateUserAsymmetricKeysCommandTests
             .RegenerateUserAsymmetricKeysAsync(Arg.Any<UserAsymmetricKeys>(),
                 Arg.Any<IEnumerable<DatabaseTransactionAction>>());
         await sutProvider.GetDependency<IPushNotificationService>()
-            .ReceivedWithAnyArgs(0)
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory]
@@ -155,7 +156,7 @@ public class RegenerateUserAsymmetricKeysCommandTests
                 Arg.Is<IEnumerable<DatabaseTransactionAction>>(actions => actions.Count() == designatedEmergencyAccess.Count));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncSettingsAsync(Arg.Is(userAsymmetricKeys.UserId));
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == userAsymmetricKeys.UserId));
         foreach (var ea in designatedEmergencyAccess)
         {
             await sutProvider.GetDependency<IMailService>()
@@ -236,7 +237,7 @@ public class RegenerateUserAsymmetricKeysCommandTests
                 Arg.Is<IEnumerable<DatabaseTransactionAction>>(actions => actions.Count() == usersOrganizationAccounts.Count));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncSettingsAsync(Arg.Is(userAsymmetricKeys.UserId));
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == userAsymmetricKeys.UserId));
     }
 
     [Theory]
@@ -274,7 +275,7 @@ public class RegenerateUserAsymmetricKeysCommandTests
                 Arg.Is<IEnumerable<DatabaseTransactionAction>>(actions => actions.Count() == 1));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncSettingsAsync(Arg.Is(userAsymmetricKeys.UserId));
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == userAsymmetricKeys.UserId));
         await sutProvider.GetDependency<IEventService>()
             .Received(usersOrganizationAccounts.Count)
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Is(EventType.OrganizationUser_Left));

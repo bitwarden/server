@@ -6,6 +6,7 @@ using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
+using Bit.Core;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -45,6 +46,7 @@ public class SendsControllerTests : IDisposable
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IEventService _eventService;
     private readonly ISendEventClassifier _sendEventClassifier;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SendsControllerTests()
     {
@@ -59,6 +61,7 @@ public class SendsControllerTests : IDisposable
         _hasPremiumAccessQuery = Substitute.For<IHasPremiumAccessQuery>();
         _eventService = Substitute.For<IEventService>();
         _sendEventClassifier = Substitute.For<ISendEventClassifier>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
 
         _sut = new SendsController(
             _sendRepository,
@@ -71,7 +74,8 @@ public class SendsControllerTests : IDisposable
             _pushNotificationService,
             _hasPremiumAccessQuery,
             _eventService,
-            _sendEventClassifier
+            _sendEventClassifier,
+            _featureService
         );
     }
 
@@ -94,6 +98,21 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
+    public async Task Post_ItemSendWithFeatureFlagOff_ThrowsBadRequest(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
+        var request = new SendRequestModel()
+        {
+            Key = "test_key",
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            Type = SendType.Item
+        };
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Post(request));
+        Assert.Equal("Item type Sends are not yet enabled", exception.Message);
+    }
+
+    [Theory, AutoData]
     public async Task Get_WithValidId_ReturnsSendResponseModel(Guid sendId, Send send)
     {
         send.Type = SendType.Text;
@@ -113,6 +132,36 @@ public class SendsControllerTests : IDisposable
     public async Task Get_WithInvalidGuid_ThrowsException(string invalidId)
     {
         await Assert.ThrowsAsync<FormatException>(() => _sut.Get(invalidId));
+    }
+
+    [Theory, AutoData]
+    public async Task Get_WithItemSendFeatureFlagOff_ThrowsException(Guid sendId, Send send)
+    {
+        send.Type = SendType.Item;
+        var itemData = new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }");
+        send.Data = JsonSerializer.Serialize(itemData);
+        _sendOwnerQuery.Get(sendId, Arg.Any<ClaimsPrincipal>()).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.Get(sendId.ToString()));
+    }
+
+    [Theory, AutoData]
+    public async Task GetAll_WithItemSendFeatureFlagOff_FiltersOutItemSends(Guid userId, Send send1, Send send2)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        send1.Type = SendType.Item;
+        var itemData = new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }");
+        send1.Data = JsonSerializer.Serialize(itemData);
+        send2.Type = SendType.Text;
+        var textData = new SendTextData("Test Send", "Notes", "Sample text", false);
+        send2.Data = JsonSerializer.Serialize(textData);
+        _sendOwnerQuery.GetOwned(Arg.Any<ClaimsPrincipal>()).Returns([send1, send2]);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
+
+        var result = await _sut.GetAll();
+        Assert.Single(result.Data);
+        Assert.Equal(SendType.Text, result.Data.First().Type);
     }
 
     [Fact]
@@ -391,6 +440,47 @@ public class SendsControllerTests : IDisposable
         };
 
         await Assert.ThrowsAsync<NotFoundException>(() => _sut.Put(sendId.ToString(), request));
+    }
+
+    [Theory, AutoData]
+    public async Task Put_ItemSendWithFeatureFlagOff_ThrowsBadRequestException(Guid sendId)
+    {
+        var request = new SendRequestModel
+        {
+            Type = SendType.Item,
+            Key = "key",
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var error = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Put(sendId.ToString(), request));
+        Assert.Equal("Item type Sends are not yet enabled", error.Message);
+    }
+
+    [Theory, AutoData]
+    public async Task Put_ChangingSendType_ThrowsBadRequestException(Guid sendId, Guid userId)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(true);
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Old", "Old notes", "Old text", false))
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+        var request = new SendRequestModel
+        {
+            Type = SendType.Item,
+            Key = "key",
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var error = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Put(sendId.ToString(), request));
+        Assert.Equal("Cannot change a Send's type", error.Message);
     }
 
     [Theory, AutoData]
@@ -1026,6 +1116,32 @@ public class SendsControllerTests : IDisposable
         var user = CreateUserWithSendIdClaim(sendId);
         _sut.ControllerContext = CreateControllerContextWithUser(user);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithItemSendAndFeatureFlagOff_ThrowsNotFoundException(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Item,
+            Data = JsonSerializer.Serialize(new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }")),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
 
