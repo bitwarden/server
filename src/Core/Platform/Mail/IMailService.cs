@@ -140,7 +140,7 @@ public interface IMailService
     Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);
     Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent);
 #nullable disable
-    Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
+    Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string organizationId,
         string organizationName);
 #nullable enable
     Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList);
