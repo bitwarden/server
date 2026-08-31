@@ -26,6 +26,7 @@ public class AccessRequestDecidedViewTests
         {
             Assert.Contains("was approved", body);
             Assert.Contains("has not started yet", body);
+            Assert.Contains("cannot start it before the window above begins", body);
             Assert.Contains("Start access", body);
             Assert.Contains("Contoso", body);
             Assert.Contains("1 Sep 2026 at 08:30 UTC", body);
