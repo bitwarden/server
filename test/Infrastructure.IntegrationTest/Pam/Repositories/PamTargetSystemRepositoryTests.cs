@@ -49,6 +49,28 @@ public class PamTargetSystemRepositoryTests
         Assert.Equal(PamTargetSystemStatus.Active, persisted.Status);
     }
 
+    // Kind is a bare TINYINT with no check constraint: every connector kind persists on every provider without a
+    // schema change.
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_ThenRead_RoundTripsEveryAutomaticKind(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+
+        foreach (var kind in Enum.GetValues<PamTargetSystemKind>())
+        {
+            var target = await pamTargetSystemRepository.CreateAsync(
+                BuildTarget(organization.Id, $"target-{kind}", now, kind));
+
+            var persisted = await pamTargetSystemRepository.GetByIdAsync(target.Id);
+
+            Assert.NotNull(persisted);
+            Assert.Equal(kind, persisted!.Kind);
+        }
+    }
+
     // A manual target carries no connector: Kind/PasswordPolicy stay null through the round trip, and the narrow
     // fields a rename/status-change touches (Name, Status, RevisionDate) persist via the generic ReplaceAsync.
     [DatabaseTheory, DatabaseData]
@@ -195,14 +217,18 @@ public class PamTargetSystemRepositoryTests
         });
     }
 
-    private static PamTargetSystem BuildTarget(Guid organizationId, string name, DateTime now) => new()
-    {
-        OrganizationId = organizationId,
-        Name = name,
-        Method = PamTargetSystemMethod.Automatic,
-        Kind = PamTargetSystemKind.Entra,
-        Status = PamTargetSystemStatus.Active,
-        CreationDate = now,
-        RevisionDate = now,
-    };
+    private static PamTargetSystem BuildTarget(
+        Guid organizationId,
+        string name,
+        DateTime now,
+        PamTargetSystemKind kind = PamTargetSystemKind.Entra) => new()
+        {
+            OrganizationId = organizationId,
+            Name = name,
+            Method = PamTargetSystemMethod.Automatic,
+            Kind = kind,
+            Status = PamTargetSystemStatus.Active,
+            CreationDate = now,
+            RevisionDate = now,
+        };
 }

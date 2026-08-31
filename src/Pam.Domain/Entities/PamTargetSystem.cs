@@ -7,9 +7,9 @@ namespace Bit.Pam.Entities;
 
 /// <summary>
 /// A system PAM can rotate credentials against: an <see cref="PamTargetSystemMethod.Automatic"/> target driven by a
-/// <see cref="PamDaemon"/> (Entra, MSSQL, or a custom script), or a <see cref="PamTargetSystemMethod.Manual"/> target
-/// that only tracks a schedule and records rotations a human performs out of band. <see cref="Kind"/> and
-/// <see cref="PasswordPolicy"/> are set only for an automatic target.
+/// <see cref="PamDaemon"/> (Entra, MSSQL, a custom script, or Active Directory), or a
+/// <see cref="PamTargetSystemMethod.Manual"/> target that only tracks a schedule and records rotations a human
+/// performs out of band. <see cref="Kind"/> and <see cref="PasswordPolicy"/> are set only for an automatic target.
 /// </summary>
 public class PamTargetSystem : ITableObject<Guid>
 {
