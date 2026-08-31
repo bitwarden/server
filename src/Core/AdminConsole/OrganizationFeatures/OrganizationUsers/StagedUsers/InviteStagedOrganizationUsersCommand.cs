@@ -1,11 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -16,6 +20,9 @@ public class InviteStagedOrganizationUsersCommand(
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationService organizationService,
+    ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+    IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+    IPricingClient pricingClient,
     ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
     IEventService eventService,
     TimeProvider timeProvider,
@@ -51,6 +58,13 @@ public class InviteStagedOrganizationUsersCommand(
             return seatReservationError;
         }
 
+        // Password Manager seats first: the subscription rejects more Secrets Manager seats than it has PM seats.
+        var secretsManagerSeatReservationError = await ReserveSecretsManagerSeatsAsync(organization, organizationUsers);
+        if (secretsManagerSeatReservationError is not null)
+        {
+            return secretsManagerSeatReservationError;
+        }
+
         await InviteAsync(organizationUsers, organization, request.PerformedBy);
 
         await eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(organizationUser =>
@@ -73,12 +87,10 @@ public class InviteStagedOrganizationUsersCommand(
         foreach (var organizationUser in organizationUsers)
         {
             organizationUser.Status = OrganizationUserStatusType.Invited;
-            // The update stored procedure persists whatever RevisionDate the entity carries, so bump it here or
-            // the row's watermark stays at its staged-creation timestamp and watermark-driven consumers miss the
-            // change.
             organizationUser.RevisionDate = revisionDate;
-            await organizationUserRepository.ReplaceAsync(organizationUser);
         }
+
+        await organizationUserRepository.ReplaceManyAsync(organizationUsers);
 
         try
         {
@@ -98,17 +110,53 @@ public class InviteStagedOrganizationUsersCommand(
             {
                 organizationUser.Status = OrganizationUserStatusType.Staged;
                 organizationUser.RevisionDate = previousRevisionDates[organizationUser.Id];
-                await organizationUserRepository.ReplaceAsync(organizationUser);
             }
+
+            await organizationUserRepository.ReplaceManyAsync(organizationUsers);
 
             throw;
         }
     }
 
     /// <summary>
-    /// Reserves the seats the members occupy once invited. Runs before any row is updated so a billing failure
-    /// leaves them staged.
+    /// Staged users may be eligible for SM without occupying a seat; enforcement happens at promotion-time.
     /// </summary>
+    private async Task<Error?> ReserveSecretsManagerSeatsAsync(Organization organization, List<OrganizationUser> organizationUsers)
+    {
+        if (!organization.UseSecretsManager)
+        {
+            return null;
+        }
+
+        var membersWithSecretsManager = organizationUsers.Count(organizationUser => organizationUser.AccessSecretsManager);
+        if (membersWithSecretsManager == 0)
+        {
+            return null;
+        }
+
+        // Returns 0 for an unlimited plan or when there is already room.
+        var seatsToAdd = await countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, membersWithSecretsManager);
+        if (seatsToAdd <= 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+            await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(
+                new SecretsManagerSubscriptionUpdate(organization, plan, true).AdjustSeats(seatsToAdd));
+            return null;
+        }
+        catch (Exception ex) when (ex is BadRequestException or GatewayException)
+        {
+            logger.LogWarning(ex,
+                "Could not add {SeatsToAdd} Secrets Manager seat(s) while inviting staged members for organization {OrganizationId}",
+                seatsToAdd, organization.Id);
+            return new SecretsManagerSeatExpansionFailed(organization.DisplayName());
+        }
+    }
+
     private async Task<Error?> ReserveSeatsAsync(Organization organization, int seatsNeeded)
     {
         if (!organization.Seats.HasValue)
@@ -121,14 +169,6 @@ public class InviteStagedOrganizationUsersCommand(
         if (seatsToAdd <= 0)
         {
             return null;
-        }
-
-        // AutoAddSeatsAsync enforces this too, but checking first distinguishes "the cap is in the way" from a
-        // payment or gateway failure.
-        if (organization.MaxAutoscaleSeats.HasValue &&
-            organization.Seats.Value + seatsToAdd > organization.MaxAutoscaleSeats.Value)
-        {
-            return new NoSeatsAvailableForInvite(organization.DisplayName());
         }
 
         try

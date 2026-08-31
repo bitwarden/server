@@ -143,6 +143,28 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
     }
 
     [Fact]
+    public async Task SendInvite_WhenTheAutoscaleLimitCannotCoverEveryMember_LeavesThemAllStaged()
+    {
+        // Room to autoscale by one, but two members were selected. The row action is all-or-nothing, and the
+        // only thing enforcing the cap is AutoAddSeatsAsync itself, so this has to run against the real one.
+        await SetSeatsAsync(seats: 1, maxAutoscaleSeats: 2);
+        var staged = await StageMembersAsync(2);
+
+        var response = await SendInviteAsync(staged.Select(member => member.Id));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var organization = await _organizationRepository.GetByIdAsync(_organization.Id);
+        Assert.NotNull(organization);
+        Assert.Equal(1, organization.Seats);
+
+        var untouched = await _organizationUserRepository.GetManyAsync(staged.Select(member => member.Id).ToList());
+        Assert.All(untouched, member => Assert.Equal(OrganizationUserStatusType.Staged, member.Status));
+
+        await _sendOrganizationInvitesCommand.DidNotReceive().SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+    }
+
+    [Fact]
     public async Task SendInvite_WhenAnyMemberIsNotStaged_LeavesTheWholeBatchAlone()
     {
         var staged = await StageMembersAsync(1);
