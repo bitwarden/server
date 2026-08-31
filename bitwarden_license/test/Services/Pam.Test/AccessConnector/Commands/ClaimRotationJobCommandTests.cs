@@ -23,10 +23,10 @@ public class ClaimRotationJobCommandTests
 
     [Theory, BitAutoData]
     public async Task ClaimAsync_Claimed_ReturnsSnapshotAndEmitsRotationDispatchedAudit(
-        Guid accessConnectorId, Guid jobId, PamAccessConnector accessConnector, PamRotationJob job)
+        Guid daemonId, Guid jobId, PamDaemon daemon, PamRotationJob job)
     {
         var sutProvider = Setup();
-        accessConnector.Id = accessConnectorId;
+        daemon.Id = daemonId;
         job.Id = jobId;
         var result = new PamRotationClaimResult
         {
@@ -36,29 +36,26 @@ public class ClaimRotationJobCommandTests
             Source = PamRotationSource.Scheduled,
             TargetSystemId = Guid.NewGuid(),
             TargetSystemName = "Prod SQL",
-            TargetSystemSealedData = "target-sealed-blob",
-            TargetSystemWrappedKey = "target-wrapped-key",
             CipherId = Guid.NewGuid(),
-            RotationConfigSealedData = "config-sealed-blob",
-            RotationConfigWrappedKey = "config-wrapped-key",
+            AccountIdentity = "svc-account",
+            TerminateSessions = true,
             ExecuteBy = _now + _releaseDelay,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .ClaimAsync(jobId, accessConnectorId, _now, _releaseDelay)
+            .ClaimAsync(jobId, daemonId, _now, _releaseDelay)
             .Returns(result);
-        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
-            .Returns(accessConnector);
+        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(jobId).Returns(job);
 
-        var returned = await sutProvider.Sut.ClaimAsync(accessConnectorId, jobId);
+        var returned = await sutProvider.Sut.ClaimAsync(daemonId, jobId);
 
         Assert.Same(result, returned);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationDispatched
-                && a.OrganizationId == accessConnector.OrganizationId
+                && a.OrganizationId == daemon.OrganizationId
                 && a.ActorId == null
-                && a.AccessConnectorId == accessConnectorId
-                && a.AccessConnectorName == accessConnector.Name
+                && a.DaemonId == daemonId
+                && a.DaemonName == daemon.Name
                 && a.RotationJobId == jobId
                 && a.RotationConfigId == job.RotationConfigId
                 && a.CipherId == result.CipherId
@@ -68,27 +65,27 @@ public class ClaimRotationJobCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ClaimAsync_NotClaimable_ThrowsConflict_NoAudit(Guid accessConnectorId, Guid jobId)
+    public async Task ClaimAsync_NotClaimable_ThrowsConflict_NoAudit(Guid daemonId, Guid jobId)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .ClaimAsync(jobId, accessConnectorId, _now, _releaseDelay)
+            .ClaimAsync(jobId, daemonId, _now, _releaseDelay)
             .Returns(new PamRotationClaimResult { Outcome = PamRotationClaimOutcome.NotClaimable });
 
-        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.ClaimAsync(accessConnectorId, jobId));
+        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.ClaimAsync(daemonId, jobId));
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task ClaimAsync_NotEligible_ThrowsNotFound_NoAudit(Guid accessConnectorId, Guid jobId)
+    public async Task ClaimAsync_NotEligible_ThrowsNotFound_NoAudit(Guid daemonId, Guid jobId)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .ClaimAsync(jobId, accessConnectorId, _now, _releaseDelay)
+            .ClaimAsync(jobId, daemonId, _now, _releaseDelay)
             .Returns(new PamRotationClaimResult { Outcome = PamRotationClaimOutcome.NotEligible });
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ClaimAsync(accessConnectorId, jobId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ClaimAsync(daemonId, jobId));
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }

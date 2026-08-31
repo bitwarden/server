@@ -23,7 +23,7 @@ public class PamLeaseExpirySweepServiceTests
         var sutProvider = Setup();
         var lease1 = MakeExpiredLease();
         var lease2 = MakeExpiredLease();
-        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now, _now.AddDays(-30))
+        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now)
             .Returns(new List<PamExpiredLease> { lease1, lease2 });
 
         await sutProvider.Sut.SweepAsync();
@@ -51,11 +51,13 @@ public class PamLeaseExpirySweepServiceTests
         var sutProvider = Setup();
         var lease1 = MakeExpiredLease();
         var lease2 = MakeExpiredLease();
-        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now, _now.AddDays(-30))
+        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now)
             .Returns(new List<PamExpiredLease> { lease1, lease2 });
         sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().HandleAsync(lease1.CipherId)
             .Returns(Task.FromException(new InvalidOperationException("boom")));
 
+        // lease1's failure (raised from the HandleAsync call the sweep awaits after its own audit emit) must be
+        // logged and swallowed per-lease, never preventing lease2 from being processed.
         await sutProvider.Sut.SweepAsync();
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
@@ -68,7 +70,7 @@ public class PamLeaseExpirySweepServiceTests
     {
         var sutProvider = Setup();
         var lease = MakeExpiredLease();
-        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now, _now.AddDays(-30))
+        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now)
             .Returns(new List<PamExpiredLease> { lease });
         sutProvider.GetDependency<IAccessAuditEventEmitter>()
             .EmitAsync(Arg.Any<AccessAuditEventData>())
@@ -76,7 +78,8 @@ public class PamLeaseExpirySweepServiceTests
 
         await sutProvider.Sut.SweepAsync();
 
-        // An audit failure must not leave the credential unrotated.
+        // ExpireDueAsync has already flipped the lease out of Active, so it is never returned again -- letting an
+        // audit hiccup swallow the rotation trigger would silently leave the credential the user just held valid.
         await sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().Received(1).HandleAsync(lease.CipherId);
     }
 

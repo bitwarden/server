@@ -1,10 +1,9 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.Pam.AccessConnector.Queries;
-using Bit.Core.Pam.Services;
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
-using Bit.Pam;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 
 namespace Bit.Services.Pam.AccessConnector.Queries;
 
@@ -14,42 +13,29 @@ public class GetRotationCipherQuery : IGetRotationCipherQuery
     private readonly IPamRotationJobRepository _jobRepository;
     private readonly IPamRotationConfigRepository _configRepository;
     private readonly ICipherRepository _cipherRepository;
-    private readonly ICipherLeaseGate _cipherLeaseGate;
-    private readonly TimeProvider _timeProvider;
 
     public GetRotationCipherQuery(
         IPamRotationJobRepository jobRepository,
         IPamRotationConfigRepository configRepository,
-        ICipherRepository cipherRepository,
-        ICipherLeaseGate cipherLeaseGate,
-        TimeProvider timeProvider)
+        ICipherRepository cipherRepository)
     {
         _jobRepository = jobRepository;
         _configRepository = configRepository;
         _cipherRepository = cipherRepository;
-        _cipherLeaseGate = cipherLeaseGate;
-        _timeProvider = timeProvider;
     }
 
-    public async Task<RotationCipherAccess> GetAsync(Guid accessConnectorId, Guid attemptId)
+    public async Task<Cipher> GetAsync(Guid daemonId, Guid attemptId)
     {
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
-        if (attempt is null || attempt.ClaimedByAccessConnectorId != accessConnectorId)
+        if (attempt is null
+            || attempt.ClaimedByDaemonId != daemonId
+            || attempt.Status != PamRotationAttemptStatus.Executing)
         {
             throw new NotFoundException();
         }
 
         var job = await _jobRepository.GetByIdAsync(attempt.JobId);
-        if (job is null || job.ClaimedByAccessConnectorId != accessConnectorId)
-        {
-            throw new NotFoundException();
-        }
-
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var jobStatus = PamRotationStatusDerivation.ComputeJobStatus(job.Action, job.ExpirationDate, now);
-        var attemptStatus = PamRotationStatusDerivation.ComputeAttemptStatus(
-            attempt.Action, PamRotationRules.IsCurrentAttempt(job, attempt), jobStatus);
-        if (attemptStatus != PamRotationAttemptStatus.Executing)
+        if (job is null || job.Status != PamRotationJobStatus.Claimed || job.ClaimedByDaemonId != daemonId)
         {
             throw new NotFoundException();
         }
@@ -60,12 +46,12 @@ public class GetRotationCipherQuery : IGetRotationCipherQuery
             throw new NotFoundException();
         }
 
-        var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(config.CipherId);
+        var cipher = await _cipherRepository.GetByIdAsync(config.CipherId);
         if (cipher is null)
         {
             throw new NotFoundException();
         }
 
-        return new RotationCipherAccess(cipher, _cipherLeaseGate.AuthorizeAccessConnectorRotationRead(cipher));
+        return cipher;
     }
 }

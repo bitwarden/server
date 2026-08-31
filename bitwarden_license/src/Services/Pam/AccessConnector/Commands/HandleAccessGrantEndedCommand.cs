@@ -1,11 +1,11 @@
 ﻿using Bit.Core;
+using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.Services;
-using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Services.Pam.AccessConnector.Commands;
 
@@ -48,7 +48,8 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
             return;
         }
 
-        // Dropped while paused; the spec's DeferAccessEndWhileUnavailable latch is not implemented.
+        // Paused/disabled is a no-op this iteration -- the deferred access-end latch (pending_access_end) would
+        // otherwise remember this and discharge it on Enable/Resume.
         if (!config.Enabled)
         {
             return;
@@ -62,12 +63,13 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
 
         if (target.Method == PamTargetSystemMethod.Automatic)
         {
-            // OfferAsync re-checks can_offer and no-ops when it does not hold.
+            // OfferRotationCommand re-checks can_offer (including target Active and no active job) and no-ops
+            // silently when it no longer holds -- no need to duplicate that guard here.
             await _offerRotationCommand.OfferAsync(config.Id, PamRotationSource.AccessEnd);
             return;
         }
 
-        // A manual target has no access connector to offer a job to, so its rotation is pulled due now.
+        // Manual target: there is no daemon to offer a job to, so the obligation is pulled due immediately.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var toPersist = new PamRotationConfig
         {
@@ -75,13 +77,13 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
             OrganizationId = config.OrganizationId,
             CipherId = config.CipherId,
             TargetSystemId = config.TargetSystemId,
-            SealedData = config.SealedData,
-            WrappedKey = config.WrappedKey,
+            AccountIdentity = config.AccountIdentity,
+            TerminateSessions = config.TerminateSessions,
             ScheduleCron = config.ScheduleCron,
             RotateOnAccessEnd = config.RotateOnAccessEnd,
-            NextRotationDate = now,
+            NextRotationAt = now,
             Enabled = config.Enabled,
-            LastRotationDate = config.LastRotationDate,
+            LastRotationAt = config.LastRotationAt,
             CreationDate = config.CreationDate,
             RevisionDate = now,
         };
@@ -91,7 +93,7 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.ManualRotationDue,
-            OccurredDate = now,
+            OccurredAt = now,
             OrganizationId = config.OrganizationId,
             ActorId = null,
             CipherId = config.CipherId,

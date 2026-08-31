@@ -1,11 +1,17 @@
 ﻿using Bit.Core;
 using Bit.Core.Jobs;
-using Bitwarden.Server.Sdk.Features;
+using Bit.Core.Services;
 using Quartz;
 
 namespace Bit.Services.Pam.AccessConnector.Jobs;
 
-/// <summary>Quartz entry point for <see cref="IPamRotationSweepService"/>.</summary>
+/// <summary>
+/// Quartz entry point for <see cref="IPamRotationSweepService"/> (spec <c>RotationDue</c>, <c>JobTimesOut</c>,
+/// <c>DaemonConnectionDropsReleaseJobs</c>). Gated on <see cref="FeatureFlagKeys.PamAccessConnector"/> -- when the flag is
+/// off the job no-ops on its first line, matching every other rotation entry point (see
+/// <see cref="Bit.Services.Pam.AccessConnector.Commands.HandleAccessGrantEndedCommand"/>). Registered from
+/// <c>JobsHostedService</c> inside <c>#if !OSS</c>, since the sweep depends on commercial PAM commands.
+/// </summary>
 public class PamRotationSweepJob : BaseJob
 {
     private readonly IFeatureService _featureService;
