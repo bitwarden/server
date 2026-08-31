@@ -2466,7 +2466,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("LeaseNotBefore")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("OccurredAt")
+                    b.Property<DateTime>("OccurredDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
@@ -2511,7 +2511,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId", "OccurredAt", "Id")
+                    b.HasIndex("OrganizationId", "OccurredDate", "Id")
                         .IsDescending(false, true, true);
 
                     b.ToTable("AccessAuditEvent", (string)null);

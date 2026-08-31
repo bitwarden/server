@@ -12,7 +12,7 @@ namespace Bit.Pam.Models;
 /// </summary>
 public class AccessAuditEvent
 {
-    /// <summary>The stored row's identifier. Pairs with <see cref="OccurredAt"/> to form the paging cursor.</summary>
+    /// <summary>The stored row's identifier. Pairs with <see cref="OccurredDate"/> to form the paging cursor.</summary>
     public Guid Id { get; set; }
 
     public AccessAuditEventKind Kind { get; set; }
@@ -21,7 +21,7 @@ public class AccessAuditEvent
     /// <summary>Correlates an action's attempt/outcome pair; the trail read collapses events sharing this id into one entry.</summary>
     public Guid CorrelationId { get; set; }
 
-    public DateTime OccurredAt { get; set; }
+    public DateTime OccurredDate { get; set; }
     public Guid OrganizationId { get; set; }
     public Guid? ActorId { get; set; }
     public Guid? RequesterId { get; set; }

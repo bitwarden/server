@@ -33,7 +33,7 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
                 auditEvent.OrganizationId,
                 Kind = (byte)auditEvent.Kind,
                 Phase = (byte)auditEvent.Phase,
-                auditEvent.OccurredAt,
+                auditEvent.OccurredDate,
                 auditEvent.ActorId,
                 auditEvent.RequesterId,
                 auditEvent.CollectionId,
@@ -66,7 +66,7 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
         var parameters = new DynamicParameters();
         parameters.Add("@OrganizationId", organizationId, DbType.Guid);
         parameters.Add("@Since", since, DbType.DateTime2, null, 7);
-        parameters.Add("@BeforeOccurredAt", before?.OccurredAt, DbType.DateTime2, null, 7);
+        parameters.Add("@BeforeOccurredDate", before?.OccurredDate, DbType.DateTime2, null, 7);
         parameters.Add("@BeforeId", before?.Id, DbType.Guid);
         parameters.Add("@Take", take, DbType.Int32);
 
