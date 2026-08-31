@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Bit.Core.Platform.Mail.Mailer;
 
 namespace Bit.Core.Pam.Models.Mail.AccessRequestPending;
