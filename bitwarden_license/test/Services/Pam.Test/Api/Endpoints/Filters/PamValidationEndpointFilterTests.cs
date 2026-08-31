@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Models.Api;
 using Bit.Pam.Enums;
+using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 using Bit.Services.Pam.Api.Endpoints.Filters;
 using Bit.Services.Pam.Api.Models.Request;
-using Bit.Services.Pam.Rotation.Api.Models.Request;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Xunit;
@@ -57,7 +57,7 @@ public class PamValidationEndpointFilterTests
     // The rotation report enums are nullable for the same reason. [Required] alone would not catch an omitted
     // value on a non-nullable enum -- it only rejects null -- so the field would bind to whichever member is zero:
     // "the vault credential is still correct" for SyncState, "termination was never attempted" for
-    // SessionTermination. Both are the reassuring answer, reported for a daemon that said nothing.
+    // SessionTermination. Both are the reassuring answer, reported for an access connector that said nothing.
     [Fact]
     public async Task InvokeAsync_FailureReportWithoutSyncState_Returns400()
     {
@@ -122,7 +122,7 @@ public class PamValidationEndpointFilterTests
     public async Task InvokeAsync_TargetSystemRegistrationWithOutOfRangeKind_Returns400()
     {
         // Kind is optional rather than [Required], but an undefined member still needs rejecting: it would be
-        // stored as the connector the daemon is expected to rotate through.
+        // stored as the integration the access connector is expected to rotate through.
         var context = CreateContext(new RegisterTargetSystemRequestModel
         {
             Name = "db-prod",

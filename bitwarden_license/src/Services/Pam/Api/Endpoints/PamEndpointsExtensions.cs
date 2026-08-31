@@ -2,9 +2,10 @@
 using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
+using Bit.Services.Pam.AccessConnector.Api.Authorization;
+using Bit.Services.Pam.AccessConnector.Api.Endpoints;
+using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Filters;
-using Bit.Services.Pam.Rotation.Api.Authorization;
-using Bit.Services.Pam.Rotation.Api.Endpoints;
 
 namespace Bit.Services.Pam.Api.Endpoints;
 
@@ -22,45 +23,48 @@ public static class PamEndpointsExtensions
         endpoints.MapGroup("/organizations/{orgId:guid}/access-rules").WithPamDefaults().MapAccessRuleEndpoints();
         endpoints.MapGroup("/leases/ciphers/{id:guid}").WithPamDefaults().MapCipherLeaseEndpoints();
 
-        // Credential rotation -- admin fleet/config management.
-        var rotationAdmin = endpoints.MapGroup("/organizations/{orgId:guid}/rotation").WithPamRotationDefaults();
-        rotationAdmin.MapGroup("/daemons").MapRotationDaemonEndpoints();
-        rotationAdmin.MapGroup("/target-systems").MapRotationTargetSystemEndpoints();
-        rotationAdmin.MapGroup("/configs").MapRotationConfigEndpoints();
+        // Access connectors -- the admin surface. The connector fleet sits at the group root; rotation -- the target
+        // systems credentials are rotated on, and the per-credential configs -- hangs beneath it.
+        var connectorAdmin = endpoints.MapGroup("/organizations/{orgId:guid}/access-connectors")
+            .WithPamAccessConnectorAdminDefaults();
+        connectorAdmin.MapAccessConnectorEndpoints();
+        connectorAdmin.MapGroup("/rotation/target-systems").MapTargetSystemEndpoints();
+        connectorAdmin.MapGroup("/rotation/configs").MapRotationConfigEndpoints();
 
-        // Credential rotation -- the daemon-facing surface, reached by a machine credential rather than a user's.
-        var rotationDaemon = endpoints.MapGroup("/rotation").WithPamDaemonDefaults();
-        rotationDaemon.MapGroup("/daemon").MapRotationDaemonJobsEndpoints();
-        rotationDaemon.MapGroup("/jobs").MapRotationJobEndpoints();
-        rotationDaemon.MapGroup("/attempts").MapRotationAttemptEndpoints();
+        // Access connectors -- the connector-facing surface, reached by a machine credential rather than a user's.
+        var connector = endpoints.MapGroup("/access-connectors").WithPamAccessConnectorMachineDefaults();
+        connector.MapGroup("/rotation/jobs").MapRotationJobEndpoints();
+        connector.MapGroup("/rotation/attempts").MapRotationAttemptEndpoints();
     }
 
-    /// <summary>Applies the shared PAM endpoint chain with the surface's usual authorization policy and feature flag.</summary>
+    /// <summary>Applies the shared PAM endpoint chain with the surface's usual authorization policy and feature
+    /// flag.</summary>
     private static RouteGroupBuilder WithPamDefaults(this RouteGroupBuilder group) =>
         group.WithPamDefaults(Policies.Application, FeatureFlagKeys.Pam);
 
     /// <summary>
-    /// Rotation's admin surface: behind the rotation flag rather than the base PAM flag, and authorized in the
-    /// middleware by <see cref="ManageRotationRequirement"/> rather than in the handlers. Handlers and commands are
-    /// left with resource scoping only -- confirming an id reached by route belongs to the route organization.
+    /// The access connector's admin surface: behind the connector flag rather than the base PAM flag, and authorized
+    /// in the middleware by <see cref="ManageAccessConnectorRequirement"/> rather than in the handlers. Handlers and
+    /// commands are left with resource scoping only -- confirming an id reached by route belongs to the route
+    /// organization.
     /// </summary>
-    private static RouteGroupBuilder WithPamRotationDefaults(this RouteGroupBuilder group)
+    private static RouteGroupBuilder WithPamAccessConnectorAdminDefaults(this RouteGroupBuilder group)
     {
-        group.WithPamDefaults(Policies.Application, FeatureFlagKeys.PamRotation);
-        group.RequireAuthorization(new AuthorizeAttribute<ManageRotationRequirement>());
+        group.WithPamDefaults(Policies.Application, FeatureFlagKeys.PamAccessConnector);
+        group.RequireAuthorization(new AuthorizeAttribute<ManageAccessConnectorRequirement>());
         return group;
     }
 
     /// <summary>
-    /// Rotation's daemon-facing surface. These routes carry no {orgId} and no organization requirement: a daemon's
+    /// The connector-facing surface. These routes carry no {orgId} and no organization requirement: a connector's
     /// organization comes from its token, and the work queries scope every read and write to it.
     ///
     /// TODO(PM-39040): these routes belong behind the machine-credential policy, not the user-token
     /// <see cref="Policies.Application"/>. That policy — and the client type and API scope it asserts on — lands
-    /// with the daemon identity wiring, which must merge before the handlers below stop throwing.
+    /// with the connector identity wiring, which must merge before the handlers below stop throwing.
     /// </summary>
-    private static RouteGroupBuilder WithPamDaemonDefaults(this RouteGroupBuilder group) =>
-        group.WithPamDefaults(Policies.Application, FeatureFlagKeys.PamRotation);
+    private static RouteGroupBuilder WithPamAccessConnectorMachineDefaults(this RouteGroupBuilder group) =>
+        group.WithPamDefaults(Policies.Application, FeatureFlagKeys.PamAccessConnector);
 
     /// <summary>
     /// Applies the shared PAM endpoint chain to a group for the given authorization policy and feature flag. Order

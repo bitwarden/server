@@ -311,7 +311,7 @@ public static partial class FeatureFlagKeys
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
-    public const string PamRotation = "pm-42354-rotation-daemon";
+    public const string PamAccessConnector = "pm-42354-rotation-daemon";
 
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";

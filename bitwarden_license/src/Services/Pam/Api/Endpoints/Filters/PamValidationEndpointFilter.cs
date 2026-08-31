@@ -17,7 +17,7 @@ namespace Bit.Services.Pam.Api.Endpoints.Filters;
 public class PamValidationEndpointFilter : IEndpointFilter
 {
     // A prefix/suffix match rather than an exact one, so nested feature subtrees that mirror the same
-    // Api/Models/Request folder convention -- e.g. Rotation's Bit.Services.Pam.Rotation.Api.Models.Request --
+    // Api/Models/Request folder convention -- e.g. Rotation's Bit.Services.Pam.AccessConnector.Api.Models.Request --
     // are covered without this filter needing to know about every subtree by name.
     private const string RequestModelNamespacePrefix = "Bit.Services.Pam.";
     private const string RequestModelNamespaceSuffix = ".Api.Models.Request";

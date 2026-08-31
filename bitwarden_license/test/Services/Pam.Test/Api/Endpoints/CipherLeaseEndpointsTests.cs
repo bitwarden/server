@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Models.Api;
+using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
+using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
-using Bit.Services.Pam.Rotation.Api.Endpoints.Handlers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
@@ -30,10 +31,9 @@ public class CipherLeaseEndpointsTests
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
         builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
-        builder.Services.AddScoped<RotationDaemonEndpointsHandler>();
-        builder.Services.AddScoped<RotationTargetSystemEndpointsHandler>();
+        builder.Services.AddScoped<AccessConnectorEndpointsHandler>();
+        builder.Services.AddScoped<TargetSystemEndpointsHandler>();
         builder.Services.AddScoped<RotationConfigEndpointsHandler>();
-        builder.Services.AddScoped<RotationDaemonJobsEndpointsHandler>();
         builder.Services.AddScoped<RotationJobEndpointsHandler>();
         builder.Services.AddScoped<RotationAttemptEndpointsHandler>();
 

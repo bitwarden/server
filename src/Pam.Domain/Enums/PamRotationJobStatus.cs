@@ -10,7 +10,8 @@ public enum PamRotationJobStatus : byte
     /// <summary>Offered and claimable, or returned to claimable after a retry or a release.</summary>
     Pending = 0,
 
-    /// <summary>Held by <see cref="Entities.PamRotationJob.ClaimedByDaemonId"/> until it succeeds, is released, retried, or times out.</summary>
+    /// <summary>Held by <see cref="Entities.PamRotationJob.ClaimedByAccessConnectorId"/> until it succeeds, is
+    /// released, retried, or times out.</summary>
     Claimed = 1,
 
     /// <summary>An attempt against this job reported success.</summary>
@@ -19,6 +20,7 @@ public enum PamRotationJobStatus : byte
     /// <summary>Every attempt errored and the retry budget (<c>MaxAttempts</c>) is exhausted.</summary>
     Failed = 3,
 
-    /// <summary>Still Pending or Claimed past <see cref="Entities.PamRotationJob.ExpiresAt"/> with no successful attempt.</summary>
+    /// <summary>Still Pending or Claimed past <see cref="Entities.PamRotationJob.ExpiresAt"/> with no successful
+    /// attempt.</summary>
     TimedOut = 4,
 }
