@@ -5,7 +5,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Whether anyone holds this cipher's lease now, matching the singleton guard's scope.
+    -- Does *anyone* currently hold this cipher's lease, and when does it free? Same predicate and same cipher-only
+    -- scope as the singleton guard in [AccessLease_CreateFromApprovedRequest]; latest-ending first, because that
+    -- guard blocks while ANY in-window lease exists. See IAccessLeaseRepository.GetActiveByCipherIdAsync for why
+    -- both of those matter.
     SELECT TOP 1
         *
     FROM
