@@ -28,6 +28,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IApproverMailNotifier _approverMailNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
@@ -40,6 +41,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         IAccessLeaseRepository accessLeaseRepository,
         IAccessRequestRepository accessRequestRepository,
         IApproverInboxNotifier approverInboxNotifier,
+        IApproverMailNotifier approverMailNotifier,
         IRequesterNotifier requesterNotifier,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
@@ -51,6 +53,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         _accessLeaseRepository = accessLeaseRepository;
         _accessRequestRepository = accessRequestRepository;
         _approverInboxNotifier = approverInboxNotifier;
+        _approverMailNotifier = approverMailNotifier;
         _requesterNotifier = requesterNotifier;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
@@ -275,6 +278,9 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 
         // A new request just entered the pending queue; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(created.CollectionId);
+
+        // Alongside the push, not instead of it: the push only reaches an approver whose client is already open.
+        await _approverMailNotifier.NotifyPendingRequestAsync(created);
 
         // Tell the requester's other devices a new pending request exists, so "My requests" reflects it without a
         // manual refresh.
