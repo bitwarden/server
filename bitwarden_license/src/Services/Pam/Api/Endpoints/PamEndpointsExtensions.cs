@@ -1,7 +1,7 @@
-﻿using Bit.Api.AdminConsole.Authorization;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
+using Bit.OrganizationAuthorization;
 using Bit.Services.Pam.AccessConnector.Api.Authorization;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints;
