@@ -81,7 +81,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IBulkResendOrganizationInvitesCommand _bulkResendOrganizationInvitesCommand;
-    private readonly IAutomaticallyConfirmOrganizationUserCommand _automaticallyConfirmOrganizationUserCommand;
     private readonly IBulkAutomaticallyConfirmOrganizationUsersCommand _bulkAutomaticallyConfirmOrganizationUsersCommand;
     private readonly V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand _revokeOrganizationUserCommandVNext;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
@@ -124,7 +123,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
-        IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         IBulkAutomaticallyConfirmOrganizationUsersCommand bulkAutomaticallyConfirmOrganizationUsersCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
@@ -159,7 +157,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _bulkResendOrganizationInvitesCommand = bulkResendOrganizationInvitesCommand;
-        _automaticallyConfirmOrganizationUserCommand = automaticallyConfirmOrganizationUserCommand;
         _bulkAutomaticallyConfirmOrganizationUsersCommand = bulkAutomaticallyConfirmOrganizationUsersCommand;
         _revokeOrganizationUserCommandVNext = revokeOrganizationUserCommandVNext;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
@@ -858,25 +855,21 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPost("{id}/auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync([FromRoute] Guid orgId,
+    public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync(
+        [BindOrganization] Organization organization,
         [FromRoute] Guid id,
         [FromBody] OrganizationUserConfirmRequestModel model)
     {
-        var userId = _userService.GetProperUserId(User);
-
-        if (userId is null || userId.Value == Guid.Empty)
+        var request = new BulkAutomaticallyConfirmOrganizationUsersRequest
         {
-            return TypedResults.Unauthorized();
-        }
-        return Handle(await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
-            new AutomaticallyConfirmOrganizationUserRequest
-            {
-                OrganizationId = orgId,
-                OrganizationUserId = id,
-                Key = model.Key,
-                DefaultUserCollectionName = model.DefaultUserCollectionName,
-                PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
-            }));
+            Organization = organization,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
+            UsersToConfirm = [new BulkAutoConfirmUserEntry { OrganizationUserId = id, Key = model.Key }],
+        };
+
+        var result = (await _bulkAutomaticallyConfirmOrganizationUsersCommand.RunAsync(request)).Single();
+
+        return Handle(result.Result);
     }
 
     [HttpGet("pending-auto-confirm")]
