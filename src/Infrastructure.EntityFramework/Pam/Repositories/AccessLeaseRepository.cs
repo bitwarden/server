@@ -74,6 +74,22 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         return Mapper.Map<List<CoreEntity>>(leases);
     }
 
+    public async Task<CoreEntity?> GetActiveByCipherIdAsync(Guid cipherId, DateTime now)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Latest-ending, across all members: the singleton guard blocks while any in-window lease exists, so the slot
+        // frees when the last one does. Cipher-scoped to match that guard, which ignores CollectionId.
+        var lease = await dbContext.AccessLeases
+            .Where(l => l.CipherId == cipherId)
+            .Where(LiveAt(now))
+            .OrderByDescending(l => l.NotAfter)
+            .AsNoTracking()
+            .FirstOrDefaultAsync();
+        return Mapper.Map<CoreEntity>(lease);
+    }
+
     public async Task<ICollection<CoreEntity>> GetManyActiveByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now)
     {
         var ids = collectionIds.ToList();
