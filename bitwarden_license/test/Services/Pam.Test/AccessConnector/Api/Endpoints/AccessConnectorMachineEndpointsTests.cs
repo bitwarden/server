@@ -1,7 +1,13 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Context;
 using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
+using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 using Bit.Services.Pam.Api.Endpoints;
@@ -11,6 +17,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using NSubstitute;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -35,6 +44,7 @@ public class AccessConnectorMachineEndpointsTests
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
         builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
+        builder.Services.AddScoped<AuditEndpointsHandler>();
         builder.Services.AddScoped<AccessConnectorEndpointsHandler>();
         builder.Services.AddScoped<TargetSystemEndpointsHandler>();
         builder.Services.AddScoped<RotationConfigEndpointsHandler>();
@@ -107,16 +117,69 @@ public class AccessConnectorMachineEndpointsTests
     [Fact]
     public void MapPamEndpoints_DoesNotGateTheConnectorSurfaceOnAnOrganizationRequirement()
     {
-        // The access connector routes carry no {orgId}, and OrganizationRequirementHandler reads the id off the route —
-        // attaching an IOrganizationRequirement here would throw rather than deny. An access
-        // connector is scoped to its own
-        // organization by its token and by the queries underneath, so this holds once the machine-credential
-        // policy replaces the placeholder Policies.Application these routes carry today.
+        // The access connector routes carry no {orgId}, and OrganizationRequirementHandler reads the id off the
+        // route — attaching an IOrganizationRequirement here would throw rather than deny. The connector is
+        // authorized by Policies.PamRotationDaemon, and scoped to its own organization by the queries underneath.
         var endpoints = ConnectorEndpoints();
 
         Assert.NotEmpty(endpoints);
         Assert.All(endpoints, endpoint =>
-            Assert.DoesNotContain(RequirementsFor(endpoint), r => r is IOrganizationRequirement));
+        {
+            Assert.DoesNotContain(RequirementsFor(endpoint), r => r is IOrganizationRequirement);
+            Assert.Contains(endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),
+                data => data.Policy == Policies.PamRotationDaemon);
+        });
+    }
+
+    [Fact]
+    public async Task MapPamEndpoints_RunsHeartbeatFilterAheadOfEveryConnectorRoute()
+    {
+        // An access connector that reaches any of these routes is alive, so every one of them has to record the
+        // heartbeat -- miss one and a connector looks offline while it is working. AddEndpointFilter<T>() leaves no
+        // metadata to assert on, so drive the built endpoint instead: with no PamDaemonId the filter 404s, whereas
+        // an endpoint that had lost its filter would reach its handler and fail some other way.
+        var endpoints = ConnectorEndpoints();
+        Assert.NotEmpty(endpoints);
+
+        foreach (var endpoint in endpoints)
+        {
+            var httpContext = new DefaultHttpContext
+            {
+                RequestServices = ConnectorRequestServices(),
+                Response = { Body = new MemoryStream() },
+            };
+
+            await endpoint.RequestDelegate!(httpContext);
+
+            Assert.Equal(StatusCodes.Status404NotFound, httpContext.Response.StatusCode);
+        }
+    }
+
+    private static IServiceProvider ConnectorRequestServices()
+    {
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.PamDaemonId.Returns((Guid?)null);
+
+        var hostEnvironment = Substitute.For<IHostEnvironment>();
+        hostEnvironment.EnvironmentName.Returns(Environments.Production);
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(hostEnvironment);
+        services.AddSingleton(currentContext);
+        services.AddSingleton(Substitute.For<IPamDaemonRepository>());
+        services.AddSingleton(Substitute.For<IPamRotationJobRepository>());
+        services.AddSingleton(Substitute.For<IClaimRotationJobCommand>());
+        services.AddSingleton(Substitute.For<IGetRotationCipherQuery>());
+        services.AddSingleton(Substitute.For<ISubmitCipherUpdateCommand>());
+        services.AddSingleton(Substitute.For<IReportRotationSucceededCommand>());
+        services.AddSingleton(Substitute.For<IReportRotationFailedCommand>());
+        services.AddSingleton(Options.Create(new PamRotationOptions()));
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<RotationJobEndpointsHandler>();
+        services.AddScoped<RotationAttemptEndpointsHandler>();
+
+        return services.BuildServiceProvider();
     }
 
     [Fact]

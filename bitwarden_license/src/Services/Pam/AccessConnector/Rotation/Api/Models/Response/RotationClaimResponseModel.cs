@@ -1,4 +1,6 @@
-﻿using Bit.Pam.Enums;
+﻿using  Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
@@ -9,6 +11,24 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 /// </summary>
 public class RotationClaimResponseModel
 {
+    public RotationClaimResponseModel(PamRotationClaimResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        AttemptId = result.AttemptId!.Value;
+        JobId = result.JobId!.Value;
+        Source = result.Source!.Value;
+        TargetSystemId = result.TargetSystemId!.Value;
+        TargetSystemName = result.TargetSystemName!;
+        Kind = result.Kind;
+        var policy = PamPasswordPolicy.Parse(result.PasswordPolicy);
+        PasswordPolicy = policy is null ? null : new PamPasswordPolicyResponseModel(policy);
+        CipherId = result.CipherId!.Value;
+        AccountIdentity = result.AccountIdentity!;
+        TerminateSessions = result.TerminateSessions!.Value;
+        ExecuteBy = result.ExecuteBy!.Value.AsUtc();
+    }
+
     /// <summary>
     /// The attempt opened by this claim -- the id the access connector reports its outcome against.
     /// </summary>

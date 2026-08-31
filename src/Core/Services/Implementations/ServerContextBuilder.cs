@@ -15,6 +15,7 @@ public class ServerContextBuilder : IContextBuilder
     private const string _contextKindDevice = "device";
     private const string _contextKindOrganization = "organization";
     private const string _contextKindServiceAccount = "service-account";
+    private const string _contextKindPamRotationDaemon = "pam-rotation-daemon";
 
     private const string _contextAttributeClientVersion = "client-version";
     private const string _contextAttributeClientVersionIsPrerelease = "client-version-is-prerelease";
@@ -116,6 +117,32 @@ public class ServerContextBuilder : IContextBuilder
                         SetCommonContextAttributes(ldServiceAccount);
 
                         builder.Add(ldServiceAccount.Build());
+                    }
+                }
+                break;
+
+            case IdentityClientType.RotationDaemon:
+                {
+                    // A PAM rotation daemon's bearer token carries no device/user/organization claim recognized by
+                    // the other branches above, so without this case the multi-context builder ends up empty --
+                    // BoolVariation then receives an invalid Context and silently falls back to defaultValue (false)
+                    // for every flag, on every daemon-facing request. That looked like the PamRotation flag being
+                    // off even when explicitly enabled, so give the daemon its own context kind (mirrors
+                    // ServiceAccount's organization-keyed fallback).
+                    if (currentContext.PamDaemonId.HasValue)
+                    {
+                        var ldDaemon = LaunchDarkly.Sdk.Context.Builder(currentContext.PamDaemonId.Value.ToString());
+
+                        ldDaemon.Kind(_contextKindPamRotationDaemon);
+                        SetCommonContextAttributes(ldDaemon);
+
+                        if (currentContext.PamDaemonOrganizationId.HasValue)
+                        {
+                            ldDaemon.Set(_contextAttributeOrganizations,
+                                LdValue.ArrayOf(LdValue.Of(currentContext.PamDaemonOrganizationId.Value.ToString())));
+                        }
+
+                        builder.Add(ldDaemon.Build());
                     }
                 }
                 break;

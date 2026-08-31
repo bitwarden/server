@@ -13,6 +13,7 @@
     "api.installation",
     "internal",
     "api.secrets",
+    "api.pam.rotation",
     "api.send.access",
     "offline_access"
   ],
@@ -34,7 +35,8 @@
     "accesspam",
     "sub",
     "send_id",
-    "organization"
+    "organization",
+    "type"
   ],
   "grant_types_supported": [
     "authorization_code",

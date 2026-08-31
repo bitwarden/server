@@ -28,6 +28,12 @@ public class AccessAuditEventResponseModel : ResponseModel
         RequestId = auditEvent.AccessRequestId;
         LeaseId = auditEvent.AccessLeaseId;
         RuleId = auditEvent.AccessRuleId;
+        TargetSystemId = auditEvent.TargetSystemId;
+        DaemonId = auditEvent.DaemonId;
+        RotationConfigId = auditEvent.RotationConfigId;
+        RotationJobId = auditEvent.RotationJobId;
+        RotationSource = auditEvent.RotationSource;
+        SyncState = auditEvent.SyncState;
         Detail = auditEvent.Detail;
         LeaseNotBefore = auditEvent.LeaseNotBefore.AsUtc();
         LeaseNotAfter = auditEvent.LeaseNotAfter.AsUtc();
@@ -38,6 +44,8 @@ public class AccessAuditEventResponseModel : ResponseModel
         CipherName = auditEvent.CipherName;
         CollectionName = auditEvent.CollectionName;
         RuleName = auditEvent.RuleName;
+        TargetSystemName = auditEvent.TargetSystemName;
+        DaemonName = auditEvent.DaemonName;
         Automated = auditEvent.Automated;
         Incomplete = auditEvent.Phase == AccessAuditEventPhase.Attempt;
     }
@@ -59,6 +67,16 @@ public class AccessAuditEventResponseModel : ResponseModel
     public Guid? RequestId { get; }
     public Guid? LeaseId { get; }
     public Guid? RuleId { get; }
+    public Guid? TargetSystemId { get; }
+    public Guid? DaemonId { get; }
+    public Guid? RotationConfigId { get; }
+    public Guid? RotationJobId { get; }
+
+    /// <summary>What triggered the rotation job (scheduled, on-demand, or access-end); set on job/attempt-scoped events.</summary>
+    public PamRotationSource? RotationSource { get; }
+
+    /// <summary>Whether a failed attempt left the target system's password changed; set on failure/report events.</summary>
+    public PamRotationSyncState? SyncState { get; }
 
     /// <summary>An approver comment or a revoke reason, if the source carried one.</summary>
     public string? Detail { get; }
@@ -80,6 +98,12 @@ public class AccessAuditEventResponseModel : ResponseModel
 
     /// <summary>The access rule's name — plaintext org configuration (not vault data), for rule administration events.</summary>
     public string? RuleName { get; }
+
+    /// <summary>The target system's name — plaintext org configuration, snapshotted at write, for rotation/target events.</summary>
+    public string? TargetSystemName { get; }
+
+    /// <summary>The daemon's name — plaintext org configuration, snapshotted at write, for rotation/daemon events.</summary>
+    public string? DaemonName { get; }
 
     /// <summary>True when there is no human actor — a system / automatic event.</summary>
     public bool Automated { get; }

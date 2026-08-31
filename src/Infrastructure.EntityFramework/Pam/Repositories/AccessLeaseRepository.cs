@@ -2,11 +2,13 @@
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CoreEntity = Bit.Pam.Entities.AccessLease;
 using EfDecision = Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision;
+using EfLeaseExpirySweep = Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep;
 using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease;
 
 #nullable enable
@@ -289,6 +291,41 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         }
 
         await transaction.CommitAsync();
+    }
+
+    public async Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Expiry is derived rather than stored (a lease whose window closed on its own keeps Action = None forever),
+        // so there is no status flip to mark a lease as processed. The PamLeaseExpirySweep journal is the once-only
+        // arbiter instead: a lease is returned only by the run that journals it. No stronger isolation is needed --
+        // if two sweeps race past the read, the journal's primary key fails the loser's SaveChanges before it can
+        // return anything, which keeps at-most-once without serializable range locks across the whole lease table.
+        var due = await dbContext.AccessLeases
+            .Where(l => l.Action == AccessLeaseAction.None && l.NotAfter <= now &&
+                !dbContext.PamLeaseExpirySweeps.Any(s => s.AccessLeaseId == l.Id))
+            .Select(l => new PamExpiredLease
+            {
+                Id = l.Id,
+                OrganizationId = l.OrganizationId,
+                CollectionId = l.CollectionId,
+                CipherId = l.CipherId,
+                RequesterId = l.RequesterId,
+                NotBefore = l.NotBefore,
+                NotAfter = l.NotAfter,
+            })
+            .ToListAsync();
+
+        if (due.Count > 0)
+        {
+            dbContext.PamLeaseExpirySweeps.AddRange(due.Select(l =>
+                new EfLeaseExpirySweep { AccessLeaseId = l.Id, SweptDate = now }));
+            await dbContext.SaveChangesAsync();
+        }
+
+        return due;
     }
 
     /// <summary>
