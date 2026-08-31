@@ -93,12 +93,20 @@ public static class Saml2OptionsExtensions
 
         if (options.SPOptions.WantAssertionsSigned)
         {
-            var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
-            var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
-                options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
-            if (!isAssertionSigned)
+            // An encrypted assertion may arrive as <saml:EncryptedAssertion>.
+            // https://docs.oasis-open.org/security/saml/v2.0/saml-bindings-2.0-os.pdf :1555.
+            // In these cases, this boundary check should neither throw nor decrypt the assertion to check.
+            // Validation of encrypted assertions happens downstream in Sustainsys.Saml.
+            var isAssertionEncrypted = envelope["EncryptedAssertion", Saml2Namespaces.Saml2Name] != null;
+            if (!isAssertionEncrypted)
             {
-                throw new Exception("Cannot verify SAML assertion signature.");
+                var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
+                var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
+                    options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
+                if (!isAssertionSigned)
+                {
+                    throw new Exception("Cannot verify SAML assertion signature.");
+                }
             }
         }
 
