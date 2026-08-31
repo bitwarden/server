@@ -783,6 +783,35 @@ public class EventService : IEventService
         }
     }
 
+    public async Task LogPamAccessEventAsync(EventType type, PamAccessEventContext context)
+    {
+        var organizationAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(context.OrganizationId);
+        if (!CanUseEvents(organizationAbility))
+        {
+            return;
+        }
+
+        // A system-performed action (an automatic decision, a background sweep) has no request behind it to take an IP
+        // address or device type from, so it is attributed to the PAM system user and recorded as a server-side action
+        // instead of carrying a half-populated request context.
+        var e = context.SystemUser.HasValue
+            ? new EventMessage { SystemUser = context.SystemUser, DeviceType = DeviceType.Server }
+            : new EventMessage(_currentContext) { ActingUserId = context.ActingUserId };
+
+        e.Type = type;
+        e.OrganizationId = context.OrganizationId;
+        e.ProviderId = await GetProviderIdAsync(context.OrganizationId);
+        e.InstallationId = GetInstallationId();
+        e.UserId = context.UserId;
+        e.CipherId = context.CipherId;
+        e.CollectionId = context.CollectionId;
+        e.AccessRequestId = context.AccessRequestId;
+        e.AccessLeaseId = context.AccessLeaseId;
+        e.Date = context.Date;
+
+        await _eventWriteService.CreateAsync(e);
+    }
+
     private (Guid? actingUserId, Guid? serviceAccountId) MapIdentityClientType(
            Guid userId, IdentityClientType identityClientType)
     {
