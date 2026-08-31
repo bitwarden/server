@@ -2477,7 +2477,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("LeaseNotBefore")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime>("OccurredAt")
+                    b.Property<DateTime>("OccurredDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("OrganizationId")
@@ -2522,7 +2522,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId", "OccurredAt", "Id")
+                    b.HasIndex("OrganizationId", "OccurredDate", "Id")
                         .IsDescending(false, true, true);
 
                     b.ToTable("AccessAuditEvent", (string)null);

@@ -20,7 +20,7 @@ public class AccessAuditEvent
     public Guid CorrelationId { get; set; }
     public AccessAuditEventKind Kind { get; set; }
     public AccessAuditEventPhase Phase { get; set; }
-    public DateTime OccurredAt { get; set; }
+    public DateTime OccurredDate { get; set; }
 
     // Subject ids are deliberately not foreign keys, and neither are the rotation ids below: an audit event outlives
     // what it references.

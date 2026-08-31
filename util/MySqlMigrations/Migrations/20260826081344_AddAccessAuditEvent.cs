@@ -19,7 +19,7 @@ public partial class AddAccessAuditEvent : Migration
                 CorrelationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                 Kind = table.Column<byte>(type: "tinyint unsigned", nullable: false),
                 Phase = table.Column<byte>(type: "tinyint unsigned", nullable: false),
-                OccurredAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                OccurredDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 ActorId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                 RequesterId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                 CollectionId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
@@ -65,9 +65,9 @@ public partial class AddAccessAuditEvent : Migration
             .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateIndex(
-            name: "IX_AccessAuditEvent_OrganizationId_OccurredAt_Id",
+            name: "IX_AccessAuditEvent_OrganizationId_OccurredDate_Id",
             table: "AccessAuditEvent",
-            columns: new[] { "OrganizationId", "OccurredAt", "Id" },
+            columns: new[] { "OrganizationId", "OccurredDate", "Id" },
             descending: new[] { false, true, true });
     }
 

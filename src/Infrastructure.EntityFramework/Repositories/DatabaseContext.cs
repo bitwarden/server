@@ -222,11 +222,11 @@ public class DatabaseContext : DbContext
 
         // The audit store is append-only and self-contained. Only OrganizationId is a foreign key -- the subject ids
         // (actor, requester, cipher, collection, request, lease, rule) deliberately are not, so an event outlives what
-        // it references. The one index serves the only read: org-scoped, filtered on OccurredAt, newest first, a page
-        // at a time. Id is the third key because OccurredAt is not unique -- an action's Attempt and Outcome share a
+        // it references. The one index serves the only read: org-scoped, filtered on OccurredDate, newest first, a page
+        // at a time. Id is the third key because OccurredDate is not unique -- an action's Attempt and Outcome share a
         // timestamp, and a paged read needs a total order to not double-serve or skip a boundary row.
         eAccessAuditEvent.Property(p => p.Id).ValueGeneratedNever();
-        eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.OccurredAt, p.Id })
+        eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.OccurredDate, p.Id })
             .IsDescending(false, true, true);
 
         eOrganizationMemberBaseDetail.HasNoKey();
