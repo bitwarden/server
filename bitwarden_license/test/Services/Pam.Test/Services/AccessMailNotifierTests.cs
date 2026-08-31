@@ -32,7 +32,7 @@ public class AccessMailNotifierTests
 
     private static void EnableFlag(SutProvider<AccessMailNotifier> sutProvider) =>
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PamEmailNotifications)
+            .IsEnabled(FeatureFlagKeys.Pam)
             .Returns(true);
 
     [Theory, BitAutoData]

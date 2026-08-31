@@ -25,7 +25,7 @@ public class AccessMailNotifier : IAccessMailNotifier
         _logger = logger;
     }
 
-    private bool Enabled => _featureService.IsEnabled(FeatureFlagKeys.PamEmailNotifications);
+    private bool Enabled => _featureService.IsEnabled(FeatureFlagKeys.Pam);
 
     public async Task SendToUserAsync<TView>(Guid recipientUserId, Func<string, BaseMail<TView>> buildMail)
         where TView : BaseMailView

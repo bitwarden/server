@@ -320,17 +320,6 @@ public static partial class FeatureFlagKeys
     /// </summary>
     public const string PamDisableSqlAuditLogging = "pm-42480-disable-pam-sql-audit-logging";
 
-    /// <summary>
-    /// Gates every email PAM sends. Off — the absent-flag default, and the only state self-host ever sees — PAM
-    /// works exactly as it does without it, notifying through the SignalR refresh pushes alone.
-    ///
-    /// The <c>pm-00000</c> prefix is a placeholder — no LaunchDarkly flag exists under this key, so
-    /// <c>IsEnabled</c> returns the absent-flag default no matter what is toggled upstream, and mail stays off.
-    /// Substitute the notification ticket's number before the first caller merges; renaming after the flag is
-    /// created under the placeholder is a coordinated migration.
-    /// </summary>
-    public const string PamEmailNotifications = "pm-00000-pam-email-notifications";
-
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
 
