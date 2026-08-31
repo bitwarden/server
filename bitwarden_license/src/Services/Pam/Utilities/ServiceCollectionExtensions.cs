@@ -90,6 +90,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IAccessMailNotifier, AccessMailNotifier>();
         services.TryAddScoped<IApproverMailNotifier, ApproverMailNotifier>();
         services.TryAddScoped<IRequesterMailNotifier, RequesterMailNotifier>();
+        services.TryAddScoped<ILeaseRevokedMailNotifier, LeaseRevokedMailNotifier>();
 
         // Runs on every connector-facing route (see PamEndpointsExtensions.WithPamAccessConnectorMachineDefaults).
         // Its
