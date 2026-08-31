@@ -171,4 +171,14 @@ public enum EventType : int
     Send_Deleted_File = 2509,
     Send_Accessed_Text = 2510,
     Send_Accessed_File = 2511,
+
+    // PAM. These mirror a subset of AccessAuditEventKind: the PAM audit store remains the system of record for the
+    // full trail (including the Attempt half of each action), and only the Outcome of an action that an organization
+    // administrator would expect to find in the org event log is fanned out to here. Kinds without a value below are
+    // recorded in the PAM store only; add one here as each becomes worth surfacing organization-wide.
+    Pam_AccessRequest_Submitted = 2600,
+    Pam_AccessRequest_Approved = 2601,
+    Pam_AccessRequest_Denied = 2602,
+    Pam_AccessLease_Activated = 2603,
+    Pam_AccessLease_Revoked = 2604,
 }

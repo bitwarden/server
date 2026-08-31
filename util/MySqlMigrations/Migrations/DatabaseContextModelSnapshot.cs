@@ -1581,6 +1581,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("ActingUserId")
                         .HasColumnType("char(36)");
 
