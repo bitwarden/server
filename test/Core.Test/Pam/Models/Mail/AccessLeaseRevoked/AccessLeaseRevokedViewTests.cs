@@ -12,11 +12,7 @@ public class AccessLeaseRevokedViewTests
 {
     private static readonly Guid _requestId = Guid.Parse("6f1b2d84-0c37-4a91-8e55-1d7c93a4b208");
 
-    /// <summary>
-    /// <see cref="HandlebarMailRenderer" /> resolves both templates from the view's full class name and only fails
-    /// when a mail is actually sent, which no other spec in this feature reaches. This is the spec that catches a
-    /// misnamed or misplaced <c>.hbs</c>.
-    /// </summary>
+    /// <summary>The only spec that renders, so the only one that catches a misnamed or misplaced <c>.hbs</c>.</summary>
     [Fact]
     public async Task RenderAsync_SaysAccessWasRevokedAndPointsAtTheRequest()
     {
@@ -32,10 +28,7 @@ public class AccessLeaseRevokedViewTests
         }
     }
 
-    /// <summary>
-    /// A revoked lease is over. Copy that implies otherwise sends someone back to a "Start access" button that
-    /// will not help them, so the body has to say both that it cannot be resumed and what to do instead.
-    /// </summary>
+    /// <summary>A revoked lease is over; copy implying otherwise sends the holder to a button that cannot help.</summary>
     [Fact]
     public async Task RenderAsync_SaysTheAccessCannotBeResumedAndThatANewRequestIsNeeded()
     {
@@ -50,11 +43,7 @@ public class AccessLeaseRevokedViewTests
         }
     }
 
-    /// <summary>
-    /// The reason an operator gave is free text that may name the very system being accessed, so it is linked to
-    /// rather than rendered — the same call the request's reason and the approver's comment get. Nothing on the
-    /// view can carry it.
-    /// </summary>
+    /// <summary>The reason is free text that may name the system being accessed, so it is linked to, not rendered.</summary>
     [Fact]
     public void View_HasNoPlaceToCarryTheRevocationReason() =>
         Assert.DoesNotContain(
@@ -63,9 +52,6 @@ public class AccessLeaseRevokedViewTests
                 || property.Name.Contains("Comment", StringComparison.OrdinalIgnoreCase)
                 || property.Name.Contains("Detail", StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>
-    /// An organization name is member-supplied text, so the HTML body must escape it rather than interpolate it raw.
-    /// </summary>
     [Fact]
     public async Task RenderAsync_EscapesTheOrganizationNameInTheHtmlBody()
     {
@@ -93,10 +79,7 @@ public class AccessLeaseRevokedViewTests
         NotAfter = new DateTime(2026, 9, 1, 17, 0, 0, DateTimeKind.Utc),
     };
 
-    /// <summary>
-    /// Both templates wrap their copy across source lines, so a sentence these specs assert on is not contiguous in
-    /// the rendered output. Collapsing runs of whitespace keeps them about the wording rather than the line breaks.
-    /// </summary>
+    /// <summary>Both templates wrap copy across source lines; collapsing whitespace keeps the specs about wording.</summary>
     private static string Reflow(string body) => Regex.Replace(body, @"\s+", " ");
 
     private static Task<(string html, string txt)> RenderAsync(BaseMailView view) =>

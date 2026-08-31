@@ -16,7 +16,6 @@ using Xunit;
 
 namespace Bit.Services.Pam.Test.Services;
 
-[SutProviderCustomize]
 public class LeaseRevokedMailNotifierTests
 {
     private const string _vaultUrl = "https://vault.example.com/#";
@@ -39,12 +38,11 @@ public class LeaseRevokedMailNotifierTests
         Assert.Equal(_organizationName, mail.View.OrganizationName);
         Assert.Equal("1 Sep 2026 at 17:00 UTC", mail.View.ScheduledEnd);
         Assert.Equal($"{_vaultUrl}/pam/requests/{lease.AccessRequestId}", mail.View.Url);
+        // One message per recipient: the holder is never named alongside anyone else.
+        await sutProvider.GetDependency<IAccessMailNotifier>().DidNotReceiveWithAnyArgs()
+            .SendToUsersAsync(default!, (Func<string, BaseMail<AccessLeaseRevokedView>>)default!);
     }
 
-    /// <summary>
-    /// The point of the whole feature. A holder who ends their own access already knows, and a mail thirty seconds
-    /// behind their own click is what teaches people to filter the channel.
-    /// </summary>
     [Theory]
     [BitAutoData(AccessLeaseAction.Cancelled)]
     [BitAutoData(AccessLeaseAction.None)]
@@ -73,21 +71,6 @@ public class LeaseRevokedMailNotifierTests
         await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(default);
         await sutProvider.GetDependency<IAccessMailNotifier>().DidNotReceiveWithAnyArgs()
             .SendToUserAsync(default, (Func<string, BaseMail<AccessLeaseRevokedView>>)default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task NotifyLeaseEndedAsync_MailsTheHolderAndNobodyElse(AccessLease lease)
-    {
-        var sutProvider = Setup();
-        SetupOrganization(sutProvider, lease);
-        var sent = RecordMail(sutProvider);
-
-        await sutProvider.Sut.NotifyLeaseEndedAsync(lease, AccessLeaseAction.Revoked);
-
-        var (recipientId, _) = Assert.Single(sent);
-        Assert.Equal(lease.RequesterId, recipientId);
-        await sutProvider.GetDependency<IAccessMailNotifier>().DidNotReceiveWithAnyArgs()
-            .SendToUsersAsync(default!, (Func<string, BaseMail<AccessLeaseRevokedView>>)default!);
     }
 
     [Theory, BitAutoData]
