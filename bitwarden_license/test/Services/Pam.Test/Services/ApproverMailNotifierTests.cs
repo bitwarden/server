@@ -72,7 +72,7 @@ public class ApproverMailNotifierTests
         Assert.Equal(_organizationName, mail.View.OrganizationName);
         Assert.Equal("1 Sep 2026 at 08:30 UTC", mail.View.WindowStart);
         Assert.Equal("1 Sep 2026 at 17:00 UTC", mail.View.WindowEnd);
-        Assert.Equal($"{_vaultUrl}/privileged-controls/requests/{request.Id}", mail.View.Url);
+        Assert.Equal($"{_vaultUrl}/pam/requests/{request.Id}", mail.View.Url);
         Assert.Empty(recorder.Waiting);
     }
 
@@ -156,7 +156,7 @@ public class ApproverMailNotifierTests
         Assert.Equal(new[] { approverId }, recipients);
         Assert.Equal(ApproverMailNotifier.BurstThreshold + 1, collapsed.View.RequestCount);
         Assert.Equal(ApproverMailNotifier.BurstWindowMinutes, collapsed.View.WindowMinutes);
-        Assert.Equal($"{_vaultUrl}/privileged-controls/approvals", collapsed.View.Url);
+        Assert.Equal($"{_vaultUrl}/pam/approvals", collapsed.View.Url);
     }
 
     [Theory, BitAutoData]
