@@ -22,9 +22,9 @@ public interface IApproverMailNotifier
     /// the requester themselves — they may well manage it, but no one may decide their own request.
     /// </summary>
     /// <remarks>
-    /// One email per request at normal volume. Recipient count is otherwise irreducible — every request fans out to
-    /// every manager of the collection — so once an approver has taken more than the burst threshold inside one
-    /// window, the rest of that window collapses into a single "requests are waiting" message for them.
+    /// One email per request, always. Every request therefore fans out to every manager of the collection, which is
+    /// deliberate: an approval is time-critical, and a request that is quietly folded into a summary is one nobody
+    /// is told about individually.
     /// </remarks>
     Task NotifyPendingRequestAsync(AccessRequest request);
 }
