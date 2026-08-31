@@ -58,5 +58,22 @@ public class AccessAuditEvent
     [MaxLength(256)]
     public string? RuleName { get; set; }
 
+    // Rotation context. Like the subject ids above these are deliberately not foreign keys, and the target and
+    // daemon names are snapshotted so the row still reads once the rows they came from are gone.
+    public Guid? TargetSystemId { get; set; }
+
+    [MaxLength(200)]
+    public string? TargetSystemName { get; set; }
+
+    public Guid? DaemonId { get; set; }
+
+    [MaxLength(200)]
+    public string? DaemonName { get; set; }
+
+    public Guid? RotationConfigId { get; set; }
+    public Guid? RotationJobId { get; set; }
+    public PamRotationSource? RotationSource { get; set; }
+    public PamRotationSyncState? SyncState { get; set; }
+
     public virtual Organization? Organization { get; set; }
 }

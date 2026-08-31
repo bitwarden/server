@@ -1,5 +1,7 @@
-﻿using Bit.HttpExtensions;
+﻿using  Bit.HttpExtensions;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
@@ -10,9 +12,16 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 /// </summary>
 public class ClaimableRotationJobResponseModel : ResponseModel
 {
-    public ClaimableRotationJobResponseModel()
+    public ClaimableRotationJobResponseModel(PamClaimableJob job)
         : base("pamRotationJob")
     {
+        ArgumentNullException.ThrowIfNull(job);
+
+        JobId = job.Id;
+        Source = job.Source;
+        NextClaimableAt = job.NextClaimableAt.AsUtc();
+        ExpiresAt = job.ExpiresAt.AsUtc();
+        TargetSystemId = job.TargetSystemId;
     }
 
     /// <summary>
