@@ -23,6 +23,8 @@
     [ProjectId]              UNIQUEIDENTIFIER NULL,
     [GrantedServiceAccountId] UNIQUEIDENTIFIER NULL,
     [SendId]                 UNIQUEIDENTIFIER NULL,
+    [AccessRequestId]        UNIQUEIDENTIFIER NULL,
+    [AccessLeaseId]          UNIQUEIDENTIFIER NULL,
     CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
