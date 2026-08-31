@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
+using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
+using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
@@ -30,6 +32,11 @@ public class AccessRequestEndpointsTests
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
         builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
+        builder.Services.AddScoped<AccessConnectorEndpointsHandler>();
+        builder.Services.AddScoped<TargetSystemEndpointsHandler>();
+        builder.Services.AddScoped<RotationConfigEndpointsHandler>();
+        builder.Services.AddScoped<RotationJobEndpointsHandler>();
+        builder.Services.AddScoped<RotationAttemptEndpointsHandler>();
 
         var app = builder.Build();
         app.MapPamEndpoints();
