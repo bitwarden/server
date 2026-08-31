@@ -45,31 +45,22 @@ public class LeaseRevokedMailNotifierTests
     /// The point of the whole feature. A holder who ends their own access already knows, and a mail thirty seconds
     /// behind their own click is what teaches people to filter the channel.
     /// </summary>
-    [Theory, BitAutoData]
-    public async Task NotifyLeaseEndedAsync_Cancelled_ReadsNothingAndSendsNothing(AccessLease lease)
+    [Theory]
+    [BitAutoData(AccessLeaseAction.Cancelled)]
+    [BitAutoData(AccessLeaseAction.None)]
+    public async Task NotifyLeaseEndedAsync_NotRevoked_ReadsNothingAndSendsNothing(
+        AccessLeaseAction endAction, AccessLease lease)
     {
         var sutProvider = Setup();
         SetupOrganization(sutProvider, lease);
         var sent = RecordMail(sutProvider);
 
-        await sutProvider.Sut.NotifyLeaseEndedAsync(lease, AccessLeaseAction.Cancelled);
+        await sutProvider.Sut.NotifyLeaseEndedAsync(lease, endAction);
 
         Assert.Empty(sent);
         await sutProvider.GetDependency<IAccessMailNotifier>().DidNotReceiveWithAnyArgs()
             .SendToUserAsync(default, (Func<string, BaseMail<AccessLeaseRevokedView>>)default!);
         await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task NotifyLeaseEndedAsync_NoEndRecorded_SendsNothing(AccessLease lease)
-    {
-        var sutProvider = Setup();
-        SetupOrganization(sutProvider, lease);
-        var sent = RecordMail(sutProvider);
-
-        await sutProvider.Sut.NotifyLeaseEndedAsync(lease, AccessLeaseAction.None);
-
-        Assert.Empty(sent);
     }
 
     [Theory, BitAutoData]
