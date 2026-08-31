@@ -15,6 +15,7 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
     private readonly ICipherRepository _cipherRepository;
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
+    private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
     private readonly ICurrentContext _currentContext;
     private readonly TimeProvider _timeProvider;
 
@@ -22,12 +23,14 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
         ICipherRepository cipherRepository,
         IGoverningRuleResolver resolver,
         IAccessLeaseRepository accessLeaseRepository,
+        ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
         ICurrentContext currentContext,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
         _resolver = resolver;
         _accessLeaseRepository = accessLeaseRepository;
+        _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
         _currentContext = currentContext;
         _timeProvider = timeProvider;
     }
@@ -47,6 +50,8 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
         // a request that SubmitAccessRequestCommand would reject. This mirrors the active-lease guard there.
         if (await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
         {
+            // CanStartLease keeps its default true here rather than being computed: the client reveals the credential
+            // instead of rendering a request form, so the field has nothing to qualify. Skips the extra query too.
             return new AccessPreCheckResult(AccessApprovalMode.Automatic, HasActiveLease: true);
         }
 
@@ -63,10 +68,22 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
         var defaultDurationSeconds =
             LeaseDurationBounds.EffectiveDefault(governingRule?.DefaultLeaseDurationSeconds, maxDurationSeconds);
 
+        // Whether a lease could actually be started right now — the spec's RuleAllowsLease. A hint only: the mint
+        // procedure's UPDLOCK/HOLDLOCK range lock is authoritative and re-checks this at start.
+        //
+        // The !applies short-circuit is the point, not an optimization. A member with an ungated or
+        // non-single_active_lease path to the cipher is unconstrained and must read as startable however many leases
+        // are live, per the same union/OR rule that governs gating — and the extra query stays off that path.
+        var blockingLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, cipherId)
+            ? await _accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now)
+            : null;
+
         return new AccessPreCheckResult(
             approvalMode,
             HasActiveLease: false,
             DefaultDurationSeconds: defaultDurationSeconds,
-            MaxDurationSeconds: maxDurationSeconds);
+            MaxDurationSeconds: maxDurationSeconds,
+            CanStartLease: blockingLease is null,
+            SlotFreesAt: blockingLease?.NotAfter);
     }
 }

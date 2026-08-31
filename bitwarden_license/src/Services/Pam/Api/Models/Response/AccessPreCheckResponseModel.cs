@@ -30,6 +30,11 @@ public class AccessPreCheckResponseModel : ResponseModel
         HasActiveLease = result.HasActiveLease;
         DefaultDurationSeconds = result.DefaultDurationSeconds;
         MaxDurationSeconds = result.MaxDurationSeconds;
+        CanStartLease = result.CanStartLease;
+        // AsUtc for the reason every other PAM timestamp does it: Dapper hands back Kind.Unspecified, which
+        // serializes without a designator and is then read as local time. Here that would hand the requester a retry
+        // time off by their UTC offset — for anyone east of UTC, one already in the past.
+        SlotFreesAt = result.SlotFreesAt.AsUtc();
     }
 
     public Guid CipherId { get; set; }
@@ -57,4 +62,26 @@ public class AccessPreCheckResponseModel : ResponseModel
     /// submit enforces the same number.
     /// </summary>
     public int MaxDurationSeconds { get; set; }
+
+    /// <summary>
+    /// Whether access could be started right now, implementing the spec's <c>RuleAllowsLease</c>. False only when the
+    /// per-cipher single-active-lease constraint binds for this caller and another member holds the slot; a caller
+    /// with an ungated or non-singleton path to the cipher is unconstrained and reads true regardless.
+    ///
+    /// A current-state hint, re-checked for real at start — the request is still worth submitting, it just cannot be
+    /// activated until the slot frees. Clients that do not understand this field must treat its absence as true.
+    ///
+    /// Answers about <em>now</em>, and is reported for both approval modes: the singleton is re-checked at start
+    /// whichever path approved the request. A caller choosing a future window should weigh it accordingly — the slot
+    /// being taken now says nothing about that window.
+    /// </summary>
+    // Initialized true so the polarity holds on every construction path, including the parameterless
+    // (de)serialization constructor — a default-constructed model must not read as blocked.
+    public bool CanStartLease { get; set; } = true;
+
+    /// <summary>
+    /// When the lease currently holding the slot ends, so the requester can be given a retry time. Null whenever
+    /// <see cref="CanStartLease"/> is true. Carries no holder identity by design.
+    /// </summary>
+    public DateTime? SlotFreesAt { get; set; }
 }
