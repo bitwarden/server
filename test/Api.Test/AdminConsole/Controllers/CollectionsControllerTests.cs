@@ -4,6 +4,7 @@ using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Request;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.AdminConsole.Services;
@@ -233,6 +234,55 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<ICollectionRepository>()
             .GetByIdAsync(collection.Id)
             .Returns(collection);
+
+        _ = await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_WithNewAuthorizationEnabled_Success(Collection collection, UpdateCollectionRequestModel collectionRequest,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        collection.DefaultUserCollectionEmail = null;
+        Collection ExpectedCollection() => Arg.Is<Collection>(c => c.Id == collection.Id &&
+            c.Name == collectionRequest.Name && c.ExternalId == collectionRequest.ExternalId &&
+            c.OrganizationId == collection.OrganizationId);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(collection.Id)
+            .Returns(collection);
+
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AuthorizationServices)
+            .Returns(true);
+        sutProvider.GetDependency<ICollectionAuthorizationService>()
+            .AuthorizeUpdateAsync(collection.OrganizationId, collection.Id)
+            .Returns(true);
+
+        _ = await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest);
+
+        await sutProvider.GetDependency<IUpdateCollectionCommand>()
+            .Received(1)
+            .UpdateAsync(ExpectedCollection(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+        await sutProvider.GetDependency<IAuthorizationService>()
+            .DidNotReceive()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_WithNewAuthorizationEnabled_WithNoCollectionPermission_ThrowsNotFound(Collection collection,
+        UpdateCollectionRequestModel collectionRequest, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(collection.Id)
+            .Returns(collection);
+
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AuthorizationServices)
+            .Returns(true);
+        sutProvider.GetDependency<ICollectionAuthorizationService>()
+            .AuthorizeUpdateAsync(collection.OrganizationId, collection.Id)
+            .Returns(false);
 
         _ = await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest));
     }
