@@ -23,7 +23,7 @@ namespace Bit.Identity.IdentityServer.ClientProviders;
 /// </summary>
 internal class PamDaemonClientProvider : IClientProvider
 {
-    public const string DaemonPrefix = "daemon";
+    public const string AccessConnectorPrefix = "access-connector";
 
     /// <summary>
     /// How long a daemon's access token stays valid. Shorter than the one-hour platform default: a daemon polls
@@ -65,7 +65,7 @@ internal class PamDaemonClientProvider : IClientProvider
 
         return new Client
         {
-            ClientId = $"{DaemonPrefix}.{apiKeyId}",
+            ClientId = $"{AccessConnectorPrefix}.{apiKeyId}",
             RequireClientSecret = true,
             ClientSecrets = { new Secret(apiKey.ClientSecretHash) },
             AllowedScopes = apiKey.GetScopes(),
