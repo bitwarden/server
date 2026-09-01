@@ -29,4 +29,7 @@ public class TargetSystemEndpointsHandler
 
     public Task Put(Guid orgId, Guid id, UpdateTargetSystemRequestModel model)
         => throw new NotImplementedException();
+
+    public Task Delete(Guid orgId, Guid id)
+        => throw new NotImplementedException();
 }
