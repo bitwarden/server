@@ -28,4 +28,12 @@ public sealed record SeederDependencies(
     /// Set via <c>with</c> expression from UI-facing callers (e.g., CLI).
     /// </summary>
     public IProgress<SeederProgressEvent>? Progress { get; init; }
+
+    /// <summary>
+    /// Optional factory for the Stripe billing initializer. Required only by callers that opt into Stripe
+    /// billing; when null, any billing opt-in fails fast rather than seeding an org with no subscription.
+    /// A factory rather than a resolved instance so the billing DI graph is only constructed when a
+    /// command actually opts in, instead of on every command.
+    /// </summary>
+    public Func<IStripeBillingInitializer>? BillingInitializer { get; init; }
 }

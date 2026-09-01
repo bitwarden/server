@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\Core\Core.csproj" />
     <ProjectReference Include="..\ExceptionHandling\ExceptionHandling.csproj" />
     <ProjectReference Include="..\Invoicing\Invoicing.csproj" />
+    <ProjectReference Include="..\OrganizationAuthorization\OrganizationAuthorization.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1025,6 +1025,12 @@
           "Stripe.net": "[52.1.0, 52.1.0]"
         }
       },
+      "organizationauthorization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.8.0, )"
+        }
+      },
       "serilogfilelogging": {
         "type": "Project",
         "dependencies": {
@@ -1039,7 +1045,8 @@
         "dependencies": {
           "Core": "[2026.8.1, )",
           "ExceptionHandling": "[0.0.1, )",
-          "Invoicing": "[0.0.1, )"
+          "Invoicing": "[0.0.1, )",
+          "OrganizationAuthorization": "[0.0.1, )"
         }
       }
     }

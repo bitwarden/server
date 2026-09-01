@@ -43,6 +43,14 @@ internal static class TargetSystemEndpoints
             })
             .WithName("Pam_AccessConnectors_Rotation_TargetSystems_Put");
 
+        group.MapDelete("{id:guid}",
+            async (Guid orgId, Guid id, TargetSystemEndpointsHandler handler) =>
+            {
+                await handler.Delete(orgId, id);
+                return TypedResults.NoContent();
+            })
+            .WithName("Pam_AccessConnectors_Rotation_TargetSystems_Delete");
+
         return group;
     }
 }
