@@ -61,7 +61,7 @@ public class UpdateBillingAddressCommand(
                         City = billingAddress.City,
                         State = billingAddress.State
                     },
-                    Expand = ["subscriptions", "subscriptions.data.test_clock", "discount.source.coupon"]
+                    Expand = ["subscriptions", "subscriptions.data.test_clock", "subscriptions.data.discounts.source", "discount.source.coupon"]
                 });
 
         await EnableAutomaticTaxAsync(subscriber, customer);
@@ -84,7 +84,7 @@ public class UpdateBillingAddressCommand(
                 City = billingAddress.City,
                 State = billingAddress.State
             },
-            Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids", "discount.source.coupon"]
+            Expand = ["subscriptions", "subscriptions.data.test_clock", "subscriptions.data.discounts.source", "tax_ids", "discount.source.coupon"]
         };
 
         var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId, updateOptions);
@@ -151,23 +151,24 @@ public class UpdateBillingAddressCommand(
                 if (activeSchedule != null)
                 {
                     var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+                    // subscription.Customer may be a bare id here (it comes from the customer's
+                    // expanded subscriptions list); assign the already-fetched customer so the
+                    // shared builder can read the customer-level coupon.
+                    subscription.Customer = customer;
+
+                    DiscountExtensions.RequireScheduleDiscountExpansions(subscription, _logger);
+
                     var phases = new List<SubscriptionSchedulePhaseOptions>();
 
-                    for (var i = 0; i < activeSchedule.Phases.Count; i++)
+                    foreach (var phase in activeSchedule.Phases)
                     {
-                        var phase = activeSchedule.Phases[i];
-
                         if (phase.EndDate <= now)
                         {
                             continue;
                         }
 
-                        var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
-
-                        // Gate on StartDate > now, not !discountConsumed (false for the active
-                        // phase 0), so we never re-stack onto the current period. Use the fetched
-                        // customer (subscription.Customer may be a bare id here).
-                        var customerDiscount = phase.StartDate > now ? customer.Discount : null;
+                        var isFuture = phase.StartDate > now;
 
                         phases.Add(new SubscriptionSchedulePhaseOptions
                         {
@@ -176,12 +177,14 @@ public class UpdateBillingAddressCommand(
                             Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
                             {
                                 Price = item.PriceId,
-                                Quantity = item.Quantity
+                                Quantity = item.Quantity,
+                                Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
+                                    item.Discounts?.Select(d => d.CouponId) ?? [])
                             }).ToList(),
-                            Discounts = discountConsumed
-                                ? []
-                                : customerDiscount.MergeDiscountCouponIds(
-                                    phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
+                            Discounts = isFuture
+                                ? DiscountExtensions.BuildPhaseLevelDiscounts(
+                                    subscription, [], preservedCouponIds: phase.Discounts?.Select(d => d.CouponId))
+                                : DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
                             Metadata = phase.Metadata,
                             ProrationBehavior = phase.ProrationBehavior,
                             AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
