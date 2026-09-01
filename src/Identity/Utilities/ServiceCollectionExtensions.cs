@@ -79,7 +79,7 @@ public static class ServiceCollectionExtensions
         services.AddClientProvider<UserClientProvider>("user");
         services.AddClientProvider<OrganizationClientProvider>("organization");
         services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
-        services.AddClientProvider<PamDaemonClientProvider>(PamDaemonClientProvider.DaemonPrefix);
+        services.AddClientProvider<PamDaemonClientProvider>(PamDaemonClientProvider.AccessConnectorPrefix);
 
         if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
         {
