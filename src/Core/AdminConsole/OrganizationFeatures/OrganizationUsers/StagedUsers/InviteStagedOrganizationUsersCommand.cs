@@ -13,6 +13,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
+using None = OneOf.Types.None;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 
@@ -29,8 +30,7 @@ public class InviteStagedOrganizationUsersCommand(
     ILogger<InviteStagedOrganizationUsersCommand> logger)
     : IInviteStagedOrganizationUsersCommand
 {
-    public async Task<CommandResult<ICollection<OrganizationUser>>> RunAsync(
-        InviteStagedOrganizationUsersRequest request)
+    public async Task<CommandResult<ICollection<BulkCommandResult>>> RunAsync(InviteStagedOrganizationUsersRequest request)
     {
         var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
         if (organization is null)
@@ -39,39 +39,78 @@ public class InviteStagedOrganizationUsersCommand(
         }
 
         var requestedIds = request.OrganizationUserIds.Distinct().ToList();
-        var organizationUsers = (await organizationUserRepository.GetManyAsync(requestedIds)).ToList();
+        var organizationUsersById = (await organizationUserRepository.GetManyAsync(requestedIds))
+            .Where(organizationUser => organizationUser.OrganizationId == organization.Id)
+            .ToDictionary(organizationUser => organizationUser.Id);
 
-        if (organizationUsers.Count != requestedIds.Count ||
-            organizationUsers.Any(organizationUser => organizationUser.OrganizationId != organization.Id))
+        var (eligible, skipped) = Partition(requestedIds, organizationUsersById);
+
+        if (eligible.Count == 0)
         {
-            return new StagedOrganizationUserNotFound();
+            return BuildResults(requestedIds, skipped);
         }
 
-        if (organizationUsers.Any(organizationUser => organizationUser.Status != OrganizationUserStatusType.Staged))
-        {
-            return new OrganizationUserNotStaged();
-        }
-
-        var seatReservationError = await ReserveSeatsAsync(organization, organizationUsers.Count);
+        var seatReservationError = await ReserveSeatsAsync(organization, eligible.Count);
         if (seatReservationError is not null)
         {
             return seatReservationError;
         }
 
         // Password Manager seats first: the subscription rejects more Secrets Manager seats than it has PM seats.
-        var secretsManagerSeatReservationError = await ReserveSecretsManagerSeatsAsync(organization, organizationUsers);
+        var secretsManagerSeatReservationError = await ReserveSecretsManagerSeatsAsync(organization, eligible);
         if (secretsManagerSeatReservationError is not null)
         {
             return secretsManagerSeatReservationError;
         }
 
-        await InviteAsync(organizationUsers, organization, request.PerformedBy);
+        await InviteAsync(eligible, organization, request.PerformedBy);
 
-        await eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(organizationUser =>
+        await eventService.LogOrganizationUserEventsAsync(eligible.Select(organizationUser =>
             (organizationUser, EventType.OrganizationUser_Invited, (DateTime?)organizationUser.RevisionDate)));
 
-        return organizationUsers;
+        return BuildResults(requestedIds, skipped);
     }
+
+    /// <summary>
+    /// Splits the requested members into those that can be invited and those that cannot.
+    /// </summary>
+    /// <remarks>
+    /// Ineligible members are reported per row instead of failing the request, so one member who was promoted
+    /// or removed since the admin loaded the members grid cannot block everyone else's invitation. Seat
+    /// expansion stays all-or-nothing because it is reserved once for the whole eligible set.
+    /// </remarks>
+    private static (List<OrganizationUser> Eligible, Dictionary<Guid, Error> Skipped) Partition(
+        List<Guid> requestedIds,
+        Dictionary<Guid, OrganizationUser> organizationUsersById)
+    {
+        var eligible = new List<OrganizationUser>();
+        var skipped = new Dictionary<Guid, Error>();
+
+        foreach (var requestedId in requestedIds)
+        {
+            if (!organizationUsersById.TryGetValue(requestedId, out var organizationUser))
+            {
+                skipped[requestedId] = new StagedOrganizationUserNotFound();
+            }
+            else if (organizationUser.Status != OrganizationUserStatusType.Staged)
+            {
+                skipped[requestedId] = new OrganizationUserNotStaged();
+            }
+            else
+            {
+                eligible.Add(organizationUser);
+            }
+        }
+
+        return (eligible, skipped);
+    }
+
+    private static List<BulkCommandResult> BuildResults(List<Guid> requestedIds, Dictionary<Guid, Error> skipped)
+        => requestedIds
+            .Select(requestedId => new BulkCommandResult(requestedId, skipped.TryGetValue(requestedId, out var error)
+                ? new CommandResult(error)
+                : new CommandResult(new None())))
+            .ToList();
 
     /// <summary>
     /// Moves each row to Invited and emails the invitations. A send failure restores every row to staged so the

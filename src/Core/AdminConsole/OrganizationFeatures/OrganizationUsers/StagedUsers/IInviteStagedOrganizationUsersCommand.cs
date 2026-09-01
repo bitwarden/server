@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
@@ -14,12 +13,14 @@ public interface IInviteStagedOrganizationUsersCommand
     /// leaving their role, collection access, group membership, and Secrets Manager access as provisioned.
     /// </summary>
     /// <remarks>
-    /// The batch is all-or-nothing: if any member is missing, belongs to another organization, or is not
-    /// staged, nothing is changed.
+    /// Members that are missing, belong to another organization, or are no longer staged are skipped and
+    /// reported individually rather than failing the request. Seat expansion remains all-or-nothing because
+    /// seats are reserved once for the whole eligible set.
     /// </remarks>
     /// <param name="request">The organization, the staged members to invite, and the inviting administrator.</param>
     /// <returns>
-    /// The invited <see cref="OrganizationUser"/> rows, or an error if validation fails or no seats could be reserved.
+    /// A per-member result for every requested id, or an error if the organization is missing or no seats
+    /// could be reserved.
     /// </returns>
-    Task<CommandResult<ICollection<OrganizationUser>>> RunAsync(InviteStagedOrganizationUsersRequest request);
+    Task<CommandResult<ICollection<BulkCommandResult>>> RunAsync(InviteStagedOrganizationUsersRequest request);
 }

@@ -6,7 +6,7 @@ public record OrganizationNotFound()
     : NotFoundError("Organization not found.");
 
 public record StagedOrganizationUserNotFound()
-    : NotFoundError("One or more organization members could not be found.");
+    : NotFoundError("Member not found.");
 
 public record OrganizationUserNotStaged()
     : BadRequestError("Only staged members can be sent an invitation.");

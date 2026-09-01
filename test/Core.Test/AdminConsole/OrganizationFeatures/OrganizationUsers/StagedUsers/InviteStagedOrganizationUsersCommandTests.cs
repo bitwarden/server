@@ -3,6 +3,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
+using Bit.Core.AdminConsole.Utilities.v2;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
@@ -94,13 +96,16 @@ public class InviteStagedOrganizationUsersCommandTests
         var result = await sutProvider.Sut.RunAsync(request);
 
         // Rows are updated in place: SCIM and Directory Connector key off Id and ExternalId.
-        Assert.Equal(originalIds, result.AsSuccess.Select(organizationUser => organizationUser.Id));
-        Assert.Equal(originalExternalIds, result.AsSuccess.Select(organizationUser => organizationUser.ExternalId));
-        Assert.All(result.AsSuccess, organizationUser =>
+        Assert.Equal(originalIds, organizationUsers.Select(organizationUser => organizationUser.Id));
+        Assert.Equal(originalExternalIds, organizationUsers.Select(organizationUser => organizationUser.ExternalId));
+        Assert.All(organizationUsers, organizationUser =>
         {
             Assert.Equal(now.UtcDateTime, organizationUser.RevisionDate);
             Assert.Null(organizationUser.UserId);
         });
+
+        Assert.Equal(originalIds, result.AsSuccess.Select(memberResult => memberResult.Id));
+        Assert.All(result.AsSuccess, memberResult => Assert.True(memberResult.Result.IsSuccess));
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -240,7 +245,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_WhenAnyMemberIsMissing_ReturnsNotFoundAndChangesNothing(
+    public async Task RunAsync_WhenAMemberIsMissing_SkipsItAndInvitesTheRest(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy, Guid missingId)
     {
         var sutProvider = GetSutProvider();
@@ -254,24 +259,23 @@ public class InviteStagedOrganizationUsersCommandTests
 
         var result = await sutProvider.Sut.RunAsync(request);
 
-        Assert.True(result.IsError);
-        Assert.IsType<StagedOrganizationUserNotFound>(result.AsError);
-        await AssertNothingHappenedAsync(sutProvider);
+        AssertSkipped<StagedOrganizationUserNotFound>(result, missingId);
+        AssertInvited(result, organizationUsers);
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_WhenAnyMemberBelongsToAnotherOrganization_ReturnsNotFound(
+    public async Task RunAsync_WhenAMemberBelongsToAnotherOrganization_SkipsItAndInvitesTheRest(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy, Guid otherOrganizationId)
     {
         var sutProvider = GetSutProvider();
         var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
-        organizationUsers[^1].OrganizationId = otherOrganizationId;
+        var foreignUser = organizationUsers[^1];
+        foreignUser.OrganizationId = otherOrganizationId;
 
         var result = await sutProvider.Sut.RunAsync(request);
 
-        Assert.True(result.IsError);
-        Assert.IsType<StagedOrganizationUserNotFound>(result.AsError);
-        await AssertNothingHappenedAsync(sutProvider);
+        AssertSkipped<StagedOrganizationUserNotFound>(result, foreignUser.Id);
+        AssertInvited(result, organizationUsers.Except([foreignUser]).ToList());
     }
 
     [Theory]
@@ -279,18 +283,40 @@ public class InviteStagedOrganizationUsersCommandTests
     [BitAutoData(OrganizationUserStatusType.Accepted)]
     [BitAutoData(OrganizationUserStatusType.Confirmed)]
     [BitAutoData(OrganizationUserStatusType.Revoked)]
-    public async Task RunAsync_WhenAnyMemberIsNotStaged_ReturnsErrorAndChangesNothing(
+    public async Task RunAsync_WhenAMemberIsNoLongerStaged_SkipsItAndInvitesTheRest(
         OrganizationUserStatusType status,
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
         var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
-        organizationUsers[^1].Status = status;
+        var promotedUser = organizationUsers[^1];
+        promotedUser.Status = status;
 
         var result = await sutProvider.Sut.RunAsync(request);
 
-        Assert.True(result.IsError);
-        Assert.IsType<OrganizationUserNotStaged>(result.AsError);
+        AssertSkipped<OrganizationUserNotStaged>(result, promotedUser.Id);
+        AssertInvited(result, organizationUsers.Except([promotedUser]).ToList());
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    public async Task RunAsync_WhenNoMemberIsStaged_ReportsEveryRowAndChangesNothing(
+        OrganizationUserStatusType status,
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
+        foreach (var organizationUser in organizationUsers)
+        {
+            organizationUser.Status = status;
+        }
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.All(result.AsSuccess, memberResult =>
+            Assert.IsType<OrganizationUserNotStaged>(memberResult.Result.AsError));
         await AssertNothingHappenedAsync(sutProvider);
     }
 
@@ -416,6 +442,27 @@ public class InviteStagedOrganizationUsersCommandTests
         Assert.All(organizationUsers, organizationUser =>
             Assert.Equal(OrganizationUserStatusType.Staged, organizationUser.Status));
         await AssertNothingHappenedAsync(sutProvider);
+    }
+
+    /// <summary>Asserts the request succeeded overall but reported <typeparamref name="TError"/> for one member.</summary>
+    private static void AssertSkipped<TError>(
+        CommandResult<ICollection<BulkCommandResult>> result, Guid skippedId) where TError : Error
+    {
+        Assert.True(result.IsSuccess);
+        var skipped = Assert.Single(result.AsSuccess, memberResult => memberResult.Id == skippedId);
+        Assert.IsType<TError>(skipped.Result.AsError);
+    }
+
+    /// <summary>Asserts every member in <paramref name="expected"/> was invited and reported without an error.</summary>
+    private static void AssertInvited(
+        CommandResult<ICollection<BulkCommandResult>> result, ICollection<OrganizationUser> expected)
+    {
+        Assert.All(expected, organizationUser =>
+        {
+            Assert.Equal(OrganizationUserStatusType.Invited, organizationUser.Status);
+            var invited = Assert.Single(result.AsSuccess, memberResult => memberResult.Id == organizationUser.Id);
+            Assert.True(invited.Result.IsSuccess);
+        });
     }
 
     private static async Task AssertNothingHappenedAsync(SutProvider<InviteStagedOrganizationUsersCommand> sutProvider)

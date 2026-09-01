@@ -1,7 +1,10 @@
 ﻿using System.Net;
+using System.Net.Http.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -23,6 +26,8 @@ namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 /// Covers the members-grid "Send invite" row action, which promotes Staged members to Invited without
 /// touching their access. Seat expansion and the revert-on-send-failure path only hold together across the
 /// command, the repositories and the billing plumbing, so they are exercised here rather than in unit tests.
+///
+/// Members that are no longer staged are reported per row; only seat expansion fails the whole request.
 /// </summary>
 public class OrganizationUsersControllerSendInviteToStagedUsersTests
     : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
@@ -82,7 +87,9 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
 
         var response = await SendInviteAsync(staged.Select(member => member.Id));
 
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var results = await ReadResultsAsync(response);
+        Assert.All(results, result => Assert.Empty(result.Error));
 
         var promoted = await _organizationUserRepository.GetManyAsync(staged.Select(member => member.Id).ToList());
         Assert.All(promoted, member => Assert.Equal(OrganizationUserStatusType.Invited, member.Status));
@@ -107,7 +114,7 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
 
         var response = await SendInviteAsync(staged.Select(member => member.Id));
 
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var organization = await _organizationRepository.GetByIdAsync(_organization.Id);
         Assert.NotNull(organization);
@@ -145,8 +152,9 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
     [Fact]
     public async Task SendInvite_WhenTheAutoscaleLimitCannotCoverEveryMember_LeavesThemAllStaged()
     {
-        // Room to autoscale by one, but two members were selected. The row action is all-or-nothing, and the
-        // only thing enforcing the cap is AutoAddSeatsAsync itself, so this has to run against the real one.
+        // Room to autoscale by one, but two members were selected. Seats are reserved once for the whole
+        // eligible set, and the only thing enforcing the cap is AutoAddSeatsAsync itself, so this has to run
+        // against the real one.
         await SetSeatsAsync(seats: 1, maxAutoscaleSeats: 2);
         var staged = await StageMembersAsync(2);
 
@@ -165,7 +173,7 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
     }
 
     [Fact]
-    public async Task SendInvite_WhenAnyMemberIsNotStaged_LeavesTheWholeBatchAlone()
+    public async Task SendInvite_WhenAMemberIsNoLongerStaged_SkipsItAndInvitesTheRest()
     {
         var staged = await StageMembersAsync(1);
         var (_, confirmed) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
@@ -173,17 +181,25 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
 
         var response = await SendInviteAsync([staged[0].Id, confirmed.Id]);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var results = await ReadResultsAsync(response);
+        Assert.Empty(Assert.Single(results, result => result.Id == staged[0].Id).Error);
+        Assert.NotEmpty(Assert.Single(results, result => result.Id == confirmed.Id).Error);
 
-        var untouched = await _organizationUserRepository.GetByIdAsync(staged[0].Id);
+        var promoted = await _organizationUserRepository.GetByIdAsync(staged[0].Id);
+        Assert.NotNull(promoted);
+        Assert.Equal(OrganizationUserStatusType.Invited, promoted.Status);
+
+        var untouched = await _organizationUserRepository.GetByIdAsync(confirmed.Id);
         Assert.NotNull(untouched);
-        Assert.Equal(OrganizationUserStatusType.Staged, untouched.Status);
+        Assert.Equal(OrganizationUserStatusType.Confirmed, untouched.Status);
 
-        await _sendOrganizationInvitesCommand.DidNotReceive().SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+        await _sendOrganizationInvitesCommand.Received(1).SendInvitesAsync(
+            Arg.Is<SendInvitesRequest>(request => request.Users.Length == 1));
     }
 
     [Fact]
-    public async Task SendInvite_WhenAMemberBelongsToAnotherOrganization_ReturnsNotFound()
+    public async Task SendInvite_WhenAMemberBelongsToAnotherOrganization_ReportsItWithoutTouchingIt()
     {
         var otherOwnerEmail = $"staged-send-invite-other-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(otherOwnerEmail);
@@ -196,11 +212,23 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
 
         var response = await SendInviteAsync([outsider.Id]);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var results = await ReadResultsAsync(response);
+        Assert.NotEmpty(Assert.Single(results, result => result.Id == outsider.Id).Error);
 
         var untouched = await _organizationUserRepository.GetByIdAsync(outsider.Id);
         Assert.NotNull(untouched);
         Assert.Equal(OrganizationUserStatusType.Staged, untouched.Status);
+
+        await _sendOrganizationInvitesCommand.DidNotReceive().SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+    }
+
+    private static async Task<List<OrganizationUserBulkResponseModel>> ReadResultsAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content
+            .ReadFromJsonAsync<ListResponseModel<OrganizationUserBulkResponseModel>>();
+        Assert.NotNull(body);
+        return body.Data.ToList();
     }
 
     private Task<HttpResponseMessage> SendInviteAsync(IEnumerable<Guid> organizationUserIds) =>
