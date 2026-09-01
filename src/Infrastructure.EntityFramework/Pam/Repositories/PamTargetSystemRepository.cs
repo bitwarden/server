@@ -27,4 +27,36 @@ public class PamTargetSystemRepository : Repository<CoreEntity, EfModel, Guid>, 
             .ToListAsync();
         return Mapper.Map<List<CoreEntity>>(targets);
     }
+
+    /// <remarks>
+    /// Mirrors PamTargetSystem_DeleteWithAssignments. The assignment -> target FK is NO ACTION, so the assignments
+    /// go before the target row; a rotation config naming the target refuses the delete instead of cascading, since
+    /// it is the configuration for a credential rather than an edge between two rows.
+    /// </remarks>
+    public async Task<bool> DeleteWithAssignmentsAsync(Guid targetSystemId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Serializable so the config re-check and the deletes are one indivisible step: a config created between
+        // them would otherwise be left naming a target that no longer exists.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable);
+
+        var hasConfig = await dbContext.PamRotationConfigs.AnyAsync(c => c.TargetSystemId == targetSystemId);
+        if (hasConfig)
+        {
+            await transaction.RollbackAsync();
+            return false;
+        }
+
+        await dbContext.PamDaemonTargetAssignments
+            .Where(a => a.TargetSystemId == targetSystemId)
+            .ExecuteDeleteAsync();
+
+        await dbContext.PamTargetSystems.Where(t => t.Id == targetSystemId).ExecuteDeleteAsync();
+
+        await transaction.CommitAsync();
+        return true;
+    }
 }

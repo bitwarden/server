@@ -30,4 +30,15 @@ public class PamTargetSystemRepository : Repository<PamTargetSystem, Guid>, IPam
 
         return results.ToList();
     }
+
+    public async Task<bool> DeleteWithAssignmentsAsync(Guid targetSystemId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var outcome = await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[PamTargetSystem_DeleteWithAssignments]",
+            new { Id = targetSystemId },
+            commandType: CommandType.StoredProcedure);
+
+        return outcome == 1;
+    }
 }
