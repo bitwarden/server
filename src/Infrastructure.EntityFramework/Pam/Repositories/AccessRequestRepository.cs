@@ -265,12 +265,20 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
+        // A transaction is required so the claim below holds its row lock across both statements; without one each
+        // statement commits on its own and the lock is gone before the guarded update runs.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        await ClaimRequestRowAsync(dbContext, id);
+
         // No AccessDecision is written -- a cancellation is the requester acting on their own request, not an
         // approver verdict.
         await RetractableRequests(dbContext, id, now)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(r => r.Action, AccessRequestAction.Cancelled)
                 .SetProperty(r => r.ActionDate, now));
+
+        await transaction.CommitAsync();
     }
 
     public async Task CancelWithDecisionAsync(CoreEntity request, AccessDecision decision, DateTime now)
@@ -279,6 +287,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         var dbContext = GetDatabaseContext(scope);
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        await ClaimRequestRowAsync(dbContext, request.Id);
 
         // The decision is inserted only when the transition actually happened, so a no-op never orphans an
         // AccessDecision.
@@ -304,6 +314,36 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         await transaction.CommitAsync();
     }
+
+    /// <summary>
+    /// Takes the request row's write lock, so a retraction's probe for a produced lease cannot be evaluated before
+    /// the row is held. Both retraction writes below test lease existence with a subquery correlated to the captured
+    /// id rather than to the row being updated, which leaves the provider free to evaluate it as a start-up filter
+    /// ahead of touching AccessRequest at all -- and in that gap a concurrent
+    /// <see cref="Bit.Infrastructure.EntityFramework.Pam.Repositories.AccessLeaseRepository.CreateFromApprovedRequestAsync"/>
+    /// can mint and commit, leaving a Cancelled/Denied request holding a live lease. Access is governed by the lease
+    /// alone once it exists, so that combination hands the requester the credential they withdrew from.
+    /// </summary>
+    /// <remarks>
+    /// Activation claims the same row, so by the time the guarded update runs there are only two states: activation
+    /// has not claimed yet, and now blocks behind this transaction until it can, then fails its own CAS on Action; or
+    /// it committed first, and the probe sees the lease it minted. EF has no portable UPDLOCK hint, so the lock is
+    /// taken the only portable way -- by writing the row. The write is a no-op (Action is set to what it already is);
+    /// the lock is the point. Stands in for the <c>WITH (UPDLOCK, ROWLOCK)</c> read that AccessRequest_Cancel and
+    /// AccessRequest_CancelWithDecision use. Must run inside a transaction, or the lock is released before the
+    /// guarded update runs.
+    ///
+    /// It also has to stay a <em>separate statement</em> rather than being folded into the guard, which is what makes
+    /// this work on PostgreSQL. A single statement that blocks on a concurrently-updated row resumes under
+    /// ReadCommitted by re-checking the target row against the new version while its subqueries still run on the
+    /// original snapshot, so the guard would re-read Action but not the lease that appeared alongside it -- the
+    /// inconsistent snapshot the manual calls out for updating commands. Absorbing the block here means the guarded
+    /// update starts afterwards on a fresh snapshot, with the lease visible.
+    /// </remarks>
+    private static Task ClaimRequestRowAsync(DatabaseContext dbContext, Guid id)
+        => dbContext.AccessRequests
+            .Where(r => r.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Action, r => r.Action));
 
     /// <summary>
     /// The requests a retraction (requester cancel, or a manager's cancel-with-decision) may still settle: still open
