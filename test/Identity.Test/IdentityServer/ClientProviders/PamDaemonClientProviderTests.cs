@@ -119,7 +119,7 @@ public class PamDaemonClientProviderTests
         var client = await _sut.GetAsync(apiKeyId.ToString());
 
         Assert.NotNull(client);
-        Assert.Equal($"daemon.{apiKeyId}", client.ClientId);
+        Assert.Equal($"access-connector.{apiKeyId}", client.ClientId);
         Assert.True(client.RequireClientSecret);
         // The usage of this secret is tested in integration tests
         Assert.Single(client.ClientSecrets);
