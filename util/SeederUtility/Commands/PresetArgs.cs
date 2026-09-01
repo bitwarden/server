@@ -1,4 +1,5 @@
-﻿using CommandDotNet;
+﻿using Bit.Seeder.Options;
+using CommandDotNet;
 
 namespace Bit.SeederUtility.Commands;
 
@@ -37,6 +38,21 @@ public class PresetArgs : IArgumentModel
     [Option("kdf-iterations", Description = "KDF iteration count for all seeded users. Overrides the preset value if specified. Use 600000 for production-realistic e2e testing.")]
     public int? KdfIterations { get; set; }
 
+    [Option("stripe-billing", Description = "Create a real Stripe test-environment customer and subscription for the preset's organization. Requires a sk_test_ key and pricingUri; organization presets only.")]
+    public bool StripeBilling { get; set; }
+
+    [Option("skip-trial", Description = "Start the subscription active instead of trialing (charges the Stripe test card). Requires --stripe-billing.")]
+    public bool SkipTrial { get; set; }
+
+    [Option("trial-days", Description = "Trial length in days, 1-30 (default: 30). Requires --stripe-billing; not valid with --skip-trial.")]
+    public int? TrialDays { get; set; }
+
+    /// <summary>
+    /// Billing configuration for this run, or null when <c>--stripe-billing</c> was not requested.
+    /// </summary>
+    public StripeBillingOptions? ToStripeBillingOptions() =>
+        StripeBillingArgs.ToOptions(StripeBilling, SkipTrial, TrialDays);
+
     public void Validate()
     {
         if (!string.IsNullOrWhiteSpace(Output)
@@ -44,6 +60,9 @@ public class PresetArgs : IArgumentModel
         {
             throw new ArgumentException($"Unrecognized output format '{Output}'. Allowed: text, json.");
         }
+
+        // Before the --list short-circuit: `--list --trial-days 99` should not silently pass.
+        StripeBillingArgs.Validate(StripeBilling, SkipTrial, TrialDays);
 
         if (List)
         {

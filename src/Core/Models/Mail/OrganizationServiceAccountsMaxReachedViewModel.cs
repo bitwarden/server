@@ -3,8 +3,9 @@
 
 namespace Bit.Core.Models.Mail;
 
-public class OrganizationServiceAccountsMaxReachedViewModel
+public class OrganizationServiceAccountsMaxReachedViewModel : BaseMailModel
 {
     public int MaxServiceAccountsCount { get; set; }
     public string VaultSubscriptionUrl { get; set; }
+    public string OrganizationName { get; set; }
 }

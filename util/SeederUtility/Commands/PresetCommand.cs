@@ -25,6 +25,13 @@ public class PresetCommand
 
             if (IsIndividualPreset(args.Name!))
             {
+                if (args.StripeBilling)
+                {
+                    throw new ArgumentException(
+                        $"--stripe-billing is not supported for individual preset '{args.Name}'. " +
+                        "Only organization presets can be billed today; premium billing is a separate task.");
+                }
+
                 await RunIndividualPresetAsync(args);
             }
             else
@@ -46,7 +53,13 @@ public class PresetCommand
         await Console.Error.WriteLineAsync($"Seeding organization from preset '{args.Name}'...");
         var result = await ConsoleProgressReporter.RunWithProgressAsync(
             deps.ToDependencies(),
-            d => new OrganizationRecipe(d).SeedAsync(args.Name!, args.Password, args.KdfIterations, args.OrgName, args.OwnerEmail));
+            d => new OrganizationRecipe(d).SeedAsync(
+                args.Name!,
+                args.Password,
+                args.KdfIterations,
+                args.OrgName,
+                args.OwnerEmail,
+                stripeBilling: args.ToStripeBillingOptions()));
 
         ConsoleOutput.PrintRow("Organization", result.OrganizationId);
         if (result.OwnerEmail is not null)
@@ -62,6 +75,12 @@ public class PresetCommand
         ConsoleOutput.PrintCountRow("Groups", result.GroupsCount);
         ConsoleOutput.PrintCountRow("Collections", result.CollectionsCount);
         ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
+
+        if (args.StripeBilling)
+        {
+            ConsoleOutput.PrintRow("StripeCustomer", result.GatewayCustomerId);
+            ConsoleOutput.PrintRow("StripeSubscription", result.GatewaySubscriptionId);
+        }
 
         ConsoleOutput.PrintMangleMap(deps);
 

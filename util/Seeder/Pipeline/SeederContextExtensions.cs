@@ -3,6 +3,7 @@ using Bit.Core.Services;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Pipeline;
 
@@ -17,6 +18,9 @@ internal static class SeederContextExtensions
 
     internal static IManglerService GetMangler(this SeederContext context) =>
         context.Services.GetRequiredService<IManglerService>();
+
+    internal static ILogger<T>? GetLogger<T>(this SeederContext context) =>
+        context.Services.GetService<ILogger<T>>();
 
     internal static ISeedReader GetSeedReader(this SeederContext context) =>
         context.Services.GetRequiredService<ISeedReader>();

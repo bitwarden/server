@@ -7,6 +7,7 @@ using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.SeederUtility.Configuration;
 
@@ -41,8 +42,17 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal IAttachmentStorageService AttachmentStorageService { get; }
 
+    internal Func<IStripeBillingInitializer> BillingInitializer { get; }
+
+    internal ISeederLicenseSigner LicenseSigner { get; }
+
+    internal ILoggerFactory LoggerFactory { get; }
+
     internal SeederDependencies ToDependencies()
-        => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService);
+        => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService, LicenseSigner, LoggerFactory)
+        {
+            BillingInitializer = BillingInitializer,
+        };
 
     private readonly ServiceProvider _provider;
 
@@ -59,6 +69,14 @@ internal sealed class SeederServiceScope : IDisposable
         Mangler = sp.GetRequiredService<IManglerService>();
         LicensingService = sp.GetRequiredService<ILicensingService>();
         AttachmentStorageService = sp.GetRequiredService<IAttachmentStorageService>();
+        // Deferred so the billing DI graph (IOrganizationBillingService -> IBraintreeGateway, IStripeAdapter,
+        // ISubscriberService -> IPriceIncreaseScheduler -> IFeatureService) is only constructed by commands
+        // that actually opt into Stripe billing, not on every command. Closes over the scope, not the root
+        // provider: the billing graph is scoped and transient throughout, and capturing it on the root
+        // provider would outlive the DbContext it depends on.
+        BillingInitializer = () => sp.GetRequiredService<IStripeBillingInitializer>();
+        LicenseSigner = sp.GetRequiredService<ISeederLicenseSigner>();
+        LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
     }
 
     public void Dispose()
