@@ -247,7 +247,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpGet("{id}/reset-password-details")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails([FromRoute] Guid orgId, Guid id,
+    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid id,
         [BindOrganization] Organization organization)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
@@ -429,7 +429,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}")]
     [Authorize<ManageUsersRequirement>]
-    public async Task<IResult> Put([FromRoute] Guid orgId, [BindOrganization] Organization organization, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
+    public async Task<IResult> Put([BindOrganization] Organization organization, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
         var (organizationUser, currentAccess) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
 
@@ -875,7 +875,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [HttpPost("bulk-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkAutomaticallyConfirmOrganizationUsersAsync(
-        [FromRoute] Guid orgId,
         [BindOrganization] Organization organization,
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
     {
