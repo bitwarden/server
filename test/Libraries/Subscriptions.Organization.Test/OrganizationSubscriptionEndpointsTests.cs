@@ -18,9 +18,8 @@ public class OrganizationSubscriptionEndpointsTests
     {
         var app = WebApplication.CreateBuilder().Build();
 
-        // The host mounts this group under a prefix carrying the {organizationId} route token
-        // (see Startup.MapSubscriptionEndpoints); mirror it so [FromRoute] parameters materialize.
-        var group = app.MapGroup("/organizations/{organizationId:guid}/billing/subscription")
+        // only organizationId is important for the mapping.
+        var group = app.MapGroup("/{organizationId:guid}")
             .MapOrganizationSubscriptionEndpoints();
         group.MapGet("/__probe", () => Results.Ok());
 
