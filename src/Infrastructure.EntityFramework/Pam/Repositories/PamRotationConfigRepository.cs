@@ -65,6 +65,13 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
         return Mapper.Map<List<CoreEntity>>(configs);
     }
 
+    public async Task<bool> AnyByTargetSystemAsync(Guid targetSystemId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        return await dbContext.PamRotationConfigs.AnyAsync(c => c.TargetSystemId == targetSystemId);
+    }
+
     public async Task<bool> AnyByTargetSystemWithTerminateSessionsAsync(Guid targetSystemId)
     {
         using var scope = ServiceScopeFactory.CreateScope();

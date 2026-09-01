@@ -65,6 +65,17 @@ public class PamRotationConfigRepository : Repository<PamRotationConfig, Guid>, 
         return results.ToList();
     }
 
+    public async Task<bool> AnyByTargetSystemAsync(Guid targetSystemId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var result = await connection.ExecuteScalarAsync<int?>(
+            $"[{Schema}].[PamRotationConfig_AnyByTargetSystem]",
+            new { TargetSystemId = targetSystemId },
+            commandType: CommandType.StoredProcedure);
+
+        return result.HasValue;
+    }
+
     public async Task<bool> AnyByTargetSystemWithTerminateSessionsAsync(Guid targetSystemId)
     {
         await using var connection = new SqlConnection(ConnectionString);
