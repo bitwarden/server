@@ -43,8 +43,9 @@ CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_OrganizationId]
     ON [dbo].[PamRotationConfig] ([OrganizationId] ASC);
 GO
 
--- Backs the daemon poll's assignment -> config join and
--- PamRotationConfig_AnyByTargetSystemWithTerminateSessions; also the FK's own lookups.
+-- Backs the daemon poll's assignment -> config join, PamRotationConfig_AnyByTargetSystem (and its
+-- WithTerminateSessions sibling), and the range lock PamTargetSystem_DeleteWithAssignments takes; also the FK's own
+-- lookups.
 CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_TargetSystemId]
     ON [dbo].[PamRotationConfig] ([TargetSystemId] ASC);
 GO
