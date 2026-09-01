@@ -58,6 +58,7 @@ public static class AccessAuditEventKindNames
     public const string TargetSystemEnabled = "targetSystemEnabled";
     public const string TargetSystemRenamed = "targetSystemRenamed";
     public const string TargetSystemPolicyUpdated = "targetSystemPolicyUpdated";
+    public const string TargetSystemDeleted = "targetSystemDeleted";
 
     public static string From(AccessAuditEventKind kind) => kind switch
     {
@@ -109,6 +110,7 @@ public static class AccessAuditEventKindNames
         AccessAuditEventKind.TargetSystemEnabled => TargetSystemEnabled,
         AccessAuditEventKind.TargetSystemRenamed => TargetSystemRenamed,
         AccessAuditEventKind.TargetSystemPolicyUpdated => TargetSystemPolicyUpdated,
+        AccessAuditEventKind.TargetSystemDeleted => TargetSystemDeleted,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 

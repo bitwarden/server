@@ -158,4 +158,13 @@ public enum AccessAuditEventKind : byte
 
     /// <summary>A rotation daemon was permanently deleted (row removed and its credential invalidated).</summary>
     DaemonDeleted = 81,
+
+    // Target administration (continued). The fleet/target range above (74-78) is followed by the daemon lifecycle
+    // kinds, so the target delete kind continues from here.
+
+    /// <summary>
+    /// A target system was permanently deleted, taking its access connector assignments with it. Spec outcome
+    /// <c>target_deleted</c>.
+    /// </summary>
+    TargetSystemDeleted = 82,
 }
