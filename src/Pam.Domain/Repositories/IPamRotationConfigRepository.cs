@@ -26,6 +26,12 @@ public interface IPamRotationConfigRepository : IRepository<PamRotationConfig, G
     Task<ICollection<PamRotationConfig>> GetManyDueAsync(DateTime now);
 
     /// <summary>
+    /// Whether any config names the target system — the guard <c>DeleteTargetSystemCommand</c> checks before a
+    /// target may be removed.
+    /// </summary>
+    Task<bool> AnyByTargetSystemAsync(Guid targetSystemId);
+
+    /// <summary>
     /// Whether any config on the target system has <see cref="PamRotationConfig.TerminateSessions"/> set — the
     /// guard <c>UpdateTargetSystemPolicyCommand</c> checks before a target may withdraw
     /// <see cref="Entities.PamTargetSystem.SupportsSessionTermination"/>.

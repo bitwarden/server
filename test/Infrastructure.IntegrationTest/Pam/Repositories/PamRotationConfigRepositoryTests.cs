@@ -144,6 +144,29 @@ public class PamRotationConfigRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task AnyByTargetSystemAsync_ReflectsConfigsOnTarget(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var target = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now);
+        var otherTarget = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now);
+
+        Assert.False(await pamRotationConfigRepository.AnyByTargetSystemAsync(target.Id));
+
+        var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
+        await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
+
+        // Unlike the WithTerminateSessions sibling, the target-delete guard does not care what a config opts into:
+        // any config naming the target keeps it.
+        Assert.True(await pamRotationConfigRepository.AnyByTargetSystemAsync(target.Id));
+        Assert.False(await pamRotationConfigRepository.AnyByTargetSystemAsync(otherTarget.Id));
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task AnyByTargetSystemWithTerminateSessionsAsync_ReflectsConfigsOnTarget(
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,
