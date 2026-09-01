@@ -30,7 +30,6 @@ public static class Saml2OptionsExtensions
             return true;
         }
 
-        // We need to pull out and parse the response or request SAML envelope
         XmlElement envelope = null;
         try
         {
@@ -95,22 +94,25 @@ public static class Saml2OptionsExtensions
         {
             var keyEncryptionAlgorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
 
-            // An empty list reports an envelope with no encrypted assertion, and the census skips it.
+            // An empty list represents an envelope with no encrypted assertions.
             if (keyEncryptionAlgorithms.Count > 0)
             {
                 var logger = context.RequestServices.GetRequiredService<ILogger<Saml2Options>>();
                 foreach (var keyEncryptionAlgorithm in keyEncryptionAlgorithms)
                 {
-                    logger.LogInformation(
-                        "SAML assertion encryption census. Scheme: {Scheme}, " +
-                        "IsEncrypted: {IsEncrypted}, KeyEncryptionAlgorithm: {KeyEncryptionAlgorithm}",
-                        scheme, true, keyEncryptionAlgorithm);
+                    if (!Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(keyEncryptionAlgorithm))
+                    {
+                        logger.LogInformation(
+                            "Unsupported SAML key encryption. Scheme: {Scheme}," +
+                            "KeyEncryptionAlgorithm: {KeyEncryptionAlgorithm}",
+                            scheme, keyEncryptionAlgorithm);
+                    }
                 }
             }
         }
         catch (Exception)
         {
-            // The census must not interfere with SSO login.
+            // The legacy check must not interfere with SSO login.
         }
 
         if (options.SPOptions.WantAssertionsSigned)
@@ -118,7 +120,7 @@ public static class Saml2OptionsExtensions
             // An encrypted assertion may arrive as <saml:EncryptedAssertion>.
             // https://docs.oasis-open.org/security/saml/v2.0/saml-bindings-2.0-os.pdf :1555.
             // In these cases, this boundary check should neither throw nor decrypt the assertion to check.
-            // Validation of encrypted assertions happens downstream in Sustainsys.Saml.
+            // This check enforces individual signed assertions for plaintext cases.
             var isAssertionEncrypted = envelope["EncryptedAssertion", Saml2Namespaces.Saml2Name] != null;
             if (!isAssertionEncrypted)
             {

@@ -12,16 +12,6 @@ public static class Saml2EncryptedAssertionInspector
     // Encryption algorithms found outside the known list are categorized an "unrecognized."
     private const string _unrecognizedAlgorithm = "unrecognized";
 
-    // The identity provider controls the Algorithm attribute, and a caller may write the value to a log.
-    // The allow list restricts the number of distinct values a log can hold, and expresses the set of
-    // expected values.
-    private static readonly HashSet<string> _knownKeyEncryptionAlgorithms = new(StringComparer.Ordinal)
-    {
-        "http://www.w3.org/2001/04/xmlenc#rsa-1_5",
-        "http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p",
-        "http://www.w3.org/2009/xmlenc11#rsa-oaep",
-    };
-
     /// <summary>
     /// Examines which algorithms encrypted the keys of the assertions in the envelope.
     /// A SAML response can hold more than one assertion, and each encrypted assertion holds its own key.
@@ -30,7 +20,7 @@ public static class Saml2EncryptedAssertionInspector
     /// <returns>
     /// An empty list when the envelope holds no <c>saml:EncryptedAssertion</c> element.
     /// Otherwise, a list with one entry for each distinct value.
-    /// An entry holds the algorithm URI when the allow list contains that URI.
+    /// An entry holds the algorithm URI when it is a known URI.
     /// An entry holds <c>"unrecognized"</c> when an assertion names an algorithm outside the allow list.
     /// An entry holds null when an assertion names no algorithm.
     /// </returns>
@@ -40,8 +30,11 @@ public static class Saml2EncryptedAssertionInspector
     /// </remarks>
     public static IReadOnlyList<string?> InspectKeyEncryptionAlgorithms(XmlElement envelope)
     {
-        // A search by tag name reads every depth of the envelope, not only the direct children.
-        var encryptedAssertions = envelope.GetElementsByTagName("EncryptedAssertion", Saml2Namespaces.Saml2Name);
+        // Both Sustainsys and downstream gates respect first children EncryptedAssertion nodes only.
+        var encryptedAssertions = envelope.ChildNodes
+            .OfType<XmlElement>()
+            .Where(e => e.LocalName == "EncryptedAssertion"
+                 && e.NamespaceURI == Saml2Namespaces.Saml2Name);
 
         var algorithms = new List<string?>();
         foreach (XmlElement encryptedAssertion in encryptedAssertions)
@@ -76,11 +69,14 @@ public static class Saml2EncryptedAssertionInspector
         // GetAttribute returns an empty string for a missing attribute.
         // The Attributes indexer returns null for a missing attribute, and then throws.
         var rawAlgorithm = encryptedKey?["EncryptionMethod", XencNamespace]?.GetAttribute("Algorithm");
+
         if (string.IsNullOrEmpty(rawAlgorithm))
         {
             return null;
         }
-
-        return _knownKeyEncryptionAlgorithms.Contains(rawAlgorithm) ? rawAlgorithm : _unrecognizedAlgorithm;
+        return (Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(rawAlgorithm) ||
+            rawAlgorithm.Equals(Saml2KeyTransportEncryptionAlgorithms.Rsa15)) ?
+            rawAlgorithm :
+            _unrecognizedAlgorithm;
     }
 }
