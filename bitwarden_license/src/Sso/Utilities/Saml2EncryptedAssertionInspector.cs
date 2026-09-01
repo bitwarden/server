@@ -25,18 +25,14 @@ public static class Saml2EncryptedAssertionInspector
     /// <summary>
     /// Examines which algorithms encrypted the keys of the assertions in the envelope.
     /// A SAML response can hold more than one assertion, and each encrypted assertion holds its own key.
-    /// This method reads every <c>saml:EncryptedAssertion</c> element in the envelope.
     /// </summary>
     /// <param name="envelope">The root element of a SAML response or request.</param>
     /// <returns>
     /// An empty list when the envelope holds no <c>saml:EncryptedAssertion</c> element.
-    /// Otherwise, a list with one entry for each distinct value, in the order of the first encounter.
-    /// Assertions that resolve to the same value produce one entry.
+    /// Otherwise, a list with one entry for each distinct value.
     /// An entry holds the algorithm URI when the allow list contains that URI.
     /// An entry holds <c>"unrecognized"</c> when an assertion names an algorithm outside the allow list.
-    /// An entry is null when an assertion names no algorithm.
-    /// Null counts as a distinct value, so a null entry, an <c>"unrecognized"</c> entry, and a URI entry
-    /// can all appear in one list.
+    /// An entry holds null when an assertion names no algorithm.
     /// </returns>
     /// <remarks>
     /// This method runs on the unauthenticated assertion consumer service (ACS) request path.
