@@ -145,8 +145,8 @@ public class Saml2EncryptedAssertionInspectorTests
     [Theory]
     [InlineData("http://www.w3.org/2001/04/xmlenc#kw-aes256")]
     [InlineData("urn:example:unknown-algorithm")]
-    [InlineData("rsa-1_5\nlevel=Critical Injected log line")]
-    public void InspectKeyEncryptionAlgorithms_AlgorithmOutsideAllowList_ReturnsUnrecognized(string algorithm)
+    [InlineData("rsa-1_5\nlevel=something-else")]
+    public void InspectKeyEncryptionAlgorithms_AlgorithmOutsideKnownValues_ReturnsUnrecognized(string algorithm)
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +

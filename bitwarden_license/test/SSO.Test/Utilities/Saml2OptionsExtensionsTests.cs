@@ -57,7 +57,7 @@ public class Saml2OptionsExtensionsTests
     }
 
     [Fact]
-    public async Task CouldHandleAsync_EncryptedAssertionWithOneAlgorithm_LogsOneCensusEntry()
+    public async Task CouldHandleAsync_EncryptedAssertionWithOneUnsupportedAlgorithm_LogsOneEntry()
     {
         var options = BuildOptions(wantAssertionsSigned: true);
         var logger = new FakeLogger<Saml2Options>();
@@ -69,13 +69,12 @@ public class Saml2OptionsExtensionsTests
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Equal(LogLevel.Information, record.Level);
-        Assert.Equal(Scheme, GetStructuredValue(record, "OrganizationId"));
-        Assert.Equal("True", GetStructuredValue(record, "IsEncrypted"));
+        Assert.Equal(Scheme, GetStructuredValue(record, "Scheme"));
         Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public async Task CouldHandleAsync_PlaintextAssertion_LogsNoCensusEntry()
+    public async Task CouldHandleAsync_PlaintextAssertion_LogsNoEntry()
     {
         // An empty inspector result reports an envelope with no encrypted assertion.
         // The census skips that envelope, so no log entry claims IsEncrypted is false.
@@ -90,7 +89,7 @@ public class Saml2OptionsExtensionsTests
     }
 
     [Fact]
-    public async Task CouldHandleAsync_TwoEncryptedAssertionsWithTwoAlgorithms_LogsOneEntryForEachAlgorithm()
+    public async Task CouldHandleAsync_TwoEncryptedAssertionsWithOneUnsupportedAlgorithm_LogsOneEntry()
     {
         // A federation proxy can aggregate assertions from two identity providers.
         // The census then holds one entry for each distinct algorithm.
@@ -103,23 +102,18 @@ public class Saml2OptionsExtensionsTests
         Assert.True(await options.CouldHandleAsync(Scheme, context));
 
         var records = logger.Collector.GetSnapshot();
-        Assert.Equal(2, records.Count);
-        Assert.All(records, record =>
-        {
-            Assert.Equal(LogLevel.Information, record.Level);
-            Assert.Equal(Scheme, GetStructuredValue(record, "OrganizationId"));
-            Assert.Equal("True", GetStructuredValue(record, "IsEncrypted"));
-        });
-        Assert.Equal(
-            new[] { RsaPkcs1, RsaOaep },
-            records.Select(record => GetStructuredValue(record, "KeyEncryptionAlgorithm")));
+        Assert.Single(records);
+        var record = records.Single();
+        Assert.Equal(LogLevel.Information, record.Level);
+        Assert.Equal(Scheme, GetStructuredValue(record, "Scheme"));
+        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public async Task CouldHandleAsync_CensusThrows_DoesNotPropagate()
+    public async Task CouldHandleAsync_AlgorithmInspectionThrows_DoesNotPropagate()
     {
         // An empty service provider makes the logger resolution throw.
-        // The census must swallow that throw, and the login must continue.
+        // The inspection must swallow that throw, and the login must continue.
         var options = BuildOptions(wantAssertionsSigned: true);
         var context = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
         context.RequestServices = new ServiceCollection().BuildServiceProvider();
