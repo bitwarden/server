@@ -1,8 +1,10 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.OrganizationUsers;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
@@ -1046,7 +1048,7 @@ public class OrganizationUsersControllerTests
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
 
         sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
@@ -1069,7 +1071,7 @@ public class OrganizationUsersControllerTests
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
         model.Email = "new@claimed.example.com";
 
         V2_UpdateUserCommand.UpdateOrganizationUserRequest captured = null;
@@ -1090,7 +1092,7 @@ public class OrganizationUsersControllerTests
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
 
         sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
@@ -1107,7 +1109,7 @@ public class OrganizationUsersControllerTests
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: false);
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: false);
 
         var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
 
@@ -1128,7 +1130,7 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, Guid sharedCollectionId, Guid defaultCollectionId,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
 
         // The client posts no collections; the user currently has access to a shared and a default collection.
         model.Collections = [];
@@ -1170,7 +1172,7 @@ public class OrganizationUsersControllerTests
     }
 
     private static void PutSetup(SutProvider<OrganizationUsersController> sutProvider, Organization organization,
-        OrganizationUser organizationUser, Guid userId, bool featureEnabled)
+        OrganizationUser organizationUser, Guid userId, bool changeMemberEmailNoMpEnabled)
     {
         organizationUser.OrganizationId = organization.Id;
         organization.AllowAdminAccessToAllCollectionItems = true;
@@ -1186,6 +1188,271 @@ public class OrganizationUsersControllerTests
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
             .Returns(AuthorizationResult.Success());
         sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>().IsEnabled(Bit.Core.FeatureFlagKeys.ChangeMemberEmailNoMp)
-            .Returns(featureEnabled);
+            .Returns(changeMemberEmailNoMpEnabled);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_EditingSelf_AddingANewCollection_ThrowsBadRequest(Organization organization,
+        OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: false);
+        organization.AllowAdminAccessToAllCollectionItems = false;
+        organizationUser.UserId = userId;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.Put(organization, organizationUser.Id, model));
+
+        Assert.Equal("You cannot add yourself to a collection.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_EditingSelf_WhenAdminAccessDisabled_DoesNotSaveGroups(Organization organization,
+        OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        organization.AllowAdminAccessToAllCollectionItems = false;
+        organizationUser.UserId = userId;
+        model.Collections = [];
+        V2_UpdateUserCommand.UpdateOrganizationUserRequest? captured = null;
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Do<V2_UpdateUserCommand.UpdateOrganizationUserRequest>(r => captured = r))
+            .Returns(new CommandResult(new None()));
+
+        await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.NotNull(captured);
+        Assert.Null(captured.NewGroups);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_NotAuthorizedForPostedCollections_ThrowsNotFound(Organization organization,
+        OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
+        Collection postedCollection, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { postedCollection });
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<IEnumerable<Collection>>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.Put(organization, organizationUser.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithNewAuthorizationEnabled_CannotAddSelfToCollection_ThrowsBadRequest(
+        Organization organization, OrganizationUser organizationUser, Guid userId,
+        OrganizationUserUpdateRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        EnableNewAuthorization(sutProvider);
+        ArrangeAuthorizationResult(sutProvider, organization, organizationUser, model,
+            new OrganizationUserAuthorizationResult(CanAddSelfToCollection: false, CanEditOwnGroups: true, new HashSet<Guid>(), new HashSet<Guid>()));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.Put(organization, organizationUser.Id, model));
+
+        Assert.Equal("You cannot add yourself to a collection.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithNewAuthorizationEnabled_UnauthorizedPostedCollection_ThrowsNotFound(
+        Organization organization, OrganizationUser organizationUser, Guid userId, Guid unauthorizedCollectionId,
+        OrganizationUserUpdateRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        EnableNewAuthorization(sutProvider);
+        ArrangeAuthorizationResult(sutProvider, organization, organizationUser, model,
+            new OrganizationUserAuthorizationResult(CanAddSelfToCollection: true, CanEditOwnGroups: true, new HashSet<Guid> { unauthorizedCollectionId },
+                new HashSet<Guid>()));
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.Put(organization, organizationUser.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithNewAuthorizationEnabled_CannotEditOwnGroups_DoesNotSaveGroups(Organization organization,
+        OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        EnableNewAuthorization(sutProvider);
+        ArrangeAuthorizationResult(sutProvider, organization, organizationUser, model,
+            new OrganizationUserAuthorizationResult(CanAddSelfToCollection: true, CanEditOwnGroups: false, new HashSet<Guid>(), new HashSet<Guid>()));
+        V2_UpdateUserCommand.UpdateOrganizationUserRequest? captured = null;
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Do<V2_UpdateUserCommand.UpdateOrganizationUserRequest>(r => captured = r))
+            .Returns(new CommandResult(new None()));
+
+        await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.NotNull(captured);
+        Assert.Null(captured.NewGroups);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithNewAuthorizationEnabled_SavesGroupsAndPreservesUnauthorizedCurrentCollections(
+        Organization organization, OrganizationUser organizationUser, Guid userId, Guid readonlyCollectionId,
+        OrganizationUserUpdateRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        var currentAccess = new List<CollectionAccessSelection> { new() { Id = readonlyCollectionId, Manage = true } };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(organizationUser, currentAccess));
+        EnableNewAuthorization(sutProvider);
+        ArrangeAuthorizationResult(sutProvider, organization, organizationUser, model,
+            new OrganizationUserAuthorizationResult(CanAddSelfToCollection: true, CanEditOwnGroups: true, new HashSet<Guid>(),
+                new HashSet<Guid> { readonlyCollectionId }),
+            currentCollectionIds: [readonlyCollectionId]);
+        V2_UpdateUserCommand.UpdateOrganizationUserRequest? captured = null;
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Do<V2_UpdateUserCommand.UpdateOrganizationUserRequest>(r => captured = r))
+            .Returns(new CommandResult(new None()));
+
+        await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        var postedCollectionIds = model.Collections.Select(c => c.Id).ToList();
+        Assert.NotNull(captured);
+        Assert.Same(model.Groups, captured.NewGroups);
+        // The posted collections are saved, and the collection the caller cannot change is kept.
+        Assert.Equal(
+            postedCollectionIds.Append(readonlyCollectionId).OrderBy(id => id),
+            captured.CollectionsToSave!.Select(c => c.Id).OrderBy(id => id));
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
+    }
+
+    /// <summary>
+    /// Covers the three things the saved access list must get right at once: the posted collections are saved, a
+    /// current collection the caller may change is dropped when it is not reposted, a current collection the caller
+    /// may not change is kept, and default collections are filtered out of both.
+    /// </summary>
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithNewAuthorizationEnabled_SavesPostedCollections_KeepsReadonly_DropsDefaultAndRemoved(
+        Organization organization, OrganizationUser organizationUser, Guid userId,
+        OrganizationUserUpdateRequestModel model, Guid postedCollectionId, Guid removedCollectionId,
+        Guid readonlyCollectionId, Guid defaultCollectionId, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        model.Collections =
+        [
+            new SelectionReadOnlyRequestModel { Id = postedCollectionId },
+            new SelectionReadOnlyRequestModel { Id = defaultCollectionId },
+        ];
+        var currentAccess = new List<CollectionAccessSelection>
+        {
+            new() { Id = removedCollectionId },
+            new() { Id = readonlyCollectionId },
+        };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(organizationUser, currentAccess));
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>
+            {
+                new() { Id = postedCollectionId, OrganizationId = organization.Id, Type = CollectionType.SharedCollection },
+                new() { Id = removedCollectionId, OrganizationId = organization.Id, Type = CollectionType.SharedCollection },
+                new() { Id = readonlyCollectionId, OrganizationId = organization.Id, Type = CollectionType.SharedCollection },
+                new() { Id = defaultCollectionId, OrganizationId = organization.Id, Type = CollectionType.DefaultUserCollection },
+            });
+
+        EnableNewAuthorization(sutProvider);
+        ArrangeAuthorizationResult(sutProvider, organization, organizationUser, model,
+            new OrganizationUserAuthorizationResult(CanAddSelfToCollection: true, CanEditOwnGroups: true, new HashSet<Guid>(),
+                new HashSet<Guid> { readonlyCollectionId }),
+            currentCollectionIds: [removedCollectionId, readonlyCollectionId]);
+
+        V2_UpdateUserCommand.UpdateOrganizationUserRequest? captured = null;
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Do<V2_UpdateUserCommand.UpdateOrganizationUserRequest>(r => captured = r))
+            .Returns(new CommandResult(new None()));
+
+        await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.NotNull(captured);
+        Assert.Equal(
+            new[] { postedCollectionId, readonlyCollectionId }.OrderBy(id => id),
+            captured.CollectionsToSave!.Select(c => c.Id).OrderBy(id => id));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Invite_WithNewAuthorizationEnabled_UnauthorizedPostedCollection_ThrowsNotFound(Guid orgId,
+        Guid unauthorizedCollectionId, OrganizationUserInviteRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        EnableNewAuthorization(sutProvider);
+        var postedCollectionIds = model.Collections.Select(c => c.Id).ToList();
+        sutProvider.GetDependency<IOrganizationUserAuthorizationService>()
+            .AuthorizeSaveAsync(orgId, null,
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(postedCollectionIds)),
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 0))
+            .Returns(new OrganizationUserAuthorizationResult(true, true,
+                new HashSet<Guid> { unauthorizedCollectionId }, new HashSet<Guid>()));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(orgId, model));
+
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs()
+            .InviteUsersAsync(default, default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Invite_WithNewAuthorizationEnabled_Success(Guid orgId, Guid userId,
+        OrganizationUserInviteRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        EnableNewAuthorization(sutProvider);
+        var postedCollectionIds = model.Collections.Select(c => c.Id).ToList();
+        sutProvider.GetDependency<IOrganizationUserAuthorizationService>()
+            .AuthorizeSaveAsync(orgId, null,
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(postedCollectionIds)),
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 0))
+            .Returns(new OrganizationUserAuthorizationResult(CanAddSelfToCollection: true, CanEditOwnGroups: true, new HashSet<Guid>(), new HashSet<Guid>()));
+
+        await sutProvider.Sut.Invite(orgId, model);
+
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUsersAsync(
+            orgId, userId, Arg.Any<EventSystemUser?>(),
+            Arg.Any<IEnumerable<(OrganizationUserInvite, string?)>>());
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<IEnumerable<Collection>>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
+    }
+
+    private static void EnableNewAuthorization(SutProvider<OrganizationUsersController> sutProvider) =>
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.AuthorizationServices)
+            .Returns(true);
+
+    private static void ArrangeAuthorizationResult(SutProvider<OrganizationUsersController> sutProvider,
+        Organization organization, OrganizationUser organizationUser, OrganizationUserUpdateRequestModel model,
+        OrganizationUserAuthorizationResult result, IReadOnlyCollection<Guid>? currentCollectionIds = null)
+    {
+        var postedCollectionIds = model.Collections.Select(c => c.Id).ToList();
+        var expectedCurrentCollectionIds = currentCollectionIds ?? Array.Empty<Guid>();
+        sutProvider.GetDependency<IOrganizationUserAuthorizationService>()
+            .AuthorizeSaveAsync(organization.Id, organizationUser.Id,
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(postedCollectionIds)),
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(expectedCurrentCollectionIds)))
+            .Returns(result);
+    }
+
 }
