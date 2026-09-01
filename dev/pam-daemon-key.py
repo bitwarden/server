@@ -215,9 +215,9 @@ def main():
     print("\n=== registered daemon ===")
     print(json.dumps(result, indent=2))
     print("\n=== daemon access token (client_id : client_secret : encryption_key) ===")
-    print(f"client_id     = daemon.{api_key_id}")
+    print(f"client_id     = access-connector.{api_key_id}")
     print(f"client_secret = {result['clientSecret']}")
-    print(f"full token    = 0.daemon.{api_key_id}.{result['clientSecret']}:{seed_b64}")
+    print(f"full token    = 0.access-connector.{api_key_id}.{result['clientSecret']}:{seed_b64}")
 
 
 if __name__ == "__main__":
