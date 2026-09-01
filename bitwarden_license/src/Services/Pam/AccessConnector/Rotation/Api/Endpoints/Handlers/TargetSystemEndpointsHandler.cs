@@ -21,7 +21,8 @@ public class TargetSystemEndpointsHandler(
     IRegisterTargetSystemCommand registerTargetSystemCommand,
     ISetTargetSystemStatusCommand setTargetSystemStatusCommand,
     IRenameTargetSystemCommand renameTargetSystemCommand,
-    IUpdateTargetSystemPolicyCommand updateTargetSystemPolicyCommand)
+    IUpdateTargetSystemPolicyCommand updateTargetSystemPolicyCommand,
+    IDeleteTargetSystemCommand deleteTargetSystemCommand)
 {
     public async Task<ListResponseModel<PamTargetSystemResponseModel>> GetAll(Guid orgId)
     {
@@ -103,6 +104,8 @@ public class TargetSystemEndpointsHandler(
         await renameTargetSystemCommand.RenameAsync(orgId, currentContext.UserId!.Value, id, model.Name);
     }
 
-    public Task Delete(Guid orgId, Guid id)
-        => throw new NotImplementedException();
+    public async Task Delete(Guid orgId, Guid id)
+    {
+        await deleteTargetSystemCommand.DeleteAsync(orgId, currentContext.UserId!.Value, id);
+    }
 }
