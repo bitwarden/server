@@ -100,6 +100,21 @@ public class OrganizationTests
         Assert.Equal("Host_value", host);
     }
 
+    [Theory]
+    [InlineData("not-json-at-all")]
+    [InlineData("TwoFactorProviders" + "a0c30e2f-0ac1-4ffe-bc3a-47830b829a4f")]
+    [InlineData("{ unterminated")]
+    [InlineData("{ \"6\": \"not-a-provider-object\" }")]
+    public void GetTwoFactorProviders_InvalidJson_ReturnsNull(string invalidJson)
+    {
+        var organization = new Organization
+        {
+            TwoFactorProviders = invalidJson,
+        };
+
+        Assert.Null(organization.GetTwoFactorProviders());
+    }
+
     [Fact]
     public void UseDisableSmAdsForUsers_DefaultValue_IsFalse()
     {

@@ -919,6 +919,12 @@
           "Stripe.net": "[52.1.0, 52.1.0]"
         }
       },
+      "organizationauthorization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.8.0, )"
+        }
+      },
       "serilogfilelogging": {
         "type": "Project",
         "dependencies": {
