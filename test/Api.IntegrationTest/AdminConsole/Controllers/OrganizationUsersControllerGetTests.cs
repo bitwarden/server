@@ -57,7 +57,7 @@ public class OrganizationUsersControllerGetTests : IClassFixture<ApiApplicationF
     }
 
     [Fact]
-    public async Task Get_UserFromDifferentOrganization_WithSpoofedOrgIdInBody_ReturnsNotFound()
+    public async Task Get_UserFromDifferentOrganization_WitOrgBIdInBody_ReturnsNotFound()
     {
         await _loginHelper.LoginAsync(_ownerEmailA);
 
