@@ -7,7 +7,7 @@ itself is not in this repository.
 **Audience:** server engineers changing the daemon-facing endpoints, and anyone implementing or
 debugging a daemon against them.
 
-Routes live under `rotation/` and are mapped in
+Routes live under `access-connectors/rotation/` and are mapped in
 [`PamEndpointsExtensions`](../../Api/Endpoints/PamEndpointsExtensions.cs). Every one of them requires
 a daemon token, not a member's.
 
