@@ -38,6 +38,14 @@ public class OrganizationUserScene(
         public required OrganizationUserStatusType OrganizationUserStatusType { get; set; }
         public Permissions? Permissions { get; set; }
         public bool AccessSecretsManager { get; set; }
+
+        /// <summary>
+        /// Overrides the member's Privileged Access Manager license. Unset leaves the factory's default in place,
+        /// which follows the organization's subscription — so a member seeded into a <c>UsePam</c> organization is
+        /// licensed and scenes that predate licensing keep working. Set it explicitly to <c>false</c> to seed the
+        /// unlicensed member the block is written for.
+        /// </summary>
+        public bool? AccessPam { get; set; }
     }
 
     public async Task<SceneResult<OrganizationUserSceneResult>> SeedAsync(Request request)
@@ -79,6 +87,10 @@ public class OrganizationUserScene(
         }
 
         organizationUser.AccessSecretsManager = request.AccessSecretsManager;
+        if (request.AccessPam is { } accessPam)
+        {
+            organizationUser.AccessPam = accessPam;
+        }
 
         await organizationUserRepository.CreateAsync(organizationUser);
 

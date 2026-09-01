@@ -444,6 +444,14 @@ public class CurrentContext(
         return Organizations?.Any(o => o.Id == orgId && o.AccessSecretsManager) ?? false;
     }
 
+    public bool AccessPam(Guid orgId)
+    {
+        // No machine-principal escape hatch of the kind AccessSecretsManager grants a service account: PAM's own
+        // machine caller, the rotation connector, authenticates under Policies.PamRotationDaemon rather than the
+        // user-token Policies.Application, and never travels the leasing paths this guards.
+        return Organizations?.Any(o => o.Id == orgId && o.AccessPam) ?? false;
+    }
+
     public async Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
         IOrganizationUserRepository organizationUserRepository, Guid userId)
     {

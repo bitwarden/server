@@ -8,6 +8,7 @@ using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
+using Bit.Services.Pam.Utilities;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -80,6 +81,15 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             }
             throw new ConflictException("This request's access has already been used and is no longer active.");
         }
+
+        // Below the idempotency and extension guards on purpose. A grant approved while the requester was licensed
+        // does not survive the license being withdrawn -- activation is what mints the lease, so this is the last
+        // point at which the entitlement still decides anything -- but re-activating a lease that is ALREADY running
+        // must keep returning it (the early return above), because a live lease survives de-licensing and a
+        // double-click or a second tab must not turn it into a refusal. Sitting below the extension guard likewise
+        // keeps that request's own, more accurate reason. The request itself is left standing rather than denied:
+        // restoring the license makes it startable again.
+        _currentContext.RequireLicense(request.OrganizationId);
 
         if (request.Action != AccessRequestAction.Approved)
         {

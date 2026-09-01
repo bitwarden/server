@@ -77,7 +77,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        return await IsBlockedAsync(userId, cipher.Id)
+        return await IsBlockedAsync(userId, cipher.Id, cipher.OrganizationId)
             ? null
             : FullCipherAccess.ForCipher(cipher.Id);
     }
@@ -152,7 +152,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        if (await IsBlockedAsync(userId, cipher.Id))
+        if (await IsBlockedAsync(userId, cipher.Id, cipher.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -218,7 +218,13 @@ public class CipherLeaseGate : ICipherLeaseGate
 
         // Gated, so this releases secrets only to a lease the caller actually holds — the same test the
         // member single read applies, and the reason an administrator assigned to nothing sees nothing:
-        // a lease is issued against a collection they can reach.
+        // a lease is issued against a collection they can reach. An administrator is subject to licensing like
+        // anyone else, so an unlicensed one holds no usable lease either (see LeaseCanRelease).
+        if (!LeaseCanRelease(organizationId))
+        {
+            return null;
+        }
+
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var activeLease = await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipher.Id, now);
         return activeLease is null ? null : FullCipherAccess.ForCipher(cipher.Id);
@@ -384,7 +390,7 @@ public class CipherLeaseGate : ICipherLeaseGate
     /// mutation decision ("refuse"). Resolves the governing rule first so a non-gated cipher, the common
     /// case, costs no lease query.
     /// </summary>
-    private async Task<bool> IsBlockedAsync(Guid userId, Guid cipherId)
+    private async Task<bool> IsBlockedAsync(Guid userId, Guid cipherId, Guid? organizationId)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         if (!await IsGatedForCallerAsync(userId, cipherId, now))
@@ -392,9 +398,35 @@ public class CipherLeaseGate : ICipherLeaseGate
             return false;
         }
 
+        if (!LeaseCanRelease(organizationId))
+        {
+            return true;
+        }
+
         var activeLease = await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now);
         return activeLease is null;
     }
+
+    /// <summary>
+    /// Whether a lease held in <paramref name="organizationId" /> still authorizes anything — that is, whether the
+    /// holder is still licensed (PM-39423).
+    /// </summary>
+    /// <remarks>
+    /// Withdrawing a member's seat withdraws the access their outstanding leases were carrying: the organization has
+    /// decided this member is not to use privileged credentials, and a lease minted before that decision is not an
+    /// exemption from it. Without this a de-licensed member would keep reading the credential until the lease lapsed
+    /// on its own, which for a long window is indistinguishable from not having been de-licensed at all.
+    ///
+    /// Checked BEFORE the lease read, so an unlicensed caller costs one fewer query rather than one more.
+    ///
+    /// Claims-based like every other entitlement here, so it takes effect at the holder's next token refresh. An
+    /// operator who needs the credential closed off sooner revokes the lease, which is immediate.
+    ///
+    /// A cipher with no organization cannot be gated, so this is unreachable for one — it reads as "cannot release"
+    /// only because there is no subscription to license against, and the gated test above has already returned.
+    /// </remarks>
+    private bool LeaseCanRelease(Guid? organizationId) =>
+        organizationId is { } id && _currentContext.AccessPam(id);
 
     /// <summary>
     /// Whether an enabled access rule governs the cipher for this caller — the structural half of

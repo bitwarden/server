@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
@@ -23,6 +24,9 @@ public class SubmitAccessRequestCommandTests
 {
     private static readonly DateTime _now = new(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc);
 
+    /// <summary>The organization {@link SetupCipher} puts the cipher in unless a test names its own.</summary>
+    private static readonly Guid _defaultOrganizationId = Guid.NewGuid();
+
     [Theory, BitAutoData]
     public async Task SubmitAsync_CipherNotAccessible_ThrowsNotFound(Guid userId, Guid cipherId)
     {
@@ -31,6 +35,55 @@ public class SubmitAccessRequestCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Unlicensed_ThrowsBadRequestWithoutResolvingTheRule(
+        Guid userId, Guid cipherId, Guid orgId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId, orgId, licensed: false);
+        SetupResolution(sutProvider, userId, cipherId, orgId, Guid.NewGuid(), requiresHuman: false);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
+        Assert.Contains("Privileged Controls license is required", ex.Message);
+
+        // Refused before the rule is consulted, so the message cannot tell an unlicensed caller whether the item is
+        // governed at all, by which rule, or who could approve it.
+        await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs()
+            .ResolveAsync(default, default, default!);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAutoApprovedAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Licensed_PassesTheLicenseGate(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId, orgId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600 });
+
+        Assert.Equal(AccessRequestAction.Approved, result.Request.Action);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_UserOwnedCipher_SkipsTheLicenseGate(Guid userId, Guid cipherId)
+    {
+        var sutProvider = Setup();
+        // No organization to hold a license in. Such a cipher is never gated, so it must fall through to the ungated
+        // refusal rather than being told it needs a license it could not obtain.
+        SetupCipher(sutProvider, userId, cipherId, userOwned: true);
+        sutProvider.GetDependency<IGoverningRuleResolver>().ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
+            .Returns((GoverningRule?)null);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
+        Assert.Contains("does not require a lease", ex.Message);
     }
 
     [Theory, BitAutoData]
@@ -398,11 +451,21 @@ public class SubmitAccessRequestCommandTests
             .CreateAsync(Arg.Any<AccessRequest>())
             .Returns(callInfo => callInfo.Arg<AccessRequest>());
 
-    private static void SetupCipher(SutProvider<SubmitAccessRequestCommand> sutProvider, Guid userId, Guid cipherId)
+    // Defaults to the realistic shape: an organization-owned cipher whose caller is licensed, since only an
+    // organization cipher can ever be leasing-gated. Tests about the license gate override it -- pass
+    // `licensed: false` for the refusal, or `organizationId: null` for the user-owned cipher that has no
+    // organization to be licensed in.
+    private static void SetupCipher(SutProvider<SubmitAccessRequestCommand> sutProvider, Guid userId, Guid cipherId,
+        Guid? organizationId = null, bool licensed = true, bool userOwned = false)
     {
+        organizationId = userOwned ? null : organizationId ?? _defaultOrganizationId;
         sutProvider.GetDependency<ICipherRepository>()
             .GetByIdAsync(cipherId, userId)
-            .Returns(new CipherDetails { Id = cipherId });
+            .Returns(new CipherDetails { Id = cipherId, OrganizationId = organizationId });
+        if (organizationId is { } id && licensed)
+        {
+            sutProvider.GetDependency<ICurrentContext>().AccessPam(id).Returns(true);
+        }
     }
 
     private static void SetupResolution(SutProvider<SubmitAccessRequestCommand> sutProvider, Guid userId, Guid cipherId,
