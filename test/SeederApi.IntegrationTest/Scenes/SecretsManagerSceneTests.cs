@@ -184,6 +184,8 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
         var ownerUserId = await SeedUserAsync(playId);
         var (organizationId, _, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
 
+        var missingServiceAccountId = Guid.NewGuid();
+
         var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
         {
             Template = nameof(OrganizationAccessTokenScene),
@@ -191,7 +193,7 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
             {
                 OrganizationId = organizationId,
                 OrganizationKeyB64 = organizationKeyB64,
-                ServiceAccountId = Guid.NewGuid(),
+                ServiceAccountId = missingServiceAccountId,
                 Name = "deploy token"
             })
         }, playId);
@@ -203,7 +205,7 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
-        Assert.False(await db.ApiKeys.AnyAsync(k => k.ServiceAccount.OrganizationId == organizationId));
+        Assert.False(await db.ApiKeys.AnyAsync(k => k.ServiceAccountId == missingServiceAccountId));
     }
 
     [Fact]
