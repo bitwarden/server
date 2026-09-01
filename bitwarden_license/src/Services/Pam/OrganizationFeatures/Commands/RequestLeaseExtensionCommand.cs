@@ -8,6 +8,7 @@ using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
+using Bit.Services.Pam.Utilities;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -58,6 +59,10 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         {
             throw new NotFoundException();
         }
+
+        // An extension buys new access, so it needs the license the original lease was taken under. The lease already
+        // running is untouched — the holder keeps it to its approved end, and may still end it early.
+        _currentContext.RequireLicense(lease.OrganizationId);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
