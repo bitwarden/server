@@ -35,7 +35,7 @@ internal static class AccessTokenSeeder
             ClientSecretHash = HashClientSecret(clientSecret),
             Scope = "[\"api.secrets\"]",
             EncryptedPayload = RustSdkService.EncryptString(payload, derivedKeyB64),
-            Key = RustSdkService.EncryptString(encryptionKeyB64, organizationKeyB64)
+            Key = RustSdkService.EncryptString(derivedKeyB64, organizationKeyB64)
         };
 
         return (apiKey, clientSecret, encryptionKeyB64);
