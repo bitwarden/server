@@ -1,14 +1,25 @@
 ﻿using Bit.HttpExtensions;
 using Bit.Pam.Enums;
+using Bit.Services.Pam.AccessConnector.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Api.Models.Response;
 
 /// <summary>The response to <c>POST access-connectors</c> (spec <c>ConnectorRegistration</c>).</summary>
 public class RegisterAccessConnectorResponseModel : ResponseModel
 {
-    public RegisterAccessConnectorResponseModel()
+    public RegisterAccessConnectorResponseModel(PamAccessConnectorRegistrationResult result)
         : base("pamAccessConnector")
     {
+        ArgumentNullException.ThrowIfNull(result);
+
+        Id = result.Daemon.Id;
+        OrganizationId = result.Daemon.OrganizationId;
+        Name = result.Daemon.Name;
+        Status = result.Daemon.Status;
+        CreationDate = result.Daemon.CreationDate.AsUtc();
+        ApiKeyId = result.Daemon.ApiKeyId;
+        ClientSecret = result.ClientSecret;
     }
 
     /// <summary>
@@ -48,7 +59,7 @@ public class RegisterAccessConnectorResponseModel : ResponseModel
     /// WARNING: shown exactly once. The plaintext client secret for the access connector's credential -- store it now;
     /// the server hashes it for storage and never persists or returns the plaintext again. Pair with the client-wrapped
     /// org key you already hold locally to assemble the access connector's token
-    /// (<c>0.daemon.&lt;apiKeyId&gt;.&lt;client_secret&gt;:&lt;encryption_key&gt;</c>).
+    /// (<c>0.access-connector.&lt;apiKeyId&gt;.&lt;client_secret&gt;:&lt;encryption_key&gt;</c>).
     /// </summary>
     public string ClientSecret { get; set; } = null!;
 }

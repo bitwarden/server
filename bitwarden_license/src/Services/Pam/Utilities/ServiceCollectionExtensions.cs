@@ -1,30 +1,54 @@
-﻿using Bit.HttpExtensions;
+﻿using Bit.Core.Pam.Services;
+using Bit.HttpExtensions;
+using Bit.Services.Pam.AccessConnector;
+using Bit.Services.Pam.AccessConnector.Api.Endpoints.Filters;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
+using Bit.Services.Pam.AccessConnector.Commands;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
+using Bit.Services.Pam.AccessConnector.Queries;
+using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.OrganizationFeatures.Queries;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Services.Pam.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Services.Pam.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddPamServices(this IServiceCollection services)
+    /// <summary>
+    /// Registers PAM's commercial services, including credential rotation. <paramref name="configuration"/> binds
+    /// <see cref="PamRotationOptions"/> from <c>globalSettings:pam:rotation</c> -- AddPamServices previously took no
+    /// configuration, so this is a new parameter on an existing call site (see <c>Startup.ConfigureServices</c>)
+    /// rather than a pre-existing pattern in this file.
+    /// </summary>
+    public static IServiceCollection AddPamServices(this IServiceCollection services, IConfiguration configuration)
     {
         // Minimal API endpoint handlers. The endpoints (see PamEndpointsExtensions) resolve these from DI.
         services.AddScoped<LeaseEndpointsHandler>();
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
         services.AddScoped<CipherLeaseEndpointsHandler>();
+        services.AddScoped<AuditEndpointsHandler>();
         services.AddScoped<AccessConnectorEndpointsHandler>();
         services.AddScoped<TargetSystemEndpointsHandler>();
         services.AddScoped<RotationConfigEndpointsHandler>();
         services.AddScoped<RotationJobEndpointsHandler>();
         services.AddScoped<RotationAttemptEndpointsHandler>();
+
+        // The read decision point Vault code consults before releasing a cipher's secrets. AddBaseServices
+        // registers the open-source UnrestrictedCipherLeaseGate, which gates nothing; this overrides it by
+        // last-one-wins, which holds because Startup calls AddPamServices after AddBaseServices and both
+        // registrations are a plain Add. A TryAdd on either side would silently leave leasing ungated, so
+        // keep this an AddScoped — CipherLeaseGateRegistrationTests pins both halves of that contract.
+        services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
 
         // Rule evaluation engine. Pure and stateless, so a singleton is safe.
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
@@ -40,7 +64,100 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
 
+        // Read models behind the approver inbox, the lease surfaces, and the per-cipher pre-check and access-state
+        // snapshot.
+        services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
+        services.AddScoped<IGetCipherAccessStateQuery, GetCipherAccessStateQuery>();
+        services.AddScoped<IGetAccessRequestDetailsQuery, GetAccessRequestDetailsQuery>();
+        services.AddScoped<IListInboxRequestsQuery, ListInboxRequestsQuery>();
+        services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
+        services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
+        services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
+        services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
+        services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
+        services.AddScoped<IListAccessAuditItemsQuery, ListAccessAuditItemsQuery>();
+        services.AddScoped<IListRuleBypassableCiphersQuery, ListRuleBypassableCiphersQuery>();
+
+        // Access-request and lease write path.
+        services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
+        services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();
+        services.AddScoped<IActivateAccessRequestCommand, ActivateAccessRequestCommand>();
+        services.AddScoped<ICancelAccessRequestCommand, CancelAccessRequestCommand>();
+        services.AddScoped<IRequestLeaseExtensionCommand, RequestLeaseExtensionCommand>();
+        services.AddScoped<IRevokeAccessLeaseCommand, RevokeAccessLeaseCommand>();
+
+        // Supporting reads for the write path: who may approve for a collection, and the per-cipher
+        // single-active-lease guard applied at activation.
+        services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
+        services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
+
+        // Side channels the commands emit through. The two notifiers send the RefreshApproverInbox and
+        // RefreshAccessRequest pushes; the audit emitter appends to the PAM audit store. Registering them is not
+        // optional — every command above takes all three, so dropping one turns each PAM request into a DI
+        // resolution failure at runtime rather than a compile error.
+        services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
+        services.AddScoped<IRequesterNotifier, RequesterNotifier>();
+        services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
+
+        // Runs on every connector-facing route (see PamEndpointsExtensions.WithPamAccessConnectorMachineDefaults).
+        // Its
+        // parameterless constructor would let AddEndpointFilter<T>() construct it unregistered, as
+        // PamExceptionHandlerEndpointFilter/PamValidationEndpointFilter are -- registering it anyway keeps a filter
+        // that resolves services of its own visible in the container.
+        services.AddScoped<AccessConnectorHeartbeatEndpointFilter>();
+
+        services.AddPamRotationServices(configuration);
         services.AddPamOpenApiEndpointDataSource();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers PAM credential rotation: the schedule calculator, the admin/dispatch commands, and the read
+    /// queries under <c>Rotation/</c>. Options are bound from <c>globalSettings:pam:rotation</c> (see
+    /// <see cref="PamRotationOptions"/> for defaults); the Quartz sweep jobs and Dapper repositories are registered
+    /// elsewhere (commercial job host / <c>DapperServiceCollectionExtensions</c>).
+    /// </summary>
+    private static IServiceCollection AddPamRotationServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<PamRotationOptions>(configuration.GetSection("globalSettings:pam:rotation"));
+
+        // Stateless and cheap to construct; shared across the process like IAccessRuleEngine.
+        services.AddSingleton<IRotationScheduleCalculator, RotationScheduleCalculator>();
+
+        // Admin commands
+        services.AddScoped<IRegisterAccessConnectorCommand, RegisterAccessConnectorCommand>();
+        services.AddScoped<ISetAccessConnectorStatusCommand, SetAccessConnectorStatusCommand>();
+        services.AddScoped<IDeleteAccessConnectorCommand, DeleteAccessConnectorCommand>();
+        services.AddScoped<IAssignAccessConnectorToTargetCommand, AssignAccessConnectorToTargetCommand>();
+        services.AddScoped<IUnassignAccessConnectorFromTargetCommand, UnassignAccessConnectorFromTargetCommand>();
+        services.AddScoped<IRegisterTargetSystemCommand, RegisterTargetSystemCommand>();
+        services.AddScoped<ISetTargetSystemStatusCommand, SetTargetSystemStatusCommand>();
+        services.AddScoped<IRenameTargetSystemCommand, RenameTargetSystemCommand>();
+        services.AddScoped<IUpdateTargetSystemPolicyCommand, UpdateTargetSystemPolicyCommand>();
+        services.AddScoped<IDeleteTargetSystemCommand, DeleteTargetSystemCommand>();
+        services.AddScoped<ICreateRotationConfigCommand, CreateRotationConfigCommand>();
+        services.AddScoped<IUpdateRotationSettingsCommand, UpdateRotationSettingsCommand>();
+        services.AddScoped<IUpdateRotationAccountCommand, UpdateRotationAccountCommand>();
+        services.AddScoped<IPauseRotationCommand, PauseRotationCommand>();
+        services.AddScoped<IResumeRotationCommand, ResumeRotationCommand>();
+        services.AddScoped<IDeleteRotationConfigCommand, DeleteRotationConfigCommand>();
+        services.AddScoped<ITriggerRotationCommand, TriggerRotationCommand>();
+        services.AddScoped<IRecordManualRotationCommand, RecordManualRotationCommand>();
+
+        // Dispatch / daemon commands
+        services.AddScoped<IOfferRotationCommand, OfferRotationCommand>();
+        services.AddScoped<IHandleAccessGrantEndedCommand, HandleAccessGrantEndedCommand>();
+        services.AddScoped<IClaimRotationJobCommand, ClaimRotationJobCommand>();
+        services.AddScoped<IReportRotationSucceededCommand, ReportRotationSucceededCommand>();
+        services.AddScoped<IReportRotationFailedCommand, ReportRotationFailedCommand>();
+        services.AddScoped<ISubmitCipherUpdateCommand, SubmitCipherUpdateCommand>();
+
+        // Read queries
+        services.AddScoped<IGetRotationConfigDetailsQuery, GetRotationConfigDetailsQuery>();
+        services.AddScoped<IListAccessConnectorsQuery, ListAccessConnectorsQuery>();
+        services.AddScoped<IGetAccessConnectorDetailsQuery, GetAccessConnectorDetailsQuery>();
+        services.AddScoped<IGetRotationCipherQuery, GetRotationCipherQuery>();
 
         return services;
     }

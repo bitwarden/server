@@ -2,6 +2,8 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
+using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
@@ -106,6 +108,51 @@ public class CreateAccessRuleCommandTests
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
             .SetAccessRuleAssociationsAsync(default, default, default!, default!);
+    }
+
+    // The rule id is assigned by the repository, so only the outcome can name it; the attempt names the rule by name.
+    [Theory, BitAutoData]
+    public async Task CreateAsync_EmitsAttemptThenOutcome_WithTheRuleNameAndEditorAsActor(AccessRule rule, Guid editorId)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "Production database";
+        rule.LastEditedBy = editorId;
+        SetupValidator(sutProvider, rule.OrganizationId, []);
+        sutProvider.GetDependency<IAccessRuleRepository>().CreateAsync(rule).Returns(rule);
+
+        await sutProvider.Sut.CreateAsync(rule, []);
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.RuleCreated && e.Phase == AccessAuditEventPhase.Attempt
+            && e.OrganizationId == rule.OrganizationId && e.ActorId == editorId
+            && e.RuleName == "Production database" && e.AccessRuleId == null
+            && e.OccurredAt == _now));
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.RuleCreated && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessRuleId == rule.Id && e.RuleName == "Production database"));
+    }
+
+    // The outcome waits for the collection links, so a failure there leaves the create in doubt rather than recorded
+    // as clean.
+    [Theory, BitAutoData]
+    public async Task CreateAsync_CollectionLinkWriteFails_EmitsAttemptButNoOutcome(AccessRule rule)
+    {
+        var sutProvider = SetupSutProvider();
+        SetupValidator(sutProvider, rule.OrganizationId, []);
+        sutProvider.GetDependency<IAccessRuleRepository>().CreateAsync(rule).Returns(rule);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .SetAccessRuleAssociationsAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(),
+                Arg.Any<IEnumerable<Guid>>())
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.CreateAsync(rule, []));
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Phase == AccessAuditEventPhase.Attempt));
+        await emitter.DidNotReceive().EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Phase == AccessAuditEventPhase.Outcome));
     }
 
     private static void SetupValidator(SutProvider<CreateAccessRuleCommand> sutProvider, Guid organizationId,

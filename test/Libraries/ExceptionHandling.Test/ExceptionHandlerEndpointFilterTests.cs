@@ -221,6 +221,60 @@ public class ExceptionHandlerEndpointFilterTests
         Assert.False(string.IsNullOrEmpty(body.GetProperty("exceptionStackTrace").GetString()));
     }
 
+    /// <summary>
+    /// The exception behind each branch the filter models, named rather than passed as a delegate so xUnit can
+    /// serialize the case.
+    /// </summary>
+    private static Func<IResult> Throwing(string exceptionName) => exceptionName switch
+    {
+        nameof(BadRequestException) => () => throw new BadRequestException("bad input"),
+        nameof(NotSupportedException) => () => throw new NotSupportedException("feature not supported"),
+        nameof(ApplicationException) => () => throw new ApplicationException(),
+        nameof(NotFoundException) => () => throw new NotFoundException("ignored"),
+        nameof(UnauthorizedAccessException) => () => throw new UnauthorizedAccessException(),
+        nameof(ConflictException) => () => throw new ConflictException("already exists"),
+        _ => throw new ArgumentOutOfRangeException(nameof(exceptionName), exceptionName, null),
+    };
+
+    [Theory]
+    [InlineData(nameof(BadRequestException))]
+    [InlineData(nameof(NotSupportedException))]
+    [InlineData(nameof(ApplicationException))]
+    [InlineData(nameof(NotFoundException))]
+    [InlineData(nameof(UnauthorizedAccessException))]
+    [InlineData(nameof(ConflictException))]
+    public async Task DevelopmentEnvironment_DoesNotExposeExceptionDetailsForAHandledException(
+        string exceptionName)
+    {
+        // A modelled rejection is an answer, not a defect, so it carries no throw site even locally: the stack
+        // trace's absolute source paths used to reach the caller's console verbatim (PM-42634).
+        await using var app = await TestApp.CreateAsync(Throwing(exceptionName), isDevelopment: true);
+
+        var response = await app.Client.GetAsync("/test");
+        var body = await ReadJsonAsync(response);
+
+        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        AssertNoExceptionDetails(body);
+    }
+
+    [Fact]
+    public async Task DevelopmentEnvironment_DoesNotExposeExceptionDetailsForAValidationFailure()
+    {
+        // The validation branch builds its own ErrorResponseModel, so it needs pinning separately from the
+        // branches that fall through to the message-only one.
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("email", "Email is required.");
+        await using var app = await TestApp.CreateAsync(
+            () => throw new BadRequestException(modelState),
+            isDevelopment: true);
+
+        var response = await app.Client.GetAsync("/test");
+        var body = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        AssertNoExceptionDetails(body);
+    }
+
     [Fact]
     public async Task ProductionEnvironment_DoesNotExposeExceptionDetails()
     {
@@ -231,9 +285,21 @@ public class ExceptionHandlerEndpointFilterTests
         var response = await app.Client.GetAsync("/test");
         var body = await ReadJsonAsync(response);
 
-        Assert.True(
-            !body.TryGetProperty("exceptionMessage", out var val) || val.ValueKind == JsonValueKind.Null,
-            "exceptionMessage must not be present in production responses");
+        AssertNoExceptionDetails(body);
+    }
+
+    /// <summary>
+    /// Asserts the response body carries none of the three development-only diagnostic fields, treating an
+    /// absent property and an explicit <c>null</c> alike.
+    /// </summary>
+    private static void AssertNoExceptionDetails(JsonElement body)
+    {
+        foreach (var name in new[] { "exceptionMessage", "exceptionStackTrace", "innerExceptionMessage" })
+        {
+            Assert.True(
+                !body.TryGetProperty(name, out var value) || value.ValueKind == JsonValueKind.Null,
+                $"{name} must not be present");
+        }
     }
 
     [Theory]

@@ -15,7 +15,7 @@ BEGIN
     BEGIN TRANSACTION
 
     -- Per-cipher singleton guard. When the governing rule(s) ask for a single active lease, activation is allowed
-    -- only if no other active in-window lease exists for the same cipher across all users. The UPDLOCK, HOLDLOCK
+    -- only if no other in-window lease with no early end exists for the same cipher across all users. The UPDLOCK, HOLDLOCK
     -- range lock is held for the life of this transaction, so it serializes against the INSERT below: a concurrent
     -- same-cipher activation blocks here until this transaction commits, then sees the new lease and is rejected.
     -- Outcome -1 is distinct from the precondition-fail outcome (0) so the caller can surface a 409 conflict.
@@ -24,7 +24,7 @@ BEGIN
             SELECT 1
             FROM [dbo].[AccessLease] WITH (UPDLOCK, HOLDLOCK)
             WHERE [CipherId] = (SELECT [CipherId] FROM [dbo].[AccessRequest] WHERE [Id] = @AccessRequestId)
-                AND [Status] = 0 /* Active */
+                AND [Action] = 0 /* None (no early end) */
                 AND [NotBefore] <= @Now
                 AND [NotAfter] > @Now
         )
@@ -34,7 +34,7 @@ BEGIN
         RETURN
     END
 
-    -- Activation of an approved request: mints the active lease that authorizes access, spanning the request's
+    -- Activation of an approved request: mints the lease that authorizes access, spanning the request's
     -- approved window. Every application-level precondition is re-checked inside the INSERT so a concurrent
     -- activation cannot double-mint; zero rows inserted means a precondition no longer held and the caller decides
     -- how to surface that. [IX_AccessLease_AccessRequestId] (unique) is the backstop when two calls pass the
@@ -42,16 +42,17 @@ BEGIN
     INSERT INTO [dbo].[AccessLease]
     (
         [Id], [AccessRequestId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-        [Status], [NotBefore], [NotAfter], [RevokedDate], [RevokedBy], [CreationDate]
+        [Action], [NotBefore], [NotAfter], [RevokedDate], [RevokedBy], [CreationDate]
     )
     SELECT
         @AccessLeaseId, AR.[Id], AR.[OrganizationId], AR.[CollectionId], AR.[CipherId], AR.[RequesterId],
-        0 /* Active */, AR.[NotBefore], AR.[NotAfter], NULL, NULL, @Now
+        0 /* None (no early end) */, AR.[NotBefore], AR.[NotAfter], NULL, NULL, @Now
     FROM [dbo].[AccessRequest] AR
     WHERE
         AR.[Id] = @AccessRequestId
         AND AR.[RequesterId] = @RequesterId
-        AND AR.[Status] = 1 -- Approved
+        AND AR.[Action] = 1 -- Approved
+        AND AR.[ExtensionOfLeaseId] IS NULL -- an extension applied in place on approval and never mints a lease
         AND AR.[NotBefore] <= @Now
         AND AR.[NotAfter] > @Now
         AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] AL WHERE AL.[AccessRequestId] = AR.[Id])

@@ -752,6 +752,32 @@ rule UpdateManualTargetSystem {
         -- registration request.
 }
 
+rule DeleteTargetSystem {
+    when: DeleteTargetSystem(target_system)
+    -- A configuration naming this target holds it: deleting the target would leave the
+    -- configuration -- and the credential it manages -- pointing at nothing. The
+    -- configurations go first (DeleteRotationConfig), which is also what releases each
+    -- cipher for a configuration elsewhere.
+    requires: not RotationConfigs.any(c => c.target_system = target_system)
+    ensures: AdministrationAudited(operation: target_deleted, target_system: target_system)
+    ensures:
+        for assignment in ConnectorTargetAssignments where target_system = target_system:
+            not exists assignment
+    ensures: not exists target_system
+    @guidance
+        -- Permanent, and deliberately narrower than DisableTargetSystem: disabling stops new
+        -- rotations being offered while the target and its configurations stay intact, so it
+        -- remains the reversible control for a target that is merely unavailable. Deleting is
+        -- for a target that has left the estate.
+        -- Its access connector assignments go with it: an assignment is only the
+        -- connector-to-target edge and means nothing once the target is gone, so it cascades
+        -- rather than blocking (mirroring an access connector's own assignments). No rotation
+        -- can be in flight to be torn up -- a job belongs to a configuration on this target,
+        -- and a surviving configuration blocks the delete outright.
+        -- The audit log, not the row, is the durable record of the target (Goal 4): the event
+        -- carries its name, which is why the audit emission is ordered before the removal.
+}
+
 -- Rotation configuration
 
 rule CreateRotationConfig {
@@ -1616,8 +1642,8 @@ rule RecordManualRotation {
 -- targets — an access connector registered (connector_registered), revoked (connector_revoked), its
 -- credential reissued in place (connector_credential_reissued), assigned to / unassigned from
 -- a target (connector_assigned, connector_unassigned), and a target system registered / disabled /
--- enabled / updated (target_registered, target_disabled, target_enabled,
--- target_system_updated). Connector connectivity edges
+-- enabled / updated / deleted (target_registered, target_disabled, target_enabled,
+-- target_system_updated, target_deleted). Connector connectivity edges
 -- (ConnectorConnected/ConnectorDisconnected) are liveness observations, not operations, and are
 -- not audited directly; a drop's impact on in-flight work is audited via the released outcome.
 --
@@ -1741,6 +1767,10 @@ surface TargetSystemView {
             when target_system.method = automatic
         UpdateManualTargetSystem(target_system, name)
             when target_system.method = manual
+        -- Permanently remove the target. Offered only once nothing is configured against it;
+        -- disable is the reversible control.
+        DeleteTargetSystem(target_system)
+            when not RotationConfigs.any(c => c.target_system = target_system)
 }
 
 surface RotationConfigView {

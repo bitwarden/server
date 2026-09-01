@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
@@ -6,10 +7,12 @@ using Bit.Core.Vault.Entities;
 namespace Bit.Core.Pam.Services;
 
 /// <summary>
-/// The read decision point for PAM credential leasing in Vault code. A cipher reachable only through
-/// leasing-enabled collections is "leasing-gated": its secrets are withheld (partial data) unless the
-/// caller holds a valid active lease. Every method is "unrestricted" when the <c>Pam</c> feature flag is
-/// off, so flag-off behaviour is unchanged.
+/// The decision point for PAM credential leasing in Vault code. A cipher reachable only through
+/// leasing-enabled collections — those governed by an access rule that is currently <em>enabled</em> — is
+/// "leasing-gated": its secrets are withheld (partial data) unless the caller holds a valid active lease,
+/// and mutating it is refused without one. A collection whose rule has been switched off gates nothing.
+/// Every method is "unrestricted" when the <c>Pam</c> feature flag is off, so flag-off behaviour is
+/// unchanged.
 /// </summary>
 /// <remarks>
 /// Callers reach a cipher in one of two stances, and the gate has a method family for each. A
@@ -46,8 +49,11 @@ public interface ICipherLeaseGate
     /// regardless of lease state — secrets are only ever released one cipher at a time.
     /// </summary>
     /// <param name="collections">
-    /// The caller's collections. <c>null</c> means "not loaded, because the caller has no organizations"
-    /// and is equivalent to empty: with no collection to reach a cipher through, nothing is gated.
+    /// The caller's collections, loaded through a collection read path so that
+    /// <see cref="CollectionDetails.HasEnabledAccessRule"/> is populated — the implementation reads it to
+    /// tell a governing rule that is switched on from one that is not. <c>null</c> means "not loaded,
+    /// because the caller has no organizations" and is equivalent to empty: with no collection to reach a
+    /// cipher through, nothing is gated.
     /// </param>
     /// <param name="collectionCiphersByCipher">
     /// The caller's cipher-to-collection mappings, keyed by cipher id. <c>null</c> carries the same
@@ -93,8 +99,37 @@ public interface ICipherLeaseGate
     Task<FullCipherAccess?> AuthorizeAdminWriteReturnAsync(Guid userId, Guid organizationId, Cipher cipher);
 
     /// <summary>
+    /// Per-cipher write decision. Throws <see cref="NotFoundException"/> when mutating
+    /// <paramref name="cipher"/> is refused — it is gated and the caller holds no valid active lease —
+    /// and otherwise returns a witness authorizing that cipher, so a caller who echoes the mutated cipher
+    /// back can build the full shape without asking again.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="NotFoundException"/>, not a forbidden, and deliberately so: a member who cannot reach a
+    /// credential should not learn from a write attempt that it exists. It also matches how the vault
+    /// already answers a mutation aimed at a cipher the caller cannot edit.
+    /// </remarks>
+    Task<FullCipherAccess> EnsureCanMutateAsync(Guid userId, Cipher cipher);
+
+    /// <summary>
+    /// Bulk write decision. Throws <see cref="NotFoundException"/> if <em>any</em> of
+    /// <paramref name="ciphers"/> is gated with no valid active lease, refusing the whole batch rather
+    /// than half-applying it; otherwise returns a witness authorizing all of them.
+    /// </summary>
+    /// <remarks>
+    /// A held lease widens this decision, which is the opposite of
+    /// <see cref="AuthorizeReadManyAsync(Guid, IEnumerable{Cipher})"/> — and for a reason. A bulk read
+    /// stays strict because a sync copies secrets into every client's local store for as long as that
+    /// store lives; a bulk write's <em>request</em> copies no secret anywhere, so refusing a lease-holder's
+    /// own edit would withhold nothing and only break the feature for the person the lease was issued to.
+    /// What a write <em>returns</em> is a separate decision, and a strict one — see
+    /// <see cref="AuthorizeWriteReturnAsync"/>.
+    /// </remarks>
+    Task<FullCipherAccess> EnsureCanMutateManyAsync(Guid userId, IEnumerable<Cipher> ciphers);
+
+    /// <summary>
     /// Per-cipher read for a caller reaching the cipher through organization-wide permission rather than
-    /// a collection assignment — the "/admin" endpoints.
+    /// through their collection assignments — the "/admin" endpoints.
     /// </summary>
     /// <remarks>
     /// Leasing status is resolved from the organization's collections, not the caller's, so a cipher the

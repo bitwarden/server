@@ -10,7 +10,8 @@ CREATE PROCEDURE [dbo].[AccessRequest_CreateApprovedExtension]
     @NotAfter DATETIME2(7),
     @Reason NVARCHAR(MAX) = NULL,
     @Now DATETIME2(7),
-    @RuleId UNIQUEIDENTIFIER = NULL
+    @RuleId UNIQUEIDENTIFIER = NULL,
+    @DenialComment NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -22,17 +23,47 @@ BEGIN
 
     -- Lock the parent lease row for the life of the transaction. A second concurrent extension of the same lease
     -- blocks here until this transaction commits, then re-counts below and sees this extension. The lease must
-    -- still be active and in-window to be extendable; outcome 0 is distinct from the cap conflict (-1).
+    -- have no early end recorded and be in-window to be extendable; outcome 0 is distinct from the cap conflict (-1).
     IF NOT EXISTS (
         SELECT 1
         FROM [dbo].[AccessLease] WITH (UPDLOCK, HOLDLOCK)
         WHERE [Id] = @ExtensionOfLeaseId
             AND [RequesterId] = @RequesterId
-            AND [Status] = 0 /* Active */
+            AND [Action] = 0 /* None (no early end) */
             AND [NotAfter] > @Now
     )
     BEGIN
-        ROLLBACK TRANSACTION
+        -- There is nothing left to extend, but the attempt is still an answerable request: record it denied, with
+        -- an automatic verdict naming why, so the requester can find it instead of getting only a failed call
+        -- (PM-42632). The window stored is the one that was asked for -- it was never applied to the lease, which
+        -- is left untouched.
+        --
+        -- This row carries ExtensionOfLeaseId, so it counts toward the cap re-checked below and by
+        -- [AccessRequest_CountExtensionsByLeaseId]. That costs nothing: a lease only reaches this branch once it is
+        -- permanently un-extendable, so there is no later extension for it to consume.
+        INSERT INTO [dbo].[AccessRequest]
+        (
+            [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
+            [NotBefore], [NotAfter], [Reason], [Action], [CreationDate], [ActionDate], [RuleId]
+        )
+        VALUES
+        (
+            @AccessRequestId, @ExtensionOfLeaseId, @OrganizationId, @CollectionId, @CipherId, @RequesterId,
+            @NotBefore, @NotAfter, @Reason, 2 /* Denied */, @Now, @Now, @RuleId
+        )
+
+        INSERT INTO [dbo].[AccessDecision]
+        (
+            [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
+            [Verdict], [Comment], [EvaluationContext], [CreationDate]
+        )
+        VALUES
+        (
+            @AccessDecisionId, @AccessRequestId, 0 /* Automatic */, NULL, NULL,
+            0 /* Deny */, @DenialComment, NULL, @Now
+        )
+
+        COMMIT TRANSACTION
         SELECT 0 -- LeaseNotActive
         RETURN
     END
@@ -53,7 +84,7 @@ BEGIN
     INSERT INTO [dbo].[AccessRequest]
     (
         [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-        [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate], [RuleId]
+        [NotBefore], [NotAfter], [Reason], [Action], [CreationDate], [ActionDate], [RuleId]
     )
     VALUES
     (

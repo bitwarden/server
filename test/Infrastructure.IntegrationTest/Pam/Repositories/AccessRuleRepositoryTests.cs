@@ -82,7 +82,6 @@ public class AccessRuleRepositoryTests
             RequesterId = Guid.NewGuid(),
             NotBefore = now,
             NotAfter = now.AddHours(1),
-            Status = AccessRequestStatus.Pending,
             CreationDate = now,
             RuleId = rule.Id,
         });
@@ -98,7 +97,7 @@ public class AccessRuleRepositoryTests
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.NotNull(persisted);
         Assert.Null(persisted!.RuleId);
-        Assert.Equal(AccessRequestStatus.Pending, persisted.Status);
+        Assert.Equal(AccessRequestAction.None, persisted.Action);
     }
 
     /// <summary>
@@ -132,7 +131,7 @@ public class AccessRuleRepositoryTests
             RequesterId = requesterId,
             NotBefore = now.AddMinutes(-5),
             NotAfter = now.AddHours(1),
-            Status = AccessRequestStatus.Approved,
+            Action = AccessRequestAction.Approved,
             CreationDate = now,
             RuleId = rule.Id,
         });
@@ -145,7 +144,7 @@ public class AccessRuleRepositoryTests
             CollectionId = collection.Id,
             CipherId = cipherId,
             RequesterId = requesterId,
-            Status = AccessLeaseStatus.Active,
+            Action = AccessLeaseAction.None,
             NotBefore = request.NotBefore,
             NotAfter = request.NotAfter,
             CreationDate = now,
@@ -164,7 +163,7 @@ public class AccessRuleRepositoryTests
             RequesterId = requesterId,
             NotBefore = lease.NotAfter,
             NotAfter = lease.NotAfter.AddHours(1),
-            Status = AccessRequestStatus.Approved,
+            Action = AccessRequestAction.Approved,
             CreationDate = now,
             RuleId = rule.Id,
         };
@@ -177,7 +176,8 @@ public class AccessRuleRepositoryTests
             CreationDate = now,
         };
         Assert.Equal(AccessLeaseExtendOutcome.Extended,
-            await accessRequestRepository.CreateApprovedExtensionAsync(extension, extensionDecision, now));
+            await accessRequestRepository.CreateApprovedExtensionAsync(
+                extension, extensionDecision, now, denialComment: null));
 
         // Act
         await organizationRepository.DeleteAsync(organization);

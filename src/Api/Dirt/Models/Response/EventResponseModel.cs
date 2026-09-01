@@ -37,6 +37,8 @@ public class EventResponseModel : ResponseModel
         ServiceAccountId = ev.ServiceAccountId;
         GrantedServiceAccountId = ev.GrantedServiceAccountId;
         SendId = ev.SendId;
+        AccessRequestId = ev.AccessRequestId;
+        AccessLeaseId = ev.AccessLeaseId;
     }
 
     public EventType Type { get; set; }
@@ -62,4 +64,6 @@ public class EventResponseModel : ResponseModel
     public Guid? ServiceAccountId { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
     public Guid? SendId { get; set; }
+    public Guid? AccessRequestId { get; set; }
+    public Guid? AccessLeaseId { get; set; }
 }

@@ -173,4 +173,9 @@ public class NoopEventService : IEventService
     {
         return Task.FromResult(0);
     }
+
+    public Task LogPamAccessEventAsync(EventType type, PamAccessEventContext context)
+    {
+        return Task.FromResult(0);
+    }
 }

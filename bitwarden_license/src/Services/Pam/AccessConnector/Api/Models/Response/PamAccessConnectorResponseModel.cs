@@ -1,5 +1,7 @@
-﻿using Bit.HttpExtensions;
+﻿using  Bit.HttpExtensions;
 using Bit.Pam.Enums;
+using Bit.Services.Pam.AccessConnector.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Api.Models.Response;
 
@@ -9,9 +11,20 @@ namespace Bit.Services.Pam.AccessConnector.Api.Models.Response;
 /// </summary>
 public class PamAccessConnectorResponseModel : ResponseModel
 {
-    public PamAccessConnectorResponseModel(string obj = "pamAccessConnector")
+    public PamAccessConnectorResponseModel(PamAccessConnectorListItem item, string obj = "pamAccessConnector")
         : base(obj)
     {
+        ArgumentNullException.ThrowIfNull(item);
+
+        Id = item.Daemon.Id;
+        OrganizationId = item.Daemon.OrganizationId;
+        Name = item.Daemon.Name;
+        Status = item.Daemon.Status;
+        IsConnected = item.IsConnected;
+        LastHeartbeatAt = item.Daemon.LastHeartbeatAt.AsUtc();
+        AssignedTargetSystemIds = item.AssignedTargetSystemIds;
+        CreationDate = item.Daemon.CreationDate.AsUtc();
+        RevisionDate = item.Daemon.RevisionDate.AsUtc();
     }
 
     /// <summary>

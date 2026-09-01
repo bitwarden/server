@@ -8,9 +8,9 @@ CREATE PROCEDURE [dbo].[AccessRequest_Create]
     @NotBefore DATETIME2(7),
     @NotAfter DATETIME2(7),
     @Reason NVARCHAR(MAX) = NULL,
-    @Status TINYINT,
+    @Action TINYINT,
     @CreationDate DATETIME2(7),
-    @ResolvedDate DATETIME2(7) = NULL,
+    @ActionDate DATETIME2(7) = NULL,
     @RuleId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
@@ -27,9 +27,9 @@ BEGIN
         [NotBefore],
         [NotAfter],
         [Reason],
-        [Status],
+        [Action],
         [CreationDate],
-        [ResolvedDate],
+        [ActionDate],
         [RuleId]
     )
     VALUES
@@ -43,9 +43,9 @@ BEGIN
         @NotBefore,
         @NotAfter,
         @Reason,
-        @Status,
+        @Action,
         @CreationDate,
-        @ResolvedDate,
+        @ActionDate,
         @RuleId
     )
 END

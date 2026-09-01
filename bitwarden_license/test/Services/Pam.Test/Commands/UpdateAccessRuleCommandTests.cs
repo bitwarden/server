@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
+using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
@@ -157,6 +158,47 @@ public class UpdateAccessRuleCommandTests
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
             .SetAccessRuleAssociationsAsync(default, default, default!, default!);
+    }
+
+    // RuleName is the name after the edit, so a rename shows as the new name -- the previous one is read from the
+    // preceding event in the trail, not from this one.
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_EmitsAttemptThenOutcome_WithTheNewNameAndEditorAsActor(
+        AccessRuleDetails existing, AccessRule update, Guid editorId)
+    {
+        var sutProvider = SetupSutProvider();
+        var orgId = existing.OrganizationId;
+        existing.CollectionIds = [];
+        existing.Name = "before";
+        update.Name = "after";
+        update.LastEditedBy = editorId;
+        sutProvider.GetDependency<IAccessRuleRepository>().GetDetailsByIdAsync(existing.Id).Returns(existing);
+        SetupValidator(sutProvider, orgId, existing.Id, []);
+
+        await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, []);
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.RuleUpdated && e.Phase == AccessAuditEventPhase.Attempt
+            && e.OrganizationId == orgId && e.ActorId == editorId && e.AccessRuleId == existing.Id
+            && e.RuleName == "after" && e.OccurredAt == _now));
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.RuleUpdated && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessRuleId == existing.Id && e.RuleName == "after"));
+    }
+
+    // A rule that isn't the route organization's is rejected before anything is recorded.
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WrongOrg_EmitsNothing(AccessRuleDetails existing, AccessRule update)
+    {
+        var sutProvider = SetupSutProvider();
+        sutProvider.GetDependency<IAccessRuleRepository>().GetDetailsByIdAsync(existing.Id).Returns(existing);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.UpdateAsync(Guid.NewGuid(), existing.Id, update, []));
+
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>()
+            .DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     private static void SetupValidator(SutProvider<UpdateAccessRuleCommand> sutProvider, Guid organizationId,

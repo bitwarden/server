@@ -1,18 +1,57 @@
 ﻿using Bit.HttpExtensions;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
 /// An access request with its denormalized requester identity, serving the approver inbox, the caller's own request
-/// list, and the cipher access-state snapshot. <see cref="ExpiredAt"/> has no backing store in v1 and is always null;
-/// <see cref="RuleId"/> is the rule pinned at submit (null for requests created before pinning existed).
+/// list, and the cipher access-state snapshot. <see cref="RuleId"/> is the rule pinned at submit (null for requests
+/// created before pinning existed).
 /// </summary>
 public class AccessRequestDetailsResponseModel : ResponseModel
 {
     public AccessRequestDetailsResponseModel()
         : base("accessRequestDetails")
     {
+    }
+
+    public AccessRequestDetailsResponseModel(AccessRequestDetails details)
+        : base("accessRequestDetails")
+    {
+        ArgumentNullException.ThrowIfNull(details);
+
+        Id = details.Id;
+        CipherId = details.CipherId;
+        CollectionId = details.CollectionId;
+        OrganizationId = details.OrganizationId;
+        RequesterId = details.RequesterId;
+        RuleId = details.RuleId;
+        Status = details.Status;
+        LeaseNotBefore = details.NotBefore.AsUtc();
+        LeaseNotAfter = details.NotAfter.AsUtc();
+        Reason = details.Reason;
+        SubmittedAt = details.CreationDate.AsUtc();
+        ResolvedAt = details.ResolvedDate.AsUtc();
+        // The request's full decision log, oldest first: one element per recorded decision (human or automatic).
+        // Empty only while pending (no decision recorded yet).
+        Decisions = details.Decisions
+            .Select(d => new AccessRequestDecisionResponseModel
+            {
+                DeciderKind = d.DeciderKind,
+                Id = d.ApproverId,
+                Name = d.Name,
+                Email = d.Email,
+                Comment = d.Comment,
+                Verdict = d.Verdict,
+                DecidedAt = d.DecidedAt.AsUtc(),
+            })
+            .ToList();
+        ProducedLeaseId = details.ProducedLeaseId;
+        ProducedLeaseStatus = details.ProducedLeaseStatus;
+        ExtensionOfLeaseId = details.ExtensionOfLeaseId;
+        RequesterName = details.RequesterName;
+        RequesterEmail = details.RequesterEmail;
     }
 
     /// <summary>The access request's unique identifier.</summary>
@@ -36,7 +75,11 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// </summary>
     public Guid? RuleId { get; set; }
 
-    /// <summary>The request's lifecycle state.</summary>
+    /// <summary>
+    /// The request's lifecycle state as of the read clock. Expired has two origins behind this one value — nobody
+    /// answered, or an approval was never activated; consumers distinguish them via <see cref="Decisions"/> (empty =
+    /// unanswered, contains an approval = unactivated). An expired row's end time is <see cref="LeaseNotAfter"/>.
+    /// </summary>
     public AccessRequestStatus Status { get; set; }
 
     /// <summary>
@@ -56,11 +99,11 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// <summary>When the request was opened (UTC).</summary>
     public DateTime SubmittedAt { get; set; }
 
-    /// <summary>When the request was approved, denied, or cancelled (UTC); null while pending.</summary>
+    /// <summary>
+    /// When a party approved, denied, or cancelled the request (UTC); null while pending — and null for expired
+    /// rows, which no party resolved (their end time is <see cref="LeaseNotAfter"/>).
+    /// </summary>
     public DateTime? ResolvedAt { get; set; }
-
-    /// <summary>Distinct from <see cref="ResolvedAt"/>; set when an approved request lapses unactivated. Not tracked in v1.</summary>
-    public DateTime? ExpiredAt { get; set; }
 
     /// <summary>
     /// The request's decision log, oldest first — one element per decision (human or automatic). Each carries who
