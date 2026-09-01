@@ -20,9 +20,8 @@ internal static class AccessTokenSeeder
     internal static (ApiKey ApiKey, string ClientSecret, string EncryptionKeyB64) Create(
         string organizationKeyB64, Guid serviceAccountId, string name, bool write)
     {
-        var encryptionKey = RandomNumberGenerator.GetBytes(16);
-        var encryptionKeyB64 = Convert.ToBase64String(encryptionKey);
-        var derivedKeyB64 = Convert.ToBase64String(DeriveAccessTokenKey(encryptionKey));
+        var encryptionKeyB64 = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+        var derivedKeyB64 = RustSdkService.DeriveAccessTokenKey(encryptionKeyB64);
 
         var clientSecret = CoreHelpers.SecureRandomString(_clientSecretLength);
 
@@ -40,17 +39,6 @@ internal static class AccessTokenSeeder
         };
 
         return (apiKey, clientSecret, encryptionKeyB64);
-    }
-
-    /// <summary>
-    /// Reproduces the SDK's access-token key derivation: HMAC-SHA256 (key "bitwarden-accesstoken") over the
-    /// 16-byte encryption key, then HKDF-Expand SHA256 to 64 bytes with info "sm-access-token". The result is
-    /// an enc||mac composite key matching <c>derive_shareable_key</c> in bitwarden-crypto.
-    /// </summary>
-    internal static byte[] DeriveAccessTokenKey(byte[] encryptionKey)
-    {
-        var prk = HMACSHA256.HashData(Encoding.UTF8.GetBytes("bitwarden-accesstoken"), encryptionKey);
-        return HKDF.Expand(HashAlgorithmName.SHA256, prk, 64, Encoding.UTF8.GetBytes("sm-access-token"));
     }
 
     private static string HashClientSecret(string clientSecret)

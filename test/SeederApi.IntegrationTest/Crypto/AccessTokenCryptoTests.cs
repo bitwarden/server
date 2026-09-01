@@ -1,12 +1,11 @@
 ﻿using System.Text.Json;
 using Bit.RustSDK;
-using Bit.Seeder.Factories;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Crypto;
 
 /// <summary>
-/// Locks the managed access-token key derivation against the sdk-internal reference vector
+/// Locks the SDK-backed access-token key derivation against the sdk-internal reference vector
 /// (auth/access_token.rs::can_decode_access_token) and proves the derived key round-trips a
 /// {"encryptionKey":...} payload through the Rust SDK's type-2 EncString.
 /// </summary>
@@ -22,18 +21,15 @@ public class AccessTokenCryptoTests
     [Fact]
     public void DeriveAccessTokenKey_MatchesSdkVector()
     {
-        var encryptionKey = Convert.FromBase64String(ReferenceEncryptionKeyB64);
+        var derived = RustSdkService.DeriveAccessTokenKey(ReferenceEncryptionKeyB64);
 
-        var derived = AccessTokenSeeder.DeriveAccessTokenKey(encryptionKey);
-
-        Assert.Equal(ExpectedDerivedKeyB64, Convert.ToBase64String(derived));
+        Assert.Equal(ExpectedDerivedKeyB64, derived);
     }
 
     [Fact]
     public void EncryptedPayload_RoundTripsUnderDerivedKey()
     {
-        var derivedKeyB64 = Convert.ToBase64String(
-            AccessTokenSeeder.DeriveAccessTokenKey(Convert.FromBase64String(ReferenceEncryptionKeyB64)));
+        var derivedKeyB64 = RustSdkService.DeriveAccessTokenKey(ReferenceEncryptionKeyB64);
 
         const string organizationKeyB64 =
             "H9/oIRLtL9nGCQOVDjSMoEbJsjWXSOCb3qeyDt6ckzS3FhyboEDWyTP/CQfbIszNmAVg2ExFganG1FVFGXO/Jg==";

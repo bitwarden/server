@@ -1828,6 +1828,7 @@ dependencies = [
  "csbindgen",
  "serde",
  "serde_json",
+ "zeroize",
 ]
 
 [[package]]
