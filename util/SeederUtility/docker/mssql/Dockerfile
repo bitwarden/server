@@ -22,6 +22,6 @@ RUN chmod +x /docker-entrypoint.sh
 # racing the attach and migrating an empty database into place
 HEALTHCHECK --interval=10s --timeout=15s --retries=90 --start-period=30s \
     CMD /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "${SA_PASSWORD}" -C \
-        -d vault -b -Q "SET NOCOUNT ON; IF NOT EXISTS (SELECT 1 FROM [User]) RAISERROR('unseeded', 16, 1)" > /dev/null 2>&1
+        -d vault_dev -b -Q "SET NOCOUNT ON; IF NOT EXISTS (SELECT 1 FROM [User]) RAISERROR('unseeded', 16, 1)" > /dev/null 2>&1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

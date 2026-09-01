@@ -62,7 +62,7 @@ echo "MSSQL default data path: ${DATA_PATH}"
 database_exists() {
     local count
     count=$(sqlcmd -h -1 \
-        -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name = 'vault'" \
+        -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name = 'vault_dev'" \
         2>/dev/null | tr -d '[:space:]')
     [ "${count}" = "1" ]
 }
@@ -70,29 +70,29 @@ database_exists() {
 # Counts rows, since a zero-row SELECT is not a sqlcmd error
 database_seeded() {
     local count
-    count=$(sqlcmd -b -h -1 -d vault \
+    count=$(sqlcmd -b -h -1 -d vault_dev \
         -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM [User]" \
         2>/dev/null | tr -d '[:space:]')
     [ -n "${count}" ] && [ "${count}" -gt 0 ] 2>/dev/null
 }
 
-# The data directory is usually a mounted volume, so vault survives a restart
+# The data directory is usually a mounted volume, so vault_dev survives a restart
 if database_exists; then
     if ! database_seeded; then
-        echo "ERROR: a 'vault' database exists but holds no seeded data."
+        echo "ERROR: a 'vault_dev' database exists but holds no seeded data."
         echo "Something created it before this image could attach the seed. Start the database"
         echo "and wait for it to report healthy before starting anything that migrates."
         exit 1
     fi
-    echo "Database 'vault' is already attached. Leaving it as is."
+    echo "Database 'vault_dev' is already attached. Leaving it as is."
 else
     echo "Copying database files to data directory..."
-    cp /seed/vault_dev.mdf "${DATA_PATH}vault.mdf"
-    cp /seed/vault_dev_log.ldf "${DATA_PATH}vault_log.ldf"
+    cp /seed/vault_dev.mdf "${DATA_PATH}vault_dev.mdf"
+    cp /seed/vault_dev_log.ldf "${DATA_PATH}vault_dev_log.ldf"
 
     # -b exits non-zero on a T-SQL error so a failed attach does not log success
     echo "Attaching seeded database..."
-    sqlcmd -b -Q "CREATE DATABASE [vault] ON (FILENAME = '${DATA_PATH}vault.mdf'), (FILENAME = '${DATA_PATH}vault_log.ldf') FOR ATTACH"
+    sqlcmd -b -Q "CREATE DATABASE [vault_dev] ON (FILENAME = '${DATA_PATH}vault_dev.mdf'), (FILENAME = '${DATA_PATH}vault_dev_log.ldf') FOR ATTACH"
 
     echo "Attach complete."
 fi

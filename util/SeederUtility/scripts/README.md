@@ -33,7 +33,7 @@ dotnet run --project .. -- preset --list --output json
 
 - MSSQL uses file attach (`CREATE DATABASE ... FOR ATTACH`) instead of `.bak` restore. The `.bak` restore approach fails on Kubernetes PVCs due to `ValidateTargetForCreation` errors — a known issue with MSSQL on certain storage backends.
 - The entrypoint waits for all system databases to be ONLINE and verifies the data directory is writable (by creating and dropping a test database) before attempting the attach.
-- The database is restored as `vault` (matching the self-host chart's connection string), not `vault_dev` (the seeder's default name).
+- The database is restored as `vault_dev`, the seeder's default name. Self-host expects `vault` by default, so override the database name in its connection string when consuming this image.
 
 ## Image Tags
 
@@ -213,7 +213,9 @@ To pull that image, run `az acr login -n devimagesaedgdev` first. The registry r
 
 A locally built image needs `pull_policy: never`, because without `PUSH=true` the tag names a registry it was never pushed to and the pull fails.
 
-Gate `admin` on the database. It migrates at startup, and on a fresh volume it will create an empty `vault` before the seed finishes attaching, leaving a schema with no data. The image reports healthy only once the seed is attached:
+The image restores its database as `vault_dev`, not the `vault` self-host expects by default — override the database name in self-host's connection string before starting.
+
+Gate `admin` on the database. It migrates at startup, and on a fresh volume it will create an empty `vault_dev` before the seed finishes attaching, leaving a schema with no data. The image reports healthy only once the seed is attached:
 
 ```yaml
 services:
