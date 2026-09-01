@@ -20,6 +20,17 @@ BEGIN
     -- (@@ROWCOUNT > 0), so a no-op never orphans an AccessDecision.
     BEGIN TRANSACTION AccessRequest_CancelWithDecision
 
+    -- Claim the request row before probing for a produced lease, exactly as [AccessRequest_Cancel] does and for the
+    -- same reason: the UPDATE's NOT EXISTS is correlated to @AccessRequestId rather than to the row being updated, so
+    -- without this the optimizer may evaluate it before [AccessRequest] is locked and a concurrent
+    -- [AccessLease_CreateFromApprovedRequest] can mint in the gap, leaving a Denied request holding a live lease.
+    -- Activation claims the same row, so the two serialize on it. The value read is unused -- the guarded UPDATE
+    -- stays the single arbiter of the transition -- because reading the row is simply how T-SQL takes a lock on it.
+    DECLARE @Claimed TINYINT
+    SELECT @Claimed = [Action]
+    FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)
+    WHERE [Id] = @AccessRequestId
+
     UPDATE [dbo].[AccessRequest]
     SET [Action] = 2, -- Denied
         [ActionDate] = @Now

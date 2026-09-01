@@ -158,6 +158,9 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
     /// guard needs, arriving at the same deterministic outcome the stored procedure's UPDLOCK/HOLDLOCK blocks for.
     /// Retries are bounded: a failure that outlives them propagates, because on a path that grants access to Vault
     /// Data an unresolved persistence failure must not be reported as a benign mint outcome.
+    ///
+    /// That only applies when <paramref name="enforceSingleActiveLease"/> asks for the guard, which is the sole
+    /// reason this path ever needs Serializable -- see <see cref="MintFromApprovedRequestAsync"/>.
     /// </remarks>
     public async Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(CoreEntity lease, DateTime now,
         bool enforceSingleActiveLease)
@@ -181,47 +184,51 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // A Serializable transaction is the closest cross-provider approximation of the stored procedure's
-        // UPDLOCK/HOLDLOCK range lock used for the per-cipher singleton guard: it keeps a concurrent same-cipher
-        // activation from reading a pre-mint state. Unlike the SQL Server proc (which blocks a concurrent caller
-        // until this transaction commits, then re-evaluates deterministically), a losing concurrent transaction here
-        // fails at commit time with a provider-level serialization error instead of cleanly returning
+        // Serializable is reserved for the per-cipher singleton guard, which is the only thing here that needs it: it
+        // is an anti-join over a *set* ("no other active lease for this cipher"), so there is no row whose lock could
+        // stand in for it, and Serializable is the closest cross-provider approximation of the stored procedure's
+        // UPDLOCK/HOLDLOCK range lock. Unlike the SQL Server proc (which blocks a concurrent caller until this
+        // transaction commits, then re-evaluates deterministically), a losing concurrent transaction here fails at
+        // commit time with a provider-level serialization error instead of cleanly returning
         // SingleActiveLeaseConflict/PreconditionFailed -- which is why the caller of this method retries it.
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        //
+        // Everything else is protected by the claim below rather than by isolation: it is a real row lock plus a CAS,
+        // which holds at every level. Taking Serializable when no guard is asked for bought nothing and cost
+        // plenty -- on PostgreSQL it enrolled every activation in SSI, so unrelated concurrent writers (notably
+        // CreateApprovedExtensionAsync, which is Serializable and does *not* retry) were aborted with 40001 by
+        // activations they had no true conflict with. This also restores parity with
+        // [AccessLease_CreateFromApprovedRequest], which likewise runs at the ambient ReadCommitted and reaches for
+        // its UPDLOCK/HOLDLOCK range lock only under @EnforceSingleActiveLease.
+        var isolation = enforceSingleActiveLease
+            ? System.Data.IsolationLevel.Serializable
+            : System.Data.IsolationLevel.ReadCommitted;
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(isolation);
 
         try
         {
-            if (enforceSingleActiveLease)
-            {
-                // The cipher is resolved from the request rather than the caller's copy of the lease, matching the
-                // procedure's WHERE [CipherId] = (SELECT [CipherId] FROM [dbo].[AccessRequest] WHERE [Id] = ...).
-                // Otherwise a lease whose CipherId disagrees with its AccessRequestId would be checked for
-                // contention against the wrong cipher and could mint a second concurrent active lease.
-                //
-                // A request that does not exist yields no cipher and the guard is skipped, leaving the precondition
-                // check below to report the failure -- exactly what the procedure's NULL scalar subquery does.
-                var cipherId = await dbContext.AccessRequests
-                    .Where(r => r.Id == lease.AccessRequestId)
-                    .Select(r => (Guid?)r.CipherId)
-                    .FirstOrDefaultAsync();
-
-                if (cipherId is not null)
-                {
-                    var conflict = await dbContext.AccessLeases
-                        .Where(l => l.CipherId == cipherId.Value)
-                        .Where(LiveAt(now))
-                        .AnyAsync();
-                    if (conflict)
-                    {
-                        await transaction.RollbackAsync();
-                        return AccessLeaseMintOutcome.SingleActiveLeaseConflict;
-                    }
-                }
-            }
-
-            // Every application-level precondition is re-checked here so a concurrent activation cannot double-mint;
-            // no matching request means a precondition no longer held and the caller decides how to surface that.
-            var request = await dbContext.AccessRequests
+            // Claim the request row, then mint. Activation used to read AccessRequest and write only AccessLease
+            // while a retraction reads AccessLease and writes only AccessRequest -- write skew across two tables,
+            // where neither side writes what the other reads, so both could commit and leave a Cancelled/Denied
+            // request holding a live lease. Access is governed by the lease alone once it exists, so that
+            // combination hands the requester the credential their request was withdrawn from.
+            //
+            // This UPDATE closes it from the activation side. It is semantically a no-op -- an activated request
+            // stays Approved, there is no 'activated' action -- but it makes activation a *writer* of the row the
+            // retraction paths write, so the two serialize on that row's write lock, held until this transaction
+            // commits. The other half is in AccessRequestRepository's retraction paths, which claim the same row
+            // before they probe for a lease. Mirrors the claiming UPDATE in
+            // [AccessLease_CreateFromApprovedRequest], including its position ahead of the singleton guard: the
+            // retraction paths lock AccessRequest and then read AccessLease, so taking the guard first would invert
+            // the two operations' lock order and make them deadlock.
+            //
+            // Serializable alone did not cover this. It is the mint's isolation, but the retraction paths run at the
+            // provider default, and PostgreSQL's SSI only detects a read/write dependency cycle when every
+            // transaction in it is Serializable -- so the cycle this pair forms went unnoticed.
+            //
+            // Every application-level precondition is re-checked here, so the claim and the guard are one statement
+            // and one CAS: a retraction that committed first has already moved Action off Approved, which is a clean
+            // zero-row outcome rather than a lost update.
+            var claimed = await dbContext.AccessRequests
                 .Where(r => r.Id == lease.AccessRequestId
                     && r.RequesterId == lease.RequesterId
                     && r.Action == AccessRequestAction.Approved
@@ -231,12 +238,36 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
                     && r.NotBefore <= now
                     && r.NotAfter > now
                     && !dbContext.AccessLeases.Any(l => l.AccessRequestId == r.Id))
-                .FirstOrDefaultAsync();
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Action, AccessRequestAction.Approved));
 
-            if (request is null)
+            if (claimed == 0)
             {
                 await transaction.RollbackAsync();
                 return AccessLeaseMintOutcome.PreconditionFailed;
+            }
+
+            // The claim proved the row exists and matches every precondition, and holds it for the rest of this
+            // transaction, so this read cannot miss and its values cannot go stale under us. It supplies the columns
+            // the lease is minted from, which are taken from the request rather than the caller's copy of the lease.
+            var request = await dbContext.AccessRequests
+                .AsNoTracking()
+                .FirstAsync(r => r.Id == lease.AccessRequestId);
+
+            if (enforceSingleActiveLease)
+            {
+                // The cipher is resolved from the request rather than the caller's copy of the lease, matching the
+                // procedure's WHERE [CipherId] = (SELECT [CipherId] FROM [dbo].[AccessRequest] WHERE [Id] = ...).
+                // Otherwise a lease whose CipherId disagrees with its AccessRequestId would be checked for
+                // contention against the wrong cipher and could mint a second concurrent active lease.
+                var conflict = await dbContext.AccessLeases
+                    .Where(l => l.CipherId == request.CipherId)
+                    .Where(LiveAt(now))
+                    .AnyAsync();
+                if (conflict)
+                {
+                    await transaction.RollbackAsync();
+                    return AccessLeaseMintOutcome.SingleActiveLeaseConflict;
+                }
             }
 
             var leaseEntity = Mapper.Map<EfModel>(lease);
