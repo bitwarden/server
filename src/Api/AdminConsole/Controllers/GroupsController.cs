@@ -3,15 +3,18 @@
 
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.Groups;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.OrganizationAuthorization;
@@ -35,6 +38,8 @@ public class GroupsController : Controller
     private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly IGroupsAuthorizationService _groupsAuthorizationService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -47,7 +52,9 @@ public class GroupsController : Controller
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        IGroupsAuthorizationService groupsAuthorizationService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
@@ -60,6 +67,8 @@ public class GroupsController : Controller
         _userService = userService;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
+        _groupsAuthorizationService = groupsAuthorizationService;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -127,10 +136,25 @@ public class GroupsController : Controller
         // Check the user has permission to grant access to the collections for the new group
         if (model.Collections?.Any() == true)
         {
-            var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
-            var authorized =
-                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyGroupAccess))
-                .Succeeded;
+            bool authorized;
+            if (_featureService.IsEnabled(FeatureFlagKeys.AuthorizationServices))
+            {
+                var authorizationResult = await _groupsAuthorizationService.AuthorizeSaveAsync(
+                    orgId,
+                    groupId: null,
+                    model.Collections.Select(c => c.Id).ToList(),
+                    currentCollectionIds: [],
+                    model.Users?.ToList() ?? []);
+                authorized = authorizationResult.UnauthorizedPostedCollectionIds.Count == 0;
+            }
+            else
+            {
+                var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
+                authorized =
+                    (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyGroupAccess))
+                    .Succeeded;
+            }
+
             if (!authorized)
             {
                 throw new NotFoundException();
@@ -154,6 +178,57 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
+        var readonlyCollectionIds = _featureService.IsEnabled(FeatureFlagKeys.AuthorizationServices)
+            ? await AuthorizeGroupSaveAsync(orgId, id, model, currentAccess)
+            : await AuthorizeGroupSaveWithHandlerAsync(orgId, id, model, currentAccess);
+
+        // The client only sends collections that the saving user has permissions to edit.
+        // We need to combine these with collections that the user doesn't have permissions for, so that we don't
+        // accidentally overwrite those
+        var editedCollectionAccess = model.Collections
+            .Select(c => c.ToSelectionReadOnly());
+        var readonlyCollectionAccess = currentAccess
+            .Where(ca => readonlyCollectionIds.Contains(ca.Id));
+        var collectionsToSave = editedCollectionAccess
+            .Concat(readonlyCollectionAccess)
+            .ToList();
+
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+
+        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, collectionsToSave, model.Users);
+        return new GroupResponseModel(group);
+    }
+
+    /// <summary>
+    /// Authorizes the group save and returns the IDs of the group's current collections that the caller cannot
+    /// change.
+    /// </summary>
+    private async Task<IReadOnlySet<Guid>> AuthorizeGroupSaveAsync(Guid orgId, Guid id, GroupRequestModel model,
+        ICollection<CollectionAccessSelection> currentAccess)
+    {
+        var authorizationResult = await _groupsAuthorizationService.AuthorizeSaveAsync(
+            orgId,
+            id,
+            model.Collections.Select(c => c.Id).ToList(),
+            currentAccess.Select(ca => ca.Id).ToList(),
+            model.Users?.ToList() ?? []);
+
+        if (!authorizationResult.CanAddSelfToGroup)
+        {
+            throw new BadRequestException("You cannot add yourself to groups.");
+        }
+
+        if (authorizationResult.UnauthorizedPostedCollectionIds.Count > 0)
+        {
+            throw new NotFoundException();
+        }
+
+        return authorizationResult.UnauthorizedCurrentCollectionIds;
+    }
+
+    private async Task<IReadOnlySet<Guid>> AuthorizeGroupSaveWithHandlerAsync(Guid orgId, Guid id,
+        GroupRequestModel model, ICollection<CollectionAccessSelection> currentAccess)
+    {
         // Authorization check:
         // If admins are not allowed access to all collections, you cannot add yourself to a group.
         // No error is thrown for this, we just don't update groups.
@@ -184,9 +259,6 @@ public class GroupsController : Controller
             }
         }
 
-        // The client only sends collections that the saving user has permissions to edit.
-        // We need to combine these with collections that the user doesn't have permissions for, so that we don't
-        // accidentally overwrite those
         var currentCollections = await _collectionRepository
             .GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
 
@@ -200,18 +272,7 @@ public class GroupsController : Controller
             }
         }
 
-        var editedCollectionAccess = model.Collections
-            .Select(c => c.ToSelectionReadOnly());
-        var readonlyCollectionAccess = currentAccess
-            .Where(ca => readonlyCollectionIds.Contains(ca.Id));
-        var collectionsToSave = editedCollectionAccess
-            .Concat(readonlyCollectionAccess)
-            .ToList();
-
-        var organization = await _organizationRepository.GetByIdAsync(orgId);
-
-        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, collectionsToSave, model.Users);
-        return new GroupResponseModel(group);
+        return readonlyCollectionIds;
     }
 
     [HttpPost("{id}")]
