@@ -63,6 +63,15 @@ This library cannot reference `Api`, so route-based authorization comes from
 [`OrganizationAuthorization`](../../../../src/Libraries/OrganizationAuthorization/README.md) —
 implement `IOrganizationRequirement` rather than adding `ICurrentContext` checks to a handler.
 
+**Per-seat licensing is the one exception, and it is enforced in-command.** `IOrganizationRequirement`
+resolves its organization through `HttpContextExtensions.GetOrganizationId()`, which throws when the
+route carries no `{orgId}` — and none of the three acquiring routes does (`POST /leases/ciphers/{id}`,
+`POST /access-requests/{id}/activate`, `POST /leases/{id}/extend` all learn the organization only from
+the row they load). `PamLicenseGuard.RequireLicense` therefore runs inside the command, where the
+placement is also load-bearing: activate checks below its idempotency guard so an already-running lease
+is still returned, and submit checks above rule resolution so the refusal cannot reveal whether the item
+is governed. A group-level policy would run ahead of both and change them.
+
 ## Registration
 
 `AddPamServices(Configuration)` registers the handlers, commands, queries, and rotation options, and
