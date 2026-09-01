@@ -1,5 +1,7 @@
 ﻿using System.Reflection;
+using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.Billing.Attributes;
 using Bit.Api.IntegrationTest.Factories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,12 +15,8 @@ public class OrganizationRequirementFromRouteTests(ApiApplicationFactory factory
     private static readonly string[] _organizationIdRouteNames = ["orgId", "organizationId"];
 
     /// <summary>
-    /// Every endpoint guarded by an <see cref="IOrganizationRequirement"/> must bind the organization id from
-    /// the route with an explicit <c>[FromRoute]</c> parameter named <c>orgId</c> or <c>organizationId</c>.
-    /// <see cref="OrganizationRequirementHandler"/> resolves the id via
-    /// <see cref="HttpContextExtensions.GetOrganizationId"/>, which reads route values only and throws
-    /// <see cref="HttpContextExtensions.NoOrgIdError"/> otherwise. An endpoint that does not bind the id from
-    /// the route would therefore fail at runtime. This test enforces the binding at build time.
+    /// <see cref="OrganizationRequirementHandler"/> reads the organization id from route values only, so every
+    /// <see cref="IOrganizationRequirement"/> endpoint must source it from the route or it fails at runtime.
     /// </summary>
     [Fact]
     public void AllOrganizationRequirementEndpoints_BindOrganizationIdFromRoute()
@@ -52,7 +50,9 @@ public class OrganizationRequirementFromRouteTests(ApiApplicationFactory factory
             return false;
         }
 
-        return methodInfo.GetParameters().Any(IsOrganizationIdFromRoute);
+        return methodInfo.GetParameters().Any(IsOrganizationIdFromRoute)
+               || methodInfo.GetCustomAttribute<InjectOrganizationAttribute>() != null
+               || methodInfo.GetParameters().Any(parameter => parameter.GetCustomAttribute<BindOrganizationAttribute>() != null);
     }
 
     private static bool IsOrganizationIdFromRoute(ParameterInfo parameter)
@@ -88,8 +88,9 @@ public class OrganizationRequirementFromRouteTests(ApiApplicationFactory factory
     }
 
     private static string BuildFailureMessage(IReadOnlyCollection<string> violations) =>
-        $"{violations.Count} endpoint(s) guarded by an IOrganizationRequirement do not bind the organization id " +
-        "from the route. Each must declare a parameter with [FromRoute] named 'orgId' or 'organizationId' " +
+        $"{violations.Count} endpoint(s) guarded by an IOrganizationRequirement do not source the organization id " +
+        "from the route. Each must declare a parameter with [FromRoute] named 'orgId' or 'organizationId', or use " +
+        "a route-reading binder ([InjectOrganization] on the action or [BindOrganization] on a parameter) " +
         "(the OrganizationRequirementHandler reads the id from route values only and will otherwise throw at " +
         $"runtime):\n  - {string.Join("\n  - ", violations)}";
 }
