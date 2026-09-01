@@ -176,6 +176,7 @@ public static partial class FeatureFlagKeys
     public const string EnableAutofillTriage = "enable-autofill-triage";
     public const string PM39071_DefaultPasswordManagerPrompt = "pm-39071-default-password-manager-prompt";
     public const string LitInlineMenuComponents = "lit-inline-menu-components";
+    public const string EnableBasicAuthResponse = "enable-basic-auth-response";
 
     /* Desktop Native Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
@@ -302,6 +303,7 @@ public static partial class FeatureFlagKeys
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
     public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
+    public const string OrganizationEventCleanup = "pm-33527-organization-event-cleanup";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
@@ -309,6 +311,7 @@ public static partial class FeatureFlagKeys
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
+    public const string PamAccessConnector = "pm-42354-rotation-daemon";
 
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
