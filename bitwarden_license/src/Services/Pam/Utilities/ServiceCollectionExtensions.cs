@@ -135,6 +135,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISetTargetSystemStatusCommand, SetTargetSystemStatusCommand>();
         services.AddScoped<IRenameTargetSystemCommand, RenameTargetSystemCommand>();
         services.AddScoped<IUpdateTargetSystemPolicyCommand, UpdateTargetSystemPolicyCommand>();
+        services.AddScoped<IDeleteTargetSystemCommand, DeleteTargetSystemCommand>();
         services.AddScoped<ICreateRotationConfigCommand, CreateRotationConfigCommand>();
         services.AddScoped<IUpdateRotationSettingsCommand, UpdateRotationSettingsCommand>();
         services.AddScoped<IUpdateRotationAccountCommand, UpdateRotationAccountCommand>();
