@@ -67,7 +67,7 @@ public class OrganizationUsersControllerGetTests : IClassFixture<ApiApplicationF
         {
             Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                ["orgId"] = _organizationA.Id.ToString()
+                ["orgId"] = _organizationB.Id.ToString()
             })
         };
 
