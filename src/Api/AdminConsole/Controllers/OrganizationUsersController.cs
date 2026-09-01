@@ -926,7 +926,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }
 
-    private async Task<IDictionary<Guid, bool>> GetClaimedByOrganizationStatusAsync([FromRoute] Guid orgId, IEnumerable<Guid> userIds)
+    private async Task<IDictionary<Guid, bool>> GetClaimedByOrganizationStatusAsync(Guid orgId, IEnumerable<Guid> userIds)
     {
         var usersOrganizationClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgId, userIds);
         return usersOrganizationClaimedStatus;
