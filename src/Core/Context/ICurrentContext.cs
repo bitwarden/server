@@ -90,5 +90,15 @@ public interface ICurrentContext
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
     bool AccessSecretsManager(Guid organizationId);
+
+    /// <summary>
+    /// Whether the caller holds a Privileged Access Manager license in the given organization — the per-seat
+    /// entitlement (<c>OrganizationUser.AccessPam</c>) drawn against the organization's subscription
+    /// (<c>Organization.UsePam</c>). <see cref="CurrentContextOrganization"/> has already ANDed the two together
+    /// with the ORGANIZATION's <c>Enabled</c> (the view selects <c>O.[Enabled]</c>, not the membership's), so this
+    /// is a straight read of the resulting claim: a lapsed organization reads as unlicensed.
+    /// </summary>
+    bool AccessPam(Guid organizationId);
+
     CurrentContextOrganization? GetOrganization(Guid orgId);
 }

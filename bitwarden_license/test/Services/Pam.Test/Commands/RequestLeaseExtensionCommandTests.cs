@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -73,6 +74,21 @@ public class RequestLeaseExtensionCommandTests
         await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
 
         await sutProvider.GetDependency<IAccessRequestRepository>().ReceivedWithAnyArgs(1)
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_Unlicensed_ThrowsBadRequestWithoutWriting(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        // An extension buys new access, so it needs a live license. The lease already running is untouched.
+        sutProvider.GetDependency<ICurrentContext>().AccessPam(lease.OrganizationId).Returns(false);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
+        Assert.Contains("Privileged Controls license is required", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
@@ -308,6 +324,9 @@ public class RequestLeaseExtensionCommandTests
         lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
+        // Licensed by default: every guard below this one is about the lease or the rule, not the holder's
+        // entitlement, so the licensing test is the only one that overrides it.
+        sutProvider.GetDependency<ICurrentContext>().AccessPam(lease.OrganizationId).Returns(true);
 
         // A human-approval rule still yields automatic extensions — the approval gate never applies to extensions.
         sutProvider.GetDependency<IGoverningRuleResolver>()

@@ -9,6 +9,7 @@ using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
+using Bit.Services.Pam.Utilities;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -62,6 +63,14 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         if (cipher is null)
         {
             throw new NotFoundException();
+        }
+
+        // Before the rule is resolved, so the refusal is about the caller's license and never leaks whether the item
+        // is governed, by what, or who could approve it. A user-owned cipher has no organization to be licensed in
+        // and is never gated; it falls through to the "does not require a lease" refusal below.
+        if (cipher.OrganizationId is { } organizationId)
+        {
+            _currentContext.RequireLicense(organizationId);
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;

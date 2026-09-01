@@ -560,6 +560,63 @@ public class CurrentContextTests
 
     #endregion
 
+    #region Privileged Access Manager Tests
+
+    [Theory, BitAutoData]
+    public void AccessPam_WithOrgAccess_ReturnsTrue(
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        sutProvider.Sut.Organizations = new List<CurrentContextOrganization>
+        {
+            new() { Id = orgId, AccessPam = true }
+        };
+
+        // Act
+        var result = sutProvider.Sut.AccessPam(orgId);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public void AccessPam_WithoutAccess_ReturnsFalse(
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        sutProvider.Sut.Organizations = new List<CurrentContextOrganization>
+        {
+            new() { Id = orgId, AccessPam = false }
+        };
+
+        // Act
+        var result = sutProvider.Sut.AccessPam(orgId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public void AccessPam_WithServiceAccount_ReturnsFalse(
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        // Unlike Secrets Manager, PAM grants no machine-principal escape hatch: the rotation connector authenticates
+        // under its own policy and never travels the leasing paths this guards.
+        sutProvider.Sut.ServiceAccountOrganizationId = orgId;
+
+        // Act
+        var result = sutProvider.Sut.AccessPam(orgId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    #endregion
+
     #region Secrets Manager Tests
 
     [Theory, BitAutoData]

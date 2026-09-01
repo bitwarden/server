@@ -45,6 +45,22 @@ public class ActivateAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task ActivateAsync_Unlicensed_ThrowsBadRequestWithoutMinting(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        // The approval was granted while they were licensed; the license has since been withdrawn. Activation mints
+        // the lease, so it is the last point the entitlement can still decide anything.
+        sutProvider.GetDependency<ICurrentContext>().AccessPam(request.OrganizationId).Returns(false);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
+        Assert.Contains("Privileged Controls license is required", ex.Message);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .CreateFromApprovedRequestAsync(default!, default, default);
+    }
+
+    [Theory, BitAutoData]
     public async Task ActivateAsync_ExtensionRequest_ThrowsBadRequestWithoutMinting(
         AccessRequest request, Guid parentLeaseId)
     {
@@ -541,6 +557,9 @@ public class ActivateAccessRequestCommandTests
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id)
             .Returns((AccessLease?)null);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(_requesterIp);
+        // Licensed by default: every guard below this one is about the request, not the requester's entitlement, so
+        // the licensing tests are the only ones that override it.
+        sutProvider.GetDependency<ICurrentContext>().AccessPam(request.OrganizationId).Returns(true);
     }
 
     private static void SetupPinnedRule(

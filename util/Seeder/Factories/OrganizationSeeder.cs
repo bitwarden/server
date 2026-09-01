@@ -65,7 +65,12 @@ internal static class OrganizationExtensions
             Email = shouldLinkUserId ? null : user.Email,
             Key = shouldIncludeKey ? encryptedOrgKey : null,
             Type = type,
-            Status = status
+            Status = status,
+            // Per-seat entitlements follow the organization's subscription: a seeded member is expected to be able to
+            // exercise whatever the organization bought. Set here rather than at the call sites so every seeding path
+            // -- Scenes, Steps and Recipes alike -- agrees. Without it, members of a UsePam organization seed
+            // unlicensed and PamLicenseGuard refuses them on submit, activate and extend.
+            AccessPam = organization.UsePam
         };
     }
 }
