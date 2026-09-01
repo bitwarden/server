@@ -29,7 +29,6 @@ public class OrganizationAccessTokenScene(
         public required Guid ServiceAccountId { get; set; }
         [Required]
         public required string Name { get; set; }
-        public bool Write { get; set; }
     }
 
     public class Result
@@ -45,7 +44,7 @@ public class OrganizationAccessTokenScene(
             [request.ServiceAccountId], request.OrganizationId);
 
         var (apiKey, clientSecret, encryptionKeyB64) = AccessTokenSeeder.Create(
-            request.OrganizationKeyB64, request.ServiceAccountId, request.Name, request.Write);
+            request.OrganizationKeyB64, request.ServiceAccountId, request.Name);
 
         var created = await apiKeyRepository.CreateAsync(apiKey);
 

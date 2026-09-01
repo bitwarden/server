@@ -153,8 +153,7 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
             OrganizationId = organizationId,
             OrganizationKeyB64 = organizationKeyB64,
             ServiceAccountId = serviceAccountId,
-            Name = "deploy token",
-            Write = true
+            Name = "deploy token"
         });
 
         var accessToken = accessTokenResult.GetProperty("accessToken").GetString()!;
@@ -169,6 +168,7 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
         var apiKey = await db.ApiKeys.SingleAsync(k => k.Id == apiKeyId);
         Assert.Equal(serviceAccountId, apiKey.ServiceAccountId);
         Assert.Equal("[\"api.secrets\"]", apiKey.Scope);
+        Assert.Equal("deploy token", RustSdkService.DecryptString(apiKey.Name, organizationKeyB64));
 
         var derivedKeyB64 = RustSdkService.DeriveAccessTokenKey(accessToken.Split(':')[1]);
         var payload = RustSdkService.DecryptString(apiKey.EncryptedPayload, derivedKeyB64);

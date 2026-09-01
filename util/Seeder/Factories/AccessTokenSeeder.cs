@@ -18,7 +18,7 @@ internal static class AccessTokenSeeder
     /// persistence, because the repository regenerates the Id on create.
     /// </summary>
     internal static (ApiKey ApiKey, string ClientSecret, string EncryptionKeyB64) Create(
-        string organizationKeyB64, Guid serviceAccountId, string name, bool write)
+        string organizationKeyB64, Guid serviceAccountId, string name)
     {
         var encryptionKeyB64 = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
         var derivedKeyB64 = RustSdkService.DeriveAccessTokenKey(encryptionKeyB64);
@@ -31,7 +31,7 @@ internal static class AccessTokenSeeder
         {
             Id = CombGuid.Generate(),
             ServiceAccountId = serviceAccountId,
-            Name = write ? $"{name} (Read/Write)" : $"{name} (Read Only)",
+            Name = RustSdkService.EncryptString(name, organizationKeyB64),
             ClientSecretHash = HashClientSecret(clientSecret),
             Scope = "[\"api.secrets\"]",
             EncryptedPayload = RustSdkService.EncryptString(payload, derivedKeyB64),
