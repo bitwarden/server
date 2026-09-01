@@ -57,7 +57,7 @@ public class OrganizationUsersControllerGetTests : IClassFixture<ApiApplicationF
     }
 
     [Fact]
-    public async Task Get_MemberOfDifferentOrganization_WithSpoofedOrgIdInBody_ReturnsForbidden()
+    public async Task Get_UserFromDifferentOrganization_WithSpoofedOrgIdInBody_ReturnsNotFound()
     {
         await _loginHelper.LoginAsync(_ownerEmailA);
 
@@ -73,6 +73,6 @@ public class OrganizationUsersControllerGetTests : IClassFixture<ApiApplicationF
 
         var response = await _client.SendAsync(request);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

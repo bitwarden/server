@@ -57,7 +57,7 @@ public class PoliciesController : Controller
 
     [HttpGet("{type}")]
     [Authorize<ManagePoliciesRequirement>]
-    public async Task<PolicyStatusResponseModel> Get(Guid orgId, PolicyType type)
+    public async Task<PolicyStatusResponseModel> Get([FromRoute] Guid orgId, PolicyType type)
     {
         var policy = await _policyQuery.RunAsync(orgId, type);
         if (policy.Type is PolicyType.SingleOrg)
@@ -70,7 +70,7 @@ public class PoliciesController : Controller
 
     [HttpGet("")]
     [Authorize<ManagePoliciesRequirement>]
-    public async Task<ListResponseModel<PolicyStatusResponseModel>> GetAll(string orgId)
+    public async Task<ListResponseModel<PolicyStatusResponseModel>> GetAll([FromRoute] string orgId)
     {
         var orgIdGuid = new Guid(orgId);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -136,7 +136,7 @@ public class PoliciesController : Controller
 
     [HttpPut("{type}")]
     [Authorize<ManagePoliciesRequirement>]
-    public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
+    public async Task<PolicyResponseModel> Put([FromRoute] Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
     {
         var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, type, _currentContext);
 
