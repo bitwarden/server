@@ -1,4 +1,4 @@
-﻿using  Bit.HttpExtensions;
+﻿using Bit.HttpExtensions;
 using Bit.Pam.Enums;
 using Bit.Services.Pam.AccessConnector.Models;
 using Bit.Services.Pam.Api.Models.Response;
@@ -59,7 +59,7 @@ public class RegisterAccessConnectorResponseModel : ResponseModel
     /// WARNING: shown exactly once. The plaintext client secret for the access connector's credential -- store it now;
     /// the server hashes it for storage and never persists or returns the plaintext again. Pair with the client-wrapped
     /// org key you already hold locally to assemble the access connector's token
-    /// (<c>0.daemon.&lt;apiKeyId&gt;.&lt;client_secret&gt;:&lt;encryption_key&gt;</c>).
+    /// (<c>0.access-connector.&lt;apiKeyId&gt;.&lt;client_secret&gt;:&lt;encryption_key&gt;</c>).
     /// </summary>
     public string ClientSecret { get; set; } = null!;
 }
