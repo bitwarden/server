@@ -30,7 +30,7 @@ public static class OrganizationSubscriptionEndpointsExtensions
         group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
 
         group.MapGet("preview",
-                async (Guid organizationId, [FromServices] OrganizationSubscriptionEndpointsHandler handler) => await handler.GetPreviewAsync(organizationId))
+                async ([FromRoute] Guid organizationId, [FromServices] OrganizationSubscriptionEndpointsHandler handler) => await handler.GetPreviewAsync(organizationId))
             .WithName("GetOrganizationSubscriptionPreview")
             .WithDescription("Previews the organization's upcoming subscription renewal.");
 
