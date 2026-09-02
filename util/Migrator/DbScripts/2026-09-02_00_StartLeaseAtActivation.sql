@@ -1,4 +1,24 @@
-CREATE PROCEDURE [dbo].[AccessLease_CreateFromApprovedRequest]
+-- Start a lease at activation, never backdated to the approved window's start (PM-42596).
+--
+-- [AccessLease_CreateFromApprovedRequest] minted the lease with [NotBefore] copied from AR.[NotBefore] -- the start
+-- of the window the approver approved -- so a lease claimed to have begun at a moment access had not yet been
+-- granted. On the on-demand path the window opens at submit, so the gap was the entire approval latency; on the
+-- scheduled path it was the whole span between the window opening and the requester actually starting access.
+--
+-- A lease records when access began. The request already records what was asked for and granted, and the
+-- [NotBefore] <= @Now precondition makes the window start a bound on when activation is *allowed*, not the lease's
+-- start. Both readers of the column -- the requester's "My access" row and the audit trail's LeaseNotBefore -- were
+-- overstating the lease.
+--
+-- [NotAfter] is deliberately unchanged: activating late shortens the lease rather than sliding its end out, because
+-- the end is the promise the approver made about when access stops.
+--
+-- Authorization is unaffected in either direction. Activation already requires AR.[NotBefore] <= @Now, so the
+-- minted start is in the past the instant it is written, and every live-lease predicate ([NotBefore] <= now AND
+-- [NotAfter] > now) is satisfied exactly as before. Existing rows are left alone -- backfilling a truer start is
+-- not possible, since the activation moment was never recorded separately (only [CreationDate], which is the
+-- activation audit timestamp and is already correct).
+CREATE OR ALTER PROCEDURE [dbo].[AccessLease_CreateFromApprovedRequest]
     @AccessLeaseId UNIQUEIDENTIFIER,
     @AccessRequestId UNIQUEIDENTIFIER,
     @RequesterId UNIQUEIDENTIFIER,
@@ -108,3 +128,4 @@ BEGIN
     -- 1 = minted, 0 = precondition no longer held (caller re-reads the winner).
     SELECT CASE WHEN @Rows = 1 THEN 1 ELSE 0 END
 END
+GO

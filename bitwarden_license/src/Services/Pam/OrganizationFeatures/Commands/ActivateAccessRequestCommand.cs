@@ -116,10 +116,21 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             CipherId = request.CipherId,
             RequesterId = request.RequesterId,
             // No Action is set: the lease is born running, and only an early end ever records one.
-            // Activation mints the window the approver approved, exactly as the old approval-time path did; the
-            // creation date is the activation audit timestamp (no decision row is written — approval was the
-            // decision).
-            NotBefore = request.NotBefore,
+            //
+            // The lease starts NOW, at activation, and is never backdated to the approved window's start. A lease
+            // records when access actually began; the request already records what was asked for and granted. The
+            // window start is only ever an upper bound on how early access may begin -- the guard above refuses an
+            // activation before it -- so carrying it onto the lease claimed access that had not happened yet, for a
+            // span that could be the whole approval latency on the on-demand path, or the whole pre-activation part
+            // of a scheduled window. It is the requester's own "My access" row and the audit trail's
+            // LeaseNotBefore that read it back, and both were overstating the lease.
+            //
+            // The end is untouched: activating late shortens the lease rather than sliding its end out, because
+            // NotAfter is the promise the approver made about when access stops.
+            //
+            // Authorization is unaffected either way -- activation requires request.NotBefore <= now, so a lease's
+            // start is already in the past the instant it is minted (see AccessLeaseRepository.LiveAt).
+            NotBefore = now,
             NotAfter = request.NotAfter,
             CreationDate = now,
         };
