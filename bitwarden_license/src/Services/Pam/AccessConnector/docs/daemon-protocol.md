@@ -46,8 +46,8 @@ An administrator registers the daemon; the daemon does not register itself.
 
 1. Wrap the organization key client-side and post the ciphertext to `POST
    organizations/{orgId}/access-connectors` with a display name.
-   [`RegisterDaemonCommand`](../Commands/RegisterDaemonCommand.cs) stores the wrapped key and never
-   sees the plaintext.
+   [`RegisterAccessConnectorCommand`](../Commands/RegisterAccessConnectorCommand.cs) stores the
+   wrapped key and never sees the plaintext.
 2. Keep the `clientSecret` from the response. It is shown exactly once — the server stores only a
    hash of it and cannot return it again.
 3. Assemble the daemon's credential from the response's `apiKeyId` and `clientSecret`, plus the
