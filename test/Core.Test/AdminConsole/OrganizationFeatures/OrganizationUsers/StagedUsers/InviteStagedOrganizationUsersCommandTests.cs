@@ -26,6 +26,12 @@ using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 
+/// <summary>
+/// Covers the decisions the command makes internally: call ordering, which dependency is invoked with what,
+/// and how failures map to errors. End-to-end outcomes that need real repositories and real billing — seat
+/// arithmetic, the send-failure rollback, and per-row skipping — are asserted in
+/// OrganizationUsersControllerSendInviteToStagedUsersTests instead.
+/// </summary>
 [SutProviderCustomize]
 public class InviteStagedOrganizationUsersCommandTests
 {
@@ -200,23 +206,6 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_AutoscalesByTheNumberOfSeatsShort(
-        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
-    {
-        var sutProvider = GetSutProvider();
-        organization.MaxAutoscaleSeats = 100;
-        // 10 seats, 9 occupied, so all but one of the batch needs a new seat.
-        var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats: 10, occupiedSeats: 9);
-
-        var result = await sutProvider.Sut.RunAsync(request);
-
-        Assert.True(result.IsSuccess);
-        await sutProvider.GetDependency<IOrganizationService>()
-            .Received(1)
-            .AutoAddSeatsAsync(organization, organizationUsers.Count - 1);
-    }
-
-    [Theory, BitAutoData]
     public async Task RunAsync_WhenAutoscaleFails_ReturnsErrorAndChangesNothing(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
@@ -295,41 +284,6 @@ public class InviteStagedOrganizationUsersCommandTests
 
         AssertSkipped<StagedOrganizationUserNotFound>(result, missingId);
         AssertInvited(result, organizationUsers);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RunAsync_WhenAMemberBelongsToAnotherOrganization_SkipsItAndInvitesTheRest(
-        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy, Guid otherOrganizationId)
-    {
-        var sutProvider = GetSutProvider();
-        var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
-        var foreignUser = organizationUsers[^1];
-        foreignUser.OrganizationId = otherOrganizationId;
-
-        var result = await sutProvider.Sut.RunAsync(request);
-
-        AssertSkipped<StagedOrganizationUserNotFound>(result, foreignUser.Id);
-        AssertInvited(result, organizationUsers.Except([foreignUser]).ToList());
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationUserStatusType.Invited)]
-    [BitAutoData(OrganizationUserStatusType.Accepted)]
-    [BitAutoData(OrganizationUserStatusType.Confirmed)]
-    [BitAutoData(OrganizationUserStatusType.Revoked)]
-    public async Task RunAsync_WhenAMemberIsNoLongerStaged_SkipsItAndInvitesTheRest(
-        OrganizationUserStatusType status,
-        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
-    {
-        var sutProvider = GetSutProvider();
-        var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
-        var promotedUser = organizationUsers[^1];
-        promotedUser.Status = status;
-
-        var result = await sutProvider.Sut.RunAsync(request);
-
-        AssertSkipped<OrganizationUserNotStaged>(result, promotedUser.Id);
-        AssertInvited(result, organizationUsers.Except([promotedUser]).ToList());
     }
 
     [Theory]
